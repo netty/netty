@@ -21,7 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,13 +32,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
 import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ApplicationProtocolNegotiationHandlerTest {
 
@@ -86,7 +87,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertTrue(configureCalled.get());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testHandshakeSuccessButNoSslHandler() {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
@@ -94,13 +95,15 @@ public class ApplicationProtocolNegotiationHandlerTest {
                 fail();
             }
         };
-        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        try {
-            channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
-        } finally {
-            assertNull(channel.pipeline().context(alpnHandler));
-            assertFalse(channel.finishAndReleaseAll());
-        }
+        final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+        assertNull(channel.pipeline().context(alpnHandler));
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.finishAndReleaseAll();
+            }
+        });
     }
 
     @Test

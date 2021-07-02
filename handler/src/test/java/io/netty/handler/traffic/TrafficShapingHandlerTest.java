@@ -16,14 +16,8 @@
 
 package io.netty.handler.traffic;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-
-import org.junit.AfterClass;
-import org.junit.Test;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -38,6 +32,11 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TrafficShapingHandlerTest {
 
@@ -45,7 +44,7 @@ public class TrafficShapingHandlerTest {
     private static final ScheduledExecutorService SES = Executors.newSingleThreadScheduledExecutor();
     private static final DefaultEventLoopGroup GROUP = new DefaultEventLoopGroup(1);
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
         SES.shutdown();

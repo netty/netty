@@ -27,8 +27,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -43,7 +43,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.TimeUnit.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChunkedWriteHandlerTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -120,8 +124,8 @@ public class ChunkedWriteHandlerTest {
                     //no op
                 }
             });
-            Assert.assertTrue(in.isOpen());
-            Assert.assertEquals(expectedPosition, in.position());
+            assertTrue(in.isOpen());
+            assertEquals(expectedPosition, in.position());
         } finally {
             if (in != null) {
                 in.close();
@@ -129,17 +133,22 @@ public class ChunkedWriteHandlerTest {
         }
     }
 
-    @Test(expected = ClosedChannelException.class)
+    @Test
     public void testChunkedNioFileFailOnClosedFileChannel() throws IOException {
         final FileChannel in = new RandomAccessFile(TMP, "r").getChannel();
         in.close();
-        check(new ChunkedNioFile(in) {
+
+        assertThrows(ClosedChannelException.class, new Executable() {
             @Override
-            public void close() throws Exception {
-                //no op
+            public void execute() throws Throwable {
+                check(new ChunkedNioFile(in) {
+                    @Override
+                    public void close() throws Exception {
+                        //no op
+                    }
+                });
             }
         });
-        Assert.fail();
     }
 
     @Test
@@ -496,16 +505,16 @@ public class ChunkedWriteHandlerTest {
     @Test
     public void testCloseFailedChunkedInput() {
         Exception error = new Exception("Unable to produce a chunk");
-        ThrowingChunkedInput input = new ThrowingChunkedInput(error);
+        final ThrowingChunkedInput input = new ThrowingChunkedInput(error);
+        final EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
-        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-
-        try {
-            ch.writeOutbound(input);
-            fail("Exception expected");
-        } catch (Exception e) {
-            assertEquals(error, e);
-        }
+        Exception e = assertThrows(Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeOutbound(input);
+            }
+        });
+        assertEquals(error, e);
 
         assertTrue(input.isClosed());
         assertFalse(ch.finish());

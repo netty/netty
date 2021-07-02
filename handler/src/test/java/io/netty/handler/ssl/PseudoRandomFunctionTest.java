@@ -18,10 +18,9 @@ package io.netty.handler.ssl;
 
 import io.netty.util.CharsetUtil;
 import org.bouncycastle.util.encoders.Hex;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertArrayEquals;
-
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 /**
  * The test vectors here were provided via:
  * https://www.ietf.org/mail-archive/web/tls/current/msg03416.html
