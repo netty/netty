@@ -22,11 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -42,14 +39,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class DatagramUnicastTest extends AbstractDatagramTest {
+public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     private static final byte[] BYTES = {0, 1, 2, 3};
     protected enum WrapType {
@@ -248,21 +244,6 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         }
     }
 
-    protected ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
-        switch (wrapType) {
-            case DUP:
-                return cc.write(new DatagramPacket(buf.retainedDuplicate(), (InetSocketAddress) remote));
-            case SLICE:
-                return cc.write(new DatagramPacket(buf.retainedSlice(), (InetSocketAddress) remote));
-            case READ_ONLY:
-                return cc.write(new DatagramPacket(buf.retain().asReadOnly(), (InetSocketAddress) remote));
-            case NONE:
-                return cc.write(new DatagramPacket(buf.retain(), (InetSocketAddress) remote));
-            default:
-                throw new Error("unknown wrap type: " + wrapType);
-        }
-    }
-
     private void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count)
             throws Throwable {
         try {
@@ -356,89 +337,18 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         }
     }
 
-    protected boolean isConnected(Channel channel) {
-        return ((DatagramChannel) channel).isConnected();
-    }
+    protected abstract boolean isConnected(Channel channel);
 
-    protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
-                                         final AtomicReference<Throwable> errorRef) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
-            @Override
-            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
-                try {
-                    ByteBuf buf = msg.content();
-                    assertEquals(bytes.length, buf.readableBytes());
-                    for (int i = 0; i < bytes.length; i++) {
-                        assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                    }
+    protected abstract Channel setupClientChannel(Bootstrap cb, byte[] bytes, CountDownLatch latch,
+                                                  AtomicReference<Throwable> errorRef) throws Throwable;
 
-                    InetSocketAddress localAddress = (InetSocketAddress) ctx.channel().localAddress();
-                    if (localAddress.getAddress().isAnyLocalAddress()) {
-                        assertEquals(localAddress.getPort(), msg.recipient().getPort());
-                    } else {
-                        // Test that the channel's localAddress is equal to the message's recipient
-                        assertEquals(localAddress, msg.recipient());
-                    }
-                } finally {
-                    latch.countDown();
-                }
-            }
+    protected abstract Channel setupServerChannel(Bootstrap sb, byte[] bytes, SocketAddress sender,
+                                                  CountDownLatch latch, AtomicReference<Throwable> errorRef,
+                                                  boolean echo) throws Throwable;
 
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                errorRef.compareAndSet(null, cause);
-            }
-        });
-        return cb.bind(newSocketAddress()).sync().channel();
-    }
+    protected abstract boolean supportDisconnect();
 
-    protected Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final SocketAddress sender,
-                                       final CountDownLatch latch, final AtomicReference<Throwable> errorRef,
-                                       final boolean echo) throws Throwable {
-        sb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
-                    @Override
-                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
-                        try {
-                            if (sender == null) {
-                                assertNotNull(msg.sender());
-                            } else {
-                                InetSocketAddress senderAddress = (InetSocketAddress) sender;
-                                if (senderAddress.getAddress().isAnyLocalAddress()) {
-                                    assertEquals(senderAddress.getPort(), msg.sender().getPort());
-                                } else {
-                                    assertEquals(sender, msg.sender());
-                                }
-                            }
-
-                            ByteBuf buf = msg.content();
-                            assertEquals(bytes.length, buf.readableBytes());
-                            for (int i = 0; i < bytes.length; i++) {
-                                assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                            }
-
-                            // Test that the channel's localAddress is equal to the message's recipient
-                            assertEquals(ctx.channel().localAddress(), msg.recipient());
-
-                            if (echo) {
-                                ctx.writeAndFlush(new DatagramPacket(buf.retainedDuplicate(), msg.sender()));
-                            }
-                        } finally {
-                            latch.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                        errorRef.compareAndSet(null, cause);
-                    }
-                });
-            }
-        });
-        return sb.bind(newSocketAddress()).sync().channel();
-    }
+    protected abstract ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType);
 
     protected static void closeChannel(Channel channel) throws Exception {
         if (channel != null) {
@@ -455,9 +365,5 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             return new InetSocketAddress(NetUtil.LOCALHOST4, serverAddress.getPort());
         }
         return serverAddress;
-    }
-
-    protected boolean supportDisconnect() {
-        return true;
     }
 }
