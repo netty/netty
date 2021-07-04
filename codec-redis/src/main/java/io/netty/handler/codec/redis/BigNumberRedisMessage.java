@@ -31,7 +31,7 @@ public class BigNumberRedisMessage extends AbstractNumberRedisMessage {
      * @param value the message content.
      */
     public BigNumberRedisMessage(byte[] value) {
-        super(new BigInteger(value));
+        this(new String(value));
     }
 
     /**
@@ -40,7 +40,7 @@ public class BigNumberRedisMessage extends AbstractNumberRedisMessage {
      * @param value the message content.
      */
     public BigNumberRedisMessage(String value) {
-        super(new BigInteger(value));
+        this(new BigInteger(value));
     }
 
     /**
