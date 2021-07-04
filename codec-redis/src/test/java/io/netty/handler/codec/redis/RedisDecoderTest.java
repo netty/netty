@@ -437,4 +437,22 @@ public class RedisDecoderTest {
         });
     }
 
+    @Test
+    public void shouldDecodeBulkErrorString() {
+        String buf1 = "bulk\nst";
+        String buf2 = "ring\ntest\n1234";
+        byte[] content = bytesOf(buf1 + buf2);
+        assertFalse(channel.writeInbound(byteBufOf("!")));
+        assertFalse(channel.writeInbound(byteBufOf(Integer.toString(content.length))));
+        assertFalse(channel.writeInbound(byteBufOf("\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(buf1)));
+        assertFalse(channel.writeInbound(byteBufOf(buf2)));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        FullBulkErrorStringRedisMessage msg = channel.readInbound();
+
+        assertThat(bytesOf(msg.content()), is(content));
+
+        ReferenceCountUtil.release(msg);
+    }
 }

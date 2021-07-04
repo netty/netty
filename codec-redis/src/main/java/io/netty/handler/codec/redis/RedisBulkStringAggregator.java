@@ -22,8 +22,10 @@ import io.netty.handler.codec.MessageAggregator;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * A {@link ChannelHandler} that aggregates an {@link BulkStringHeaderRedisMessage}
- * and its following {@link BulkStringRedisContent}s into a single {@link FullBulkStringRedisMessage}
+ * A {@link ChannelHandler} that aggregates
+ * an {@link BulkStringHeaderRedisMessage} or {@link BulkErrorStringHeaderRedisMessage}
+ * and its following {@link BulkStringRedisContent}s into correspondingly
+ * a single {@link FullBulkStringRedisMessage} or {@link FullBulkErrorStringRedisMessage}
  * with no following {@link BulkStringRedisContent}s.  It is useful when you don't want to take
  * care of {@link RedisMessage}s whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link RedisDecoder} in the {@link ChannelPipeline}:
@@ -95,6 +97,10 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
     @Override
     protected FullBulkStringRedisMessage beginAggregation(BulkStringHeaderRedisMessage start, ByteBuf content)
             throws Exception {
-        return new FullBulkStringRedisMessage(content);
+        if (start instanceof BulkErrorStringHeaderRedisMessage) {
+            return new FullBulkErrorStringRedisMessage(content);
+        } else {
+            return new FullBulkStringRedisMessage(content);
+        }
     }
 }

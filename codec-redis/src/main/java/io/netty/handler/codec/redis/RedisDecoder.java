@@ -26,6 +26,8 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisConstants.*;
+import static io.netty.handler.codec.redis.RedisMessageType.BLOB_ERROR;
+import static io.netty.handler.codec.redis.RedisMessageType.BULK_STRING;
 
 /**
  * Decodes the Redis protocol into {@link RedisMessage} objects following
@@ -186,18 +188,19 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             resetDecoder();
             return true;
         case BULK_STRING:
+        case BLOB_ERROR:
             if (length > RedisConstants.REDIS_MESSAGE_MAX_LENGTH) {
                 throw new RedisCodecException("length: " + length + " (expected: <= " +
                                               RedisConstants.REDIS_MESSAGE_MAX_LENGTH + ")");
             }
             remainingBulkLength = (int) length; // range(int) is already checked.
-            return decodeBulkString(in, out);
+            return decodeBulkString(type, in, out);
         default:
             throw new RedisCodecException("bad type: " + type);
         }
     }
 
-    private boolean decodeBulkString(ByteBuf in, List<Object> out) throws Exception {
+    private boolean decodeBulkString(RedisMessageType messageType, ByteBuf in, List<Object> out) throws Exception {
         switch (remainingBulkLength) {
         case RedisConstants.NULL_VALUE: // $-1\r\n
             out.add(FullBulkStringRedisMessage.NULL_INSTANCE);
@@ -207,7 +210,11 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             state = State.DECODE_BULK_STRING_EOL;
             return decodeBulkStringEndOfLine(in, out);
         default: // expectedBulkLength is always positive.
-            out.add(new BulkStringHeaderRedisMessage(remainingBulkLength));
+            if (BULK_STRING.equals(messageType)) {
+                out.add(new BulkStringHeaderRedisMessage(remainingBulkLength));
+            } else if (BLOB_ERROR.equals(messageType)) {
+                out.add(new BulkErrorStringHeaderRedisMessage(remainingBulkLength));
+            }
             state = State.DECODE_BULK_STRING_CONTENT;
             return decodeBulkStringContent(in, out);
         }
@@ -225,6 +232,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     // ${expectedBulkLength}\r\n <here> {data...}\r\n
+    // or !{expectedBulkLength}\r\n <here> {data...}\r\n
     private boolean decodeBulkStringContent(ByteBuf in, List<Object> out) throws Exception {
         final int readableBytes = in.readableBytes();
         if (readableBytes == 0 || remainingBulkLength == 0 && readableBytes < RedisConstants.EOL_LENGTH) {

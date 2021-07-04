@@ -249,4 +249,33 @@ public class RedisEncoderTest {
         }
         return buf;
     }
+
+    @Test
+    public void shouldEncodeFullBulkErrorString() {
+        ByteBuf bulkString = byteBufOf("bulk\nstring\ntest").retain();
+        int length = bulkString.readableBytes();
+        RedisMessage msg = new FullBulkErrorStringRedisMessage(bulkString);
+
+        boolean result = channel.writeOutbound(msg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf("!" + length + "\r\nbulk\nstring\ntest\r\n"))));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeBulkErrorStringContent() {
+        RedisMessage header = new BulkErrorStringHeaderRedisMessage(16);
+        RedisMessage body1 = new DefaultBulkStringRedisContent(byteBufOf("bulk\nstr").retain());
+        RedisMessage body2 = new DefaultLastBulkStringRedisContent(byteBufOf("ing\ntest").retain());
+
+        assertThat(channel.writeOutbound(header), is(true));
+        assertThat(channel.writeOutbound(body1), is(true));
+        assertThat(channel.writeOutbound(body2), is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf("!16\r\nbulk\nstring\ntest\r\n"))));
+        written.release();
+    }
 }
