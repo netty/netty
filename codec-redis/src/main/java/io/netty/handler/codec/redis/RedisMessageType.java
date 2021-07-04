@@ -29,7 +29,17 @@ public enum RedisMessageType {
     ERROR((byte) '-', true),
     INTEGER((byte) ':', true),
     BULK_STRING((byte) '$', false),
-    ARRAY_HEADER((byte) '*', false);
+    ARRAY_HEADER((byte) '*', false),
+    NULL((byte) '_', true),
+    DOUBLE((byte) ',', true),
+    BOOLEAN((byte) '#', true),
+    BLOB_ERROR((byte) '!', false),
+    VERBATIM_STRING((byte) '=', false),
+    BIG_NUMBER((byte) '(', true),
+    MAP((byte) '%', false),
+    SET((byte) '~', false),
+    ATTRIBUTE((byte) '|', false),
+    PUSH((byte) '>', false);
 
     private final Byte value;
     private final boolean inline;
@@ -92,6 +102,26 @@ public enum RedisMessageType {
             return BULK_STRING;
         case '*':
             return ARRAY_HEADER;
+        case '_':
+            return NULL;
+        case ',':
+            return DOUBLE;
+        case '#':
+            return BOOLEAN;
+        case '!':
+            return BLOB_ERROR;
+        case '=':
+            return VERBATIM_STRING;
+        case '(':
+            return BIG_NUMBER;
+        case '%':
+            return MAP;
+        case '~':
+            return SET;
+        case '|':
+            return ATTRIBUTE;
+        case '>':
+            return PUSH;
         default:
             return INLINE_COMMAND;
         }

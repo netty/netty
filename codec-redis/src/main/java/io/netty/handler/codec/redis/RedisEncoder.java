@@ -21,14 +21,19 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
+import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_NEGATIVE_INF_CONTENT;
+import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_POSITIVE_INF_CONTENT;
+
 /**
  * Encodes {@link RedisMessage} into bytes following
- * <a href="https://redis.io/topics/protocol">RESP (REdis Serialization Protocol)</a>.
+ * <a href="https://redis.io/topics/protocol">RESP (Redis Serialization Protocol)</a>
+ * and  * and <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
 public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
@@ -80,9 +85,44 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
             writeArrayHeader(allocator, (ArrayHeaderRedisMessage) msg, out);
         } else if (msg instanceof ArrayRedisMessage) {
             writeArrayMessage(allocator, (ArrayRedisMessage) msg, out);
+        } else if (msg instanceof DoubleRedisMessage) {
+            writeDoubleMessage(allocator, (DoubleRedisMessage) msg, out);
+        } else if (msg instanceof BigNumberRedisMessage) {
+            writeBigNumberMessage(allocator, (BigNumberRedisMessage) msg, out);
+        } else if (msg instanceof BooleanRedisMessage) {
+            writeBooleanMessage(allocator, (BooleanRedisMessage) msg, out);
+        } else if (msg instanceof NullRedisMessage) {
+            writeNullMessage(allocator, (NullRedisMessage) msg, out);
         } else {
             throw new CodecException("unknown message type: " + msg);
         }
+    }
+
+    private void writeBigNumberMessage(ByteBufAllocator allocator, BigNumberRedisMessage msg, List<Object> out) {
+        writeString(allocator, RedisMessageType.BIG_NUMBER, msg.value(), out);
+    }
+
+    private void writeDoubleMessage(ByteBufAllocator allocator, DoubleRedisMessage msg, List<Object> out) {
+        ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.DOUBLE_MAX_LENGTH +
+            RedisConstants.EOL_LENGTH);
+        RedisMessageType.DOUBLE.writeTo(buf);
+        buf.writeBytes(doubleToBytes(msg.value()));
+        buf.writeShort(RedisConstants.EOL_SHORT);
+        out.add(buf);
+    }
+
+    private void writeBooleanMessage(ByteBufAllocator allocator, BooleanRedisMessage msg, List<Object> out) {
+        ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.BOOLEAN_LENGTH +
+            RedisConstants.EOL_LENGTH);
+        RedisMessageType.BOOLEAN.writeTo(buf);
+        byte content = msg.value() ? RedisConstants.BOOLEAN_TRUE_CONTENT : RedisConstants.BOOLEAN_FALSE_CONTENT;
+        buf.writeByte(content);
+        buf.writeShort(RedisConstants.EOL_SHORT);
+        out.add(buf);
+    }
+
+    private void writeNullMessage(ByteBufAllocator allocator, NullRedisMessage msg, List<Object> out) {
+        writeString(allocator, RedisMessageType.NULL, "", out);
     }
 
     private static void writeInlineCommandMessage(ByteBufAllocator allocator, InlineCommandRedisMessage msg,
@@ -203,5 +243,15 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
     private byte[] numberToBytes(long value) {
         byte[] bytes = messagePool.getByteBufOfInteger(value);
         return bytes != null ? bytes : RedisCodecUtil.longToAsciiBytes(value);
+    }
+
+    private byte[] doubleToBytes(double value) {
+        if (value == Double.MAX_VALUE) {
+            return DOUBLE_POSITIVE_INF_CONTENT.getBytes(CharsetUtil.US_ASCII);
+        } else if (value == Double.MIN_VALUE) {
+            return DOUBLE_NEGATIVE_INF_CONTENT.getBytes(CharsetUtil.US_ASCII);
+        } else {
+            return RedisCodecUtil.doubleToAsciiBytes(value);
+        }
     }
 }

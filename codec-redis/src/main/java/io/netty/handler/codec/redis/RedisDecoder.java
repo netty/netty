@@ -22,11 +22,15 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.math.BigInteger;
 import java.util.List;
+
+import static io.netty.handler.codec.redis.RedisConstants.*;
 
 /**
  * Decodes the Redis protocol into {@link RedisMessage} objects following
- * <a href="https://redis.io/topics/protocol">RESP (REdis Serialization Protocol)</a>.
+ * <a href="https://redis.io/topics/protocol">RESP (Redis Serialization Protocol)</a>
+ * and <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  *
  * {@link RedisMessage} parts can be aggregated to {@link RedisMessage} using
  * {@link RedisArrayAggregator} or processed directly.
@@ -35,6 +39,7 @@ import java.util.List;
 public final class RedisDecoder extends ByteToMessageDecoder {
 
     private final ToPositiveLongProcessor toPositiveLongProcessor = new ToPositiveLongProcessor();
+    private final ToPositiveBigIntegerProcessor toPositiveBigIntegerProcessor = new ToPositiveBigIntegerProcessor();
 
     private final boolean decodeInlineCommands;
     private final int maxInlineMessageLength;
@@ -47,8 +52,8 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
     private enum State {
         DECODE_TYPE,
-        DECODE_INLINE, // SIMPLE_STRING, ERROR, INTEGER
-        DECODE_LENGTH, // BULK_STRING, ARRAY_HEADER
+        DECODE_INLINE, // SIMPLE_STRING, ERROR, INTEGER, DOUBLE, BIG_NUMBER, BOOLEAN, NULL
+        DECODE_LENGTH, // BULK_STRING, ARRAY_HEADER, BLOB_ERROR, VERBATIM_STRING
         DECODE_BULK_STRING_EOL,
         DECODE_BULK_STRING_CONTENT,
     }
@@ -268,6 +273,26 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             IntegerRedisMessage cached = messagePool.getInteger(content);
             return cached != null ? cached : new IntegerRedisMessage(parseRedisNumber(content));
         }
+        case DOUBLE: {
+            String value = content.toString(CharsetUtil.UTF_8);
+            if (DOUBLE_POSITIVE_INF_CONTENT.equals(value)) {
+                return DoubleRedisMessage.POSITIVE_INFINITY_DOUBLE_INSTANCE;
+            } else if (DOUBLE_NEGATIVE_INF_CONTENT.equals(value)) {
+                return DoubleRedisMessage.NEGATIVE_INFINITY_DOUBLE_INSTANCE;
+            } else {
+                return new DoubleRedisMessage(Double.parseDouble(value));
+            }
+        }
+        case BIG_NUMBER: {
+            return new BigNumberRedisMessage(parsePositiveBigInteger(content));
+        }
+        case BOOLEAN: {
+            return content.readByte() == BOOLEAN_TRUE_CONTENT ?
+                BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE : BooleanRedisMessage.FALSE_BOOLEAN_INSTANCE;
+        }
+        case NULL: {
+            return NullRedisMessage.INSTANCE;
+        }
         default:
             throw new RedisCodecException("bad type: " + messageType);
         }
@@ -295,7 +320,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         }
         if (readableBytes > RedisConstants.POSITIVE_LONG_MAX_LENGTH + extraOneByteForNegative) {
             throw new RedisCodecException("too many characters to be a valid RESP Integer: " +
-                                          byteBuf.toString(CharsetUtil.US_ASCII));
+                byteBuf.toString(CharsetUtil.US_ASCII));
         }
         if (negative) {
             return -parsePositiveNumber(byteBuf.skipBytes(extraOneByteForNegative));
@@ -307,6 +332,12 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         toPositiveLongProcessor.reset();
         byteBuf.forEachByte(toPositiveLongProcessor);
         return toPositiveLongProcessor.content();
+    }
+
+    private BigInteger parsePositiveBigInteger(ByteBuf byteBuf) {
+        toPositiveBigIntegerProcessor.reset();
+        byteBuf.forEachByte(toPositiveBigIntegerProcessor);
+        return toPositiveBigIntegerProcessor.content();
     }
 
     private static final class ToPositiveLongProcessor implements ByteProcessor {
@@ -327,6 +358,28 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
         public void reset() {
             result = 0;
+        }
+    }
+
+
+    private static final class ToPositiveBigIntegerProcessor implements ByteProcessor {
+        private BigInteger result = BigInteger.ZERO;
+
+        @Override
+        public boolean process(byte value) throws Exception {
+            if (value < '0' || value > '9') {
+                throw new RedisCodecException("bad byte in number: " + value);
+            }
+            result = result.multiply(BigInteger.TEN).add(BigInteger.valueOf((value - '0')));
+            return true;
+        }
+
+        public BigInteger content() {
+            return result;
+        }
+
+        public void reset() {
+            result = BigInteger.ZERO;
         }
     }
 }

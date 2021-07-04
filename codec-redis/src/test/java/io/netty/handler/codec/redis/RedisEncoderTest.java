@@ -26,11 +26,12 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Verifies the correct functionality of the {@link RedisEncoder}.
@@ -180,6 +181,62 @@ public class RedisEncoderTest {
 
         ByteBuf written = readAll(channel);
         assertThat(bytesOf(written), is(equalTo(bytesOf("*2\r\n+foo\r\n*2\r\n$3\r\nbar\r\n:-1234\r\n"))));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeNull() {
+        boolean result = channel.writeOutbound(NullRedisMessage.INSTANCE);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf("_\r\n")));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeBoolean() {
+        boolean result = channel.writeOutbound(BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf("#t\r\n")));
+        written.release();
+
+        result = channel.writeOutbound(BooleanRedisMessage.FALSE_BOOLEAN_INSTANCE);
+        assertThat(result, is(true));
+
+        written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf("#f\r\n")));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeDouble() {
+        boolean result = channel.writeOutbound(new DoubleRedisMessage(1.23d));
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf(",1.23\r\n")));
+        written.release();
+
+        result = channel.writeOutbound(DoubleRedisMessage.POSITIVE_INFINITY_DOUBLE_INSTANCE);
+        assertThat(result, is(true));
+
+        written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf(",inf\r\n")));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeBigNumber() {
+        BigNumberRedisMessage message = new BigNumberRedisMessage(bytesOf("3492890328409238509324850943850943825024385"));
+        boolean result = channel.writeOutbound(message);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf("(3492890328409238509324850943850943825024385\r\n"))));
+
         written.release();
     }
 

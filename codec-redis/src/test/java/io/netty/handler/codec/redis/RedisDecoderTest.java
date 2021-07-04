@@ -29,13 +29,11 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Verifies the correct functionality of the {@link RedisDecoder} and {@link RedisArrayAggregator}.
@@ -339,4 +337,104 @@ public class RedisDecoderTest {
         assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
         assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
     }
+
+    @Test
+    public void shouldDecodeNull() {
+        assertFalse(channel.writeInbound(byteBufOf("_")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof NullRedisMessage);
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeBoolean() {
+        assertFalse(channel.writeInbound(byteBufOf("#")));
+        assertFalse(channel.writeInbound(byteBufOf("t")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        assertTrue(channel.writeInbound(byteBufOf("#f\r\n")));
+
+        BooleanRedisMessage msgTrue = channel.readInbound();
+        assertTrue(msgTrue.value());
+        ReferenceCountUtil.release(msgTrue);
+
+        BooleanRedisMessage msgFalse = channel.readInbound();
+        assertFalse(msgFalse.value());
+        ReferenceCountUtil.release(msgFalse);
+    }
+
+    @Test
+    public void shouldDecodeDouble() {
+        assertFalse(channel.writeInbound(byteBufOf(",")));
+        assertFalse(channel.writeInbound(byteBufOf("1.23")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        DoubleRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is(1.23d));
+
+        assertTrue(channel.writeInbound(byteBufOf(",-1.23\r\n")));
+
+        msg = channel.readInbound();
+        assertThat(msg.value(), is(-1.23d));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeInfinityDouble() {
+        assertFalse(channel.writeInbound(byteBufOf(",inf")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+        assertTrue(channel.writeInbound(byteBufOf(",-inf\r\n")));
+
+        DoubleRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is(Double.MAX_VALUE));
+
+        msg = channel.readInbound();
+        assertThat(msg.value(), is(Double.MIN_VALUE));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldErrorOnDecodeDoubleOnNotValidRepresentation() {
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf(",-1.23a")));
+                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+                BigNumberRedisMessage msg = channel.readInbound();
+                ReferenceCountUtil.release(msg);
+            }
+        });
+    }
+
+    @Test
+    public void shouldDecodeBigNumber() {
+        assertFalse(channel.writeInbound(byteBufOf("(3492890328409238509324850943850943825024385")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        BigNumberRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is("3492890328409238509324850943850943825024385"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldErrorOnDecodeBigNumberOnNotValidRepresentation() {
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf("(3492890328409238509324850943850943825024385")));
+                assertFalse(channel.writeInbound(byteBufOf("Error")));
+                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+                BigNumberRedisMessage msg = channel.readInbound();
+                ReferenceCountUtil.release(msg);
+            }
+        });
+    }
+
 }
