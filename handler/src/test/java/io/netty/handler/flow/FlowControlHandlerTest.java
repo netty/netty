@@ -37,7 +37,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -64,7 +64,7 @@ public class FlowControlHandlerTest {
         GROUP = new NioEventLoopGroup();
     }
 
-    @AfterEach
+    @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
     }
