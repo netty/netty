@@ -24,14 +24,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link RedisEncoder}.
@@ -276,6 +278,31 @@ public class RedisEncoderTest {
 
         ByteBuf written = readAll(channel);
         assertThat(bytesOf(written), is(equalTo(bytesOf("!16\r\nbulk\nstring\ntest\r\n"))));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeSet() {
+        Set<RedisMessage> children = new HashSet<>();
+        children.add(new SimpleStringRedisMessage("apple"));
+        children.add(new FullBulkStringRedisMessage(byteBufOf("orange").retain()));
+        children.add(BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE);
+        children.add(new IntegerRedisMessage(100));
+        RedisMessage msg = new SetRedisMessage(children);
+
+        boolean result = channel.writeOutbound(msg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+
+        String encodeResult = new String(bytesOf(written));
+        assertThat(encodeResult, is(startsWith("~4")));
+        // out-of-order
+        assertThat(encodeResult, is(containsString("$6\r\norange\r\n")));
+        assertThat(encodeResult, is(containsString("#t\r\n")));
+        assertThat(encodeResult, is(containsString(":100\r\n")));
+        assertThat(encodeResult, is(containsString("+apple\r\n")));
+
         written.release();
     }
 }

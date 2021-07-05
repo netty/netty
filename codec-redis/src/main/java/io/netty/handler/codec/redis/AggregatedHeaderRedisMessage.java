@@ -18,49 +18,46 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.math.BigInteger;
-
 /**
- * Abstract class for Number types message.
+ * Header of Redis Aggregated types Message.
  */
 @UnstableApi
-public abstract class AbstractNumberRedisMessage implements RedisMessage {
+public abstract class AggregatedHeaderRedisMessage implements RedisMessage {
 
-    protected final Number value;
+    private final long length;
 
     /**
-     * For create a {@link IntegerRedisMessage} the given int {@code value}.
-     *
-     * @param value the message content.
+     * Creates a {@link AggregatedHeaderRedisMessage} for the given {@code length}.
      */
-    AbstractNumberRedisMessage(long value) {
-        this.value = value;
+    public AggregatedHeaderRedisMessage(long length) {
+        if (length < RedisConstants.NULL_VALUE) {
+            throw new RedisCodecException("length: " + length + " (expected: >= " + RedisConstants.NULL_VALUE + ")");
+        }
+        this.length = length;
     }
 
     /**
-     * For create a {@link DoubleRedisMessage} the given double {@code value}.
-     *
-     * @param value the message content.
+     * Get length of this array object.
      */
-    AbstractNumberRedisMessage(double value) {
-        this.value = value;
+    public final long length() {
+        return length;
     }
 
     /**
-     * For create a {@link BigNumberRedisMessage} the given BigInteger {@code value}.
+     * Returns whether the content of this message is {@code null}.
      *
-     * @param value the message content.
+     * @return indicates whether the content of this message is {@code null}.
      */
-    AbstractNumberRedisMessage(BigInteger value) {
-        this.value = value;
+    public boolean isNull() {
+        return length == RedisConstants.NULL_VALUE;
     }
 
     @Override
     public String toString() {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
-            .append("value=")
-            .append(value)
+            .append("length=")
+            .append(length)
             .append(']').toString();
     }
 

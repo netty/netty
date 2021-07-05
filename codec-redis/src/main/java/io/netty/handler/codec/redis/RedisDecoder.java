@@ -187,6 +187,10 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             out.add(new ArrayHeaderRedisMessage(length));
             resetDecoder();
             return true;
+        case SET_HEADER:
+            out.add(new SetHeaderRedisMessage(length));
+            resetDecoder();
+            return true;
         case BULK_STRING:
         case BLOB_ERROR:
             if (length > RedisConstants.REDIS_MESSAGE_MAX_LENGTH) {

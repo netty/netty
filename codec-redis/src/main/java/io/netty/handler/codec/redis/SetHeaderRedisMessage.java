@@ -18,14 +18,15 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public class BulkErrorStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
+public class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
-     * Creates a {@link BulkErrorStringHeaderRedisMessage}.
+     * Creates a {@link SetHeaderRedisMessage} for the given {@code length}.
      *
-     * @param bulkStringLength follow content length.
+     * @param length
      */
-    public BulkErrorStringHeaderRedisMessage(int bulkStringLength) {
-        super(bulkStringLength);
+    public SetHeaderRedisMessage(long length) {
+        super(length);
     }
+
 }

@@ -36,9 +36,9 @@ public enum RedisMessageType {
     BLOB_ERROR((byte) '!', false),
     VERBATIM_STRING((byte) '=', false),
     BIG_NUMBER((byte) '(', true),
-    MAP((byte) '%', false),
-    SET((byte) '~', false),
-    ATTRIBUTE((byte) '|', false),
+    MAP_HEADER((byte) '%', false),
+    SET_HEADER((byte) '~', false),
+    ATTRIBUTE_HEADER((byte) '|', false),
     PUSH((byte) '>', false);
 
     private final Byte value;
@@ -115,11 +115,11 @@ public enum RedisMessageType {
         case '(':
             return BIG_NUMBER;
         case '%':
-            return MAP;
+            return MAP_HEADER;
         case '~':
-            return SET;
+            return SET_HEADER;
         case '|':
-            return ATTRIBUTE;
+            return ATTRIBUTE_HEADER;
         case '>':
             return PUSH;
         default:

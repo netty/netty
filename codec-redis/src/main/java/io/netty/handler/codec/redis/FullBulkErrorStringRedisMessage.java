@@ -16,7 +16,9 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.UnstableApi;
 
+@UnstableApi
 public class FullBulkErrorStringRedisMessage extends FullBulkStringRedisMessage {
 
     /**

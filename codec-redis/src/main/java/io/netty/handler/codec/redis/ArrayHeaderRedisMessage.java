@@ -15,49 +15,21 @@
 
 package io.netty.handler.codec.redis;
 
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
  * Header of Redis Array Message.
  */
 @UnstableApi
-public class ArrayHeaderRedisMessage implements RedisMessage {
-
-    private final long length;
+public class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
      * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
+     *
+     * @param length
      */
     public ArrayHeaderRedisMessage(long length) {
-        if (length < RedisConstants.NULL_VALUE) {
-            throw new RedisCodecException("length: " + length + " (expected: >= " + RedisConstants.NULL_VALUE + ")");
-        }
-        this.length = length;
+        super(length);
     }
 
-    /**
-     * Get length of this array object.
-     */
-    public final long length() {
-        return length;
-    }
-
-    /**
-     * Returns whether the content of this message is {@code null}.
-     *
-     * @return indicates whether the content of this message is {@code null}.
-     */
-    public boolean isNull() {
-        return length == RedisConstants.NULL_VALUE;
-    }
-
-    @Override
-    public String toString() {
-        return new StringBuilder(StringUtil.simpleClassName(this))
-                .append('[')
-                .append("length=")
-                .append(length)
-                .append(']').toString();
-    }
 }

@@ -15,10 +15,6 @@
 
 package io.netty.handler.codec.redis;
 
-import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
@@ -28,12 +24,10 @@ import java.util.List;
  * Arrays of <a href="https://redis.io/topics/protocol">RESP</a>.
  */
 @UnstableApi
-public class ArrayRedisMessage extends AbstractReferenceCounted implements RedisMessage {
-
-    private final List<RedisMessage> children;
+public class ArrayRedisMessage extends AbstractCollectionRedisMessage {
 
     private ArrayRedisMessage() {
-        children = Collections.emptyList();
+        super(Collections.emptyList());
     }
 
     /**
@@ -43,7 +37,7 @@ public class ArrayRedisMessage extends AbstractReferenceCounted implements Redis
      */
     public ArrayRedisMessage(List<RedisMessage> children) {
         // do not retain here. children are already retained when created.
-        this.children = ObjectUtil.checkNotNull(children, "children");
+        super(children);
     }
 
     /**
@@ -51,41 +45,9 @@ public class ArrayRedisMessage extends AbstractReferenceCounted implements Redis
      *
      * @return list of {@link RedisMessage}s.
      */
+    @Override
     public final List<RedisMessage> children() {
-        return children;
-    }
-
-    /**
-     * Returns whether the content of this message is {@code null}.
-     *
-     * @return indicates whether the content of this message is {@code null}.
-     */
-    public boolean isNull() {
-        return false;
-    }
-
-    @Override
-    protected void deallocate() {
-        for (RedisMessage msg : children) {
-            ReferenceCountUtil.release(msg);
-        }
-    }
-
-    @Override
-    public ArrayRedisMessage touch(Object hint) {
-        for (RedisMessage msg : children) {
-            ReferenceCountUtil.touch(msg);
-        }
-        return this;
-    }
-
-    @Override
-    public String toString() {
-        return new StringBuilder(StringUtil.simpleClassName(this))
-                .append('[')
-                .append("children=")
-                .append(children.size())
-                .append(']').toString();
+        return (List<RedisMessage>) children;
     }
 
     /**

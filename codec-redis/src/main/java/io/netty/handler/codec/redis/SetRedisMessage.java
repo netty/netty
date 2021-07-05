@@ -17,15 +17,36 @@ package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Collections;
+import java.util.Set;
+
+/**
+ * Set of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
+ */
 @UnstableApi
-public class BulkErrorStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
+public class SetRedisMessage extends AbstractCollectionRedisMessage {
+
+    private SetRedisMessage() {
+        super(Collections.emptySet());
+    }
 
     /**
-     * Creates a {@link BulkErrorStringHeaderRedisMessage}.
+     * Creates a {@link SetRedisMessage} for the given {@code content}.
      *
-     * @param bulkStringLength follow content length.
+     * @param children the children.
      */
-    public BulkErrorStringHeaderRedisMessage(int bulkStringLength) {
-        super(bulkStringLength);
+    public SetRedisMessage(Set<RedisMessage> children) {
+        super(children);
     }
+
+    /**
+     * Get children of this Set. It can be null or empty.
+     *
+     * @return Set of {@link RedisMessage}s.
+     */
+    @Override
+    public final Set<RedisMessage> children() {
+        return (Set<RedisMessage>) children;
+    }
+
 }

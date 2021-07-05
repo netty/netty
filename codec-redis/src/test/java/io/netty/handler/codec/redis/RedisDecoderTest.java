@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
+import java.util.Set;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
@@ -452,6 +453,33 @@ public class RedisDecoderTest {
         FullBulkErrorStringRedisMessage msg = channel.readInbound();
 
         assertThat(bytesOf(msg.content()), is(content));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeSet() {
+        assertFalse(channel.writeInbound(byteBufOf("~3\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+sim")));
+        assertFalse(channel.writeInbound(byteBufOf("ple\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        SetRedisMessage msg = channel.readInbound();
+        Set<RedisMessage> children = msg.children();
+
+        assertThat(msg.children().size(), is(equalTo(3)));
+        for (RedisMessage child : children) {
+            if (child instanceof IntegerRedisMessage) {
+                assertThat(((IntegerRedisMessage) child).value(), is(1234L));
+            } else if (child instanceof SimpleStringRedisMessage) {
+                assertThat(((SimpleStringRedisMessage) child).content(), is("simple"));
+            } else if (child instanceof ErrorRedisMessage) {
+                assertThat(((ErrorRedisMessage) child).content(), is("error"));
+            } else {
+                fail("Unexpected types");
+            }
+        }
 
         ReferenceCountUtil.release(msg);
     }

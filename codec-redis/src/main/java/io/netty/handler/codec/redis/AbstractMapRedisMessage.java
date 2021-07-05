@@ -15,17 +15,26 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Map;
+
 @UnstableApi
-public class BulkErrorStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
+public abstract class AbstractMapRedisMessage implements AggregatedRedisMessage {
+
+    public Map<RedisMessage, RedisMessage> children;
+
+    public AbstractMapRedisMessage(Map<RedisMessage, RedisMessage> children) {
+        this.children = ObjectUtil.checkNotNull(children, "children");
+    }
 
     /**
-     * Creates a {@link BulkErrorStringHeaderRedisMessage}.
+     * Get children of this Map. It can be null or empty.
      *
-     * @param bulkStringLength follow content length.
+     * @return Map of {@link RedisMessage}s.
      */
-    public BulkErrorStringHeaderRedisMessage(int bulkStringLength) {
-        super(bulkStringLength);
+    public Map<RedisMessage, RedisMessage> children() {
+        return children;
     }
 }
