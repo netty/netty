@@ -15,8 +15,18 @@
 
 package io.netty.handler.codec.redis;
 
-/**
- * Just a marker interface for Aggregated data types
- */
-public interface AggregatedRedisMessage extends RedisMessage {
+import io.netty.util.internal.UnstableApi;
+
+@UnstableApi
+public class MapHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+
+    /**
+     * Creates a {@link MapHeaderRedisMessage} for the given {@code length}.
+     *
+     * @param length
+     */
+    public MapHeaderRedisMessage(long length) {
+        super(length);
+    }
+
 }

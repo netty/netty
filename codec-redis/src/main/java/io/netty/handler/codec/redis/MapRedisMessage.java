@@ -18,59 +18,46 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
-import java.util.Set;
+import java.util.Map;
 
-/**
- * Set of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
- */
 @UnstableApi
-public class SetRedisMessage extends AbstractCollectionRedisMessage {
+public class MapRedisMessage extends AbstractMapRedisMessage {
 
-    private SetRedisMessage() {
-        super(Collections.<RedisMessage>emptySet());
+    public MapRedisMessage() {
+        this(Collections.<RedisMessage, RedisMessage>emptyMap());
     }
 
     /**
-     * Creates a {@link SetRedisMessage} for the given {@code content}.
+     * Creates a {@link MapRedisMessage} for the given {@code content}.
      *
      * @param children the children.
      */
-    public SetRedisMessage(Set<RedisMessage> children) {
+    public MapRedisMessage(Map<RedisMessage, RedisMessage> children) {
         super(children);
     }
 
     /**
-     * Get children of this Set. It can be null or empty.
-     *
-     * @return Set of {@link RedisMessage}s.
+     * A predefined empty array instance for {@link MapRedisMessage}.
      */
-    @Override
-    public final Set<RedisMessage> children() {
-        return (Set<RedisMessage>) children;
-    }
-
-    /**
-     * A predefined empty array instance for {@link SetRedisMessage}.
-     */
-    public static final SetRedisMessage EMPTY_INSTANCE = new SetRedisMessage() {
+    public static final MapRedisMessage EMPTY_INSTANCE = new MapRedisMessage() {
 
         @Override
-        public SetRedisMessage retain() {
+        public MapRedisMessage retain() {
             return this;
         }
 
         @Override
-        public SetRedisMessage retain(int increment) {
+        public MapRedisMessage retain(int increment) {
             return this;
         }
 
         @Override
-        public SetRedisMessage touch() {
+        public MapRedisMessage touch() {
             return this;
         }
 
         @Override
-        public SetRedisMessage touch(Object hint) {
+        public MapRedisMessage touch(Object hint) {
             return this;
         }
 
@@ -86,7 +73,8 @@ public class SetRedisMessage extends AbstractCollectionRedisMessage {
 
         @Override
         public String toString() {
-            return "EmptySetRedisMessage";
+            return "EmptyMapRedisMessage";
         }
     };
+
 }

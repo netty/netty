@@ -15,13 +15,17 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Map;
 
 @UnstableApi
-public abstract class AbstractMapRedisMessage implements AggregatedRedisMessage {
+public abstract class AbstractMapRedisMessage extends AbstractReferenceCounted
+        implements AggregatedRedisMessage {
 
     private final Map<RedisMessage, RedisMessage> children;
 
@@ -37,4 +41,40 @@ public abstract class AbstractMapRedisMessage implements AggregatedRedisMessage 
     public Map<RedisMessage, RedisMessage> children() {
         return children;
     }
+
+    @Override
+    protected void deallocate() {
+        for (Map.Entry<RedisMessage, RedisMessage> messageEntry : children.entrySet()) {
+            ReferenceCountUtil.release(messageEntry.getKey());
+            ReferenceCountUtil.release(messageEntry.getValue());
+        }
+    }
+
+    @Override
+    public AbstractMapRedisMessage touch(Object hint) {
+        for (Map.Entry<RedisMessage, RedisMessage> messageEntry : children.entrySet()) {
+            ReferenceCountUtil.touch(messageEntry.getKey());
+            ReferenceCountUtil.touch(messageEntry.getValue());
+        }
+        return this;
+    }
+
+    /**
+     * Returns whether the content of this message is {@code null}.
+     *
+     * @return indicates whether the content of this message is {@code null}.
+     */
+    public boolean isNull() {
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder(StringUtil.simpleClassName(this))
+                .append('[')
+                .append("children=")
+                .append(children.size())
+                .append(']').toString();
+    }
+
 }

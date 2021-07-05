@@ -28,7 +28,7 @@ import java.util.Collection;
  */
 @UnstableApi
 public abstract class AbstractCollectionRedisMessage extends AbstractReferenceCounted
-    implements RedisMessage, AggregatedRedisMessage {
+    implements AggregatedRedisMessage {
 
     protected Collection<RedisMessage> children;
 

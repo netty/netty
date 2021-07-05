@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -297,12 +298,33 @@ public class RedisEncoderTest {
         ByteBuf written = readAll(channel);
 
         String encodeResult = new String(bytesOf(written));
-        assertThat(encodeResult, is(startsWith("~4")));
+        assertThat(encodeResult, is(startsWith("~4\r\n")));
         // out-of-order
         assertThat(encodeResult, is(containsString("$6\r\norange\r\n")));
         assertThat(encodeResult, is(containsString("#t\r\n")));
         assertThat(encodeResult, is(containsString(":100\r\n")));
         assertThat(encodeResult, is(containsString("+apple\r\n")));
+
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeMap() {
+        HashMap<RedisMessage, RedisMessage> map = new HashMap<RedisMessage, RedisMessage>();
+        map.put(new SimpleStringRedisMessage("first"), new IntegerRedisMessage(1));
+        map.put(new SimpleStringRedisMessage("second"), new IntegerRedisMessage(2));
+        MapRedisMessage mapMsg = new MapRedisMessage(map);
+
+        boolean result = channel.writeOutbound(mapMsg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+
+        String encodeResult = new String(bytesOf(written));
+        assertThat(encodeResult, is(startsWith("%2\r\n")));
+
+        assertThat(encodeResult, is(containsString("+first\r\n:1\r\n")));
+        assertThat(encodeResult, is(containsString("+second\r\n:2\r\n")));
 
         written.release();
     }

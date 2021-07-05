@@ -26,6 +26,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
+import java.util.Map;
 
 import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_NEGATIVE_INF_CONTENT;
 import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_POSITIVE_INF_CONTENT;
@@ -96,11 +97,15 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
         } else if (msg instanceof ArrayHeaderRedisMessage) {
             writeAggregatedHeader(allocator, RedisMessageType.ARRAY_HEADER, (ArrayHeaderRedisMessage) msg, out);
         } else if (msg instanceof ArrayRedisMessage) {
-            writeAggregatedMessage(allocator, RedisMessageType.ARRAY_HEADER, (ArrayRedisMessage) msg, out);
+            writeCollectionMessage(allocator, RedisMessageType.ARRAY_HEADER, (ArrayRedisMessage) msg, out);
         } else if (msg instanceof SetHeaderRedisMessage) {
             writeAggregatedHeader(allocator, RedisMessageType.SET_HEADER, (SetHeaderRedisMessage) msg, out);
         } else if (msg instanceof SetRedisMessage) {
-            writeAggregatedMessage(allocator, RedisMessageType.SET_HEADER, (SetRedisMessage) msg, out);
+            writeCollectionMessage(allocator, RedisMessageType.SET_HEADER, (SetRedisMessage) msg, out);
+        } else if (msg instanceof MapHeaderRedisMessage) {
+            writeAggregatedHeader(allocator, RedisMessageType.MAP_HEADER, (MapHeaderRedisMessage) msg, out);
+        } else if (msg instanceof MapRedisMessage) {
+            writeMapMessage(allocator, RedisMessageType.MAP_HEADER, (MapRedisMessage) msg, out);
         } else if (msg instanceof DoubleRedisMessage) {
             writeDoubleMessage(allocator, (DoubleRedisMessage) msg, out);
         } else if (msg instanceof BigNumberRedisMessage) {
@@ -227,9 +232,9 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
     }
 
     /**
-     * Write full constructed array message.
+     * Write full constructed collection message.
      */
-    private void writeAggregatedMessage(ByteBufAllocator allocator, RedisMessageType messageType,
+    private void writeCollectionMessage(ByteBufAllocator allocator, RedisMessageType messageType,
                                         AbstractCollectionRedisMessage msg, List<Object> out) {
         if (msg.isNull()) {
             writeAggregatedHeader(allocator, messageType, msg.isNull(), RedisConstants.NULL_VALUE, out);
@@ -237,6 +242,22 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
             writeAggregatedHeader(allocator, messageType, msg.isNull(), msg.children().size(), out);
             for (RedisMessage child : msg.children()) {
                 writeRedisMessage(allocator, child, out);
+            }
+        }
+    }
+
+    /**
+     * Write full constructed map message.
+     */
+    private void writeMapMessage(ByteBufAllocator allocator, RedisMessageType messageType,
+                                 AbstractMapRedisMessage msg, List<Object> out) {
+        if (msg.isNull()) {
+            writeAggregatedHeader(allocator, messageType, msg.isNull(), RedisConstants.NULL_VALUE, out);
+        } else {
+            writeAggregatedHeader(allocator, messageType, msg.isNull(), msg.children().size(), out);
+            for (Map.Entry<RedisMessage, RedisMessage> child : msg.children().entrySet()) {
+                writeRedisMessage(allocator, child.getKey(), out);
+                writeRedisMessage(allocator, child.getValue(), out);
             }
         }
     }

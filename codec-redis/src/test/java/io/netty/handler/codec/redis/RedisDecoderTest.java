@@ -27,7 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
@@ -52,7 +54,8 @@ public class RedisDecoderTest {
         return new EmbeddedChannel(
                 new RedisDecoder(decodeInlineCommands),
                 new RedisBulkStringAggregator(),
-                new RedisArrayAggregator());
+                new RedisArrayAggregator(),
+                new RedisMapAggregator());
     }
 
     @AfterEach
@@ -468,7 +471,7 @@ public class RedisDecoderTest {
         SetRedisMessage msg = channel.readInbound();
         Set<RedisMessage> children = msg.children();
 
-        assertThat(msg.children().size(), is(equalTo(3)));
+        assertThat(children.size(), is(equalTo(3)));
         for (RedisMessage child : children) {
             if (child instanceof IntegerRedisMessage) {
                 assertThat(((IntegerRedisMessage) child).value(), is(1234L));
@@ -483,4 +486,76 @@ public class RedisDecoderTest {
 
         ReferenceCountUtil.release(msg);
     }
+
+    @Test
+    public void shouldDecodeEmptySet() {
+        assertTrue(channel.writeInbound(byteBufOf("~0\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof SetRedisMessage);
+        assertThat(((SetRedisMessage) msg).children().size(), is(0));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeMap() {
+        assertFalse(channel.writeInbound(byteBufOf("%2\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+second\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        MapRedisMessage msg = channel.readInbound();
+        Map<RedisMessage, RedisMessage> children = msg.children();
+
+        assertThat(children.size(), is(equalTo(2)));
+
+        for (Map.Entry<RedisMessage, RedisMessage> messageEntry : children.entrySet()) {
+            assertThat(messageEntry.getKey(), instanceOf(SimpleStringRedisMessage.class));
+            String key = ((SimpleStringRedisMessage) messageEntry.getKey()).content();
+            if ("first".equals(key)) {
+                assertThat(messageEntry.getValue(), instanceOf(IntegerRedisMessage.class));
+                assertThat(((IntegerRedisMessage) messageEntry.getValue()).value(), is(1L));
+            } else if ("second".equals(key)) {
+                assertThat(messageEntry.getValue(), instanceOf(ErrorRedisMessage.class));
+                assertThat(((ErrorRedisMessage) messageEntry.getValue()).content(), is("error"));
+            } else {
+                fail("Unexpected key");
+            }
+        }
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeEmptyMap() {
+        assertTrue(channel.writeInbound(byteBufOf("%0\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof MapRedisMessage);
+        assertThat(((MapRedisMessage) msg).children().size(), is(0));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldErrorOnDecodeOddLengthMap() {
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf("%3\r\n")));
+                assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
+                assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
+                assertFalse(channel.writeInbound(byteBufOf("+second\r\n")));
+
+                RedisMessage msg = channel.readInbound();
+
+                ReferenceCountUtil.release(msg);
+            }
+        });
+    }
+
 }
