@@ -28,6 +28,7 @@ import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.ThrowableUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
@@ -520,7 +521,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
-                            t.addSuppressed(future.cause());
+                            ThrowableUtil.addSuppressed(t, future.cause());
                         }
                         finalPromise.setFailure(t);
                     }
