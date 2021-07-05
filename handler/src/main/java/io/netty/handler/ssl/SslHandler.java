@@ -37,7 +37,6 @@ import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.internal.tcnative.AsyncTask;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
@@ -1510,8 +1509,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (task == null) {
                 return;
             }
-            if (task instanceof AsyncTask) {
-                ((AsyncTask) task).runAsync(completeTask);
+            if (task instanceof AsyncRunnable) {
+                ((AsyncRunnable) task).run(completeTask);
             } else {
                 task.run();
                 completeTask.run();

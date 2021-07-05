@@ -1458,13 +1458,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private final class AsyncTaskDecorator extends TaskDecorator<AsyncTask> implements AsyncTask {
+    private final class AsyncTaskDecorator extends TaskDecorator<AsyncTask> implements AsyncRunnable {
         AsyncTaskDecorator(AsyncTask task) {
             super(task);
         }
 
         @Override
-        public void runAsync(Runnable runnable) {
+        public void run(Runnable runnable) {
             if (isDestroyed()) {
                 // The engine was destroyed in the meantime, just return.
                 runnable.run();
