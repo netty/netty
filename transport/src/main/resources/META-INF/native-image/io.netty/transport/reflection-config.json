@@ -2,7 +2,7 @@
     {
       "name": "io.netty.channel.socket.nio.NioServerSocketChannel",
       "methods": [
-        { "name": "<init>", "parameterTypes": [] }
+        { "name": "<init>", "parameterTypes": [ "io.netty.channel.EventLoop", "io.netty.channel.EventLoopGroup" ] }
       ]
     },
     {
