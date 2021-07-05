@@ -32,7 +32,7 @@ public abstract class AbstractCollectionRedisMessage extends AbstractReferenceCo
 
     protected Collection<RedisMessage> children;
 
-    public AbstractCollectionRedisMessage(Collection<RedisMessage> children) {
+    protected AbstractCollectionRedisMessage(Collection<RedisMessage> children) {
         this.children = ObjectUtil.checkNotNull(children, "children");
     }
 

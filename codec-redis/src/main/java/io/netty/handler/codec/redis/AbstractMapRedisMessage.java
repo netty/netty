@@ -23,9 +23,9 @@ import java.util.Map;
 @UnstableApi
 public abstract class AbstractMapRedisMessage implements AggregatedRedisMessage {
 
-    public Map<RedisMessage, RedisMessage> children;
+    private final Map<RedisMessage, RedisMessage> children;
 
-    public AbstractMapRedisMessage(Map<RedisMessage, RedisMessage> children) {
+    protected AbstractMapRedisMessage(Map<RedisMessage, RedisMessage> children) {
         this.children = ObjectUtil.checkNotNull(children, "children");
     }
 
