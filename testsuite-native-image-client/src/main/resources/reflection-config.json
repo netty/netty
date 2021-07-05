@@ -2,7 +2,7 @@
     {
       "name": "io.netty.channel.socket.nio.NioDatagramChannel",
       "methods": [
-        { "name": "<init>", "parameterTypes": [ "io.netty.channel.EventLoop "] }
+        { "name": "<init>", "parameterTypes": [ "io.netty.channel.EventLoop"] }
       ]
     }
 ]
