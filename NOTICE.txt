@@ -204,7 +204,7 @@ non-blocking XML processor, which can be obtained at:
   * LICENSE:
     * license/LICENSE.aalto-xml.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://wiki.fasterxml.com/AaltoHome
+    * https://wiki.fasterxml.com/AaltoHome
 
 This product contains a modified version of 'HPACK', a Java implementation of
 the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
