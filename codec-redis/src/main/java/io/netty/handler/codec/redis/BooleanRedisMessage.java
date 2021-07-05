@@ -22,7 +22,7 @@ import io.netty.util.internal.UnstableApi;
  * Boolean of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
-public class BooleanRedisMessage implements RedisMessage {
+public final class BooleanRedisMessage implements RedisMessage {
 
     private boolean value;
 

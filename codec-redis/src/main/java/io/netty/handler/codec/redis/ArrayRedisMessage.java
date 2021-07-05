@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
@@ -27,7 +28,7 @@ import java.util.List;
 public class ArrayRedisMessage extends AbstractCollectionRedisMessage {
 
     private ArrayRedisMessage() {
-        super(Collections.emptyList());
+        super(Collections.<RedisMessage>emptyList());
     }
 
     /**
@@ -48,6 +49,14 @@ public class ArrayRedisMessage extends AbstractCollectionRedisMessage {
     @Override
     public final List<RedisMessage> children() {
         return (List<RedisMessage>) children;
+    }
+
+    @Override
+    public ArrayRedisMessage touch(Object hint) {
+        for (RedisMessage msg : children) {
+            ReferenceCountUtil.touch(msg);
+        }
+        return this;
     }
 
     /**

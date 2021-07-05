@@ -21,7 +21,7 @@ import io.netty.util.internal.UnstableApi;
  * NULL of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
-public class NullRedisMessage implements RedisMessage {
+public final class NullRedisMessage implements RedisMessage {
 
     public static final NullRedisMessage INSTANCE = new NullRedisMessage();
 

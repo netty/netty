@@ -27,7 +27,7 @@ import java.util.Set;
 public class SetRedisMessage extends AbstractCollectionRedisMessage {
 
     private SetRedisMessage() {
-        super(Collections.emptySet());
+        super(Collections.<RedisMessage>emptySet());
     }
 
     /**

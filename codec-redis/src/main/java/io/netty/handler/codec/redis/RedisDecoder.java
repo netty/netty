@@ -25,7 +25,9 @@ import io.netty.util.internal.UnstableApi;
 import java.math.BigInteger;
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisConstants.*;
+import static io.netty.handler.codec.redis.RedisConstants.BOOLEAN_TRUE_CONTENT;
+import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_NEGATIVE_INF_CONTENT;
+import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_POSITIVE_INF_CONTENT;
 import static io.netty.handler.codec.redis.RedisMessageType.BLOB_ERROR;
 import static io.netty.handler.codec.redis.RedisMessageType.BULK_STRING;
 
@@ -373,7 +375,6 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         }
     }
 
-
     private static final class ToPositiveBigIntegerProcessor implements ByteProcessor {
         private BigInteger result = BigInteger.ZERO;
 
@@ -382,7 +383,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             if (value < '0' || value > '9') {
                 throw new RedisCodecException("bad byte in number: " + value);
             }
-            result = result.multiply(BigInteger.TEN).add(BigInteger.valueOf((value - '0')));
+            result = result.multiply(BigInteger.TEN).add(BigInteger.valueOf(value - '0'));
             return true;
         }
 

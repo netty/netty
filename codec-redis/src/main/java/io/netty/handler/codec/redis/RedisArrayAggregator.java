@@ -21,7 +21,13 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Aggregates {@link RedisMessage} parts into {@link ArrayRedisMessage} or {@link SetRedisMessage}.
@@ -94,10 +100,10 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         AggregateState(AggregatedHeaderRedisMessage headerType, int length) {
             this.length = length;
             if (headerType instanceof ArrayHeaderRedisMessage) {
-                this.children = new ArrayList<>(length);
+                this.children = new ArrayList<RedisMessage>(length);
                 this.aggregateType = RedisMessageType.ARRAY_HEADER;
             } else if (headerType instanceof SetHeaderRedisMessage) {
-                this.children = new HashSet<>(length);
+                this.children = new HashSet<RedisMessage>(length);
                 this.aggregateType = RedisMessageType.SET_HEADER;
             } else {
                 throw new CodecException("bad header type: " + headerType);

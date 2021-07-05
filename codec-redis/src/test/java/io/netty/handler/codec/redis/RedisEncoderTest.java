@@ -232,7 +232,8 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeBigNumber() {
-        BigNumberRedisMessage message = new BigNumberRedisMessage(bytesOf("3492890328409238509324850943850943825024385"));
+        BigNumberRedisMessage message =
+            new BigNumberRedisMessage(bytesOf("3492890328409238509324850943850943825024385"));
         boolean result = channel.writeOutbound(message);
         assertThat(result, is(true));
 
@@ -283,7 +284,7 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeSet() {
-        Set<RedisMessage> children = new HashSet<>();
+        Set<RedisMessage> children = new HashSet<RedisMessage>();
         children.add(new SimpleStringRedisMessage("apple"));
         children.add(new FullBulkStringRedisMessage(byteBufOf("orange").retain()));
         children.add(BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE);
