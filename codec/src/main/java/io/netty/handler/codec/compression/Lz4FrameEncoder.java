@@ -281,7 +281,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     // The second half of msg got buffered in #buffer and the first half went into out so both have to
                     // succeed for msg's promise to succeed. We create a new promise for the part of the message in
                     // out because we started without a pending #bufferPromise.
-                    return combinedPromise(ctx, promise, ctx.newPromise());
+                    final ChannelPromise firstMsgPartPromise = ctx.newPromise();
+                    bufferPromise = ctx.newPromise();
+                    firstMsgPartPromise.addListener(new DependencyAwareListener(bufferPromise, promise));
+                    return firstMsgPartPromise;
                 }
                 bufferPromise = promise;
                 // out is empty and we just return a new promise as out does not contain any part of msg
@@ -293,7 +296,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             if (out.isReadable()) {
                 // the second half of msg got buffered in #buffer and the first half went into out so both have to
                 // succeed for msg's promise to succeed so we associate #bufferPromise with out
-                return combinedPromise(ctx, promise, bufferPromise);
+                final ChannelPromise firstMsgPartPromise = bufferPromise;
+                bufferPromise = ctx.newPromise();
+                firstMsgPartPromise.addListener(new DependencyAwareListener(bufferPromise, promise));
+                return firstMsgPartPromise;
             }
             bufferPromise.addListener(new ChannelPromiseNotifier(promise));
             // out is empty and we just return a new promise as out does not contain any part of msg
@@ -305,34 +311,6 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         final ChannelPromise prev = bufferPromise;
         bufferPromise = null;
         return prev;
-    }
-
-    /**
-     * This method handles the promise ({@code msgPromise}) to notify for a message that is split between the current
-     * output buffer and {@link #buffer}. In this case {@code msgPromise} is notified with success once the current
-     * {@link #bufferPromise} succeeds and the promise ({@code outPromise}) associated with the current write buffer
-     * succeeds. If either of the two do not succeed then the {@code msgPromise} must fail.
-     *
-     * @param ctx        the {@link ChannelHandlerContext} which this {@link Lz4FrameEncoder} belongs to
-     * @param msgPromise promise to notify once all of a message has been written
-     * @param outPromise promise to notify once the current write buffer has been written
-     * @return           the given {@code outPromise}
-     */
-    private ChannelPromise combinedPromise(final ChannelHandlerContext ctx, final ChannelPromise msgPromise,
-                                           final ChannelPromise outPromise) {
-        final ChannelPromise outstandingMsgPartPromise = ctx.newPromise();
-        bufferPromise = outstandingMsgPartPromise;
-        outPromise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    outstandingMsgPartPromise.addListener(new ChannelPromiseNotifier(msgPromise));
-                } else {
-                    msgPromise.setFailure(future.cause());
-                }
-            }
-        });
-        return outPromise;
     }
 
     private void flushBufferedData(ByteBuf out) {
@@ -507,5 +485,47 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
     final ByteBuf getBackingBuffer() {
         return buffer;
+    }
+
+    /**
+     * A {@link ChannelFutureListener} that delays notifying a {@link ChannelPromise} until another promise has been
+     * notified. This is used by the LZ4 frame encoder to notify the promise associated with a message that is written
+     * across multiple frames once all frames it was sent in have been written.
+     */
+    private static final class DependencyAwareListener implements ChannelFutureListener {
+
+        /**
+         * {@link ChannelPromise} that must be notified before {@link #finalPromise} may be notified.
+         */
+        private final ChannelPromise dependency;
+
+        /**
+         * {@link ChannelPromise} to notify once this listener has been called and {@link #dependency} has been
+         * notified.
+         */
+        private final ChannelPromise finalPromise;
+
+        DependencyAwareListener(ChannelPromise dependency, ChannelPromise finalPromise) {
+            this.dependency = dependency;
+            this.finalPromise = finalPromise;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                dependency.addListener(new ChannelPromiseNotifier(finalPromise));
+            } else {
+                final Throwable t = future.cause();
+                dependency.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            t.addSuppressed(future.cause());
+                        }
+                        finalPromise.setFailure(t);
+                    }
+                });
+            }
+        }
     }
 }
