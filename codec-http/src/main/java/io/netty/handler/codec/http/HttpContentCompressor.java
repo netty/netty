@@ -54,7 +54,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * Creates a new handler with the default compression level (<tt>6</tt>),
      * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
      */
-    @Deprecated
     public HttpContentCompressor() {
         this(6);
     }
