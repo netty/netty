@@ -72,6 +72,12 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         data.release();
     }
 
+    @ParameterizedTest
+    @MethodSource("smallData")
+    public void testCompressionOfSmallBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfBatchedFlow(data);
+    }
+
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
         InputStream is = new ByteBufInputStream(compressed, true);
