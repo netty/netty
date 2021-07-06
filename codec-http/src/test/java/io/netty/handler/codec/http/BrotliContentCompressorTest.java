@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.compression.StandardCompressionOptions;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -51,7 +52,7 @@ class BrotliContentCompressorTest {
 
     @Test
     void testAcceptEncodingHttpRequest() {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(null));
         ch.writeInbound(newRequest());
         FullHttpRequest fullHttpRequest = ch.readInbound();
         fullHttpRequest.release();

@@ -40,26 +40,23 @@ import java.util.Arrays;
 public class HttpContentCompressor extends HttpContentEncoder {
 
     private final boolean supportsCompressionOptions;
+    private final BrotliOptions brotliOptions;
+    private final GzipOptions gzipOptions;
+    private final DeflateOptions deflateOptions;
 
-    private BrotliOptions brotliOptions;
-    private GzipOptions gzipCompressionOptions;
-    private DeflateOptions deflateOptions;
-
-    private int compressionLevel;
-    private int windowBits;
-    private int memLevel;
-    private int contentSizeThreshold;
+    private final int compressionLevel;
+    private final int windowBits;
+    private final int memLevel;
+    private final int contentSizeThreshold;
     private ChannelHandlerContext ctx;
 
     /**
-     * Create a new {@link HttpContentCompressor} Instance with default
-     * implementation of {@link StandardCompressionOptions}
+     * Creates a new handler with the default compression level (<tt>6</tt>),
+     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
      */
+    @Deprecated
     public HttpContentCompressor() {
-        brotliOptions = StandardCompressionOptions.brotli();
-        gzipCompressionOptions = StandardCompressionOptions.gzip();
-        deflateOptions = StandardCompressionOptions.deflate();
-        supportsCompressionOptions = true;
+        this(6);
     }
 
     /**
@@ -129,63 +126,74 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
+        this.brotliOptions = null;
+        this.gzipOptions = null;
+        this.deflateOptions = null;
         supportsCompressionOptions = false;
     }
 
     /**
      * Create a new {@link HttpContentCompressor} Instance with specified
-     * {@link CompressionOptions}s and ContentSizeThreshold set to {@code 0}
+     * {@link CompressionOptions}s and contentSizeThreshold set to {@code 0}
      *
-     * @param compressionOptions {@link CompressionOptions} Instance(s)
+     * @param compressionOptions {@link CompressionOptions} or {@code null} if the default
+     *        should be used.
      */
     public HttpContentCompressor(CompressionOptions... compressionOptions) {
         this(0, compressionOptions);
     }
 
     /**
-     * Create a new {@link HttpContentCompressor} Instance with specified
+     * Create a new {@link HttpContentCompressor} instance with specified
      * {@link CompressionOptions}s
      *
-     * @param compressionOptions {@link CompressionOptions} Instance(s)
+     * @param contentSizeThreshold
+     *        The response body is compressed when the size of the response
+     *        body exceeds the threshold. The value should be a non negative
+     *        number. {@code 0} will enable compression for all responses.
+     * @param compressionOptions {@link CompressionOptions} or {@code null}
+     *        if the default should be used.
      */
     public HttpContentCompressor(int contentSizeThreshold, CompressionOptions... compressionOptions) {
-        this(contentSizeThreshold, Arrays.asList(ObjectUtil.checkNotNull(compressionOptions, "CompressionOptions")));
-    }
-
-    /**
-     * Create a new {@link HttpContentCompressor} Instance with specified
-     * {@link CompressionOptions}s and ContentSizeThreshold set to {@code 0}
-     *
-     * @param compressionOptionsIterable {@link Iterable<CompressionOptions>} Instance
-     */
-    public HttpContentCompressor(Iterable<CompressionOptions> compressionOptionsIterable) {
-        this(0, compressionOptionsIterable);
-    }
-
-    /**
-     * Create a new {@link HttpContentCompressor} Instance with specified
-     * {@link CompressionOptions}s
-     *
-     * @param compressionOptionsIterable {@link Iterable<CompressionOptions>} Instance
-     */
-    public HttpContentCompressor(int contentSizeThreshold, Iterable<CompressionOptions> compressionOptionsIterable) {
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
-        ObjectUtil.checkNotNull(compressionOptionsIterable, "CompressionOptions");
-        ObjectUtil.deepCheckNotNull(compressionOptionsIterable, "CompressionOptions");
-
-        for (CompressionOptions compressionOptions : compressionOptionsIterable) {
-            if (compressionOptions instanceof BrotliOptions) {
-                brotliOptions = (BrotliOptions) compressionOptions;
-            } else if (compressionOptions instanceof GzipOptions) {
-                gzipCompressionOptions = (GzipOptions) compressionOptions;
-            } else if (compressionOptions instanceof DeflateOptions) {
-                deflateOptions = (DeflateOptions) compressionOptions;
-            } else {
-                throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
-                        ": " + compressionOptions);
+        BrotliOptions brotliOptions = null;
+        GzipOptions gzipOptions = null;
+        DeflateOptions deflateOptions = null;
+        if (compressionOptions == null || compressionOptions.length == 0) {
+            brotliOptions = StandardCompressionOptions.brotli();
+            gzipOptions = StandardCompressionOptions.gzip();
+            deflateOptions = StandardCompressionOptions.deflate();
+        } else {
+            Iterable<CompressionOptions> compressionOptionsIterable = Arrays.asList(compressionOptions);
+            ObjectUtil.deepCheckNotNull(compressionOptionsIterable, "compressionOptionsIterable");
+            for (CompressionOptions compressionOption : compressionOptionsIterable) {
+                if (compressionOption instanceof BrotliOptions) {
+                    brotliOptions = (BrotliOptions) compressionOption;
+                } else if (compressionOption instanceof GzipOptions) {
+                    gzipOptions = (GzipOptions) compressionOption;
+                } else if (compressionOption instanceof DeflateOptions) {
+                    deflateOptions = (DeflateOptions) compressionOption;
+                } else {
+                    throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
+                            ": " + compressionOption);
+                }
+            }
+            if (brotliOptions == null) {
+                brotliOptions = StandardCompressionOptions.brotli();
+            }
+            if (gzipOptions == null) {
+                gzipOptions = StandardCompressionOptions.gzip();
+            }
+            if (deflateOptions == null) {
+                deflateOptions = StandardCompressionOptions.deflate();
             }
         }
-
+        this.brotliOptions = brotliOptions;
+        this.gzipOptions = gzipOptions;
+        this.deflateOptions = deflateOptions;
+        this.compressionLevel = -1;
+        this.windowBits = -1;
+        this.memLevel = -1;
         supportsCompressionOptions = true;
     }
 
@@ -216,25 +224,26 @@ public class HttpContentCompressor extends HttpContentEncoder {
                 return null;
             }
 
-            if (targetContentEncoding.equals("gzip") && gzipCompressionOptions != null) {
+            if (targetContentEncoding.equals("gzip")) {
                 return new Result(targetContentEncoding,
                         new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                                 ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                                ZlibWrapper.GZIP, gzipCompressionOptions.compressionLevel()
-                                , gzipCompressionOptions.windowBits(), gzipCompressionOptions.memLevel())));
-            } else if (targetContentEncoding.equals("deflate") && deflateOptions != null) {
+                                ZlibWrapper.GZIP, gzipOptions.compressionLevel()
+                                , gzipOptions.windowBits(), gzipOptions.memLevel())));
+            }
+            if (targetContentEncoding.equals("deflate")) {
                 return new Result(targetContentEncoding,
                         new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                                 ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
                                 ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
                                 deflateOptions.windowBits(), deflateOptions.memLevel())));
-            } else if (targetContentEncoding.equals("br") && brotliOptions != null) {
+            }
+            if (targetContentEncoding.equals("br")) {
                 return new Result(targetContentEncoding,
                         new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                                 ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters())));
-            } else {
-                throw new Error();
             }
+            throw new Error();
         } else {
             ZlibWrapper wrapper = determineWrapper(acceptEncoding);
             if (wrapper == null) {
