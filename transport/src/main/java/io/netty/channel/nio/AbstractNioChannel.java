@@ -22,8 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -37,8 +36,10 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
@@ -54,11 +55,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     boolean readPending;
     private final Runnable clearReadPendingRunnable = this::clearReadPending0;
 
+    private static final AtomicReferenceFieldUpdater<AbstractNioChannel,
+            ChannelOutboundInvokerCallback> CONNECT_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    AbstractNioChannel.class, ChannelOutboundInvokerCallback.class, "connectListener");
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
+    private volatile ChannelOutboundInvokerCallback connectListener;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
@@ -195,6 +200,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
 
+        void closeWithNoop() {
+            close(noopCallback());
+        }
+
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
@@ -217,55 +226,64 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public final void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress,
+                final ChannelOutboundInvokerCallback callback) {
+            if (!trySetUncancellable(callback) || !ensureOpen(callback)) {
                 return;
             }
-
+            if (connectListener != null) {
+                // Already a connect in process.
+                callback.onError(new ConnectionPendingException());
+                return;
+            }
+            connectListener = callback;
             try {
-                if (connectPromise != null) {
-                    // Already a connect in process.
-                    throw new ConnectionPendingException();
-                }
-
                 boolean wasActive = isActive();
                 if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
+                    fulfillConnectPromise(connectListener, wasActive);
                 } else {
-                    connectPromise = promise;
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
-                            ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                            if (connectPromise != null && !connectPromise.isDone()
-                                    && connectPromise.tryFailure(new ConnectTimeoutException(
-                                    "connection timed out: " + remoteAddress))) {
-                                close(newPromise());
+                            ChannelOutboundInvokerCallback connectListener =
+                                    CONNECT_UPDATER.getAndSet(AbstractNioChannel.this, null);
+                            if (connectListener != null) {
+                                connectListener.onError(new ConnectTimeoutException(
+                                        "connection timed out: " + remoteAddress));
+                                closeWithNoop();
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
-                        if (future.isCancelled()) {
-                            if (connectTimeoutFuture != null) {
-                                connectTimeoutFuture.cancel(false);
-                            }
-                            connectPromise = null;
-                            close(newPromise());
+                    connectListener = new ChannelOutboundInvokerCallback() {
+                        @Override
+                        public void onSuccess() {
+                            callback.onSuccess();
                         }
-                    });
+
+                        @Override
+                        public void onError(Throwable cause) {
+                            if (cause instanceof CancellationException) {
+                                if (connectTimeoutFuture != null) {
+                                    connectTimeoutFuture.cancel(false);
+                                }
+                                connectListener = null;
+                                closeWithNoop();
+                            }
+                        }
+                    };
                 }
             } catch (Throwable t) {
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
+                callback.onError(annotateConnectException(t, remoteAddress));
                 closeIfClosed();
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-            if (promise == null) {
+        private void fulfillConnectPromise(ChannelOutboundInvokerCallback callback, boolean wasActive) {
+            if (callback == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
             }
@@ -274,8 +292,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // We still need to ensure we call fireChannelActive() in this case.
             boolean active = isActive();
 
-            // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
+            callback.onSuccess();
 
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
@@ -283,21 +300,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 pipeline().fireChannelActive();
                 readIfIsAutoRead();
             }
-
-            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
-                close(newPromise());
-            }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
-            if (promise == null) {
+        private void fulfillConnectPromise(ChannelOutboundInvokerCallback callback, Throwable cause) {
+            if (callback == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
             }
 
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(cause);
+            callback.onError(cause);
             closeIfClosed();
         }
 
@@ -308,19 +319,20 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             assert eventLoop().inEventLoop();
 
+            ChannelOutboundInvokerCallback callback =
+                    CONNECT_UPDATER.getAndSet(AbstractNioChannel.this, null);
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                fulfillConnectPromise(connectPromise, wasActive);
+                fulfillConnectPromise(callback, wasActive);
             } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+                fulfillConnectPromise(callback, annotateConnectException(t, requestedRemoteAddress));
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
                 if (connectTimeoutFuture != null) {
                     connectTimeoutFuture.cancel(false);
                 }
-                connectPromise = null;
             }
         }
 
@@ -454,11 +466,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        ChannelPromise promise = connectPromise;
-        if (promise != null) {
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(new ClosedChannelException());
-            connectPromise = null;
+        ChannelOutboundInvokerCallback connectListener = CONNECT_UPDATER.getAndSet(AbstractNioChannel.this, null);
+        if (connectListener != null) {
+            connectListener.onError(new ClosedChannelException());
         }
 
         ScheduledFuture<?> future = connectTimeoutFuture;

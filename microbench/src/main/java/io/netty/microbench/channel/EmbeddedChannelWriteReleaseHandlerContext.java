@@ -17,7 +17,8 @@ package io.netty.microbench.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
 
@@ -40,35 +41,35 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
+    public final ChannelHandlerContext write(Object msg, ChannelOutboundInvokerCallback callback) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess();
+                callback.setSuccess();
             } else {
-                channel().write(msg, promise);
+                channel().write(msg, callback);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public final ChannelHandlerContext writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess();
+                callback.setSuccess();
             } else {
-                channel().writeAndFlush(msg, promise);
+                channel().writeAndFlush(msg, callback);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override

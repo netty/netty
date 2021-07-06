@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
@@ -50,6 +51,10 @@ public class LocalChannel extends AbstractChannel {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
+    private static final AtomicReferenceFieldUpdater<LocalChannel, ChannelOutboundInvokerCallback> CONNECT_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    LocalChannel.class, ChannelOutboundInvokerCallback.class, "connectListener");
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
 
@@ -69,7 +74,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelPromise connectPromise;
+    private volatile ChannelOutboundInvokerCallback connectListener;
     private volatile boolean readInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
@@ -173,11 +178,9 @@ public class LocalChannel extends AbstractChannel {
                     finishPeerRead(peer);
                 }
 
-                ChannelPromise promise = connectPromise;
-                if (promise != null) {
-                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    promise.tryFailure(new ClosedChannelException());
-                    connectPromise = null;
+                ChannelOutboundInvokerCallback callback = CONNECT_UPDATER.getAndSet(this, null);
+                if (callback != null) {
+                    callback.onError(new ClosedChannelException());
                 }
             }
 
@@ -215,17 +218,19 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
+    private LocalChannelUnsafe localUnsafe() {
+        return (LocalChannelUnsafe) unsafe();
+    }
+
     private void tryClose(boolean isActive) {
         if (isActive) {
-            unsafe().close(newPromise());
+            localUnsafe().closeWithNoop();
         } else {
             releaseInboundBuffers();
 
-            ChannelPromise promise = connectPromise;
-            if (promise != null) {
-                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(new ClosedChannelException());
-                connectPromise = null;
+            ChannelOutboundInvokerCallback callback = CONNECT_UPDATER.getAndSet(this, null);
+            if (callback != null) {
+                callback.onError(new ClosedChannelException());
             }
         }
     }
@@ -388,24 +393,29 @@ public class LocalChannel extends AbstractChannel {
     private class LocalUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
 
         @Override
+        public void closeWithNoop() {
+            close(noopCallback());
+        }
+
+        @Override
         public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                SocketAddress localAddress, final ChannelOutboundInvokerCallback callback) {
+            if (!trySetUncancellable(callback) || !ensureOpen(callback)) {
                 return;
             }
 
             if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
-                safeSetFailure(promise, cause);
+                callback.onError(cause);
                 pipeline().fireExceptionCaught(cause);
                 return;
             }
 
-            if (connectPromise != null) {
+            if (connectListener != null) {
                 throw new ConnectionPendingException();
             }
 
-            connectPromise = promise;
+            connectListener = callback;
 
             if (state != State.BOUND) {
                 // Not bound yet and no localAddress specified - get one.
@@ -418,8 +428,8 @@ public class LocalChannel extends AbstractChannel {
                 try {
                     doBind(localAddress);
                 } catch (Throwable t) {
-                    safeSetFailure(promise, t);
-                    close(newPromise());
+                    callback.onError(t);
+                    localUnsafe().closeWithNoop();
                     return;
                 }
             }
@@ -427,8 +437,9 @@ public class LocalChannel extends AbstractChannel {
             Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ConnectException("connection refused: " + remoteAddress);
-                safeSetFailure(promise, cause);
-                close(newPromise());
+                connectListener = null;
+                callback.onError(cause);
+                localUnsafe().closeWithNoop();
                 return;
             }
 
@@ -457,11 +468,12 @@ public class LocalChannel extends AbstractChannel {
                 // event is triggered *after* this channel's channelRegistered event, so that this channel's
                 // pipeline is fully initialized by ChannelInitializer before any channelRead events.
                 peer.eventLoop().execute(() -> {
-                    ChannelPromise promise = peer.connectPromise;
+                    ChannelOutboundInvokerCallback callback = CONNECT_UPDATER.getAndSet(peer, null);
 
                     // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
                     // connectPromise may be set to null if doClose() was called in the meantime.
-                    if (promise != null && promise.trySuccess()) {
+                    if (callback != null) {
+                        callback.onSuccess();
                         peer.pipeline().fireChannelActive();
                         peer.readIfIsAutoRead();
                     }

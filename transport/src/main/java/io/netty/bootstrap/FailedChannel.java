@@ -19,7 +19,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 
@@ -95,8 +95,9 @@ final class FailedChannel extends AbstractChannel {
 
     private final class FailedChannelUnsafe extends AbstractUnsafe {
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
+            callback.onError(new UnsupportedOperationException());
         }
     }
 }

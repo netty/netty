@@ -239,7 +239,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!isClosed) {
             if (ctx.channel() instanceof SocketChannel) {
                 handleTCP(ctx, msg, true);

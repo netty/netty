@@ -276,8 +276,9 @@ public class DefaultChannelPipelineTailTest {
 
         private class MyUnsafe extends AbstractUnsafe {
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                if (!ensureOpen(promise)) {
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                ChannelOutboundInvokerCallback callback) {
+                if (!ensureOpen(callback)) {
                     return;
                 }
 
@@ -287,7 +288,7 @@ public class DefaultChannelPipelineTailTest {
                     readIfIsAutoRead();
                 }
 
-                promise.setSuccess();
+                callback.onSuccess();
             }
         }
 

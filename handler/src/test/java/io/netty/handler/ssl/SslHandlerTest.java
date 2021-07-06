@@ -118,7 +118,7 @@ public class SslHandlerTest {
         SSLEngine engine = newClientModeSSLEngine();
         SslHandler handler = new SslHandler(engine) {
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 super.write(ctx, msg, promise);
                 writeLatch.countDown();
             }

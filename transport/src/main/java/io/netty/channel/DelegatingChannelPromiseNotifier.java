@@ -30,7 +30,8 @@ import java.util.concurrent.TimeoutException;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
+public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener,
+        ChannelOutboundInvokerCallback {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DelegatingChannelPromiseNotifier.class);
     private final ChannelPromise delegate;
@@ -200,5 +201,15 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     @Override
     public Throwable cause() {
         return delegate.cause();
+    }
+
+    @Override
+    public void onSuccess() {
+        PromiseNotificationUtil.trySuccess(this, null, logger);
+    }
+
+    @Override
+    public void onError(Throwable cause) {
+        PromiseNotificationUtil.tryFailure(this, cause, logger);
     }
 }

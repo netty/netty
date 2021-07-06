@@ -17,6 +17,7 @@ package io.netty.channel.local;
 
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
@@ -159,9 +160,16 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private final class DefaultServerUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
+
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
+        public void closeWithNoop() {
+            close(voidCallback());
+        }
+
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
+            callback.onError(new UnsupportedOperationException());
         }
 
         @Override

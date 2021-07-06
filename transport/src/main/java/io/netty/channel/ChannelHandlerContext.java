@@ -120,7 +120,8 @@ import io.netty.util.concurrent.EventExecutor;
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
  */
-public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
+public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker,
+        ChannelOutboundInvoker<ChannelHandlerContext> {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
@@ -177,12 +178,6 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
 
     @Override
     ChannelHandlerContext fireChannelWritabilityChanged();
-
-    @Override
-    ChannelHandlerContext read();
-
-    @Override
-    ChannelHandlerContext flush();
 
     /**
      * Return the assigned {@link ChannelPipeline}

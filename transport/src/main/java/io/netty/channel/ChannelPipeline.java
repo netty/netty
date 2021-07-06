@@ -141,14 +141,14 @@ import java.util.NoSuchElementException;
  * </li>
  * <li>Outbound event propagation methods:
  *     <ul>
- *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#write(Object, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#flush()}</li>
- *     <li>{@link ChannelHandlerContext#read()}</li>
- *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#bind(SocketAddress, ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelOutboundInvoker#connect(SocketAddress, SocketAddress, ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelOutboundInvoker#write(Object, ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelHandlerContext#flush(ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelHandlerContext#read(ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelOutboundInvoker#disconnect(ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelOutboundInvoker#close(ChannelOutboundInvokerCallback)}</li>
+ *     <li>{@link ChannelOutboundInvoker#deregister(ChannelOutboundInvokerCallback)}</li>
  *     </ul>
  * </li>
  * </ul>
@@ -208,7 +208,8 @@ import java.util.NoSuchElementException;
  * after the exchange.
  */
 public interface ChannelPipeline
-        extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Map.Entry<String, ChannelHandler>> {
+        extends ChannelInboundInvoker, ChannelOutboundInvoker<ChannelPipeline>,
+        Iterable<Map.Entry<String, ChannelHandler>> {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -536,7 +537,7 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelWritabilityChanged();
 
     @Override
-    ChannelPipeline flush();
+    ChannelOutboundInvokerCallback voidCallback();
 
     /**
      * Returns the {@link EventExecutor} which is used by all {@link ChannelHandler}s in the pipeline.

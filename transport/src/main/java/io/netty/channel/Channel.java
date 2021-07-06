@@ -70,11 +70,11 @@ import java.net.SocketAddress;
  *
  * <h3>Release resources</h3>
  * <p>
- * It is important to call {@link #close()} or {@link #close(ChannelPromise)} to release all
- * resources once you are done with the {@link Channel}. This ensures all resources are
+ * It is important to call {@link #close()} or {@link ChannelOutboundInvoker#close(ChannelOutboundInvokerCallback)}
+ * to release all resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker<Channel>, Comparable<Channel> {
 
     /**
      * Returns the globally unique identifier of this {@link Channel}.
@@ -188,10 +188,136 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     ByteBufAllocator alloc();
 
     @Override
-    Channel read();
+    default ChannelFuture bind(SocketAddress localAddress) {
+        return pipeline().bind(localAddress);
+    }
 
     @Override
-    Channel flush();
+    default ChannelFuture connect(SocketAddress remoteAddress) {
+        return pipeline().connect(remoteAddress);
+    }
+
+    @Override
+    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return pipeline().connect(remoteAddress, localAddress);
+    }
+
+    @Override
+    default ChannelFuture disconnect() {
+        return pipeline().disconnect();
+    }
+
+    @Override
+    default ChannelFuture close() {
+        return pipeline().close();
+    }
+
+    @Override
+    default ChannelFuture register() {
+        return pipeline().register();
+    }
+
+    @Override
+    default ChannelFuture deregister() {
+        return pipeline().deregister();
+    }
+
+    @Override
+    default Channel read() {
+        pipeline().read();
+        return this;
+    }
+
+    @Override
+    default Channel bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+        pipeline().bind(localAddress, callback);
+        return this;
+    }
+
+    @Override
+    default Channel connect(SocketAddress remoteAddress, ChannelOutboundInvokerCallback callback) {
+        pipeline().connect(remoteAddress, callback);
+        return this;
+    }
+
+    @Override
+    default Channel connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
+        pipeline().connect(remoteAddress, localAddress, callback);
+        return this;
+    }
+
+    @Override
+    default Channel disconnect(ChannelOutboundInvokerCallback callback) {
+        pipeline().disconnect(callback);
+        return this;
+    }
+
+    @Override
+    default Channel close(ChannelOutboundInvokerCallback callback) {
+        pipeline().close(callback);
+        return this;
+    }
+
+    @Override
+    default Channel register(ChannelOutboundInvokerCallback callback) {
+        pipeline().register(callback);
+        return this;
+    }
+
+    @Override
+    default Channel deregister(ChannelOutboundInvokerCallback callback) {
+        pipeline().deregister(callback);
+        return this;
+    }
+
+    @Override
+    default ChannelFuture write(Object msg) {
+        return pipeline().write(msg);
+    }
+
+    @Override
+    default Channel write(Object msg, ChannelOutboundInvokerCallback callback) {
+        pipeline().write(msg, callback);
+        return this;
+    }
+
+    @Override
+    default Channel flush() {
+        pipeline().flush();
+        return this;
+    }
+
+    @Override
+    default Channel writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
+        pipeline().writeAndFlush(msg, callback);
+        return this;
+    }
+
+    @Override
+    default ChannelFuture writeAndFlush(Object msg) {
+        return pipeline().writeAndFlush(msg);
+    }
+
+    @Override
+    default ChannelPromise newPromise() {
+        return pipeline().newPromise();
+    }
+
+    @Override
+    default ChannelFuture newSucceededFuture() {
+        return pipeline().newSucceededFuture();
+    }
+
+    @Override
+    default ChannelFuture newFailedFuture(Throwable cause) {
+        return pipeline().newFailedFuture(cause);
+    }
+
+    @Override
+    default ChannelOutboundInvokerCallback voidCallback() {
+        return pipeline().voidCallback();
+    }
 
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
@@ -201,8 +327,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(ChannelPromise)}</li>
-     *   <li>{@link #deregister(ChannelPromise)}</li>
+     *   <li>{@link #register(ChannelOutboundInvokerCallback)}</li>
+     *   <li>{@link #deregister(ChannelOutboundInvokerCallback)}</li>
      * </ul>
      */
     interface Unsafe {
@@ -226,37 +352,50 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         SocketAddress remoteAddress();
 
         /**
-         * Register the {@link Channel} of the {@link ChannelPromise} and notify
-         * the {@link ChannelFuture} once the registration was complete.
+         * Register the {@link Channel} and notify
+         * the {@link ChannelOutboundInvokerCallback} once the operations is complete.
+         *
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void register(ChannelPromise promise);
+        void register(ChannelOutboundInvokerCallback callback);
 
         /**
-         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
-         * it once its done.
+         * Bind the {@link SocketAddress} to the {@link Channel} and notify the {@link ChannelOutboundInvokerCallback}
+         * once the operations is complete.
+         *
+         * @param localAddress      the local {@link SocketAddress}.
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void bind(SocketAddress localAddress, ChannelPromise promise);
+        void bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback);
 
         /**
-         * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
+         * Connect the {@link Channel} with the given remote {@link SocketAddress}.
          * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
          * pass {@code null} to it.
          *
-         * The {@link ChannelPromise} will get notified once the connect operation was complete.
+         * The {@link ChannelOutboundInvokerCallback} will get notified once the connect operation was complete.
+         *
+         * @param remoteAddress     the remote {@link SocketAddress}.
+         * @param localAddress      the local {@link SocketAddress} or {@link null}.
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelOutboundInvokerCallback callback);
 
         /**
-         * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelPromise} once the
-         * operation was complete.
+         * Disconnect the {@link Channel} and notify the {@link ChannelOutboundInvokerCallback} once the
+         * operation was complete
+         *
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void disconnect(ChannelPromise promise);
+        void disconnect(ChannelOutboundInvokerCallback callback);
 
         /**
-         * Close the {@link Channel} of the {@link ChannelPromise} and notify the {@link ChannelPromise} once the
+         * Close the {@link Channel} and notify the {@link ChannelOutboundInvokerCallback} once the
          * operation was complete.
+         *
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void close(ChannelPromise promise);
+        void close(ChannelOutboundInvokerCallback callback);
 
         /**
          * Closes the {@link Channel} immediately without firing any events.  Probably only useful
@@ -265,24 +404,31 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         void closeForcibly();
 
         /**
-         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-         * {@link ChannelPromise} once the operation was complete.
+         * Deregister the {@link Channel} from {@link EventLoop} and notify the
+         * {@link ChannelOutboundInvokerCallback} once the operation was complete.
+         *
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void deregister(ChannelPromise promise);
+        void deregister(ChannelOutboundInvokerCallback callback);
 
         /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
-         * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
+         * {@link ChannelPipeline}. If there's already a pending read operation, this method does nothing.
          */
         void beginRead();
 
         /**
-         * Schedules a write operation.
+         * Schedules a write operation and notifies the {@link ChannelOutboundInvokerCallback} once the operation
+         * completes.
+         *
+         * @param msg               the msg to write.
+         * @param callback  the {@link ChannelOutboundInvokerCallback} that is notified once the operation completes.
          */
-        void write(Object msg, ChannelPromise promise);
+        void write(Object msg, ChannelOutboundInvokerCallback callback);
 
         /**
-         * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
+         * Flush out all write operations scheduled via {@link #write(Object, ChannelOutboundInvokerCallback)}
+         *  and notifies the {@link ChannelOutboundInvokerCallback} once the operation completes.
          */
         void flush();
 

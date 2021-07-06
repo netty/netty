@@ -20,6 +20,9 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.internal.PromiseNotificationUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +31,7 @@ import static java.util.Objects.requireNonNull;
  * a new {@link ChannelPromise} rather than calling the constructor explicitly.
  */
 public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(DefaultChannelPromise.class);
 
     private final Channel channel;
     private long checkpoint;
@@ -130,5 +134,15 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         if (channel().isRegistered()) {
             super.checkDeadLock();
         }
+    }
+
+    @Override
+    public void onSuccess() {
+        PromiseNotificationUtil.trySuccess(this, null, LOGGER);
+    }
+
+    @Override
+    public void onError(Throwable cause) {
+        PromiseNotificationUtil.tryFailure(this, cause, LOGGER);
     }
 }

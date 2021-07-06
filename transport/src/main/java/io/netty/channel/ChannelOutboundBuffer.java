@@ -110,8 +110,8 @@ public final class ChannelOutboundBuffer {
      * Add given message to this {@link ChannelOutboundBuffer}. The given {@link ChannelPromise} will be notified once
      * the message was written.
      */
-    public void addMessage(Object msg, int size, ChannelPromise promise) {
-        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
+    public void addMessage(Object msg, int size, ChannelOutboundInvokerCallback callback) {
+        Entry entry = Entry.newInstance(msg, size, total(msg), callback);
         if (tailEntry == null) {
             flushedEntry = null;
         } else {
@@ -145,12 +145,13 @@ public final class ChannelOutboundBuffer {
             }
             do {
                 flushed ++;
-                if (!entry.promise.setUncancellable()) {
+                if (!AbstractChannel.trySetUncancellable(entry.callback)) {
                     // Was cancelled so make sure we free up memory and notify about the freed bytes
                     int pending = entry.cancel();
                     decrementPendingOutboundBytes(pending, false, true);
                 }
                 entry = entry.next;
+
             } while (entry != null);
 
             // All flushed so reset unflushedEntry
@@ -234,17 +235,6 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Notify the {@link ChannelPromise} of the current message about writing progress.
-     */
-    public void progress(long amount) {
-        Entry e = flushedEntry;
-        assert e != null;
-        ChannelPromise p = e.promise;
-        long progress = e.progress + amount;
-        e.progress = progress;
-    }
-
-    /**
      * Will remove the current message, mark its {@link ChannelPromise} as success and return {@code true}. If no
      * flushed message exists at the time this method is called it will return {@code false} to signal that no more
      * messages are ready to be handled.
@@ -257,7 +247,7 @@ public final class ChannelOutboundBuffer {
         }
         Object msg = e.msg;
 
-        ChannelPromise promise = e.promise;
+        ChannelOutboundInvokerCallback callback = e.callback;
         int size = e.pendingSize;
 
         removeEntry(e);
@@ -265,7 +255,7 @@ public final class ChannelOutboundBuffer {
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
             ReferenceCountUtil.safeRelease(msg);
-            safeSuccess(promise);
+            callback.onSuccess();
             decrementPendingOutboundBytes(size, false, true);
         }
 
@@ -292,7 +282,7 @@ public final class ChannelOutboundBuffer {
         }
         Object msg = e.msg;
 
-        ChannelPromise promise = e.promise;
+        ChannelOutboundInvokerCallback callback = e.callback;
         int size = e.pendingSize;
 
         removeEntry(e);
@@ -301,7 +291,7 @@ public final class ChannelOutboundBuffer {
             // only release message, fail and decrement if it was not canceled before.
             ReferenceCountUtil.safeRelease(msg);
 
-            safeFail(promise, cause);
+            callback.onError(cause);
             decrementPendingOutboundBytes(size, false, notifyWritability);
         }
 
@@ -342,14 +332,12 @@ public final class ChannelOutboundBuffer {
 
             if (readableBytes <= writtenBytes) {
                 if (writtenBytes != 0) {
-                    progress(readableBytes);
                     writtenBytes -= readableBytes;
                 }
                 remove();
             } else { // readableBytes > writtenBytes
                 if (writtenBytes != 0) {
                     buf.readerIndex(readerIndex + (int) writtenBytes);
-                    progress(writtenBytes);
                 }
                 break;
             }
@@ -681,7 +669,7 @@ public final class ChannelOutboundBuffer {
 
                 if (!e.cancelled) {
                     ReferenceCountUtil.safeRelease(e.msg);
-                    safeFail(e.promise, cause);
+                   e.callback.onError(cause);
                 }
                 e = e.recycleAndGetNext();
             }
@@ -785,7 +773,7 @@ public final class ChannelOutboundBuffer {
         Object msg;
         ByteBuffer[] bufs;
         ByteBuffer buf;
-        ChannelPromise promise;
+        ChannelOutboundInvokerCallback callback;
         long progress;
         long total;
         int pendingSize;
@@ -796,12 +784,12 @@ public final class ChannelOutboundBuffer {
             this.handle = handle;
         }
 
-        static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
+        static Entry newInstance(Object msg, int size, long total, ChannelOutboundInvokerCallback callback) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;
             entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
             entry.total = total;
-            entry.promise = promise;
+            entry.callback = callback;
             return entry;
         }
 
@@ -829,7 +817,7 @@ public final class ChannelOutboundBuffer {
             bufs = null;
             buf = null;
             msg = null;
-            promise = null;
+            callback = null;
             progress = 0;
             total = 0;
             pendingSize = 0;

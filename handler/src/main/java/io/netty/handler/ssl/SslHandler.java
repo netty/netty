@@ -472,7 +472,8 @@ public class SslHandler extends ByteToMessageDecoder {
      * Sets the number of bytes to pass to each {@link SSLEngine#wrap(ByteBuffer[], int, int, ByteBuffer)} call.
      * <p>
      * This value will partition data which is passed to write
-     * {@link #write(ChannelHandlerContext, Object, ChannelPromise)}. The partitioning will work as follows:
+     * {@link ChannelHandler#write(ChannelHandlerContext, Object, ChannelPromise)}.
+     * The partitioning will work as follows:
      * <ul>
      * <li>If {@code wrapDataSize <= 0} then we will write each data chunk as is.</li>
      * <li>If {@code wrapDataSize > data size} then we will attempt to aggregate multiple data chunks together.</li>
@@ -697,35 +698,35 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
     @Override
     public void disconnect(final ChannelHandlerContext ctx,
-                           final ChannelPromise promise) throws Exception {
+                           final ChannelPromise promise) {
         closeOutboundAndChannel(ctx, promise, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-                      final ChannelPromise promise) throws Exception {
+                      final ChannelPromise promise) {
         closeOutboundAndChannel(ctx, promise, false);
     }
 
@@ -743,7 +744,7 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!(msg instanceof ByteBufConvertible)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
             ReferenceCountUtil.safeRelease(msg);
@@ -757,7 +758,7 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
@@ -778,7 +779,6 @@ public class SslHandler extends ByteToMessageDecoder {
             wrapAndFlush(ctx);
         } catch (Throwable cause) {
             setHandshakeFailure(ctx, cause);
-            throw cause;
         }
     }
 
@@ -1817,7 +1817,7 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect) throws Exception {
+            final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect)  {
         setState(STATE_OUTBOUND_CLOSED);
         engine.closeOutbound();
 
@@ -1853,7 +1853,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
-    private void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    private void flush(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, promise);
         } else {

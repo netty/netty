@@ -130,30 +130,34 @@ final class ChannelHandlerMask {
                 mask &= ~MASK_USER_EVENT_TRIGGERED;
             }
             if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
-                    SocketAddress.class, ChannelPromise.class)) {
+                    SocketAddress.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_BIND;
             }
             if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
-                    SocketAddress.class, ChannelPromise.class)) {
+                    SocketAddress.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_CONNECT;
             }
-            if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
+            if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class,
+                    ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_DISCONNECT;
             }
-            if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
+            if (isSkippable(handlerType, "close",
+                    ChannelHandlerContext.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_CLOSE;
             }
-            if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
+            if (isSkippable(handlerType, "register",
+                    ChannelHandlerContext.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_REGISTER;
             }
-            if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
+            if (isSkippable(handlerType, "deregister",
+                    ChannelHandlerContext.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_DEREGISTER;
             }
             if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
                 mask &= ~MASK_READ;
             }
-            if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
-                    Object.class, ChannelPromise.class)) {
+            if (isSkippable(handlerType, "write",
+                    ChannelHandlerContext.class, Object.class, ChannelOutboundInvokerCallback.class)) {
                 mask &= ~MASK_WRITE;
             }
             if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {

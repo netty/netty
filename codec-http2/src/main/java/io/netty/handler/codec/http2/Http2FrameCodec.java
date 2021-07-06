@@ -342,7 +342,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             ctx.write(msg, promise);
         } else {
             ReferenceCountUtil.release(msg);
-            throw new UnsupportedMessageTypeException(msg);
+            promise.setFailure(new UnsupportedMessageTypeException(msg));
         }
     }
 

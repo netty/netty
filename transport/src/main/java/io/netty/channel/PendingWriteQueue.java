@@ -114,7 +114,7 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and performs them via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelOutboundInvoker#write(Object, ChannelOutboundInvokerCallback)}.
      *
      * @return  {@link ChannelFuture} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
@@ -203,7 +203,7 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelOutboundInvoker#write(Object, ChannelOutboundInvokerCallback)}.
      *
      * @return  {@link ChannelFuture} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
@@ -217,7 +217,8 @@ public final class PendingWriteQueue {
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
         recycle(write, true);
-        return ctx.write(msg, promise);
+        ctx.write(msg, promise);
+        return promise;
     }
 
     /**

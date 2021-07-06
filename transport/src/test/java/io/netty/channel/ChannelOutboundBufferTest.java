@@ -58,7 +58,7 @@ public class ChannelOutboundBufferTest {
 
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
         ByteBuffer nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
-        buffer.addMessage(buf, buf.readableBytes(), channel.newPromise());
+        buffer.addMessage(buf, buf.readableBytes(), channel.voidCallback());
         assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         ByteBuffer[] buffers = buffer.nioBuffers();
@@ -82,7 +82,7 @@ public class ChannelOutboundBufferTest {
 
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
-            buffer.addMessage(buf.copy(), buf.readableBytes(), channel.newPromise());
+            buffer.addMessage(buf.copy(), buf.readableBytes(), channel.voidCallback());
         }
         assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
@@ -106,7 +106,7 @@ public class ChannelOutboundBufferTest {
         for (int i = 0; i < 65; i++) {
             comp.addComponent(true, buf.copy());
         }
-        buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());
+        buffer.addMessage(comp, comp.readableBytes(), channel.voidCallback());
 
         assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
@@ -135,7 +135,7 @@ public class ChannelOutboundBufferTest {
             comp.addComponent(true, buf.copy());
         }
         assertEquals(65, comp.nioBufferCount());
-        buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());
+        buffer.addMessage(comp, comp.readableBytes(), channel.voidCallback());
         assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
         final int maxCount = 10;    // less than comp.nioBufferCount()
@@ -257,7 +257,8 @@ public class ChannelOutboundBufferTest {
 
         final class TestUnsafe extends AbstractUnsafe {
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                ChannelOutboundInvokerCallback callback) {
                 throw new UnsupportedOperationException();
             }
         }

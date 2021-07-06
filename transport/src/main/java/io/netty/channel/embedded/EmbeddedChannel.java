@@ -33,6 +33,7 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
@@ -224,19 +225,23 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture register() {
-        return register(newPromise());
+    public final ChannelFuture register() {
+        ChannelPromise promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ChannelFuture future = super.register(promise);
-        assert future.isDone();
-        Throwable cause = future.cause();
+    public final EmbeddedChannel register(ChannelOutboundInvokerCallback callback) {
+        ChannelPromise promise = newPromise();
+        callback.notifyWhenFutureCompletes(promise);
+        super.register(promise);
+        assert promise.isDone();
+        Throwable cause = promise.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
-        return future;
+        return this;
     }
 
     @Override
@@ -358,7 +363,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link #write(Object, ChannelOutboundInvokerCallback)}.
      *
      * @see #writeOneOutbound(Object, ChannelPromise)
      */
@@ -444,13 +449,14 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link #write(Object, ChannelOutboundInvokerCallback)}.
      *
      * @see #writeOneInbound(Object, ChannelPromise)
      */
     public ChannelFuture writeOneOutbound(Object msg, ChannelPromise promise) {
         if (checkOpen(true)) {
-            return write(msg, promise);
+            write(msg, promise);
+            return promise;
         }
         checkException(promise);
         return promise;
@@ -555,31 +561,37 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final ChannelFuture close() {
-        return close(newPromise());
+        ChannelPromise promise = newPromise();
+        close(promise);
+        return promise;
+    }
+
+    @Override
+    public final EmbeddedChannel close(ChannelOutboundInvokerCallback callback) {
+        // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
+        // that needs to be run before the actual close takes place.
+        runPendingTasks();
+        ChannelPromise promise = newPromise();
+        callback.notifyWhenFutureCompletes(promise);
+        super.close(promise);
+
+        // Now finish everything else and cancel all scheduled tasks that were not ready set.
+        finishPendingTasks(true);
+        return this;
     }
 
     @Override
     public final ChannelFuture disconnect() {
-        return disconnect(newPromise());
+        ChannelPromise promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
-        // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
-        // that needs to be run before the actual close takes place.
-        runPendingTasks();
-        ChannelFuture future = super.close(promise);
-
-        // Now finish everything else and cancel all scheduled tasks that were not ready set.
-        finishPendingTasks(true);
-        return future;
-    }
-
-    @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        ChannelFuture future = super.disconnect(promise);
+    public final EmbeddedChannel disconnect(ChannelOutboundInvokerCallback callback) {
+        super.disconnect(callback);
         finishPendingTasks(!metadata.hasDisconnect());
-        return future;
+        return this;
     }
 
     private static boolean isNotEmpty(Queue<Object> queue) {
@@ -793,32 +805,33 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void register(ChannelPromise promise) {
-                EmbeddedUnsafe.this.register(promise);
+            public void register(ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.register(callback);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void bind(SocketAddress localAddress, ChannelPromise promise) {
-                EmbeddedUnsafe.this.bind(localAddress, promise);
+            public void bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.bind(localAddress, callback);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.connect(remoteAddress, localAddress, callback);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void disconnect(ChannelPromise promise) {
-                EmbeddedUnsafe.this.disconnect(promise);
+            public void disconnect(ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.disconnect(callback);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void close(ChannelPromise promise) {
-                EmbeddedUnsafe.this.close(promise);
+            public void close(ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.close(callback);
                 mayRunPendingTasks();
             }
 
@@ -829,8 +842,8 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void deregister(ChannelPromise promise) {
-                EmbeddedUnsafe.this.deregister(promise);
+            public void deregister(ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.deregister(callback);
                 mayRunPendingTasks();
             }
 
@@ -841,8 +854,8 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void write(Object msg, ChannelPromise promise) {
-                EmbeddedUnsafe.this.write(msg, promise);
+            public void write(Object msg, ChannelOutboundInvokerCallback callback) {
+                EmbeddedUnsafe.this.write(msg, callback);
                 mayRunPendingTasks();
             }
 
@@ -859,8 +872,9 @@ public class EmbeddedChannel extends AbstractChannel {
         };
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetSuccess(promise);
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelOutboundInvokerCallback callback) {
+            callback.onSuccess();
         }
     }
 

@@ -19,6 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.channel.ChannelOutboundInvokerCallback;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
@@ -167,14 +169,14 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
+    public ChannelHandlerContext register(ChannelOutboundInvokerCallback callback) {
         try {
-            channel().register(promise);
+            channel().register(callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
@@ -183,71 +185,71 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    public final ChannelOutboundInvoker bind(SocketAddress localAddress, ChannelOutboundInvokerCallback callback) {
         try {
-            channel().bind(localAddress, promise);
+            channel().bind(localAddress, callback);
             this.localAddress = localAddress;
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public final ChannelOutboundInvoker connect(SocketAddress remoteAddress, ChannelOutboundInvokerCallback callback) {
         try {
-            channel().connect(remoteAddress, localAddress, promise);
+            channel().connect(remoteAddress, localAddress, callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                                 ChannelPromise promise) {
+    public final ChannelOutboundInvoker connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                                ChannelOutboundInvokerCallback callback) {
         try {
-            channel().connect(remoteAddress, localAddress, promise);
+            channel().connect(remoteAddress, localAddress, callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
+    public final ChannelFuture disconnect(ChannelOutboundInvokerCallback callback) {
         try {
-            channel().disconnect(promise);
+            channel().disconnect(callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
+    public final ChannelHandlerContext close(ChannelOutboundInvokerCallback callback) {
         try {
-            channel().close(promise);
+            channel().close(callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
-    public final ChannelFuture deregister(ChannelPromise promise) {
+    public final ChannelHandlerContext deregister(ChannelOutboundInvokerCallback callback) {
         try {
-            channel().deregister(promise);
+            channel().deregister(callback);
         } catch (Exception e) {
-            promise.setFailure(e);
+            callback.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return callback;
     }
 
     @Override
@@ -266,8 +268,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return channel().write(msg, promise);
+    public ChannelHandlerContext write(Object msg, ChannelOutboundInvokerCallback callback) {
+        return channel().write(msg, callback);
     }
 
     @Override
@@ -277,8 +279,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return channel().writeAndFlush(msg, promise);
+    public ChannelHandlerContext writeAndFlush(Object msg, ChannelOutboundInvokerCallback callback) {
+        return channel().writeAndFlush(msg, callback);
     }
 
     @Override

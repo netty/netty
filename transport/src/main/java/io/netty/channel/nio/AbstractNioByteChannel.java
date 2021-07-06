@@ -102,7 +102,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     shutdownInput();
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
-                    close(newPromise());
+                    closeWithNoop();
                 }
             } else {
                 inputClosedSeenErrorOnRead = true;
@@ -226,7 +226,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final int localFlushedAmount = doWriteBytes(buf);
             if (localFlushedAmount > 0) {
-                in.progress(localFlushedAmount);
                 if (!buf.isReadable()) {
                     in.remove();
                 }
@@ -241,7 +240,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             long localFlushedAmount = doWriteFileRegion(region);
             if (localFlushedAmount > 0) {
-                in.progress(localFlushedAmount);
                 if (region.transferred() >= region.count()) {
                     in.remove();
                 }
