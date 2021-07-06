@@ -41,15 +41,26 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        checkNewCapacity(newCapacity);
-
         int oldCapacity = capacity();
         if (newCapacity == oldCapacity) {
+            ensureAccessible();
             return this;
         }
+        checkNewCapacity(newCapacity);
 
         trimIndicesToCapacity(newCapacity);
         setByteBuffer(reallocateDirect(buffer, newCapacity), false);
         return this;
+    }
+
+    @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        // reallocateDirect copies the buffer's entire backing region so
+        // we use it only when there is no data to discard
+        if (readerIndex() == 0) {
+            capacity(newCapacity);
+            return true;
+        }
+        return super.capacityAndDiscard(newCapacity);
     }
 }

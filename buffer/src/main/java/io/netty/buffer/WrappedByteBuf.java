@@ -72,6 +72,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        return buf.capacityAndDiscard(newCapacity);
+    }
+
+    @Override
     public final int maxCapacity() {
         return buf.maxCapacity();
     }

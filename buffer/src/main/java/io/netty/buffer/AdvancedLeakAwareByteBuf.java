@@ -144,6 +144,12 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
     }
 
     @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.capacityAndDiscard(newCapacity);
+    }
+
+    @Override
     public boolean getBoolean(int index) {
         recordLeakNonRefCountingOperation(leak);
         return super.getBoolean(index);
