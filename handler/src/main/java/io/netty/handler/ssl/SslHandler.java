@@ -1258,9 +1258,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
             }
 
-            // We need to flush one time as there may be an alert that we should send to the remote peer because
-            // of the SSLException reported here.
-            wrapAndFlush(ctx);
+            // Let's check if the handler was removed in the meantime and so pendingUnencryptedWrites is null.
+            if (pendingUnencryptedWrites != null) {
+                // We need to flush one time as there may be an alert that we should send to the remote peer because
+                // of the SSLException reported here.
+                wrapAndFlush(ctx);
+            }
         } catch (SSLException ex) {
             logger.debug("SSLException during trying to call SSLEngine.wrap(...)" +
                     " because of an previous SSLException, ignoring...", ex);
