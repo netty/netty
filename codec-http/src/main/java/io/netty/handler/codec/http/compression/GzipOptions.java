@@ -37,10 +37,12 @@ public final class GzipOptions extends DeflateOptions {
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
      *                         compression level is {@code 6}.
+     *
      * @param windowBits       The base two logarithm of the size of the history buffer.  The
      *                         value should be in the range {@code 9} to {@code 15} inclusive.
      *                         Larger values result in better compression at the expense of
      *                         memory usage.  The default value is {@code 15}.
+     *
      * @param memLevel         How much memory should be allocated for the internal compression
      *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *                         memory.  Larger values result in better and faster compression
