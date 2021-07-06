@@ -178,7 +178,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     /**
      * Invoked on failed initial SSL/TLS handshake.
      */
-    protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
+    protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
         ctx.close();
     }
