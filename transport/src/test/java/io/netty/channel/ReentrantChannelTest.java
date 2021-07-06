@@ -21,6 +21,7 @@ import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -240,6 +241,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     }
 
     @Test
+    @Disabled
     public void testFlushFailure() throws Exception {
 
         LocalAddress addr = new LocalAddress("testFlushFailure");
