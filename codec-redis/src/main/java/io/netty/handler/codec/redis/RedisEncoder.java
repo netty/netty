@@ -100,6 +100,10 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
             writeAggregatedHeader(allocator, RedisMessageType.ARRAY_HEADER, (ArrayHeaderRedisMessage) msg, out);
         } else if (msg instanceof ArrayRedisMessage) {
             writeCollectionMessage(allocator, RedisMessageType.ARRAY_HEADER, (ArrayRedisMessage) msg, out);
+        } else if (msg instanceof PushHeaderRedisMessage) {
+            writeAggregatedHeader(allocator, RedisMessageType.PUSH, (PushHeaderRedisMessage) msg, out);
+        } else if (msg instanceof PushRedisMessage) {
+            writeCollectionMessage(allocator, RedisMessageType.PUSH, (PushRedisMessage) msg, out);
         } else if (msg instanceof SetHeaderRedisMessage) {
             writeAggregatedHeader(allocator, RedisMessageType.SET_HEADER, (SetHeaderRedisMessage) msg, out);
         } else if (msg instanceof SetRedisMessage) {

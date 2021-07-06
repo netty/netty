@@ -363,4 +363,20 @@ public class RedisEncoderTest {
 
         written.release();
     }
+
+    @Test
+    public void shouldEncodePush() {
+        List<RedisMessage> children = new ArrayList<RedisMessage>();
+        children.add(new FullBulkStringRedisMessage(byteBufOf("foo").retain()));
+        children.add(new FullBulkStringRedisMessage(byteBufOf("bar").retain()));
+        RedisMessage msg = new PushRedisMessage(children);
+
+        boolean result = channel.writeOutbound(msg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf(">2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"))));
+        written.release();
+    }
+
 }

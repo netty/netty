@@ -574,4 +574,27 @@ public class RedisDecoderTest {
         assertThat(msg, is(nullValue()));
     }
 
+    @Test
+    public void shouldDecodePush() throws Exception {
+        assertFalse(channel.writeInbound(byteBufOf(">3\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+sim")));
+        assertFalse(channel.writeInbound(byteBufOf("ple\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        PushRedisMessage msg = channel.readInbound();
+        List<RedisMessage> children = msg.children();
+
+        assertThat(msg.children().size(), is(equalTo(3)));
+
+        assertThat(children.get(0), instanceOf(IntegerRedisMessage.class));
+        assertThat(((IntegerRedisMessage) children.get(0)).value(), is(1234L));
+        assertThat(children.get(1), instanceOf(SimpleStringRedisMessage.class));
+        assertThat(((SimpleStringRedisMessage) children.get(1)).content(), is("simple"));
+        assertThat(children.get(2), instanceOf(ErrorRedisMessage.class));
+        assertThat(((ErrorRedisMessage) children.get(2)).content(), is("error"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
 }

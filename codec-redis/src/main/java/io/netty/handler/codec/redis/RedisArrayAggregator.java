@@ -41,7 +41,9 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
     @Override
     protected void decode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
         // only decode Array and Set types
-        if (msg instanceof ArrayHeaderRedisMessage || msg instanceof SetHeaderRedisMessage) {
+        if (msg instanceof ArrayHeaderRedisMessage
+                || msg instanceof SetHeaderRedisMessage
+                || msg instanceof PushHeaderRedisMessage) {
             msg = decodeRedisCollectionHeader((AggregatedHeaderRedisMessage) msg);
             if (msg == null) {
                 return;
@@ -58,8 +60,10 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             if (current.children.size() == current.length) {
                 if (RedisMessageType.ARRAY_HEADER.equals(current.aggregateType)) {
                     msg = new ArrayRedisMessage((List<RedisMessage>) current.children);
-                } else {
+                } else if (RedisMessageType.SET_HEADER.equals(current.aggregateType)) {
                     msg = new SetRedisMessage((Set<RedisMessage>) current.children);
+                } else if (RedisMessageType.PUSH.equals(current.aggregateType)) {
+                    msg = new PushRedisMessage((List<RedisMessage>) current.children);
                 }
                 depths.pop();
             } else {
@@ -76,8 +80,8 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         if (header.isNull()) {
             return ArrayRedisMessage.NULL_INSTANCE;
         } else if (header.length() == 0L) {
-            return (header instanceof ArrayHeaderRedisMessage) ?
-                    ArrayRedisMessage.EMPTY_INSTANCE : SetRedisMessage.EMPTY_INSTANCE;
+            return (header instanceof SetHeaderRedisMessage) ?
+                    SetRedisMessage.EMPTY_INSTANCE : ArrayRedisMessage.EMPTY_INSTANCE;
         } else if (header.length() > 0L) {
             // Currently, this codec doesn't support `long` length for arrays because Java's List.size() is int.
             if (header.length() > Integer.MAX_VALUE) {
@@ -105,6 +109,9 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             } else if (headerType instanceof SetHeaderRedisMessage) {
                 this.children = new HashSet<RedisMessage>(length);
                 this.aggregateType = RedisMessageType.SET_HEADER;
+            } else if (headerType instanceof PushHeaderRedisMessage) {
+                this.children = new ArrayList<RedisMessage>(length);
+                this.aggregateType = RedisMessageType.PUSH;
             } else {
                 // never going to run here
                 throw new CodecException("bad header type: " + headerType);

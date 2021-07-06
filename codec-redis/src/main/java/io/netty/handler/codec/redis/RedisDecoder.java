@@ -194,6 +194,10 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             out.add(new SetHeaderRedisMessage(length));
             resetDecoder();
             return true;
+        case PUSH:
+            out.add(new PushHeaderRedisMessage(length));
+            resetDecoder();
+            return true;
         case MAP_HEADER:
             out.add(new MapHeaderRedisMessage(length));
             resetDecoder();

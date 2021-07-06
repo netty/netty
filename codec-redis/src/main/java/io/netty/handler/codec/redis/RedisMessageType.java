@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Type of <a href="https://redis.io/topics/protocol">RESP (REdis Serialization Protocol)</a>.
+ * Type of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
 public enum RedisMessageType {
