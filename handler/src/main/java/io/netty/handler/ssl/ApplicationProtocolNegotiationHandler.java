@@ -117,6 +117,9 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
+            // Let's first fire the event before we try to modify the pipeline.
+            ctx.fireUserEventTriggered(evt);
+
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
                 if (handshakeEvent.isSuccess()) {
@@ -137,7 +140,6 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                ctx.fireUserEventTriggered(evt);
                 // Handshake failures are handled in exceptionCaught(...).
                 if (handshakeEvent.isSuccess()) {
                     removeSelfIfPresent(ctx);
