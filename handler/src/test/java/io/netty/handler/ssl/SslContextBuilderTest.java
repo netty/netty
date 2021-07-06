@@ -18,8 +18,9 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
@@ -35,11 +36,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.Assert.*;
 
 public class SslContextBuilderTest {
 
@@ -106,33 +103,23 @@ public class SslContextBuilderTest {
     @Test
     public void testContextFromManagersOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        assumeTrue(OpenSsl.useKeyManagerFactory());
+        Assume.assumeTrue(OpenSsl.useKeyManagerFactory());
         testContextFromManagers(SslProvider.OPENSSL);
     }
 
-    @Test
+    @Test(expected = SSLException.class)
     public void testUnsupportedPrivateKeyFailsFastForServer() throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL());
-        assertThrows(SSLException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testUnsupportedPrivateKeyFailsFast(true);
-            }
-        });
+        Assume.assumeTrue(OpenSsl.isBoringSSL());
+        testUnsupportedPrivateKeyFailsFast(true);
     }
 
-    @Test
+    @Test(expected = SSLException.class)
     public void testUnsupportedPrivateKeyFailsFastForClient() throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL());
-        assertThrows(SSLException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testUnsupportedPrivateKeyFailsFast(false);
-            }
-        });
+        Assume.assumeTrue(OpenSsl.isBoringSSL());
+        testUnsupportedPrivateKeyFailsFast(false);
     }
     private static void testUnsupportedPrivateKeyFailsFast(boolean server) throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL());
+        Assume.assumeTrue(OpenSsl.isBoringSSL());
         String cert = "-----BEGIN CERTIFICATE-----\n" +
                 "MIICODCCAY2gAwIBAgIEXKTrajAKBggqhkjOPQQDBDBUMQswCQYDVQQGEwJVUzEM\n" +
                 "MAoGA1UECAwDTi9hMQwwCgYDVQQHDANOL2ExDDAKBgNVBAoMA04vYTEMMAoGA1UE\n" +
@@ -166,15 +153,10 @@ public class SslContextBuilderTest {
         }
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testInvalidCipherJdk() throws Exception {
         OpenSsl.ensureAvailability();
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testInvalidCipher(SslProvider.JDK);
-            }
-        });
+        testInvalidCipher(SslProvider.JDK);
     }
 
     @Test

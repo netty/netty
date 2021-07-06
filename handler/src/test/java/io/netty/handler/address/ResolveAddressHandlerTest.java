@@ -31,19 +31,16 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.*;
 
 public class ResolveAddressHandlerTest {
 
@@ -53,12 +50,12 @@ public class ResolveAddressHandlerTest {
 
     private static EventLoopGroup group;
 
-    @BeforeAll
+    @BeforeClass
     public static void createEventLoop() {
         group = new DefaultEventLoopGroup();
     }
 
-    @AfterAll
+    @AfterClass
     public static void destroyEventLoop() {
         if (group != null) {
             group.shutdownGracefully();

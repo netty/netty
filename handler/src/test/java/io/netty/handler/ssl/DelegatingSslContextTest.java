@@ -17,25 +17,24 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-
 public class DelegatingSslContextTest {
-    private static final String[] EXPECTED_PROTOCOLS = { SslProtocols.TLS_v1_1 };
+    private static final String[] EXPECTED_PROTOCOLS = { SslUtils.PROTOCOL_TLS_V1_1 };
 
     @Test
     public void testInitEngineOnNewEngine() throws Exception {
         SslContext delegating = newDelegatingSslContext();
 
         SSLEngine engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
+        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
 
         engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
-        assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
+        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
     }
 
     @Test
@@ -43,10 +42,10 @@ public class DelegatingSslContextTest {
         SslContext delegating = newDelegatingSslContext();
 
         SslHandler handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
+        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
 
         handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
-        assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
+        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
     }
 
     private static SslContext newDelegatingSslContext() throws Exception {

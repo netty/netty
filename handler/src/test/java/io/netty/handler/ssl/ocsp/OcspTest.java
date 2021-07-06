@@ -41,11 +41,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
@@ -55,60 +50,51 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLHandshakeException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class OcspTest {
 
-    @BeforeAll
+    @BeforeClass
     public static void checkOcspSupported() {
         assumeTrue(OpenSsl.isOcspSupported());
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testJdkClientEnableOcsp() throws Exception {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                SslContextBuilder.forClient()
-                        .sslProvider(SslProvider.JDK)
-                        .enableOcsp(true)
-                        .build();
-            }
-        });
+        SslContextBuilder.forClient()
+                .sslProvider(SslProvider.JDK)
+                .enableOcsp(true)
+                .build();
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testJdkServerEnableOcsp() throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
         try {
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                            .sslProvider(SslProvider.JDK)
-                            .enableOcsp(true)
-                            .build();
-                }
-            });
+            SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                    .sslProvider(SslProvider.JDK)
+                    .enableOcsp(true)
+                    .build();
         } finally {
             ssc.delete();
         }
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testClientOcspNotEnabledOpenSsl() throws Exception {
         testClientOcspNotEnabled(SslProvider.OPENSSL);
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testClientOcspNotEnabledOpenSslRefCnt() throws Exception {
         testClientOcspNotEnabled(SslProvider.OPENSSL_REFCNT);
     }
@@ -119,14 +105,9 @@ public class OcspTest {
                 .build();
         try {
             SslHandler sslHandler = context.newHandler(ByteBufAllocator.DEFAULT);
-            final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+            ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
             try {
-                assertThrows(IllegalStateException.class, new Executable() {
-                    @Override
-                    public void execute() {
-                        engine.getOcspResponse();
-                    }
-                });
+                engine.getOcspResponse();
             } finally {
                 engine.release();
             }
@@ -135,12 +116,12 @@ public class OcspTest {
         }
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testServerOcspNotEnabledOpenSsl() throws Exception {
         testServerOcspNotEnabled(SslProvider.OPENSSL);
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testServerOcspNotEnabledOpenSslRefCnt() throws Exception {
         testServerOcspNotEnabled(SslProvider.OPENSSL_REFCNT);
     }
@@ -153,14 +134,9 @@ public class OcspTest {
                     .build();
             try {
                 SslHandler sslHandler = context.newHandler(ByteBufAllocator.DEFAULT);
-                final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+                ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
                 try {
-                    assertThrows(IllegalStateException.class, new Executable() {
-                        @Override
-                        public void execute() {
-                            engine.setOcspResponse(new byte[] { 1, 2, 3 });
-                        }
-                    });
+                    engine.setOcspResponse(new byte[] { 1, 2, 3 });
                 } finally {
                     engine.release();
                 }
@@ -172,14 +148,12 @@ public class OcspTest {
         }
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientAcceptingOcspStapleOpenSsl() throws Exception {
         testClientAcceptingOcspStaple(SslProvider.OPENSSL);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientAcceptingOcspStapleOpenSslRefCnt() throws Exception {
         testClientAcceptingOcspStaple(SslProvider.OPENSSL_REFCNT);
     }
@@ -220,14 +194,12 @@ public class OcspTest {
         assertArrayEquals(response, actual);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientRejectingOcspStapleOpenSsl() throws Exception {
         testClientRejectingOcspStaple(SslProvider.OPENSSL);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientRejectingOcspStapleOpenSslRefCnt() throws Exception {
         testClientRejectingOcspStaple(SslProvider.OPENSSL_REFCNT);
     }
@@ -262,17 +234,15 @@ public class OcspTest {
         assertArrayEquals(response, actual);
 
         Throwable cause = causeRef.get();
-        assertThat(cause, CoreMatchers.instanceOf(SSLHandshakeException.class));
+        assertTrue("" + cause, cause instanceof SSLHandshakeException);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testServerHasNoStapleOpenSsl() throws Exception {
         testServerHasNoStaple(SslProvider.OPENSSL);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testServerHasNoStapleOpenSslRefCnt() throws Exception {
         testServerHasNoStaple(SslProvider.OPENSSL_REFCNT);
     }
@@ -312,14 +282,12 @@ public class OcspTest {
         assertNull(actual);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientExceptionOpenSsl() throws Exception {
         testClientException(SslProvider.OPENSSL);
     }
 
-    @Test
-    @Timeout(value = 10000L, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 10000L)
     public void testClientExceptionOpenSslRefCnt() throws Exception {
         testClientException(SslProvider.OPENSSL_REFCNT);
     }
@@ -382,7 +350,7 @@ public class OcspTest {
                         Channel server = newServer(group, address, serverSslContext, response, serverHandler);
                         Channel client = newClient(group, address, clientSslContext, callback, clientHandler);
                         try {
-                            assertTrue(latch.await(10L, TimeUnit.SECONDS));
+                            assertTrue("Something went wrong.", latch.await(10L, TimeUnit.SECONDS));
                         } finally {
                             client.close().syncUninterruptibly();
                             server.close().syncUninterruptibly();

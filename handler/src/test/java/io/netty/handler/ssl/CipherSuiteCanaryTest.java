@@ -35,10 +35,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.SocketAddress;
 import java.security.NoSuchAlgorithmException;
@@ -51,37 +47,61 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.Assert.assertTrue;
 
 /**
  * The purpose of this unit test is to act as a canary and catch changes in supported cipher suites.
  */
+@RunWith(Parameterized.class)
 public class CipherSuiteCanaryTest {
 
     private static EventLoopGroup GROUP;
 
     private static SelfSignedCertificate CERT;
 
-    static Collection<Object[]> parameters() {
+    @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}, rfcCipherName = {2}, delegate = {3}")
+    public static Collection<Object[]> parameters() {
        List<Object[]> dst = new ArrayList<Object[]>();
        dst.addAll(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
        return dst;
     }
 
-    @BeforeAll
+    @BeforeClass
     public static void init() throws Exception {
         GROUP = new DefaultEventLoopGroup();
         CERT = new SelfSignedCertificate();
     }
 
-    @AfterAll
+    @AfterClass
     public static void destroy() {
         GROUP.shutdownGracefully();
         CERT.delete();
+    }
+
+    private final SslProvider serverSslProvider;
+
+    private final SslProvider clientSslProvider;
+
+    private final String rfcCipherName;
+    private final boolean delegate;
+
+    public CipherSuiteCanaryTest(SslProvider serverSslProvider, SslProvider clientSslProvider,
+                                 String rfcCipherName, boolean delegate) {
+        this.serverSslProvider = serverSslProvider;
+        this.clientSslProvider = clientSslProvider;
+        this.rfcCipherName = rfcCipherName;
+        this.delegate = delegate;
     }
 
     private static void assumeCipherAvailable(SslProvider provider, String cipher) throws NoSuchAlgorithmException {
@@ -97,7 +117,7 @@ public class CipherSuiteCanaryTest {
         } else {
             cipherSupported = OpenSsl.isCipherSuiteAvailable(cipher);
         }
-        assumeTrue(cipherSupported, "Unsupported cipher: " + cipher);
+        Assume.assumeTrue("Unsupported cipher: " + cipher, cipherSupported);
     }
 
     private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
@@ -108,11 +128,8 @@ public class CipherSuiteCanaryTest {
         }
     }
 
-    @ParameterizedTest(
-            name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}, rfcCipherName = {2}, delegate = {3}")
-    @MethodSource("parameters")
-    public void testHandshake(SslProvider serverSslProvider, SslProvider clientSslProvider,
-                              String rfcCipherName, boolean delegate) throws Exception {
+    @Test
+    public void testHandshake() throws Exception {
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
         assumeCipherAvailable(serverSslProvider, rfcCipherName);
@@ -124,7 +141,7 @@ public class CipherSuiteCanaryTest {
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslProtocols.TLS_v1_2)
+                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                 .build();
 
         final ExecutorService executorService = delegate ? Executors.newCachedThreadPool() : null;
@@ -134,7 +151,7 @@ public class CipherSuiteCanaryTest {
                     .sslProvider(clientSslProvider)
                     .ciphers(ciphers)
                     // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                    .protocols(SslProtocols.TLS_v1_2)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
 
@@ -213,8 +230,8 @@ public class CipherSuiteCanaryTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                               .syncUninterruptibly();
 
-                        assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
-                        assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");
+                        assertTrue("client timeout", clientPromise.await(5L, TimeUnit.SECONDS));
+                        assertTrue("server timeout", serverPromise.await(5L, TimeUnit.SECONDS));
 
                         clientPromise.sync();
                         serverPromise.sync();

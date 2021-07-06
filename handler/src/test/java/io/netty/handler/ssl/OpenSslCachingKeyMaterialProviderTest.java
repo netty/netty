@@ -17,15 +17,13 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
 import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.*;
 
 public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialProviderTest {
 
@@ -42,7 +40,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
 
     @Override
     protected void assertRelease(OpenSslKeyMaterial material) {
-        assertFalse(material.release());
+        Assert.assertFalse(material.release());
     }
 
     @Test

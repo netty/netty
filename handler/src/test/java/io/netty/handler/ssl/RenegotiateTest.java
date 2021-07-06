@@ -31,17 +31,14 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class RenegotiateTest {
 
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Test(timeout = 30000)
     public void testRenegotiateServer() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(2);
@@ -50,7 +47,7 @@ public abstract class RenegotiateTest {
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider())
-                    .protocols(SslProtocols.TLS_v1_2)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                     .build();
 
             ServerBootstrap sb = new ServerBootstrap();
@@ -105,7 +102,7 @@ public abstract class RenegotiateTest {
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(SslProvider.JDK)
-                    .protocols(SslProtocols.TLS_v1_2)
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                     .build();
 
             Bootstrap bootstrap = new Bootstrap();

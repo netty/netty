@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.X509KeyManager;
@@ -31,11 +31,8 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class OpenSslKeyMaterialProviderTest {
 
@@ -43,8 +40,8 @@ public class OpenSslKeyMaterialProviderTest {
     static final String EXISTING_ALIAS = "1";
     private static final String NON_EXISTING_ALIAS = "nonexisting";
 
-    @BeforeAll
-    static void checkOpenSsl() {
+    @BeforeClass
+    public static void checkOpenSsl() {
         OpenSsl.ensureAvailability();
     }
 

@@ -15,6 +15,13 @@
  */
 package io.netty.handler.timeout;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -22,20 +29,13 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import org.junit.Test;
 
 public class IdleStateHandlerTest {
 
@@ -68,7 +68,8 @@ public class IdleStateHandlerTest {
     }
 
     private static void anyIdle(TestableIdleStateHandler idleStateHandler, Object... expected) throws Exception {
-        assertThat(expected.length,  greaterThanOrEqualTo(1));
+
+        assertTrue("The number of expected events must be >= 1", expected.length >= 1);
 
         final List<Object> events = new ArrayList<Object>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
@@ -92,7 +93,7 @@ public class IdleStateHandlerTest {
             // Compare the expected with the actual IdleStateEvents
             for (int i = 0; i < expected.length; i++) {
                 Object evt = events.get(i);
-                assertSame(expected[i], evt, "Element " + i + " is not matching");
+                assertSame("Element " + i + " is not matching", expected[i], evt);
             }
         } finally {
             channel.finishAndReleaseAll();

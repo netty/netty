@@ -31,10 +31,12 @@ import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -44,16 +46,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
+@RunWith(Parameterized.class)
 public class SniClientTest {
-    private static final String PARAMETERIZED_NAME = "{index}: serverSslProvider = {0}, clientSslProvider = {1}";
-    static Collection<Object[]> parameters() {
+
+    @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
+    public static Collection<Object[]> parameters() {
         List<SslProvider> providers = new ArrayList<SslProvider>(Arrays.asList(SslProvider.values()));
         if (!OpenSsl.isAvailable()) {
             providers.remove(SslProvider.OPENSSL);
@@ -69,33 +67,32 @@ public class SniClientTest {
         return params;
     }
 
-    @ParameterizedTest(name = PARAMETERIZED_NAME)
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    @MethodSource("parameters")
-    public void testSniSNIMatcherMatchesClient(SslProvider serverProvider, SslProvider clientProvider)
-            throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
+    private final SslProvider serverProvider;
+    private final SslProvider clientProvider;
+
+    public SniClientTest(SslProvider serverProvider, SslProvider clientProvider) {
+        this.serverProvider = serverProvider;
+        this.clientProvider = clientProvider;
+    }
+
+    @Test(timeout = 30000)
+    public void testSniClient() throws Exception {
+        testSniClient(serverProvider, clientProvider);
+    }
+
+    @Test(timeout = 30000)
+    public void testSniSNIMatcherMatchesClient() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
-    @ParameterizedTest(name = PARAMETERIZED_NAME)
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    @MethodSource("parameters")
-    public void testSniSNIMatcherDoesNotMatchClient(
-            final SslProvider serverProvider, final SslProvider clientProvider) {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
-        assertThrows(SSLException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
-            }
-        });
+    @Test(timeout = 30000, expected = SSLException.class)
+    public void testSniSNIMatcherDoesNotMatchClient() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
     }
 
-    @ParameterizedTest(name = PARAMETERIZED_NAME)
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    @MethodSource("parameters")
-    public void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
+    private static void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
@@ -151,11 +148,11 @@ public class SniClientTest {
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler)
                     .connect(address).syncUninterruptibly().channel();
-            assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
+            Assert.assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
 
             // After we are done with handshaking getHandshakeSession() should return null.
             handler.handshakeFuture().syncUninterruptibly();
-            assertNull(handler.engine().getHandshakeSession());
+            Assert.assertNull(handler.engine().getHandshakeSession());
 
             if (PlatformDependent.javaVersion() >= 8) {
                 SniClientJava8TestUtil.assertSSLSession(

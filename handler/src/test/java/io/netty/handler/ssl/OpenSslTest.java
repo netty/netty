@@ -15,16 +15,15 @@
  */
 package io.netty.handler.ssl;
 
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class OpenSslTest {
 
     @Test
     public void testDefaultCiphers() {
         if (!OpenSsl.isTlsv13Supported()) {
-            assertTrue(
+            Assert.assertTrue(
                     OpenSsl.DEFAULT_CIPHERS.size() <= SslUtils.DEFAULT_CIPHER_SUITES.length);
         }
     }

@@ -20,17 +20,16 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnitRunner;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+@RunWith(MockitoJUnitRunner.class)
 public class OptionalSslHandlerTest {
 
     private static final String SSL_HANDLER_NAME = "sslhandler";
@@ -45,9 +44,8 @@ public class OptionalSslHandlerTest {
     @Mock
     private ChannelPipeline pipeline;
 
-    @BeforeEach
+    @Before
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
         when(context.pipeline()).thenReturn(pipeline);
     }
 

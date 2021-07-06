@@ -16,6 +16,17 @@
 
 package io.netty.handler.ssl;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -29,6 +40,9 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import io.netty.util.concurrent.Future;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -62,25 +76,9 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
-import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-import static org.junit.Assume.assumeTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-
+@RunWith(Parameterized.class)
 public class SniHandlerTest {
 
     private static ApplicationProtocolConfig newApnConfig() {
@@ -137,7 +135,8 @@ public class SniHandlerTest {
         return sslCtxBuilder.build();
     }
 
-    static Iterable<?> data() {
+    @Parameterized.Parameters(name = "{index}: sslProvider={0}")
+    public static Iterable<?> data() {
         List<SslProvider> params = new ArrayList<SslProvider>(3);
         if (OpenSsl.isAvailable()) {
             params.add(SslProvider.OPENSSL);
@@ -147,15 +146,20 @@ public class SniHandlerTest {
         return params;
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testNonSslRecord(SslProvider provider) throws Exception {
+    private final SslProvider provider;
+
+    public SniHandlerTest(SslProvider provider) {
+        this.provider = provider;
+    }
+
+    @Test
+    public void testNonSslRecord() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         try {
             final AtomicReference<SslHandshakeCompletionEvent> evtRef =
                     new AtomicReference<SslHandshakeCompletionEvent>();
             SniHandler handler = new SniHandler(new DomainNameMappingBuilder<SslContext>(nettyContext).build());
-            final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SslHandshakeCompletionEvent) {
@@ -165,29 +169,27 @@ public class SniHandlerTest {
             });
 
             try {
-                final byte[] bytes = new byte[1024];
+                byte[] bytes = new byte[1024];
                 bytes[0] = SslUtils.SSL_CONTENT_TYPE_ALERT;
 
-                DecoderException e = assertThrows(DecoderException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        ch.writeInbound(Unpooled.wrappedBuffer(bytes));
-                    }
-                });
-                assertThat(e.getCause(), CoreMatchers.instanceOf(NotSslRecordException.class));
+                try {
+                    ch.writeInbound(Unpooled.wrappedBuffer(bytes));
+                    fail();
+                } catch (DecoderException e) {
+                    assertTrue(e.getCause() instanceof NotSslRecordException);
+                }
                 assertFalse(ch.finish());
             } finally {
                 ch.finishAndReleaseAll();
             }
-            assertThat(evtRef.get().cause(), CoreMatchers.instanceOf(NotSslRecordException.class));
+            assertTrue(evtRef.get().cause() instanceof NotSslRecordException);
         } finally {
             releaseAll(nettyContext);
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testServerNameParsing(SslProvider provider) throws Exception {
+    @Test
+    public void testServerNameParsing() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
         SslContext leanContext2 = makeSslContext(provider, false);
@@ -249,9 +251,8 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testNonAsciiServerNameParsing(SslProvider provider) throws Exception {
+    @Test(expected = DecoderException.class)
+    public void testNonAsciiServerNameParsing() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
         SslContext leanContext2 = makeSslContext(provider, false);
@@ -267,13 +268,13 @@ public class SniHandlerTest {
                     .build();
 
             SniHandler handler = new SniHandler(mapping);
-            final EmbeddedChannel ch = new EmbeddedChannel(handler);
+            EmbeddedChannel ch = new EmbeddedChannel(handler);
 
             try {
                 // hex dump of a client hello packet, which contains an invalid hostname "CHAT4。LEANCLOUD。CN"
                 String tlsHandshakeMessageHex1 = "16030100";
                 // part 2
-                final String tlsHandshakeMessageHex = "bd010000b90303a74225676d1814ba57faff3b366" +
+                String tlsHandshakeMessageHex = "bd010000b90303a74225676d1814ba57faff3b366" +
                         "3656ed05ee9dbb2a4dbb1bb1c32d2ea5fc39e0000000100008c0000001700150000164348" +
                         "415434E380824C45414E434C4F5544E38082434E000b000403000102000a00340032000e0" +
                         "00d0019000b000c00180009000a0016001700080006000700140015000400050012001300" +
@@ -284,13 +285,7 @@ public class SniHandlerTest {
                 // Decode should fail because of the badly encoded "HostName" string in the SNI extension
                 // that isn't ASCII as per RFC 6066 - https://tools.ietf.org/html/rfc6066#page-6
                 ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
-
-                assertThrows(DecoderException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
-                    }
-                });
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
             } finally {
                 ch.finishAndReleaseAll();
             }
@@ -299,9 +294,8 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testFallbackToDefaultContext(SslProvider provider) throws Exception {
+    @Test
+    public void testFallbackToDefaultContext() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
         SslContext leanContext2 = makeSslContext(provider, false);
@@ -350,10 +344,8 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testMajorVersionNot3(SslProvider provider) throws Exception {
+    @Test(timeout = 10000)
+    public void testMajorVersionNot3() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
 
         try {
@@ -393,9 +385,8 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testSniWithApnHandler(SslProvider provider) throws Exception {
+    @Test
+    public void testSniWithApnHandler() throws Exception {
         SslContext nettyContext = makeSslContext(provider, true);
         SslContext sniContext = makeSslContext(provider, true);
         final SslContext clientContext = makeSslClientContext(provider, true);
@@ -480,10 +471,8 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testReplaceHandler(SslProvider provider) throws Exception {
+    @Test(timeout = 30000)
+    public void testReplaceHandler() throws Exception {
         switch (provider) {
             case OPENSSL:
             case OPENSSL_REFCNT:
@@ -634,19 +623,16 @@ public class SniHandlerTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testNonFragmented(SslProvider provider) throws Exception {
-        testWithFragmentSize(provider, Integer.MAX_VALUE);
+    @Test
+    public void testNonFragmented() throws Exception {
+        testWithFragmentSize(Integer.MAX_VALUE);
+    }
+    @Test
+    public void testFragmented() throws Exception {
+        testWithFragmentSize(50);
     }
 
-    @ParameterizedTest(name = "{index}: sslProvider={0}")
-    @MethodSource("data")
-    public void testFragmented(SslProvider provider) throws Exception {
-        testWithFragmentSize(provider, 50);
-    }
-
-    private void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
+    private void testWithFragmentSize(final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
@@ -654,7 +640,7 @@ public class SniHandlerTest {
                 .build();
         try {
             @SuppressWarnings("unchecked") final EmbeddedChannel server = new EmbeddedChannel(
-                    new SniHandler(mock(DomainNameMapping.class)) {
+                    new SniHandler(Mockito.mock(DomainNameMapping.class)) {
                 @Override
                 protected Future<SslContext> lookup(final ChannelHandlerContext ctx, final String hostname) {
                     assertEquals(sni, hostname);

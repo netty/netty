@@ -18,7 +18,8 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Callable;
@@ -27,9 +28,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UniqueIpFilterTest {
 
@@ -44,8 +42,8 @@ public class UniqueIpFilterTest {
                 Future<EmbeddedChannel> future2 = newChannelAsync(barrier, executorService, ipFilter);
                 EmbeddedChannel ch1 = future1.get();
                 EmbeddedChannel ch2 = future2.get();
-                assertTrue(ch1.isActive() || ch2.isActive());
-                assertFalse(ch1.isActive() && ch2.isActive());
+                Assert.assertTrue(ch1.isActive() || ch2.isActive());
+                Assert.assertFalse(ch1.isActive() && ch2.isActive());
 
                 barrier.reset();
                 ch1.close().await();
