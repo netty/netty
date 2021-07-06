@@ -20,8 +20,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -145,7 +145,17 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
             }
         }
 
+        if (evt instanceof ChannelInputShutdownEvent) {
+            fireBufferedMessages();
+        }
+
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        fireBufferedMessages();
+        super.channelInactive(ctx);
     }
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
