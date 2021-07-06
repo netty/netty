@@ -789,7 +789,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
 
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "Ljava/lang/String;", done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, certificateCallbackClass, name, done);

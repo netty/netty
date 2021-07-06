@@ -26,7 +26,7 @@
   <artifactId>netty-incubator-codec-quic</artifactId>
   <version>0.0.16.Final-SNAPSHOT</version>
   <name>Netty/Incubator/Codec/Quic</name>
-  <packaging>jar</packaging>
+  <packaging>${packaging.type}</packaging>
   <url>https://netty.io/</url>
   <description>
     Netty is an asynchronous event-driven network application framework for
@@ -70,6 +70,7 @@
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
+    <packaging.type>jar</packaging.type>
     <netty.version>4.1.65.Final</netty.version>
     <netty.build.version>29</netty.build.version>
     <junit.version>5.7.0</junit.version>
@@ -173,6 +174,9 @@
         <os>
           <family>linux</family>
         </os>
+        <property>
+          <name>!android</name>
+        </property>
       </activation>
       <properties>
         <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
@@ -188,6 +192,249 @@
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
+    </profile>
+    <profile>
+      <id>android-armeabi-v7a</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+        <property>
+          <name>android</name>
+        </property>
+      </activation>
+      <properties>
+        <!-- https://developer.android.com/ndk/guides/other_build_systems -->
+        <!-- https://github.com/android/ndk/issues/1324 -->
+        <androidAbi>armeabi-v7a</androidAbi>
+        <androidTriple>armv7a-linux-androideabi</androidTriple>
+        <androidTriple2>arm-linux-androideabi</androidTriple2>
+        <quicheTarget>armv7-linux-androideabi</quicheTarget>
+      </properties>
+    </profile>
+    <profile>
+      <id>android-arm64-v8a</id>
+      <properties>
+        <androidAbi>arm64-v8a</androidAbi>
+        <androidTriple>aarch64-linux-android</androidTriple>
+        <androidTriple2>aarch64-linux-android</androidTriple2>
+        <quicheTarget>aarch64-linux-android</quicheTarget>
+      </properties>
+    </profile>
+    <profile>
+      <id>android-x86</id>
+      <properties>
+        <androidAbi>x86</androidAbi>
+        <androidTriple>i686-linux-android</androidTriple>
+        <androidTriple2>i686-linux-android</androidTriple2>
+        <quicheTarget>i686-linux-android</quicheTarget>
+      </properties>
+    </profile>
+    <profile>
+      <id>android-x86_64</id>
+      <properties>
+        <androidAbi>x86_64</androidAbi>
+        <androidTriple>x86_64-linux-android</androidTriple>
+        <androidTriple2>x86_64-linux-android</androidTriple2>
+        <quicheTarget>x86_64-linux-android</quicheTarget>
+      </properties>
+    </profile>
+    <profile>
+      <id>android</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+        <property>
+          <name>android</name>
+        </property>
+      </activation>
+      <properties>
+        <packaging.type>aar</packaging.type>
+        <skipTests>true</skipTests>
+        <platform>android</platform>
+        <androidNdkVersion>21</androidNdkVersion>
+        <androidMinSdkVersion>21</androidMinSdkVersion>
+        <cargoTarget>--target=${quicheTarget}</cargoTarget>
+        <skipIteration>false</skipIteration>
+        <nativeLibOnlyDir>${project.build.directory}/native-lib-only/${androidAbi}</nativeLibOnlyDir>
+        <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
+        <extraCflags>-O3 -fno-omit-frame-pointer</extraCflags>
+        <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
+
+        <!-- https://developer.android.com/ndk/guides/other_build_systems -->
+        <jniLibName>netty_quiche</jniLibName>
+        <jni.classifier>${platform}</jni.classifier>
+        <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+        <bundleNativeCode>META-INF/native/${jniLibName}.dll;osname=android;processor=${androidAbi}</bundleNativeCode>
+        <ndkToolchain>${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64</ndkToolchain>
+        <extraLdflags>-Wl,-soname=${jniLibName}.so -Wl,--strip-debug -Wl,--exclude-libs,ALL -lm</extraLdflags>
+
+        <extraConfigureArg>--host=${androidTriple}</extraConfigureArg>
+
+        <boringsslBuildDir>${boringsslSourceDir}/build/${androidAbi}</boringsslBuildDir>
+        <boringsslHomeDir>${project.build.directory}/boringssl/${androidAbi}</boringsslHomeDir>
+        <quicheHomeDir>${project.build.directory}/quiche/${androidAbi}</quicheHomeDir>
+        <hawtjniBuildDir>${project.build.directory}/native-build/${androidAbi}</hawtjniBuildDir>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.soebes.maven.plugins</groupId>
+            <artifactId>iterator-maven-plugin</artifactId>
+            <!-- Don't use 0.5.1, it contains a change that merges all properties, 
+              and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
+              Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
+            <version>0.5.0</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>invoker</goal>
+                </goals>
+                <configuration>
+                  <itemsWithProperties>
+                    <itemWithProperty>
+                      <name>arm64-v8a</name>
+                      <properties>
+                        <skipIteration>true</skipIteration>
+                      </properties>
+                    </itemWithProperty>
+                    <itemWithProperty>
+                      <name>x86</name>
+                      <properties>
+                        <skipIteration>true</skipIteration>
+                      </properties>
+                    </itemWithProperty>
+                    <itemWithProperty>
+                      <name>x86_64</name>
+                      <properties>
+                        <skipIteration>true</skipIteration>
+                      </properties>
+                    </itemWithProperty>
+                  </itemsWithProperties>
+                  <goals>
+                    <goal>package</goal>
+                  </goals>
+                  <profiles>android-@item@,android</profiles>
+                  <skip>${skipIteration}</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.fusesource.hawtjni</groupId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>generate-native-lib</id>
+                <configuration>
+                  <configureArgs>
+                    <configureArg>${extraConfigureArg}</configureArg>
+                    <configureArg>${extraConfigureArg2}</configureArg>
+                    <configureArg>CFLAGS=${cflags}</configureArg>
+                    <configureArg>LDFLAGS=${ldflags} ${extraLdflags}</configureArg>
+                    <configureArg>--libdir=${hawtjniBuildDir}/native-build/target/lib</configureArg>
+
+                    <configureArg>TOOLCHAIN=${ndkToolchain}</configureArg>
+                    <configureArg>TARGET=${androidTriple}</configureArg>
+                    <configureArg>API=${androidMinSdkVersion}</configureArg>
+                    <configureArg>AR=${ndkToolchain}/bin/${androidTriple2}-ar</configureArg>
+                    <configureArg>CC=${ndkToolchain}/bin/${androidTriple}${androidMinSdkVersion}-clang</configureArg>
+                    <configureArg>AS=${ndkToolchain}/bin/${androidTriple2}-as</configureArg>
+                    <configureArg>CXX=${ndkToolchain}/bin/${androidTriple}${androidMinSdkVersion}-clang++</configureArg>
+                    <configureArg>LD=${ndkToolchain}/bin/${androidTriple2}-ld</configureArg>
+                    <configureArg>RANLIB=${ndkToolchain}/bin/${androidTriple2}-ranlib</configureArg>
+                    <configureArg>STRIP=${ndkToolchain}/bin/${androidTriple2}-strip</configureArg>
+                  </configureArgs>
+                  <buildDirectory>${hawtjniBuildDir}</buildDirectory>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-jar</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>generate-manifest</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <!-- Copy the native lib that was generated and the license material for attribution -->
+            <executions>
+              <execution>
+                <id>copy-android-native-lib</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <!-- Add the ant tasks from ant-contrib -->
+                    <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                    <filter token="JAVA_MODULE_NAME" value="${javaModuleName}" />
+                    <filter token="MIN_SDK_VERSION" value="${androidMinSdkVersion}" />
+
+                    <copy file="src/main/AndroidManifest.xml" todir="${project.build.directory}/android-build/" filtering="true" />
+
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Copy the native lib that was generated and the license material for attribution -->
+              <execution>
+                <id>copy-native-lib-and-license</id>
+                <phase>none</phase>
+              </execution>
+              <!-- Copy the native android lib that was generated and the license material for attribution -->
+              <execution>
+                <id>copy-android-native-libs</id>
+                <phase>process-test-resources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <!-- Add the ant tasks from ant-contrib -->
+                    <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                    <copy todir="${project.build.directory}/android-build/native-libs/${androidAbi}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="\1" />
+                    </copy>
+
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>linux-aarch64</id>
@@ -277,484 +524,526 @@
           </execution>
         </executions>
       </plugin>
-    <plugin>
-      <artifactId>maven-antrun-plugin</artifactId>
-      <version>1.8</version>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.ant</groupId>
-          <artifactId>ant</artifactId>
-          <version>1.10.9</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.ant</groupId>
-          <artifactId>ant-commons-net</artifactId>
-          <version>1.9.6</version>
-        </dependency>
-        <dependency>
-          <groupId>ant-contrib</groupId>
-          <artifactId>ant-contrib</artifactId>
-          <version>1.0b3</version>
-        </dependency>
-      </dependencies>
-      <executions>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.10.9</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-commons-net</artifactId>
+            <version>1.9.6</version>
+          </dependency>
+          <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>1.0b3</version>
+          </dependency>
+        </dependencies>
+        <executions>
 
-        <!-- Build the BoringSSL static libs -->
-        <execution>
-          <id>build-boringssl</id>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>run</goal>
-          </goals>
-          <configuration>
-            <target>
-              <!-- Add the ant tasks from ant-contrib -->
-              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
-              <property environment="env" />
-              <if>
-                <available file="${boringsslHomeDir}" />
-                <then>
-                  <echo message="BoringSSL was already build, skipping the build step." />
-                </then>
-                <else>
-                  <if>
-                    <available file="${boringsslSourceDir}" />
-                    <then>
-                      <echo message="BoringSSL was already cloned, skipping the clone step." />
-                    </then>
-                    <else>
-                      <echo message="Clone BoringSSL" />
-
-                      <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
-                        <arg value="clone" />
-                        <arg value="--branch" />
-                        <arg value="${boringsslBranch}" />
-                        <arg value="${boringsslRepository}" />
-                        <arg value="${boringsslSourceDir}" />
-                      </exec>
-                    </else>
-                  </if>
-
-                  <echo message="Building BoringSSL" />
-
-                  <!-- Use the known SHA of the commit -->
-                  <exec executable="git" failonerror="true" dir="${boringsslSourceDir}" resolveexecutable="true">
-                    <arg value="checkout" />
-                    <arg value="${boringsslCommitSha}" />
-                  </exec>
-
-                  <mkdir dir="${boringsslBuildDir}" />
-                  <exec executable="cmake" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
-                    <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
-                    <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
-                    <arg value="-DCMAKE_BUILD_TYPE=Release" />
-                    <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
-                    <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
-                    <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
-                    <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
-                    <arg line="${extraCmakeFlags}" />
-                    <arg value="-GNinja" />
-                    <arg value="${boringsslSourceDir}" />
-                  </exec>
-                  <if>
-                    <!-- may be called ninja-build or ninja -->
-                    <!-- See https://github.com/netty/netty-tcnative/issues/475 -->
-                    <available file="ninja-build" filepath="${env.PATH}" />
-                    <then>
-                      <property name="ninjaExecutable" value="ninja-build" />
-                    </then>
-                    <else>
-                      <property name="ninjaExecutable" value="ninja" />
-                    </else>
-                  </if>
-                  <exec executable="${ninjaExecutable}" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
-                    <arg value="crypto" />
-                    <arg value="ssl" />
-                  </exec>
-
-                  <!-- Only copy the libs and header files we need -->
-                  <mkdir dir="${boringsslHomeBuildDir}" />
-                  <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
-                  <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
-                  <copy todir="${boringsslHomeIncludeDir}" verbose="true">
-                    <fileset dir="${boringsslSourceDir}/include" />
-                  </copy>
-                </else>
-              </if>
-            </target>
-          </configuration>
-        </execution>
-        <!-- Build the Quiche static lib -->
-        <execution>
-          <id>build-quiche</id>
-          <phase>generate-sources</phase>
-          <goals>
-             <goal>run</goal>
-          </goals>
-          <configuration>
-            <target>
-              <!-- Add the ant tasks from ant-contrib -->
-              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
-              <property environment="env" />
-              <if>
-                <available file="${quicheHomeDir}" />
-                <then>
-                  <echo message="Quiche was already build, skipping the build step." />
-                </then>
-
-                <else>
-                  <if>
-                    <available file="${quicheSourceDir}" />
-                    <then>
-                      <echo message="Quiche was already cloned, skipping the clone step." />
-                    </then>
-                    <else>
-                      <echo message="Clone Quiche" />
-
-                      <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
-                        <arg value="clone" />
-                        <arg value="--recursive" />
-                        <arg value="--branch" />
-                        <arg value="${quicheBranch}" />
-                        <arg value="${quicheRepository}" />
-                        <arg value="${quicheSourceDir}" />
-                      </exec>
-
-                      <!-- Use the known SHA of the commit -->
-                      <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg value="checkout" />
-                        <arg value="${quicheCommitSha}" />
-                      </exec>
-                    </else>
-                  </if>
-                  <echo message="Building Quiche" />
-                  <if>
-                    <equals arg1="${os.detected.name}" arg2="windows" />
-                    <then>
-                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg line="build --features &quot;ffi qlog&quot; --release" />
-                        <arg value="${cargoTarget}" />
-                        <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
-                        <env key="DEBUG" value="true" />
-                        <env key="OPT_LEVEL" value="3" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
-                      </exec>
-                    </then>
-                    <elseif>
-                     <equals arg1="${crossCompile}" arg2="true" />
+          <!-- Build the BoringSSL static libs -->
+          <execution>
+            <id>build-boringssl</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Add the ant tasks from ant-contrib -->
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                <property environment="env" />
+                <if>
+                  <available file="${boringsslHomeDir}" />
+                  <then>
+                    <echo message="BoringSSL was already build, skipping the build step." />
+                  </then>
+                  <else>
+                    <if>
+                      <available file="${boringsslSourceDir}" />
                       <then>
-                        <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg line="build --features &quot;ffi qlog&quot; --release" />
-                          <arg value="${cargoTarget}" />
-                          <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
-                          <!-- Lets enable frame-pointers so we can profile better -->
-                          <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
-                          <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
+                        <echo message="BoringSSL was already cloned, skipping the clone step." />
+                      </then>
+                      <else>
+                        <echo message="Clone BoringSSL" />
+
+                        <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                          <arg value="clone" />
+                          <arg value="--branch" />
+                          <arg value="${boringsslBranch}" />
+                          <arg value="${boringsslRepository}" />
+                          <arg value="${boringsslSourceDir}" />
+                        </exec>
+                      </else>
+                    </if>
+
+                    <echo message="Building BoringSSL" />
+
+                    <!-- Use the known SHA of the commit -->
+                    <exec executable="git" failonerror="true" dir="${boringsslSourceDir}" resolveexecutable="true">
+                      <arg value="checkout" />
+                      <arg value="${boringsslCommitSha}" />
+                    </exec>
+
+                    <mkdir dir="${boringsslBuildDir}" />
+
+                    <if>
+                      <equals arg1="${platform}" arg2="android" />
+                      <then>
+                        <!-- https://boringssl.googlesource.com/boringssl/+/HEAD/BUILDING.md#building-for-android -->
+                        <exec executable="cmake" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
+                          <arg value="-DANDROID_ABI=${androidAbi}" />
+                          <arg value="-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake" />
+                          <arg value="-DANDROID_NATIVE_API_LEVEL=${androidNdkVersion}" />
+                          <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
+                          <arg value="-DCMAKE_BUILD_TYPE=Release" />
+                          <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
+                          <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
+                          <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                          <arg value="-GNinja" />
+                          <arg value="${boringsslSourceDir}" />
                         </exec>
                       </then>
-                    </elseif>
-                    <else>
-                      <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                        <arg line="build --features &quot;ffi qlog&quot; --release" />
-                        <env key="CFLAGS" value="${extraCflags}" />
-                        <env key="CXXFLAGS" value="${extraCxxflags}" />
-                        <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
-                        <!-- Lets enable frame-pointers so we can profile better -->
-                        <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
-                      </exec>
-                    </else>
-                  </if>
-                  <!-- Only copy the libs and header files we need -->
-                  <mkdir dir="${quicheHomeDir}" />
-                  <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
-                  <copy todir="${quicheHomeIncludeDir}">
-                    <fileset dir="${quicheSourceDir}/include" />
-                  </copy>
-                </else>
-              </if>
-            </target>
-          </configuration>
-        </execution>
-        <execution>
-          <id>copy-src</id>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>run</goal>
-          </goals>
-          <configuration>
-            <target>
-              <!-- Copy all of the c code -->
-              <delete dir="${generatedSourcesDir}" quiet="true" />
-              <copy todir="${generatedSourcesDir}/c">
-                <fileset dir="${project.basedir}/src/main/c" />
-              </copy>
+                      <else>
+                        <exec executable="cmake" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
+                          <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
+                          <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
+                          <arg value="-DCMAKE_BUILD_TYPE=Release" />
+                          <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
+                          <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
+                          <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                          <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
+                          <arg line="${extraCmakeFlags}" />
+                          <arg value="-GNinja" />
+                          <arg value="${boringsslSourceDir}" />
+                        </exec>
+                      </else>
+                    </if>
+                    <if>
+                      <!-- may be called ninja-build or ninja -->
+                      <!-- See https://github.com/netty/netty-tcnative/issues/475 -->
+                      <available file="ninja-build" filepath="${PATH}" />
+                      <then>
+                        <property name="ninjaExecutable" value="ninja-build" />
+                      </then>
+                      <else>
+                        <property name="ninjaExecutable" value="ninja" />
+                      </else>
+                    </if>
+                    <exec executable="${ninjaExecutable}" failonerror="true" dir="${boringsslBuildDir}" resolveexecutable="true">
+                      <arg value="crypto" />
+                      <arg value="ssl" />
+                    </exec>
 
-              <copy todir="${generatedSourcesDir}/c">
-                <fileset dir="${jniUtilIncludeDir}" />
-              </copy>
-            </target>
-          </configuration>
-        </execution>
+                    <!-- Only copy the libs and header files we need -->
+                    <mkdir dir="${boringsslHomeBuildDir}" />
+                    <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy todir="${boringsslHomeIncludeDir}" verbose="true">
+                      <fileset dir="${boringsslSourceDir}/include" />
+                    </copy>
+                  </else>
+                </if>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Build the Quiche static lib -->
+          <execution>
+            <id>build-quiche</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Add the ant tasks from ant-contrib -->
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                <property environment="env" />
+                <if>
+                  <available file="${quicheHomeDir}" />
+                  <then>
+                    <echo message="Quiche was already build, skipping the build step." />
+                  </then>
 
-        <execution>
-          <!-- Adjust our template and copy it over so it can be used when compiling on windows -->
-          <id>setup-template</id>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>run</goal>
-          </goals>
-          <configuration>
-            <target>
-              <!-- Add the ant tasks from ant-contrib -->
-              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
-              <property environment="env" />
-              <!-- Convert the paths to windows format -->
-              <pathconvert property="boringsslHomeIncludeWindowsDir" targetos="windows">
-                <path location="${boringsslHomeIncludeDir}" />
-              </pathconvert>
-              <pathconvert property="quicheHomeIncludeWindowsDir" targetos="windows">
-                <path location="${quicheHomeIncludeDir}" />
-              </pathconvert>
-              <pathconvert property="boringsslHomeBuildWindowsDir" targetos="windows">
-                <path location="${boringsslHomeBuildDir}" />
-              </pathconvert>
-              <pathconvert property="quicheHomeBuildWindowsDir" targetos="windows">
-                <path location="${quicheHomeBuildDir}" />
-              </pathconvert>
+                  <else>
+                    <if>
+                      <available file="${quicheSourceDir}" />
+                      <then>
+                        <echo message="Quiche was already cloned, skipping the clone step." />
+                      </then>
+                      <else>
+                        <echo message="Clone Quiche" />
 
-              <!-- Copy and filter the template MSVC project -->
-              <filter token="BORINGSSL_INCLUDE_DIR" value="${boringsslHomeIncludeWindowsDir}" />
-              <filter token="QUICHE_INCLUDE_DIR" value="${quicheHomeIncludeWindowsDir}" />
-              <filter token="BORINGSSL_LIB_DIR" value="${boringsslHomeBuildWindowsDir}" />
-              <filter token="QUICHE_LIB_DIR" value="${quicheHomeBuildWindowsDir}" />
-              <filter token="QUICHE_LIB" value="${libquiche}" />
-              <filter token="CRYPTO_LIB" value="${libcrypto}" />
-              <filter token="SSL_LIB" value="${libssl}" />
+                        <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
+                          <arg value="clone" />
+                          <arg value="--recursive" />
+                          <arg value="--branch" />
+                          <arg value="${quicheBranch}" />
+                          <arg value="${quicheRepository}" />
+                          <arg value="${quicheSourceDir}" />
+                        </exec>
 
-              <copy file="src/main/native-package/vs2010.custom.props.template" tofile="${templateDir}/vs2010.custom.props" filtering="true" overwrite="true" verbose="true" />
-            </target>
-          </configuration>
-        </execution>
+                        <!-- Use the known SHA of the commit -->
+                        <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                          <arg value="checkout" />
+                          <arg value="${quicheCommitSha}" />
+                        </exec>
+                      </else>
+                    </if>
+                    <echo message="Building Quiche" />
+                    <if>
+                      <equals arg1="${platform}" arg2="android" />
+                      <then>
+                        <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                          <arg line="ndk ${cargoTarget} -p ${androidNdkVersion} -- build --features &quot;ffi qlog&quot; --release" />
+                          <env key="CFLAGS" value="${extraCflags}" />
+                          <env key="CXXFLAGS" value="${extraCxxflags}" />
+                          <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                        </exec>
+                      </then>
+                      <else>
+                        <if>
+                          <equals arg1="${os.detected.name}" arg2="windows" />
+                          <then>
+                            <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                              <arg line="build --features &quot;ffi qlog&quot; --release" />
+                              <arg value="${cargoTarget}" />
+                              <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
+                              <env key="DEBUG" value="true" />
+                              <env key="OPT_LEVEL" value="3" />
+                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                            </exec>
+                          </then>
+                          <elseif>
+                            <equals arg1="${crossCompile}" arg2="true" />
+                            <then>
+                              <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                                <arg line="build --features &quot;ffi qlog&quot; --release" />
+                                <arg value="${cargoTarget}" />
+                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <!-- Lets enable frame-pointers so we can profile better -->
+                                <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
+                                <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
+                              </exec>
+                            </then>
+                          </elseif>
+                          <else>
+                            <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                              <arg line="build --features &quot;ffi qlog&quot; --release" />
+                              <env key="CFLAGS" value="${extraCflags}" />
+                              <env key="CXXFLAGS" value="${extraCxxflags}" />
+                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                              <!-- Lets enable frame-pointers so we can profile better -->
+                              <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
+                            </exec>
+                          </else>
+                        </if>
+                      </else>
+                    </if>
+                    <!-- Only copy the libs and header files we need -->
+                    <mkdir dir="${quicheHomeDir}" />
+                    <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
+                    <copy todir="${quicheHomeIncludeDir}">
+                      <fileset dir="${quicheSourceDir}/include" />
+                    </copy>
+                  </else>
+                </if>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-src</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Copy all of the c code -->
+                <delete dir="${generatedSourcesDir}" quiet="true" />
+                <copy todir="${generatedSourcesDir}/c">
+                  <fileset dir="${project.basedir}/src/main/c" />
+                </copy>
 
-        <!-- Copy the native lib that was generated and the license material for attribution -->
-        <execution>
-          <id>copy-native-lib-and-license</id>
-          <phase>process-test-resources</phase>
-          <goals>
-            <goal>run</goal>
-          </goals>
-          <configuration>
-            <target>
-              <!-- Add the ant tasks from ant-contrib -->
-              <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                <copy todir="${generatedSourcesDir}/c">
+                  <fileset dir="${jniUtilIncludeDir}" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
 
-              <copy todir="${project.build.outputDirectory}" includeEmptyDirs="false">
-                <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
-                <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
-              </copy>
+          <execution>
+            <!-- Adjust our template and copy it over so it can be used when compiling on windows -->
+            <id>setup-template</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Add the ant tasks from ant-contrib -->
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                <property environment="env" />
+                <!-- Convert the paths to windows format -->
+                <pathconvert property="boringsslHomeIncludeWindowsDir" targetos="windows">
+                  <path location="${boringsslHomeIncludeDir}" />
+                </pathconvert>
+                <pathconvert property="quicheHomeIncludeWindowsDir" targetos="windows">
+                  <path location="${quicheHomeIncludeDir}" />
+                </pathconvert>
+                <pathconvert property="boringsslHomeBuildWindowsDir" targetos="windows">
+                  <path location="${boringsslHomeBuildDir}" />
+                </pathconvert>
+                <pathconvert property="quicheHomeBuildWindowsDir" targetos="windows">
+                  <path location="${quicheHomeBuildDir}" />
+                </pathconvert>
 
-              <!-- Copy license material for attribution-->
-              <copy file="NOTICE.txt" todir="${project.build.outputDirectory}/META-INF/" />
-              <copy file="LICENSE.txt" todir="${project.build.outputDirectory}/META-INF/" />
-              <copy todir="${project.build.outputDirectory}/META-INF/license">
-                <fileset dir="license" />
-              </copy>
+                <!-- Copy and filter the template MSVC project -->
+                <filter token="BORINGSSL_INCLUDE_DIR" value="${boringsslHomeIncludeWindowsDir}" />
+                <filter token="QUICHE_INCLUDE_DIR" value="${quicheHomeIncludeWindowsDir}" />
+                <filter token="BORINGSSL_LIB_DIR" value="${boringsslHomeBuildWindowsDir}" />
+                <filter token="QUICHE_LIB_DIR" value="${quicheHomeBuildWindowsDir}" />
+                <filter token="QUICHE_LIB" value="${libquiche}" />
+                <filter token="CRYPTO_LIB" value="${libcrypto}" />
+                <filter token="SSL_LIB" value="${libssl}" />
 
-            </target>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
-    <plugin>
-      <artifactId>maven-compiler-plugin</artifactId>
-      <version>3.8.0</version>
-      <configuration>
-        <compilerVersion>1.8</compilerVersion>
-        <fork>true</fork>
-        <source>1.8</source>
-        <target>1.8</target>
-        <debug>true</debug>
-        <optimize>true</optimize>
-        <showDeprecation>true</showDeprecation>
-        <showWarnings>true</showWarnings>
-        <compilerArgument>-Xlint:-options</compilerArgument>
-        <meminitial>256m</meminitial>
-        <maxmem>1024m</maxmem>
-        <excludes>
-          <exclude>**/package-info.java</exclude>
-        </excludes>
-      </configuration>
-    </plugin>
-    <plugin>
-      <artifactId>maven-checkstyle-plugin</artifactId>
-      <version>3.1.0</version>
-      <executions>
-        <execution>
-          <id>check-style</id>
-          <goals>
-            <goal>check</goal>
-          </goals>
-          <phase>validate</phase>
-          <configuration>
-            <consoleOutput>true</consoleOutput>
-            <logViolationsToConsole>true</logViolationsToConsole>
-            <failsOnError>true</failsOnError>
-            <failOnViolation>true</failOnViolation>
-            <configLocation>io/netty/checkstyle.xml</configLocation>
-            <sourceDirectories>
-              <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-              <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
-            </sourceDirectories>
-          </configuration>
-          <inherited>false</inherited>
-        </execution>
-      </executions>
-      <dependencies>
-        <dependency>
-          <groupId>com.puppycrawl.tools</groupId>
-          <artifactId>checkstyle</artifactId>
-          <version>8.29</version>
-        </dependency>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-build-common</artifactId>
-          <version>${netty.build.version}</version>
-        </dependency>
-      </dependencies>
-    </plugin>
-    <plugin>
-      <artifactId>maven-surefire-plugin</artifactId>
-      <version>2.22.1</version>
-      <configuration>
-        <includes>
-          <include>**/*Test*.java</include>
-        </includes>
-        <excludes>
-          <exclude>**/Abstract*</exclude>
-        </excludes>
-        <runOrder>random</runOrder>
-        <systemPropertyVariables>
-          <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
-          <logLevel>info</logLevel>
-        </systemPropertyVariables>
-        <properties>
-          <property>
-            <name>listener</name>
-            <value>io.netty.build.junit.TimedOutTestsListener</value>
-          </property>
-        </properties>
-        <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
-        <trimStackTrace>false</trimStackTrace>
-        <argLine>${test.argLine}</argLine>
-      </configuration>
-    </plugin>
-    <!-- always produce osgi bundles -->
-    <plugin>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>maven-bundle-plugin</artifactId>
-      <version>2.5.4</version>
-      <executions>
-        <execution>
-          <id>generate-manifest</id>
-          <phase>process-classes</phase>
-          <goals>
-            <goal>manifest</goal>
-          </goals>
-          <configuration>
-            <supportedProjectTypes>
-              <supportedProjectType>jar</supportedProjectType>
-              <supportedProjectType>bundle</supportedProjectType>
-            </supportedProjectTypes>
-            <instructions>
-              <Export-Package>${project.groupId}.*</Export-Package>
-              <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
-              <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
-              <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
-              <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
-              <Quiche-Branch>${quicheBranch}</Quiche-Branch>
-            </instructions>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
+                <copy file="src/main/native-package/vs2010.custom.props.template" tofile="${templateDir}/vs2010.custom.props" filtering="true" overwrite="true" verbose="true" />
 
-    <plugin>
-      <artifactId>maven-source-plugin</artifactId>
-      <version>3.2.0</version>
-      <!-- Eclipse-related OSGi manifests
-            See https://github.com/netty/netty/issues/3886
-            More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
-      <configuration>
-        <archive>
-          <manifestEntries>
-            <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
-            <Bundle-Name>${project.name}</Bundle-Name>
-            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
-            <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
-            <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
-            <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
-          </manifestEntries>
-        </archive>
-      </configuration>
+                <!-- Copy custom.m4 to fix building library without version-suffix on Android -->
+                <if>
+                  <equals arg1="${platform}" arg2="android" />
+                  <then>
+                    <copy file="src/main/native-package/m4/custom.m4.android.template" tofile="${templateDir}/m4/custom.m4" filtering="true" overwrite="true" verbose="true" />
+                  </then>
+                </if>
+              </target>
+            </configuration>
+          </execution>
 
-      <executions>
-        <execution>
-          <id>attach-sources</id>
-          <phase>prepare-package</phase>
-          <goals>
-            <goal>jar-no-fork</goal>
-          </goals>
-        </execution>
-        <execution>
-          <id>attach-test-sources</id>
-          <phase>prepare-package</phase>
-          <goals>
-            <goal>test-jar-no-fork</goal>
-          </goals>
-        </execution>
-      </executions>
-    </plugin>
-    <plugin>
-      <artifactId>maven-javadoc-plugin</artifactId>
-      <version>2.10.4</version>
-      <configuration>
-        <detectOfflineLinks>false</detectOfflineLinks>
-        <breakiterator>true</breakiterator>
-        <version>false</version>
-        <author>false</author>
-        <keywords>true</keywords>
-        <source>8</source>
-      </configuration>
-    </plugin>
-    <plugin>
-      <artifactId>maven-deploy-plugin</artifactId>
-      <version>2.8.2</version>
-      <configuration>
-        <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
-      </configuration>
-    </plugin>
-    <plugin>
-      <artifactId>maven-release-plugin</artifactId>
-      <version>2.5.3</version>
-      <configuration>
-        <useReleaseProfile>false</useReleaseProfile>
-        <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
-        <autoVersionSubmodules>true</autoVersionSubmodules>
-        <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
-        <tagNameFormat>${project.artifactId}-@{project.version}</tagNameFormat>
-      </configuration>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.maven.scm</groupId>
-          <artifactId>maven-scm-api</artifactId>
-          <version>1.9.4</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.maven.scm</groupId>
-          <artifactId>maven-scm-provider-gitexe</artifactId>
-          <version>1.9.4</version>
-        </dependency>
-      </dependencies>
+          <!-- Copy the native lib that was generated and the license material for attribution -->
+          <execution>
+            <id>copy-native-lib-and-license</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Add the ant tasks from ant-contrib -->
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                <copy todir="${project.build.outputDirectory}" includeEmptyDirs="false">
+                  <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
+                  <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
+                </copy>
+
+                <!-- Copy license material for attribution-->
+                <copy file="NOTICE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+                <copy file="LICENSE.txt" todir="${project.build.outputDirectory}/META-INF/" />
+                <copy todir="${project.build.outputDirectory}/META-INF/license">
+                  <fileset dir="license" />
+                </copy>
+
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <compilerVersion>1.8</compilerVersion>
+          <fork>true</fork>
+          <source>1.8</source>
+          <target>1.8</target>
+          <debug>true</debug>
+          <optimize>true</optimize>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
+          <compilerArgument>-Xlint:-options</compilerArgument>
+          <meminitial>256m</meminitial>
+          <maxmem>1024m</maxmem>
+          <excludes>
+            <exclude>**/package-info.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>check-style</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>validate</phase>
+            <configuration>
+              <consoleOutput>true</consoleOutput>
+              <logViolationsToConsole>true</logViolationsToConsole>
+              <failsOnError>true</failsOnError>
+              <failOnViolation>true</failOnViolation>
+              <configLocation>io/netty/checkstyle.xml</configLocation>
+              <sourceDirectories>
+                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+              </sourceDirectories>
+            </configuration>
+            <inherited>false</inherited>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>8.29</version>
+          </dependency>
+          <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-build-common</artifactId>
+            <version>${netty.build.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.1</version>
+        <configuration>
+          <includes>
+            <include>**/*Test*.java</include>
+          </includes>
+          <excludes>
+            <exclude>**/Abstract*</exclude>
+          </excludes>
+          <runOrder>random</runOrder>
+          <systemPropertyVariables>
+            <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
+            <logLevel>info</logLevel>
+          </systemPropertyVariables>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>io.netty.build.junit.TimedOutTestsListener</value>
+            </property>
+          </properties>
+          <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
+          <trimStackTrace>false</trimStackTrace>
+          <argLine>${test.argLine}</argLine>
+        </configuration>
+        </plugin>
+      <!-- always produce osgi bundles -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.5.4</version>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
+              <instructions>
+                <Export-Package>${project.groupId}.*</Export-Package>
+                <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
+                <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
+                <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
+                <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
+                <Quiche-Branch>${quicheBranch}</Quiche-Branch>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.0</version>
+        <!-- Eclipse-related OSGi manifests
+              See https://github.com/netty/netty/issues/3886
+              More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+              <Bundle-Name>${project.name}</Bundle-Name>
+              <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+              <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+              <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+              <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
+            </manifestEntries>
+          </archive>
+        </configuration>
+
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-test-sources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>test-jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.4</version>
+        <configuration>
+          <detectOfflineLinks>false</detectOfflineLinks>
+          <breakiterator>true</breakiterator>
+          <version>false</version>
+          <author>false</author>
+          <keywords>true</keywords>
+          <source>8</source>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.8.2</version>
+        <configuration>
+          <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5.3</version>
+        <configuration>
+          <useReleaseProfile>false</useReleaseProfile>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+          <tagNameFormat>${project.artifactId}-@{project.version}</tagNameFormat>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-api</artifactId>
+            <version>1.9.4</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>1.9.4</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.fusesource.hawtjni</groupId>
@@ -762,7 +1051,7 @@
         <version>1.18</version>
         <executions>
           <execution>
-            <id>build-native-lib</id>
+            <id>generate-native-lib</id>
             <configuration>
               <name>${jniLibName}</name>
               <nativeSourceDirectory>${generatedSourcesDir}</nativeSourceDirectory>
@@ -821,6 +1110,28 @@
               </archive>
               <classifier>${jni.classifier}</classifier>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.simpligility.maven.plugins</groupId>
+        <artifactId>android-maven-plugin</artifactId>
+        <version>4.6.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <sdk>
+            <platform>${androidMinSdkVersion}</platform>
+          </sdk>
+          <androidManifestFile>${project.build.directory}/android-build/AndroidManifest.xml</androidManifestFile>
+          <nativeLibrariesDirectory>${project.build.directory}/android-build/native-libs</nativeLibrariesDirectory>
+          <classesJarExcludes>
+            <exclude>META-INF</exclude>
+          </classesJarExcludes>
+          <classifier>${jni.classifier}</classifier>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
           </execution>
         </executions>
       </plugin>
