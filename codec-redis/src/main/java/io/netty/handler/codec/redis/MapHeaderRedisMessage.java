@@ -17,6 +17,10 @@ package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * Header of Redis Map Message. the length represent the number of field-value pairs,
+ * but the number of redis message.
+ */
 @UnstableApi
 public class MapHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 

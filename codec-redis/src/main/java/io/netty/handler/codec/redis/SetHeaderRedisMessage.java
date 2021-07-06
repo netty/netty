@@ -17,6 +17,9 @@ package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * Header of Redis Set Message.
+ */
 @UnstableApi
 public class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 

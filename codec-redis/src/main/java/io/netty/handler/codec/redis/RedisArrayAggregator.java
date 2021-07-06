@@ -32,8 +32,6 @@ import java.util.Set;
 /**
  * Aggregates {@link RedisMessage} parts into {@link ArrayRedisMessage} or {@link SetRedisMessage}.
  * This decoder should be used together with {@link RedisDecoder}.
- *
- * todo rename RedisArrayAggregator to RedisCollectionAggregator?
  */
 @UnstableApi
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {

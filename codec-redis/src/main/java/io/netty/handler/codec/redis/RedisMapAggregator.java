@@ -74,8 +74,6 @@ public final class RedisMapAggregator extends MessageToMessageDecoder<RedisMessa
             // Currently, this codec doesn't support `long` length for arrays because Java's Map.size() is int.
             if (header.length() > Integer.MAX_VALUE) {
                 throw new CodecException("this codec doesn't support longer length than " + Integer.MAX_VALUE);
-            } else if (header.length() % 2 != 0) {
-                throw new CodecException("the length must be even in Map types, but now is " + header.length());
             }
 
             // start aggregating array or set according header type

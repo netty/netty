@@ -542,20 +542,15 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldErrorOnDecodeOddLengthMap() {
-        assertThrows(DecoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                assertFalse(channel.writeInbound(byteBufOf("%3\r\n")));
-                assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
-                assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
-                assertFalse(channel.writeInbound(byteBufOf("+second\r\n")));
+    public void shouldNotBeDecodedMapOnNotEnoughMessage() {
+        assertFalse(channel.writeInbound(byteBufOf("%2\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+second\r\n")));
 
-                RedisMessage msg = channel.readInbound();
+        MapRedisMessage msg = channel.readInbound();
 
-                ReferenceCountUtil.release(msg);
-            }
-        });
+        assertThat(msg, is(nullValue()));
     }
 
 }
