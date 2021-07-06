@@ -23,6 +23,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -49,8 +51,9 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         return new EmbeddedChannel(new ZstdEncoder());
     }
 
-    @Override
-    public void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
+    @ParameterizedTest
+    @MethodSource("largeData")
+    public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 
