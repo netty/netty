@@ -125,6 +125,14 @@ and decompression library, which can be obtained at:
   * HOMEPAGE:
     * https://github.com/jponge/lzma-java
 
+This product optionally depends on 'zstd-jni', a zstd-jni Java compression
+and decompression library, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.zstd-jni.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/luben/zstd-jni
+
 This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
 and decompression library written by William Kinney. It can be obtained at:
 
@@ -196,7 +204,7 @@ non-blocking XML processor, which can be obtained at:
   * LICENSE:
     * license/LICENSE.aalto-xml.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://wiki.fasterxml.com/AaltoHome
+    * https://wiki.fasterxml.com/AaltoHome
 
 This product contains a modified version of 'HPACK', a Java implementation of
 the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
