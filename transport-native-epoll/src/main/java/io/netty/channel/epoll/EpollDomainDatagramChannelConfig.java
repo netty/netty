@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
-import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
 public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig implements DomainDatagramChannelConfig {
@@ -47,11 +46,7 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                // https://man7.org/linux/man-pages/man7/unix.7.html
-                // TODO Check SO_RCVBUF, it is specified in Linux manual page that
-                // "The SO_SNDBUF socket option does have an effect for UNIX domain
-                // sockets, but the SO_RCVBUF option does not."
-                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_RCVBUF, SO_SNDBUF);
+                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_SNDBUF);
     }
 
     @Override
@@ -59,9 +54,6 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
     public <T> T getOption(ChannelOption<T> option) {
         if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             return (T) Boolean.valueOf(activeOnOpen);
-        }
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
         }
         if (option == SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
@@ -76,8 +68,6 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
 
         if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             setActiveOnOpen((Boolean) value);
-        } else if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
         } else if (option == SO_SNDBUF) {
             setSendBufferSize((Integer) value);
         } else {
@@ -145,25 +135,6 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
     public EpollDomainDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
-    }
-
-    @Override
-    public EpollDomainDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            ((EpollDomainDatagramChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public int getReceiveBufferSize() {
-        try {
-            return ((EpollDomainDatagramChannel) channel).socket.getReceiveBufferSize();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
     }
 
     @Override

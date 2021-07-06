@@ -34,8 +34,6 @@ import io.netty.channel.WriteBufferWaterMark;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
- * </tr><tr>
  * <td>{@link ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr>
  * </table>
@@ -60,16 +58,6 @@ public interface DomainDatagramChannelConfig extends ChannelConfig {
 
     @Override
     DomainDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
-
-    /**
-     * Sets the {@link java.net.StandardSocketOptions#SO_RCVBUF} option.
-     */
-    DomainDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize);
-
-    /**
-     * Gets the {@link java.net.StandardSocketOptions#SO_RCVBUF} option.
-     */
-    int getReceiveBufferSize();
 
     @Override
     DomainDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);

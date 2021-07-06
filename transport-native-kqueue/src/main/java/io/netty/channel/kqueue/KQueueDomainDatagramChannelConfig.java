@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
-import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
 public final class KQueueDomainDatagramChannelConfig
@@ -47,7 +46,7 @@ public final class KQueueDomainDatagramChannelConfig
     @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(),
-                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_RCVBUF, SO_SNDBUF);
+                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_SNDBUF);
     }
 
     @Override
@@ -55,9 +54,6 @@ public final class KQueueDomainDatagramChannelConfig
     public <T> T getOption(ChannelOption<T> option) {
         if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             return (T) Boolean.valueOf(activeOnOpen);
-        }
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
         }
         if (option == SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
@@ -72,8 +68,6 @@ public final class KQueueDomainDatagramChannelConfig
 
         if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             setActiveOnOpen((Boolean) value);
-        } else if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
         } else if (option == SO_SNDBUF) {
             setSendBufferSize((Integer) value);
         } else {
@@ -141,25 +135,6 @@ public final class KQueueDomainDatagramChannelConfig
     public KQueueDomainDatagramChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
         super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
         return this;
-    }
-
-    @Override
-    public KQueueDomainDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            ((KQueueDomainDatagramChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public int getReceiveBufferSize() {
-        try {
-            return ((KQueueDomainDatagramChannel) channel).socket.getReceiveBufferSize();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
     }
 
     @Override
