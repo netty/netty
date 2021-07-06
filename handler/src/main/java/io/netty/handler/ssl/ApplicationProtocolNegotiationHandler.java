@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -143,8 +144,18 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
                 }
             }
         } else {
+            if (evt instanceof ChannelInputShutdownEvent) {
+                fireBufferedMessages();
+            }
+
             ctx.fireUserEventTriggered(evt);
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        fireBufferedMessages();
+        ctx.fireChannelInactive();
     }
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
