@@ -22,16 +22,17 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class IpSubnetFilterTest {
 
@@ -109,16 +110,16 @@ public class IpSubnetFilterTest {
             protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 assertTrue(ctx.channel().isActive());
                 assertTrue(ctx.channel().isWritable());
-                Assert.assertEquals("192.168.57.1", remoteAddress.getHostName());
+                assertEquals("192.168.57.1", remoteAddress.getHostName());
 
                 return ctx.writeAndFlush(Unpooled.wrappedBuffer(message));
             }
         };
         EmbeddedChannel chDeny = newEmbeddedInetChannel("192.168.57.1", denyHandler);
         ByteBuf out = chDeny.readOutbound();
-        Assert.assertEquals(7, out.readableBytes());
+        assertEquals(7, out.readableBytes());
         for (byte i = 1; i <= 7; i++) {
-            Assert.assertEquals(i, out.readByte());
+            assertEquals(i, out.readByte());
         }
         assertFalse(chDeny.isActive());
         assertFalse(chDeny.isOpen());
@@ -126,7 +127,7 @@ public class IpSubnetFilterTest {
         RuleBasedIpFilter allowHandler = new RuleBasedIpFilter(filter0) {
             @Override
             protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-                Assert.fail();
+                fail();
                 return null;
             }
         };

@@ -18,9 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509ExtendedKeyManager;
@@ -28,6 +26,8 @@ import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class OpenSslKeyMaterialManagerTest {
 
@@ -71,7 +71,7 @@ public class OpenSslKeyMaterialManagerTest {
                 new OpenSslKeyMaterialProvider(keyManager, null) {
             @Override
             OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
-                Assert.fail("Should not be called when alias is null");
+                fail("Should not be called when alias is null");
                 return null;
             }
         });

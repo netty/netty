@@ -107,8 +107,8 @@ public class JdkSslContext extends SslContext {
         List<String> protocols = new ArrayList<String>();
         addIfSupported(
                 supportedProtocolsSet, protocols,
-                SslUtils.PROTOCOL_TLS_V1_3, SslUtils.PROTOCOL_TLS_V1_2,
-                SslUtils.PROTOCOL_TLS_V1_1, SslUtils.PROTOCOL_TLS_V1);
+                SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2,
+                SslProtocols.TLS_v1_1, SslProtocols.TLS_v1);
 
         if (!protocols.isEmpty()) {
             return protocols.toArray(EmptyArrays.EMPTY_STRINGS);
@@ -154,7 +154,7 @@ public class JdkSslContext extends SslContext {
 
     private static boolean isTlsV13Supported(String[] protocols) {
         for (String protocol: protocols) {
-            if (SslUtils.PROTOCOL_TLS_V1_3.equals(protocol)) {
+            if (SslProtocols.TLS_v1_3.equals(protocol)) {
                 return true;
             }
         }
