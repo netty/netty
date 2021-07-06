@@ -348,26 +348,26 @@ public final class OpenSsl {
 
             Set<String> protocols = new LinkedHashSet<String>(6);
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
-            protocols.add(PROTOCOL_SSL_V2_HELLO);
+            protocols.add(SslProtocols.SSL_v2_HELLO);
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2, SSL.SSL_OP_NO_SSLv2)) {
-                protocols.add(PROTOCOL_SSL_V2);
+                protocols.add(SslProtocols.SSL_v2);
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV3, SSL.SSL_OP_NO_SSLv3)) {
-                protocols.add(PROTOCOL_SSL_V3);
+                protocols.add(SslProtocols.SSL_v3);
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1, SSL.SSL_OP_NO_TLSv1)) {
-                protocols.add(PROTOCOL_TLS_V1);
+                protocols.add(SslProtocols.TLS_v1);
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_1, SSL.SSL_OP_NO_TLSv1_1)) {
-                protocols.add(PROTOCOL_TLS_V1_1);
+                protocols.add(SslProtocols.TLS_v1_1);
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_2, SSL.SSL_OP_NO_TLSv1_2)) {
-                protocols.add(PROTOCOL_TLS_V1_2);
+                protocols.add(SslProtocols.TLS_v1_2);
             }
 
             // This is only supported by java11 and later.
             if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)) {
-                protocols.add(PROTOCOL_TLS_V1_3);
+                protocols.add(SslProtocols.TLS_v1_3);
                 TLSV13_SUPPORTED = true;
             } else {
                 TLSV13_SUPPORTED = false;

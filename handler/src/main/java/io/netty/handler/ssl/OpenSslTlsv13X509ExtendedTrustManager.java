@@ -66,7 +66,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
 
     private static SSLEngine wrapEngine(final SSLEngine engine) {
         final SSLSession session = engine.getHandshakeSession();
-        if (session != null && SslUtils.PROTOCOL_TLS_V1_3.equals(session.getProtocol())) {
+        if (session != null && SslProtocols.TLS_v1_3.equals(session.getProtocol())) {
             return new JdkSslEngine(engine) {
                 @Override
                 public String getNegotiatedApplicationProtocol() {
@@ -93,7 +93,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
 
                             @Override
                             public String getProtocol() {
-                                return SslUtils.PROTOCOL_TLS_V1_2;
+                                return SslProtocols.TLS_v1_2;
                             }
                         };
                     } else {
@@ -181,7 +181,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
 
                             @Override
                             public String getProtocol() {
-                                return SslUtils.PROTOCOL_TLS_V1_2;
+                                return SslProtocols.TLS_v1_2;
                             }
 
                             @Override

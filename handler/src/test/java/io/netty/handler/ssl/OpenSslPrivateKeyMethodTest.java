@@ -152,7 +152,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .sslProvider(SslProvider.OPENSSL)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .option(OpenSslContextOption.PRIVATE_KEY_METHOD, method)
                 .build();
     }
@@ -162,7 +162,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .sslProvider(SslProvider.JDK)
                 .ciphers(Collections.singletonList(RFC_CIPHER_NAME))
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .build();
     }
@@ -176,7 +176,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .sslProvider(SslProvider.OPENSSL)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .option(OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD, method)
                 .build();
     }
