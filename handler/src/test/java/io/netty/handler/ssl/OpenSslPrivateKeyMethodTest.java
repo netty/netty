@@ -34,9 +34,11 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.hamcrest.Matchers;
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -66,9 +68,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OpenSslPrivateKeyMethodTest {
     private static final String RFC_CIPHER_NAME = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
@@ -78,8 +80,13 @@ public class OpenSslPrivateKeyMethodTest {
 
     static Collection<Object[]> parameters() {
         List<Object[]> dst = new ArrayList<Object[]>();
-        dst.add(new Object[] { true });
-        dst.add(new Object[] { false });
+        for (int a = 0; a < 2; a++) {
+            for (int b = 0; b < 2; b++) {
+                for (int c = 0; c < 2; c++) {
+                    dst.add(new Object[] { a == 0, b == 0, c == 0 });
+                }
+            }
+        }
         return dst;
     }
 
@@ -87,7 +94,7 @@ public class OpenSslPrivateKeyMethodTest {
     public static void init() throws Exception {
         checkShouldUseKeyManagerFactory();
 
-        Assume.assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL());
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
         assumeCipherAvailable(SslProvider.OPENSSL);
@@ -125,7 +132,7 @@ public class OpenSslPrivateKeyMethodTest {
         } else {
             cipherSupported = OpenSsl.isCipherSuiteAvailable(RFC_CIPHER_NAME);
         }
-        Assume.assumeTrue("Unsupported cipher: " + RFC_CIPHER_NAME, cipherSupported);
+        assumeTrue(cipherSupported, "Unsupported cipher: " + RFC_CIPHER_NAME);
     }
 
     private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
@@ -160,23 +167,35 @@ public class OpenSslPrivateKeyMethodTest {
                 .build();
     }
 
-    private static Executor delegateExecutor(boolean delegate) {
+    private SslContext buildServerContext(OpenSslAsyncPrivateKeyMethod method) throws Exception {
+        List<String> ciphers = Collections.singletonList(RFC_CIPHER_NAME);
+
+        final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
+
+        return SslContextBuilder.forServer(kmf)
+                .sslProvider(SslProvider.OPENSSL)
+                .ciphers(ciphers)
+                // As this is not a TLSv1.3 cipher we should ensure we talk something else.
+                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .option(OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD, method)
+                .build();
+    }
+
+    private Executor delegateExecutor(boolean delegate) {
        return delegate ? EXECUTOR : null;
     }
 
     private static void assertThread(boolean delegate) {
         if (delegate && OpenSslContext.USE_TASKS) {
             assertEquals(DelegateThread.class, Thread.currentThread().getClass());
-        } else {
-            assertNotEquals(DelegateThread.class, Thread.currentThread().getClass());
         }
     }
 
-    @ParameterizedTest(name = "{index}: delegate = {0}")
+    @ParameterizedTest(name = "{index}: delegate = {0}, async = {1}, newThread={2}")
     @MethodSource("parameters")
-    public void testPrivateKeyMethod(final boolean delegate) throws Exception {
+    public void testPrivateKeyMethod(final boolean delegate, boolean async, boolean newThread) throws Exception {
         final AtomicBoolean signCalled = new AtomicBoolean();
-        final SslContext sslServerContext = buildServerContext(new OpenSslPrivateKeyMethod() {
+        OpenSslPrivateKeyMethod keyMethod = new OpenSslPrivateKeyMethod() {
             @Override
             public byte[] sign(SSLEngine engine, int signatureAlgorithm, byte[] input) throws Exception {
                 signCalled.set(true);
@@ -206,7 +225,10 @@ public class OpenSslPrivateKeyMethodTest {
             public byte[] decrypt(SSLEngine engine, byte[] input) {
                 throw new UnsupportedOperationException();
             }
-        });
+        };
+
+        final SslContext sslServerContext = async ? buildServerContext(
+                new OpenSslPrivateKeyMethodAdapter(keyMethod, newThread)) : buildServerContext(keyMethod);
 
         final SslContext sslClientContext = buildClientContext();
         try {
@@ -389,6 +411,72 @@ public class OpenSslPrivateKeyMethodTest {
     private static final class DelegateThread extends Thread {
         DelegateThread(Runnable target) {
             super(target);
+        }
+    }
+
+    private static final class OpenSslPrivateKeyMethodAdapter implements OpenSslAsyncPrivateKeyMethod {
+        private final OpenSslPrivateKeyMethod keyMethod;
+        private final boolean newThread;
+
+        OpenSslPrivateKeyMethodAdapter(OpenSslPrivateKeyMethod keyMethod, boolean newThread) {
+            this.keyMethod = keyMethod;
+            this.newThread = newThread;
+        }
+
+        @Override
+        public Future<byte[]> sign(final SSLEngine engine, final int signatureAlgorithm, final byte[] input) {
+            final Promise<byte[]> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+            try {
+                if (newThread) {
+                    // Let's run these in an extra thread to ensure that this would also work if the promise is
+                    // notified later.
+                    new DelegateThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                // Let's sleep for some time to ensure we would notify in an async fashion
+                                Thread.sleep(ThreadLocalRandom.current().nextLong(100, 500));
+                                promise.setSuccess(keyMethod.sign(engine, signatureAlgorithm, input));
+                            } catch (Throwable cause) {
+                                promise.setFailure(cause);
+                            }
+                        }
+                    }).start();
+                } else {
+                    promise.setSuccess(keyMethod.sign(engine, signatureAlgorithm, input));
+                }
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+            }
+            return promise;
+        }
+
+        @Override
+        public Future<byte[]> decrypt(final SSLEngine engine, final byte[] input) {
+            final Promise<byte[]> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+            try {
+                if (newThread) {
+                    // Let's run these in an extra thread to ensure that this would also work if the promise is
+                    // notified later.
+                    new DelegateThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                // Let's sleep for some time to ensure we would notify in an async fashion
+                                Thread.sleep(ThreadLocalRandom.current().nextLong(100, 500));
+                                promise.setSuccess(keyMethod.decrypt(engine, input));
+                            } catch (Throwable cause) {
+                                promise.setFailure(cause);
+                            }
+                        }
+                    }).start();
+                } else {
+                    promise.setSuccess(keyMethod.decrypt(engine, input));
+                }
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+            }
+            return promise;
         }
     }
 }
