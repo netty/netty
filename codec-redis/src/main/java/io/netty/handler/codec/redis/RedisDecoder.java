@@ -30,6 +30,7 @@ import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_NEGATIVE_INF_CO
 import static io.netty.handler.codec.redis.RedisConstants.DOUBLE_POSITIVE_INF_CONTENT;
 import static io.netty.handler.codec.redis.RedisMessageType.BLOB_ERROR;
 import static io.netty.handler.codec.redis.RedisMessageType.BULK_STRING;
+import static io.netty.handler.codec.redis.RedisMessageType.VERBATIM_STRING;
 
 /**
  * Decodes the Redis protocol into {@link RedisMessage} objects following
@@ -199,6 +200,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             return true;
         case BULK_STRING:
         case BLOB_ERROR:
+        case VERBATIM_STRING:
             if (length > RedisConstants.REDIS_MESSAGE_MAX_LENGTH) {
                 throw new RedisCodecException("length: " + length + " (expected: <= " +
                                               RedisConstants.REDIS_MESSAGE_MAX_LENGTH + ")");
@@ -224,6 +226,8 @@ public final class RedisDecoder extends ByteToMessageDecoder {
                 out.add(new BulkStringHeaderRedisMessage(remainingBulkLength));
             } else if (BLOB_ERROR.equals(messageType)) {
                 out.add(new BulkErrorStringHeaderRedisMessage(remainingBulkLength));
+            } else if (VERBATIM_STRING.equals(messageType)) {
+                out.add(new BulkVerbatimStringHeaderRedisMessage(remainingBulkLength));
             }
             state = State.DECODE_BULK_STRING_CONTENT;
             return decodeBulkStringContent(in, out);

@@ -461,6 +461,27 @@ public class RedisDecoderTest {
     }
 
     @Test
+    public void shouldDecodeBulkVerbatimString() {
+        String buf1 = "txt:bulk\nst";
+        String buf2 = "ring\ntest\n1234";
+        byte[] content = bytesOf(buf1 + buf2);
+        assertFalse(channel.writeInbound(byteBufOf("=")));
+        assertFalse(channel.writeInbound(byteBufOf(Integer.toString(content.length))));
+        assertFalse(channel.writeInbound(byteBufOf("\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(buf1)));
+        assertFalse(channel.writeInbound(byteBufOf(buf2)));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        FullBulkVerbatimStringRedisMessage msg = channel.readInbound();
+
+        assertThat(bytesOf(msg.content()), is(content));
+        assertThat(msg.format(), is("txt"));
+        assertThat(msg.realContent(), is("bulk\nstring\ntest\n1234"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
     public void shouldDecodeSet() {
         assertFalse(channel.writeInbound(byteBufOf("~3\r\n")));
         assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));

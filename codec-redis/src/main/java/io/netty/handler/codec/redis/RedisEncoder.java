@@ -76,24 +76,26 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
             writeErrorMessage(allocator, (ErrorRedisMessage) msg, out);
         } else if (msg instanceof IntegerRedisMessage) {
             writeIntegerMessage(allocator, (IntegerRedisMessage) msg, out);
-        } else if (msg instanceof FullBulkStringRedisMessage) {
-            if (msg instanceof FullBulkErrorStringRedisMessage) {
-                writeFullBulkStringMessage(allocator, (FullBulkErrorStringRedisMessage) msg,
+        } else if (msg instanceof FullBulkErrorStringRedisMessage) {
+            writeFullBulkStringMessage(allocator, (FullBulkErrorStringRedisMessage) msg,
                     RedisMessageType.BLOB_ERROR, out);
-            } else {
-                writeFullBulkStringMessage(allocator, (FullBulkStringRedisMessage) msg,
+        } else if (msg instanceof FullBulkVerbatimStringRedisMessage) {
+            writeFullBulkStringMessage(allocator, (FullBulkVerbatimStringRedisMessage) msg,
+                    RedisMessageType.VERBATIM_STRING, out);
+        } else if (msg instanceof FullBulkStringRedisMessage) {
+            writeFullBulkStringMessage(allocator, (FullBulkStringRedisMessage) msg,
                     RedisMessageType.BULK_STRING, out);
-            }
         } else if (msg instanceof BulkStringRedisContent) {
             writeBulkStringContent(allocator, (BulkStringRedisContent) msg, out);
-        } else if (msg instanceof BulkStringHeaderRedisMessage) {
-            if (msg instanceof BulkErrorStringHeaderRedisMessage) {
-                writeBulkStringHeader(allocator, (BulkErrorStringHeaderRedisMessage) msg,
+        } else if (msg instanceof BulkErrorStringHeaderRedisMessage) {
+            writeBulkStringHeader(allocator, (BulkErrorStringHeaderRedisMessage) msg,
                     RedisMessageType.BLOB_ERROR, out);
-            } else {
-                writeBulkStringHeader(allocator, (BulkStringHeaderRedisMessage) msg,
+        } else if (msg instanceof BulkVerbatimStringHeaderRedisMessage) {
+            writeBulkStringHeader(allocator, (BulkVerbatimStringHeaderRedisMessage) msg,
+                    RedisMessageType.VERBATIM_STRING, out);
+        } else if (msg instanceof BulkStringHeaderRedisMessage) {
+            writeBulkStringHeader(allocator, (BulkStringHeaderRedisMessage) msg,
                     RedisMessageType.BULK_STRING, out);
-            }
         } else if (msg instanceof ArrayHeaderRedisMessage) {
             writeAggregatedHeader(allocator, RedisMessageType.ARRAY_HEADER, (ArrayHeaderRedisMessage) msg, out);
         } else if (msg instanceof ArrayRedisMessage) {

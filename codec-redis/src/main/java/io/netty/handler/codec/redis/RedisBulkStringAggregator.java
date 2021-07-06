@@ -99,6 +99,8 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
             throws Exception {
         if (start instanceof BulkErrorStringHeaderRedisMessage) {
             return new FullBulkErrorStringRedisMessage(content);
+        } else if (start instanceof BulkVerbatimStringHeaderRedisMessage) {
+            return new FullBulkVerbatimStringRedisMessage(content);
         } else {
             return new FullBulkStringRedisMessage(content);
         }

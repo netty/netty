@@ -17,11 +17,16 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +39,7 @@ import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -280,6 +286,35 @@ public class RedisEncoderTest {
 
         ByteBuf written = readAll(channel);
         assertThat(bytesOf(written), is(equalTo(bytesOf("!16\r\nbulk\nstring\ntest\r\n"))));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeFullBulkVerbatimString() {
+        ByteBuf bulkString = byteBufOf("txt:bulk\nstring\ntest").retain();
+        int length = bulkString.readableBytes();
+        RedisMessage msg = new FullBulkVerbatimStringRedisMessage(bulkString);
+
+        boolean result = channel.writeOutbound(msg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf("=" + length + "\r\ntxt:bulk\nstring\ntest\r\n"))));
+        written.release();
+    }
+
+    @Test
+    public void shouldEncodeBulkVerbatimStringContent() {
+        RedisMessage header = new BulkVerbatimStringHeaderRedisMessage(20);
+        RedisMessage body1 = new DefaultBulkStringRedisContent(byteBufOf("txt:bulk\nstr").retain());
+        RedisMessage body2 = new DefaultLastBulkStringRedisContent(byteBufOf("ing\ntest").retain());
+
+        assertThat(channel.writeOutbound(header), is(true));
+        assertThat(channel.writeOutbound(body1), is(true));
+        assertThat(channel.writeOutbound(body2), is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(equalTo(bytesOf("=20\r\ntxt:bulk\nstring\ntest\r\n"))));
         written.release();
     }
 
