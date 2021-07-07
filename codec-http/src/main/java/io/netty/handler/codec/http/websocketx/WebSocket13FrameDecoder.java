@@ -156,7 +156,6 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder
         this.config = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
-    
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
