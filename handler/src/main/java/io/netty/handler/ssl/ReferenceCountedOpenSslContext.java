@@ -18,9 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.util.LazyX509Certificate;
-import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
 import io.netty.internal.tcnative.CertificateVerifier;
-import io.netty.internal.tcnative.ResultCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SSLPrivateKeyMethod;
@@ -29,8 +27,6 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -68,7 +64,6 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
-import static io.netty.handler.ssl.OpenSsl.ensureAvailability;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -223,7 +218,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean tlsFalseStart = false;
         boolean useTasks = USE_TASKS;
         OpenSslPrivateKeyMethod privateKeyMethod = null;
-        OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
 
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
@@ -235,20 +229,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     useTasks = (Boolean) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD) {
                     privateKeyMethod = (OpenSslPrivateKeyMethod) ctxOpt.getValue();
-                } else if (option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
-                    asyncPrivateKeyMethod = (OpenSslAsyncPrivateKeyMethod) ctxOpt.getValue();
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
                 }
             }
         }
-        if (privateKeyMethod != null && asyncPrivateKeyMethod != null) {
-            throw new IllegalArgumentException("You can either only use "
-                    + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
-                    + OpenSslPrivateKeyMethod.class.getSimpleName());
-        }
-
         this.tlsFalseStart = tlsFalseStart;
 
         leak = leakDetection ? leakDetector.track(this) : null;
@@ -376,9 +362,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             SSLContext.setUseTasks(ctx, useTasks);
             if (privateKeyMethod != null) {
                 SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, privateKeyMethod));
-            }
-            if (asyncPrivateKeyMethod != null) {
-                SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engineMap, asyncPrivateKeyMethod));
             }
             success = true;
         } finally {
@@ -996,83 +979,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 throw e;
             }
         }
-    }
 
-    private static final class AsyncPrivateKeyMethod implements AsyncSSLPrivateKeyMethod {
-
-        private final OpenSslEngineMap engineMap;
-        private final OpenSslAsyncPrivateKeyMethod keyMethod;
-
-        AsyncPrivateKeyMethod(OpenSslEngineMap engineMap, OpenSslAsyncPrivateKeyMethod keyMethod) {
-            this.engineMap = engineMap;
-            this.keyMethod = keyMethod;
-        }
-
-        private ReferenceCountedOpenSslEngine retrieveEngine(long ssl) throws SSLException {
-            ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
-            if (engine == null) {
-                throw new SSLException("Could not find a " +
-                        StringUtil.simpleClassName(ReferenceCountedOpenSslEngine.class) + " for sslPointer " + ssl);
+        private static byte[] verifyResult(byte[] result) throws SignatureException {
+            if (result == null) {
+                throw new SignatureException();
             }
-            return engine;
+            return result;
         }
-
-        @Override
-        public void sign(long ssl, int signatureAlgorithm, byte[] bytes, ResultCallback<byte[]> resultCallback) {
-            try {
-                ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
-                keyMethod.sign(engine, signatureAlgorithm, bytes)
-                        .addListener(new ResultCallbackListener(engine, ssl, resultCallback));
-            } catch (SSLException e) {
-                resultCallback.onError(ssl, e);
-            }
-        }
-
-        @Override
-        public void decrypt(long ssl, byte[] bytes, ResultCallback<byte[]> resultCallback) {
-            try {
-                ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
-                keyMethod.decrypt(engine, bytes)
-                        .addListener(new ResultCallbackListener(engine, ssl, resultCallback));
-            } catch (SSLException e) {
-                resultCallback.onError(ssl, e);
-            }
-        }
-
-        private static final class ResultCallbackListener implements FutureListener<byte[]> {
-            private final ReferenceCountedOpenSslEngine engine;
-            private final long ssl;
-            private final ResultCallback<byte[]> resultCallback;
-
-            ResultCallbackListener(ReferenceCountedOpenSslEngine engine, long ssl,
-                                   ResultCallback<byte[]> resultCallback) {
-                this.engine = engine;
-                this.ssl = ssl;
-                this.resultCallback = resultCallback;
-            }
-
-            @Override
-            public void operationComplete(Future<byte[]> future) {
-                Throwable cause = future.cause();
-                if (cause == null) {
-                    try {
-                        byte[] result = verifyResult(future.getNow());
-                        resultCallback.onSuccess(ssl, result);
-                        return;
-                    } catch (SignatureException e) {
-                        cause = e;
-                        engine.initHandshakeException(e);
-                    }
-                }
-                resultCallback.onError(ssl, cause);
-            }
-        }
-    }
-
-    private static byte[] verifyResult(byte[] result) throws SignatureException {
-        if (result == null) {
-            throw new SignatureException();
-        }
-        return result;
     }
 }
