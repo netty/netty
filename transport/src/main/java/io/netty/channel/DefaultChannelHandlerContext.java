@@ -482,7 +482,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -522,7 +522,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -561,7 +561,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().disconnect(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -594,7 +594,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().close(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, true);
         }
     }
 
@@ -627,7 +627,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().register(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -660,7 +660,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().deregister(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -687,7 +687,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().read(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -708,7 +708,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().write(this, m, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -739,7 +739,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().flush(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t);
+            handleOutboundHandlerException(t, false);
         }
     }
 
@@ -803,10 +803,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return writeAndFlush(msg, newPromise());
     }
 
-    private void handleOutboundHandlerException(Throwable cause) {
+    private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow) {
         logger.warn("{} threw an exception while handling an outbound event." +
                 " This is most likely a bug, closing the channel.", handler(), cause);
-        close();
+        if (closeDidThrow) {
+            // Close itself did throw, just call close() directly and so have the next handler invoked. If we would
+            // call close() on the Channel we would risk an infinite-loop.
+            close();
+        } else {
+            // Let's close the channel. Calling close on the Channel ensure we start from the end of the pipeline
+            // and so give all handlers the chance to do something during close.
+            channel().close();
+        }
     }
 
     @Override
