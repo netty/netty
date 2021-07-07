@@ -25,7 +25,7 @@ import javax.net.ssl.SSLEngine;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class DelegatingSslContextTest {
-    private static final String[] EXPECTED_PROTOCOLS = { SslUtils.PROTOCOL_TLS_V1_1 };
+    private static final String[] EXPECTED_PROTOCOLS = { SslProtocols.TLS_v1_1 };
 
     @Test
     public void testInitEngineOnNewEngine() throws Exception {

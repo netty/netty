@@ -124,7 +124,7 @@ public class CipherSuiteCanaryTest {
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .build();
 
         final ExecutorService executorService = delegate ? Executors.newCachedThreadPool() : null;
@@ -134,7 +134,7 @@ public class CipherSuiteCanaryTest {
                     .sslProvider(clientSslProvider)
                     .ciphers(ciphers)
                     // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .protocols(SslProtocols.TLS_v1_2)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
 

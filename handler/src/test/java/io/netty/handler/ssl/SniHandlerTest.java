@@ -611,7 +611,7 @@ public class SniHandlerTest {
      * This is a {@link SslHandler} that will call {@code release()} on the {@link SslContext} when
      * the client disconnects.
      *
-     * @see SniHandlerTest#testReplaceHandler()
+     * @see SniHandlerTest#testReplaceHandler(SslProvider)
      */
     private static class CustomSslHandler extends SslHandler {
         private final SslContext sslContext;

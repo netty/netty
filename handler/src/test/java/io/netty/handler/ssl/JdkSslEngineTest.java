@@ -299,7 +299,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
-        testEnablingAnAlreadyDisabledSslProtocol(new String[]{}, new String[]{ SslUtils.PROTOCOL_TLS_V1_2 });
+        testEnablingAnAlreadyDisabledSslProtocol(new String[]{}, new String[]{ SslProtocols.TLS_v1_2 });
     }
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
