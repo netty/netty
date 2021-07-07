@@ -42,23 +42,23 @@ public final class ObjectUtil {
     }
 
     /**
-     * Check that the given iterator is not null and elements
-     * inside the iterator is also not null.
+     * Check that the given varargs is not null and does not contain elements
+     * null elements.
      *
      * If it is, throws {@link NullPointerException}.
      * Otherwise, returns the argument.
      */
-    public static <T> Iterable<T> deepCheckNotNull(Iterable<T> arg, String text) {
-        if (arg == null) {
+    public static <T> T[] deepCheckNotNull(String text, T... varargs) {
+        if (varargs == null) {
             throw new NullPointerException(text);
         }
 
-        for (T element : arg) {
+        for (T element : varargs) {
             if (element == null) {
                 throw new NullPointerException(text);
             }
         }
-        return arg;
+        return varargs;
     }
 
     /**

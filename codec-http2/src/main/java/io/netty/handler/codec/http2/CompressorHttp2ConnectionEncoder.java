@@ -105,21 +105,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * specified {@link StandardCompressionOptions}
      */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
-                                            CompressionOptions... compressionOptions) {
-        this(delegate, Arrays.asList(ObjectUtil.checkNotNull(compressionOptions, "CompressionOptions")));
-    }
-
-    /**
-     * Create a new {@link CompressorHttp2ConnectionEncoder} with
-     * specified {@link StandardCompressionOptions}
-     */
-    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
-                                            Iterable<CompressionOptions> compressionOptionsIterable) {
+                                            CompressionOptions... compressionOptionsArgs) {
         super(delegate);
-        ObjectUtil.checkNotNull(compressionOptionsIterable, "CompressionOptions");
-        ObjectUtil.deepCheckNotNull(compressionOptionsIterable, "CompressionOptions");
+        ObjectUtil.checkNotNull(compressionOptionsArgs, "CompressionOptions");
+        ObjectUtil.deepCheckNotNull("CompressionOptions", compressionOptionsArgs);
 
-        for (CompressionOptions compressionOptions : compressionOptionsIterable) {
+        for (CompressionOptions compressionOptions : compressionOptionsArgs) {
             if (compressionOptions instanceof BrotliOptions) {
                 brotliOptions = (BrotliOptions) compressionOptions;
             } else if (compressionOptions instanceof GzipOptions) {
