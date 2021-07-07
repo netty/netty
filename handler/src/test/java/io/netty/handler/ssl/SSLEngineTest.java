@@ -124,13 +124,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -195,9 +188,9 @@ public abstract class SSLEngineTest {
 
     static final class ProtocolCipherCombo {
         private static final ProtocolCipherCombo TLSV12 = new ProtocolCipherCombo(
-                PROTOCOL_TLS_V1_2, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+                SslProtocols.TLS_v1_2, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
         private static final ProtocolCipherCombo TLSV13 = new ProtocolCipherCombo(
-                PROTOCOL_TLS_V1_3, "TLS_AES_128_GCM_SHA256");
+                SslProtocols.TLS_v1_3, "TLS_AES_128_GCM_SHA256");
         final String protocol;
         final String cipher;
 
@@ -543,13 +536,13 @@ public abstract class SSLEngineTest {
         // due to no shared/supported cipher.
         clientSslCtx = wrapContext(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .protocols(PROTOCOL_TLS_V1_3, PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1)
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .protocols(PROTOCOL_TLS_V1_3, PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1)
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
@@ -1524,7 +1517,7 @@ public abstract class SSLEngineTest {
             assertArrayEquals(protocols1, enabledProtocols);
 
             // Enable a protocol that is currently disabled
-            sslEngine.setEnabledProtocols(new String[]{ PROTOCOL_TLS_V1_2 });
+            sslEngine.setEnabledProtocols(new String[]{ SslProtocols.TLS_v1_2 });
 
             // The protocol that was just enabled should be returned
             enabledProtocols = sslEngine.getEnabledProtocols();
@@ -1595,7 +1588,7 @@ public abstract class SSLEngineTest {
             if (!clientHandshakeFinished ||
                 // After the handshake completes it is possible we have more data that was send by the server as
                 // the server will send session updates after the handshake. In this case continue to unwrap.
-                SslUtils.PROTOCOL_TLS_V1_3.equals(clientEngine.getSession().getProtocol())) {
+                SslProtocols.TLS_v1_3.equals(clientEngine.getSession().getProtocol())) {
                 int clientAppReadBufferPos = clientAppReadBuffer.position();
                 clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
@@ -1711,7 +1704,7 @@ public abstract class SSLEngineTest {
             if (serverApn.protocol() == Protocol.NPN || serverApn.protocol() == Protocol.NPN_AND_ALPN) {
                 // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
                 // See https://github.com/openssl/openssl/issues/3665
-                serverCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
+                serverCtxBuilder.protocols(SslProtocols.TLS_v1_2);
             }
 
             SslContextBuilder clientCtxBuilder = SslContextBuilder.forClient()
@@ -1726,7 +1719,7 @@ public abstract class SSLEngineTest {
             if (clientApn.protocol() == Protocol.NPN || clientApn.protocol() == Protocol.NPN_AND_ALPN) {
                 // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
                 // See https://github.com/openssl/openssl/issues/3665
-                clientCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
+                clientCtxBuilder.protocols(SslProtocols.TLS_v1_2);
             }
 
             setupHandlers(wrapContext(serverCtxBuilder.build()), wrapContext(clientCtxBuilder.build()));
@@ -2056,9 +2049,9 @@ public abstract class SSLEngineTest {
         if (provider != null) {
             // conscrypt not correctly filters out TLSv1 and TLSv1.1 which is required now by the JDK.
             // https://github.com/google/conscrypt/issues/1013
-            return new String[] { PROTOCOL_TLS_V1_2 };
+            return new String[] { SslProtocols.TLS_v1_2 };
         }
-        return new String[] {PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1};
+        return new String[] {SslProtocols.TLS_v1_2, SslProtocols.TLS_v1};
     }
 
     @Test
@@ -2346,7 +2339,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 // This test only works for non TLSv1.3 for now
-                .protocols(PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2355,7 +2348,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 // This test only works for non TLSv1.3 for now
-                .protocols(PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .build());
         SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2816,12 +2809,13 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testDisableProtocols() throws Exception {
-        testDisableProtocols(PROTOCOL_SSL_V2, PROTOCOL_SSL_V2);
-        testDisableProtocols(PROTOCOL_SSL_V3, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3);
-        testDisableProtocols(PROTOCOL_TLS_V1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1);
-        testDisableProtocols(PROTOCOL_TLS_V1_1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1);
-        testDisableProtocols(PROTOCOL_TLS_V1_2, PROTOCOL_SSL_V2,
-                PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1, PROTOCOL_TLS_V1_2);
+        testDisableProtocols(SslProtocols.SSL_v2, SslProtocols.SSL_v2);
+        testDisableProtocols(SslProtocols.SSL_v3, SslProtocols.SSL_v2, SslProtocols.SSL_v3);
+        testDisableProtocols(SslProtocols.TLS_v1, SslProtocols.SSL_v2, SslProtocols.SSL_v3, SslProtocols.TLS_v1);
+        testDisableProtocols(SslProtocols.TLS_v1_1, SslProtocols.SSL_v2, SslProtocols.SSL_v3, SslProtocols.TLS_v1,
+                SslProtocols.TLS_v1_1);
+        testDisableProtocols(SslProtocols.TLS_v1_2, SslProtocols.SSL_v2,
+                SslProtocols.SSL_v3, SslProtocols.TLS_v1, SslProtocols.TLS_v1_1, SslProtocols.TLS_v1_2);
     }
 
     private void testDisableProtocols(String protocol, String... disabledProtocols) throws Exception {
@@ -2845,7 +2839,7 @@ public abstract class SSLEngineTest {
                 for (String disabled : disabledProtocols) {
                     supported.remove(disabled);
                 }
-                if (supported.contains(PROTOCOL_SSL_V2_HELLO) && supported.size() == 1) {
+                if (supported.contains(SslProtocols.SSL_v2_HELLO) && supported.size() == 1) {
                     // It's not allowed to set only PROTOCOL_SSL_V2_HELLO if using JDK SSLEngine.
                     return;
                 }
@@ -4024,9 +4018,9 @@ public abstract class SSLEngineTest {
         }
 
         assertEquals(SslProvider.isTlsv13EnabledByDefault(sslClientProvider(), clientSslContextProvider()),
-                SslUtils.arrayContains(clientProtocols, PROTOCOL_TLS_V1_3));
+                SslUtils.arrayContains(clientProtocols, SslProtocols.TLS_v1_3));
         assertEquals(SslProvider.isTlsv13EnabledByDefault(sslServerProvider(), serverSslContextProvider()),
-                SslUtils.arrayContains(serverProtocols, PROTOCOL_TLS_V1_3));
+                SslUtils.arrayContains(serverProtocols, SslProtocols.TLS_v1_3));
     }
 
     protected SSLEngine wrapEngine(SSLEngine engine) {

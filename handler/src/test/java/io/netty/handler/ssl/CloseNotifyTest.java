@@ -37,8 +37,6 @@ import javax.net.ssl.SSLSession;
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,10 +60,10 @@ public class CloseNotifyTest {
 
     static Collection<Object[]> data() {
         return asList(new Object[][] {
-                { SslProvider.JDK, PROTOCOL_TLS_V1_2 },
-                { SslProvider.JDK, PROTOCOL_TLS_V1_3 },
-                { SslProvider.OPENSSL, PROTOCOL_TLS_V1_2 },
-                { SslProvider.OPENSSL, PROTOCOL_TLS_V1_3 },
+                { SslProvider.JDK, SslProtocols.TLS_v1_2 },
+                { SslProvider.JDK, SslProtocols.TLS_v1_3 },
+                { SslProvider.OPENSSL, SslProtocols.TLS_v1_2 },
+                { SslProvider.OPENSSL, SslProtocols.TLS_v1_3 },
         });
     }
 
@@ -75,7 +73,7 @@ public class CloseNotifyTest {
     public void eventsOrder(SslProvider provider, String protocol) throws Exception {
         assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
 
-        if (PROTOCOL_TLS_V1_3.equals(protocol)) {
+        if (SslProtocols.TLS_v1_3.equals(protocol)) {
             // Ensure we support TLSv1.3
             assumeTrue(SslProvider.isTlsv13Supported(provider));
         }
@@ -144,7 +142,7 @@ public class CloseNotifyTest {
     }
 
     private static boolean jdkTls13(SslProvider provider, String protocol) {
-        return provider == SslProvider.JDK && PROTOCOL_TLS_V1_3.equals(protocol);
+        return provider == SslProvider.JDK && SslProtocols.TLS_v1_3.equals(protocol);
     }
 
     private static EmbeddedChannel initChannel(SslProvider provider, String protocol, final boolean useClientMode,
