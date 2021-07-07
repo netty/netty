@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty.handler.ssl.util.LazyX509Certificate;
-import io.netty.internal.tcnative.AsyncTask;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
@@ -1437,48 +1436,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private class TaskDecorator<R extends Runnable> implements Runnable {
-        protected final R task;
-        TaskDecorator(R task) {
-            this.task = task;
-        }
-
-        @Override
-        public void run() {
-            if (isDestroyed()) {
-                // The engine was destroyed in the meantime, just return.
-                return;
-            }
-            try {
-                task.run();
-            } finally {
-                // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-                needTask = false;
-            }
-        }
-    }
-
-    private final class AsyncTaskDecorator extends TaskDecorator<AsyncTask> implements AsyncRunnable {
-        AsyncTaskDecorator(AsyncTask task) {
-            super(task);
-        }
-
-        @Override
-        public void run(Runnable runnable) {
-            if (isDestroyed()) {
-                // The engine was destroyed in the meantime, just return.
-                runnable.run();
-                return;
-            }
-            try {
-                task.runAsync(runnable);
-            } finally {
-                // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-                needTask = false;
-            }
-        }
-    }
-
     @Override
     public final synchronized Runnable getDelegatedTask() {
         if (isDestroyed()) {
@@ -1488,10 +1445,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (task == null) {
             return null;
         }
-        if (task instanceof AsyncTask) {
-            return new AsyncTaskDecorator((AsyncTask) task);
-        }
-        return new TaskDecorator<Runnable>(task);
+        return new Runnable() {
+            @Override
+            public void run() {
+                if (isDestroyed()) {
+                    // The engine was destroyed in the meantime, just return.
+                    return;
+                }
+                try {
+                    task.run();
+                } finally {
+                    // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+                    needTask = false;
+                }
+            }
+        };
     }
 
     @Override
