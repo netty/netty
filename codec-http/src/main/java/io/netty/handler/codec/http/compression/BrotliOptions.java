@@ -28,8 +28,8 @@ public final class BrotliOptions implements CompressionOptions {
     private final Encoder.Parameters parameters;
 
     /**
-     * Default implementation of {@link BrotliOptions} with
-     * {@link Encoder.Parameters#setQuality(int)} set to 4.
+     * Default implementation of {@link BrotliOptions} with{@link Encoder.Parameters#setQuality(int)} set to 4
+     * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
      */
     static final BrotliOptions DEFAULT = new BrotliOptions(
             new Encoder.Parameters().setQuality(4).setMode(Encoder.Mode.TEXT)

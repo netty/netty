@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
  */
 @UnstableApi
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
+    // We cannot remove this because it'll be breaking change
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;
     public static final int DEFAULT_WINDOW_BITS = 15;
     public static final int DEFAULT_MEM_LEVEL = 8;
@@ -65,11 +66,19 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private GzipOptions gzipCompressionOptions;
     private DeflateOptions deflateOptions;
 
+    /**
+     * Create a new {@link CompressorHttp2ConnectionEncoder} instance
+     * with default implementation of {@link StandardCompressionOptions}
+     */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, StandardCompressionOptions.brotli(), StandardCompressionOptions.gzip(),
                 StandardCompressionOptions.deflate());
     }
 
+    /**
+     * Create a new {@link CompressorHttp2ConnectionEncoder} instance
+     */
+    @Deprecated
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
                                             int memLevel) {
         super(delegate);
@@ -91,11 +100,19 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         supportsCompressionOptions = false;
     }
 
+    /**
+     * Create a new {@link CompressorHttp2ConnectionEncoder} with
+     * specified {@link StandardCompressionOptions}
+     */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
                                             CompressionOptions... compressionOptions) {
         this(delegate, Arrays.asList(ObjectUtil.checkNotNull(compressionOptions, "CompressionOptions")));
     }
 
+    /**
+     * Create a new {@link CompressorHttp2ConnectionEncoder} with
+     * specified {@link StandardCompressionOptions}
+     */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
                                             Iterable<CompressionOptions> compressionOptionsIterable) {
         super(delegate);
