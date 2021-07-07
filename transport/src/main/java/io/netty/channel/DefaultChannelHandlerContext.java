@@ -482,7 +482,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -522,7 +522,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -561,7 +561,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().disconnect(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -594,7 +594,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().close(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, true);
+            handleOutboundHandlerException(t, true, promise);
         }
     }
 
@@ -627,7 +627,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().register(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -660,7 +660,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().deregister(this, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -687,7 +687,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().read(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, null);
         }
     }
 
@@ -708,7 +708,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().write(this, m, promise);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -739,7 +739,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().flush(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
+            handleOutboundHandlerException(t, false, null);
         }
     }
 
@@ -803,9 +803,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return writeAndFlush(msg, newPromise());
     }
 
-    private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow) {
-        logger.warn("{} threw an exception while handling an outbound event." +
-                " This is most likely a bug, closing the channel.", handler(), cause);
+    private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow, ChannelPromise promise) {
+        String msg = handler() + " threw an exception while handling an outbound event. This is most likely a bug";
+
+        if (promise != null && !promise.isDone()) {
+            // This is a "best-effort" approach to at least ensure the promise will be completed somehow.
+            promise.tryFailure(new IllegalStateException(msg, cause));
+        }
+
+        logger.warn("{}. This is most likely a bug, closing the channel.", msg, cause);
         if (closeDidThrow) {
             // Close itself did throw, just call close() directly and so have the next handler invoked. If we would
             // call close() on the Channel we would risk an infinite-loop.
