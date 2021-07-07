@@ -55,10 +55,6 @@ import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.KeyStore;
@@ -683,23 +679,8 @@ public class ParameterizedSslHandlerTest {
         }
 
         private void appendError(Throwable cause) {
-            readQueue.append("failed to write '").append(toWrite).append("': ");
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
-                cause.printStackTrace(new PrintStream(out));
-                readQueue.append(out.toString(CharsetUtil.US_ASCII.name()));
-            } catch (UnsupportedEncodingException ignore) {
-                // Let's just fallback to using toString().
-                readQueue.append(cause);
-            } finally {
-                doneLatch.countDown();
-                try {
-                    out.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
+            readQueue.append("failed to write '").append(toWrite).append("': ").append(cause);
+            doneLatch.countDown();
         }
     }
 }

@@ -57,7 +57,6 @@ public final class SslProtocols {
      *
      * @deprecated TLSv1.1 is no longer secure. Consider using {@link #TLS_v1_2} or {@link #TLS_v1_3}
      */
-    @Deprecated
     public static final String TLS_v1_1 = "TLSv1.1";
 
     /**
