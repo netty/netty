@@ -37,10 +37,11 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Create a new {@link BrotliEncoder} Instance
-     * with {@link Encoder.Parameters#setQuality(int)} set to 4.
+     * with {@link Encoder.Parameters#setQuality(int)} set to 4
+     * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
      */
     public BrotliEncoder() {
-        this(new Encoder.Parameters().setQuality(4));
+        this(new Encoder.Parameters().setQuality(4).setMode(Encoder.Mode.TEXT));
     }
 
     /**
