@@ -25,7 +25,7 @@ MODULES=$(git diff --name-only "$1" | cut -d '/' -f 1 | sort -u | sed -n -e 'H;$
 MAVEN_ARGUMENTS=${*:2}
 if [ -z "$MODULES" ]; then
   echo "No changes detected, skipping build"
-  exit 1
+  exit 0
 fi
 echo "Changes detected, start the build"
 echo "./mvnw -pl $MODULES -amd $MAVEN_ARGUMENTS"
