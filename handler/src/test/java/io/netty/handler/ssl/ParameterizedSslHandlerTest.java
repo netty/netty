@@ -405,7 +405,7 @@ public class ParameterizedSslHandlerTest {
                                                          // Use TLSv1.2 as we depend on the fact that the handshake
                                                          // is done in an extra round trip in the test which
                                                          // is not true in TLSv1.3
-                                                         .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                                                         .protocols(SslProtocols.TLS_v1_2)
                                                          .build();
 
         final SslContext sslClientCtx = SslContextBuilder.forClient()
@@ -414,7 +414,7 @@ public class ParameterizedSslHandlerTest {
                                                          // Use TLSv1.2 as we depend on the fact that the handshake
                                                          // is done in an extra round trip in the test which
                                                          // is not true in TLSv1.3
-                                                         .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                                                         .protocols(SslProtocols.TLS_v1_2)
                                                          .build();
 
         EventLoopGroup group = new NioEventLoopGroup();

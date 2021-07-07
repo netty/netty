@@ -50,7 +50,7 @@ public abstract class RenegotiateTest {
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider())
-                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .protocols(SslProtocols.TLS_v1_2)
                     .build();
 
             ServerBootstrap sb = new ServerBootstrap();
@@ -105,7 +105,7 @@ public abstract class RenegotiateTest {
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(SslProvider.JDK)
-                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                    .protocols(SslProtocols.TLS_v1_2)
                     .build();
 
             Bootstrap bootstrap = new Bootstrap();

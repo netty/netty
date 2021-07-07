@@ -117,10 +117,10 @@ public class OpenSslPrivateKeyMethodTest {
         if (provider == SslProvider.JDK) {
             SSLEngine engine = SSLContext.getDefault().createSSLEngine();
             for (String c: engine.getSupportedCipherSuites()) {
-               if (RFC_CIPHER_NAME.equals(c)) {
-                   cipherSupported = true;
-                   break;
-               }
+                if (RFC_CIPHER_NAME.equals(c)) {
+                    cipherSupported = true;
+                    break;
+                }
             }
         } else {
             cipherSupported = OpenSsl.isCipherSuiteAvailable(RFC_CIPHER_NAME);
@@ -141,11 +141,11 @@ public class OpenSslPrivateKeyMethodTest {
 
         final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
 
-       return SslContextBuilder.forServer(kmf)
+        return SslContextBuilder.forServer(kmf)
                 .sslProvider(SslProvider.OPENSSL)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .option(OpenSslContextOption.PRIVATE_KEY_METHOD, method)
                 .build();
     }
@@ -155,13 +155,13 @@ public class OpenSslPrivateKeyMethodTest {
                 .sslProvider(SslProvider.JDK)
                 .ciphers(Collections.singletonList(RFC_CIPHER_NAME))
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
-                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                .protocols(SslProtocols.TLS_v1_2)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .build();
     }
 
     private static Executor delegateExecutor(boolean delegate) {
-       return delegate ? EXECUTOR : null;
+        return delegate ? EXECUTOR : null;
     }
 
     private static void assertThread(boolean delegate) {
@@ -282,7 +282,7 @@ public class OpenSslPrivateKeyMethodTest {
                     Channel client = client(server, clientHandler);
                     try {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
-                              .syncUninterruptibly();
+                                .syncUninterruptibly();
 
                         assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
                         assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");

@@ -836,7 +836,7 @@ public class SslHandlerTest {
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testHandshakeFailedByWriteBeforeChannelActive() throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
-                                                         .protocols(SslUtils.PROTOCOL_SSL_V3)
+                                                         .protocols(SslProtocols.SSL_v3)
                                                          .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                                          .sslProvider(SslProvider.JDK).build();
 
@@ -1145,27 +1145,27 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv12() throws Throwable {
-        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2, true);
+        testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, true);
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv13() throws Throwable {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
-        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3, true);
+        testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, true);
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv12AndNoKey() throws Throwable {
-        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2, false);
+        testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, false);
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv13AndNoKey() throws Throwable {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        testSessionTickets(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3, false);
+        testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, false);
     }
 
     private static void testSessionTickets(SslProvider provider, String protocol, boolean withKey) throws Throwable {
@@ -1223,7 +1223,7 @@ public class SslHandlerTest {
                                         // This test only works for non TLSv1.3 as TLSv1.3 will establish sessions after
                                         // the handshake is done.
                                         // See https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_sess_set_get_cb.html
-                                        if (!SslUtils.PROTOCOL_TLS_V1_3.equals(engine.getSession().getProtocol())) {
+                                        if (!SslProtocols.TLS_v1_3.equals(engine.getSession().getProtocol())) {
                                             // First should not re-use the session
                                             try {
                                                 assertEquals(handshakeCount > 1, engine.isSessionReused());
@@ -1297,7 +1297,7 @@ public class SslHandlerTest {
             // This test only works for non TLSv1.3 as TLSv1.3 will establish sessions after
             // the handshake is done.
             // See https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_sess_set_get_cb.html
-            if (!SslUtils.PROTOCOL_TLS_V1_3.equals(engine.getSession().getProtocol())) {
+            if (!SslProtocols.TLS_v1_3.equals(engine.getSession().getProtocol())) {
                 assertEquals(isReused, engine.isSessionReused());
             }
             Object obj = queue.take();
@@ -1472,11 +1472,11 @@ public class SslHandlerTest {
         if (tls13) {
             clientCipher = "TLS_AES_128_GCM_SHA256";
             serverCipher = "TLS_AES_256_GCM_SHA384";
-            protocol = SslUtils.PROTOCOL_TLS_V1_3;
+            protocol = SslProtocols.TLS_v1_3;
         } else {
             clientCipher = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
             serverCipher = "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
-            protocol = SslUtils.PROTOCOL_TLS_V1_2;
+            protocol = SslProtocols.TLS_v1_2;
         }
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -1566,26 +1566,26 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeEventsTls12JDK() throws Exception {
-        testHandshakeEvents(SslProvider.JDK, SslUtils.PROTOCOL_TLS_V1_2);
+        testHandshakeEvents(SslProvider.JDK, SslProtocols.TLS_v1_2);
     }
 
     @Test
     public void testHandshakeEventsTls12Openssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_2);
+        testHandshakeEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_2);
     }
 
     @Test
     public void testHandshakeEventsTls13JDK() throws Exception {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
-        testHandshakeEvents(SslProvider.JDK, SslUtils.PROTOCOL_TLS_V1_3);
+        testHandshakeEvents(SslProvider.JDK, SslProtocols.TLS_v1_3);
     }
 
     @Test
     public void testHandshakeEventsTls13Openssl() throws Exception {
         OpenSsl.ensureAvailability();
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
-        testHandshakeEvents(SslProvider.OPENSSL, SslUtils.PROTOCOL_TLS_V1_3);
+        testHandshakeEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3);
     }
 
     private void testHandshakeEvents(SslProvider provider, String protocol) throws Exception {
