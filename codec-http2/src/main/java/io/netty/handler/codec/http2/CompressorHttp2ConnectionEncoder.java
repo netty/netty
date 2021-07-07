@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.compression.BrotliOptions;
 import io.netty.handler.codec.http.compression.CompressionOptions;
 import io.netty.handler.codec.http.compression.DeflateOptions;
 import io.netty.handler.codec.http.compression.GzipOptions;
+import io.netty.handler.codec.http.compression.StandardCompressionOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
@@ -65,7 +66,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private DeflateOptions deflateOptions;
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
-        this(delegate, DEFAULT_COMPRESSION_LEVEL, DEFAULT_WINDOW_BITS, DEFAULT_MEM_LEVEL);
+        this(delegate, StandardCompressionOptions.brotli(), StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate());
     }
 
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
