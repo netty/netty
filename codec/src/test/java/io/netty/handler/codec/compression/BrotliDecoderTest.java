@@ -136,7 +136,7 @@ public class BrotliDecoderTest {
         decompressed.release();
     }
 
-  private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
+    private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
         final int compressedLength = data.readableBytes();
         int written = 0, length = RANDOM.nextInt(100);
         while (written + length < compressedLength) {
@@ -155,7 +155,7 @@ public class BrotliDecoderTest {
         data.release();
     }
 
-  private static ByteBuf readDecompressed(final EmbeddedChannel channel) {
+    private static ByteBuf readDecompressed(final EmbeddedChannel channel) {
         CompositeByteBuf decompressed = Unpooled.compositeBuffer();
         ByteBuf msg;
         while ((msg = channel.readInbound()) != null) {

@@ -25,6 +25,7 @@ public final class Brotli {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Brotli.class);
     private static final ClassNotFoundException CNFE;
+    private static Throwable cause;
 
     static {
         ClassNotFoundException cnfe = null;
@@ -42,7 +43,7 @@ public final class Brotli {
 
         // If in the classpath, try to load the native library and initialize brotli4j.
         if (cnfe == null) {
-            Throwable cause = Brotli4jLoader.getUnavailabilityCause();
+            cause = Brotli4jLoader.getUnavailabilityCause();
             if (cause != null) {
                 logger.debug("Failed to load brotli4j; Brotli support will be unavailable.", cause);
             }
@@ -68,6 +69,13 @@ public final class Brotli {
             throw CNFE;
         }
         Brotli4jLoader.ensureAvailability();
+    }
+
+    /**
+     * Returns {@link Throwable} of unavailability cause
+     */
+    public static Throwable cause() {
+        return cause;
     }
 
     private Brotli() {

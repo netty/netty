@@ -778,6 +778,7 @@ public class HttpContentCompressorTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
     }
+
     private static void assertAssembledEncodedResponse(EmbeddedChannel ch) {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(AssembledHttpResponse.class)));
