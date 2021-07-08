@@ -139,6 +139,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private HttpMessage message;
     private long chunkSize;
+    private ByteBuf chunkedContent;
     private long contentLength = Long.MIN_VALUE;
     private volatile boolean resetRequested;
 
@@ -357,6 +358,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 currentState = State.READ_CHUNK_FOOTER;
                 return;
             }
+            chunkedContent = buffer.alloc().buffer(chunkSize);
             currentState = State.READ_CHUNKED_CONTENT;
             // fall-through
         } catch (Exception e) {
@@ -370,14 +372,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (toRead == 0) {
                 return;
             }
-            HttpContent chunk = new DefaultHttpContent(buffer.readRetainedSlice(toRead));
+            chunkedContent.writeBytes(buffer.readRetainedSlice(toRead));
             chunkSize -= toRead;
-
-            out.add(chunk);
-
             if (chunkSize != 0) {
+                if (toRead == maxChunkSize) {
+                    HttpContent chunk = new DefaultHttpContent(chunkedContent);
+                    out.add(chunk);
+                    chunkedContent = buffer.alloc().buffer(Long.valueOf(chunkSize).intValue());
+                }
                 return;
             }
+            HttpContent chunk = new DefaultHttpContent(chunkedContent);
+            out.add(chunk);
+            chunkedContent = null;
             currentState = State.READ_CHUNK_DELIMITER;
             // fall-through
         }
