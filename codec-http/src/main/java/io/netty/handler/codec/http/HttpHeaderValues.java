@@ -44,6 +44,10 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString APPLICATION_XML = AsciiString.cached("application/xml");
     /**
+     * {@code "application/zstd"}
+     */
+    public static final AsciiString APPLICATION_ZSTD = AsciiString.cached("application/zstd");
+    /**
      * {@code "attachment"}
      * See {@link HttpHeaderNames#CONTENT_DISPOSITION}
      */
@@ -115,6 +119,10 @@ public final class HttpHeaderValues {
      * {@code "br"}
      */
     public static final AsciiString BR = AsciiString.cached("br");
+    /**
+     * {@code "zstd"}
+     */
+    public static final AsciiString ZSTD = AsciiString.cached("zstd");
     /**
      * {@code "gzip,deflate"}
      */
