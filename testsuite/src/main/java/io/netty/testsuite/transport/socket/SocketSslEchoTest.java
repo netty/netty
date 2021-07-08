@@ -38,6 +38,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -276,7 +277,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
-                sch.pipeline().addLast("handler", serverHandler);
+                sch.pipeline().addLast("serverHandler", serverHandler);
             }
         });
 
@@ -298,7 +299,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
-                sch.pipeline().addLast("handler", clientHandler);
+                sch.pipeline().addLast("clientHandler", clientHandler);
                 sch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -472,14 +473,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            if (!autoRead) {
-                ctx.read();
-            }
-            ctx.fireChannelActive();
-        }
-
-        @Override
         public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             // We intentionally do not ctx.flush() here because we want to verify the SslHandler correctly flushing
             // non-application and previously flushed writes internally.
@@ -524,6 +517,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
+        public void handlerAdded(final ChannelHandlerContext ctx) {
+            if (!autoRead) {
+                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(new GenericFutureListener<Future<? super Channel>>() {
+                    @Override
+                    public void operationComplete(Future<? super Channel> future) {
+                        ctx.read();
+                    }
+                });
+            }
+        }
+
+        @Override
         public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
@@ -550,6 +555,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public final void channelRegistered(ChannelHandlerContext ctx) {
             renegoFuture = null;
+        }
+
+        @Override
+        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+            if (!autoRead) {
+                ctx.read();
+            }
+            ctx.fireChannelActive();
         }
 
         @Override
