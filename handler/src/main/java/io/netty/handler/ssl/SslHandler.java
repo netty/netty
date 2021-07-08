@@ -1388,7 +1388,8 @@ public class SslHandler extends ByteToMessageDecoder {
                 }
 
                 if (handshakeStatus == HandshakeStatus.NEED_TASK) {
-                    if (!runDelegatedTasks(true)) {
+                    boolean pending = runDelegatedTasks(true);
+                    if (!pending) {
                         // We scheduled a task on the delegatingTaskExecutor, so stop processing as we will
                         // resume once the task completes.
                         //
@@ -1494,16 +1495,6 @@ public class SslHandler extends ByteToMessageDecoder {
         return executor instanceof EventExecutor && ((EventExecutor) executor).inEventLoop();
     }
 
-    private static void runAllDelegatedTasks(SSLEngine engine) {
-        for (;;) {
-            Runnable task = engine.getDelegatedTask();
-            if (task == null) {
-                return;
-            }
-            task.run();
-        }
-    }
-
     /**
      * Will either run the delegated task directly calling {@link Runnable#run()} and return {@code true} or will
      * offload the delegated task using {@link Executor#execute(Runnable)} and return {@code false}.
@@ -1515,16 +1506,50 @@ public class SslHandler extends ByteToMessageDecoder {
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
             // We should run the task directly in the EventExecutor thread and not offload at all. As we are on the
             // EventLoop we can just run all tasks at once.
-            runAllDelegatedTasks(engine);
-            return true;
+            for (;;) {
+                Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    return true;
+                }
+                setState(STATE_PROCESS_TASK);
+                if (task instanceof AsyncRunnable) {
+                    // Let's set the task to processing task before we try to execute it.
+                    boolean pending = false;
+                    try {
+                        AsyncRunnable asyncTask = (AsyncRunnable) task;
+                        AsyncTaskCompletionHandler completionHandler = new AsyncTaskCompletionHandler(inUnwrap);
+                        asyncTask.run(completionHandler);
+                        pending = completionHandler.resumeLater();
+                        if (pending) {
+                            return false;
+                        }
+                    } finally {
+                        if (!pending) {
+                            // The task has completed, lets clear the state. If it is not completed we will clear the
+                            // state once it is.
+                            clearState(STATE_PROCESS_TASK);
+                        }
+                    }
+                } else {
+                    try {
+                        task.run();
+                    } finally {
+                        clearState(STATE_PROCESS_TASK);
+                    }
+                }
+            }
         } else {
             executeDelegatedTask(inUnwrap);
             return false;
         }
     }
 
+    private SslTasksRunner getTaskRunner(boolean inUnwrap) {
+        return inUnwrap ? sslTaskRunnerForUnwrap : sslTaskRunner;
+    }
+
     private void executeDelegatedTask(boolean inUnwrap) {
-        executeDelegatedTask(inUnwrap ? sslTaskRunnerForUnwrap : sslTaskRunner);
+        executeDelegatedTask(getTaskRunner(inUnwrap));
     }
 
     private void executeDelegatedTask(SslTasksRunner task) {
@@ -1537,12 +1562,44 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
+    private final class AsyncTaskCompletionHandler implements Runnable {
+        private final boolean inUnwrap;
+        boolean didRun;
+        boolean resumeLater;
+
+        AsyncTaskCompletionHandler(boolean inUnwrap) {
+            this.inUnwrap = inUnwrap;
+        }
+
+        @Override
+        public void run() {
+            didRun = true;
+            if (resumeLater) {
+                getTaskRunner(inUnwrap).runComplete();
+            }
+        }
+
+        boolean resumeLater() {
+            if (!didRun) {
+                resumeLater = true;
+                return true;
+            }
+            return false;
+        }
+    }
+
     /**
      * {@link Runnable} that will be scheduled on the {@code delegatedTaskExecutor} and will take care
      * of resume work on the {@link EventExecutor} once the task was executed.
      */
     private final class SslTasksRunner implements Runnable {
         private final boolean inUnwrap;
+        private final Runnable runCompleteTask = new Runnable() {
+            @Override
+            public void run() {
+                runComplete();
+            }
+        };
 
         SslTasksRunner(boolean inUnwrap) {
             this.inUnwrap = inUnwrap;
@@ -1684,6 +1741,21 @@ public class SslHandler extends ByteToMessageDecoder {
             }
         }
 
+        void runComplete() {
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                resumeOnEventExecutor();
+            } else {
+                // Jump back on the EventExecutor.
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        resumeOnEventExecutor();
+                    }
+                });
+            }
+        }
+
         @Override
         public void run() {
             try {
@@ -1692,13 +1764,12 @@ public class SslHandler extends ByteToMessageDecoder {
                     // The task was processed in the meantime. Let's just return.
                     return;
                 }
-                task.run();
-
-                EventExecutor executor = ctx.executor();
-                if (executor.inEventLoop()) {
-                    resumeOnEventExecutor();
+                if (task instanceof AsyncRunnable) {
+                    AsyncRunnable asyncTask = (AsyncRunnable) task;
+                    asyncTask.run(runCompleteTask);
                 } else {
-                    executor.execute(this::resumeOnEventExecutor);
+                    task.run();
+                    runComplete();
                 }
             } catch (final Throwable cause) {
                 handleException(cause);
@@ -1706,12 +1777,13 @@ public class SslHandler extends ByteToMessageDecoder {
         }
 
         private void handleException(final Throwable cause) {
-            if (ctx.executor().inEventLoop()) {
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
                 clearState(STATE_PROCESS_TASK);
                 safeExceptionCaught(cause);
             } else {
                 try {
-                    ctx.executor().execute(() -> {
+                    executor.execute(() -> {
                         clearState(STATE_PROCESS_TASK);
                         safeExceptionCaught(cause);
                     });
