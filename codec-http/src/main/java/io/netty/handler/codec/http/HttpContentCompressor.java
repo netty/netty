@@ -17,8 +17,15 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.DeflateOptions;
+import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.util.internal.ObjectUtil;
 
 /**
@@ -29,6 +36,11 @@ import io.netty.util.internal.ObjectUtil;
  * {@link HttpContentEncoder}.
  */
 public class HttpContentCompressor extends HttpContentEncoder {
+
+    private final boolean supportsCompressionOptions;
+    private final BrotliOptions brotliOptions;
+    private final GzipOptions gzipOptions;
+    private final DeflateOptions deflateOptions;
 
     private final int compressionLevel;
     private final int windowBits;
@@ -53,6 +65,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel) {
         this(compressionLevel, 15, 8, 0);
     }
@@ -76,6 +89,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        memory.  Larger values result in better and faster compression
      *        at the expense of memory usage.  The default value is {@code 8}
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
         this(compressionLevel, windowBits, memLevel, 0);
     }
@@ -103,11 +117,80 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        body exceeds the threshold. The value should be a non negative
      *        number. {@code 0} will enable compression for all responses.
      */
+    @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
+        this.brotliOptions = null;
+        this.gzipOptions = null;
+        this.deflateOptions = null;
+        supportsCompressionOptions = false;
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} Instance with specified
+     * {@link CompressionOptions}s and contentSizeThreshold set to {@code 0}
+     *
+     * @param compressionOptions {@link CompressionOptions} or {@code null} if the default
+     *        should be used.
+     */
+    public HttpContentCompressor(CompressionOptions... compressionOptions) {
+        this(0, compressionOptions);
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} instance with specified
+     * {@link CompressionOptions}s
+     *
+     * @param contentSizeThreshold
+     *        The response body is compressed when the size of the response
+     *        body exceeds the threshold. The value should be a non negative
+     *        number. {@code 0} will enable compression for all responses.
+     * @param compressionOptions {@link CompressionOptions} or {@code null}
+     *        if the default should be used.
+     */
+    public HttpContentCompressor(int contentSizeThreshold, CompressionOptions... compressionOptions) {
+        this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
+        BrotliOptions brotliOptions = null;
+        GzipOptions gzipOptions = null;
+        DeflateOptions deflateOptions = null;
+        if (compressionOptions == null || compressionOptions.length == 0) {
+            brotliOptions = StandardCompressionOptions.brotli();
+            gzipOptions = StandardCompressionOptions.gzip();
+            deflateOptions = StandardCompressionOptions.deflate();
+        } else {
+            ObjectUtil.deepCheckNotNull("compressionOptionsIterable", compressionOptions);
+            for (CompressionOptions compressionOption : compressionOptions) {
+                if (compressionOption instanceof BrotliOptions) {
+                    brotliOptions = (BrotliOptions) compressionOption;
+                } else if (compressionOption instanceof GzipOptions) {
+                    gzipOptions = (GzipOptions) compressionOption;
+                } else if (compressionOption instanceof DeflateOptions) {
+                    deflateOptions = (DeflateOptions) compressionOption;
+                } else {
+                    throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
+                            ": " + compressionOption);
+                }
+            }
+            if (brotliOptions == null) {
+                brotliOptions = StandardCompressionOptions.brotli();
+            }
+            if (gzipOptions == null) {
+                gzipOptions = StandardCompressionOptions.gzip();
+            }
+            if (deflateOptions == null) {
+                deflateOptions = StandardCompressionOptions.deflate();
+            }
+        }
+        this.brotliOptions = brotliOptions;
+        this.gzipOptions = gzipOptions;
+        this.deflateOptions = deflateOptions;
+        this.compressionLevel = -1;
+        this.windowBits = -1;
+        this.memLevel = -1;
+        supportsCompressionOptions = true;
     }
 
     @Override
@@ -131,30 +214,109 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        ZlibWrapper wrapper = determineWrapper(acceptEncoding);
-        if (wrapper == null) {
-            return null;
-        }
+        if (supportsCompressionOptions) {
+            String targetContentEncoding = determineEncoding(acceptEncoding);
+            if (targetContentEncoding == null) {
+                return null;
+            }
 
-        String targetContentEncoding;
-        switch (wrapper) {
-        case GZIP:
-            targetContentEncoding = "gzip";
-            break;
-        case ZLIB:
-            targetContentEncoding = "deflate";
-            break;
-        default:
+            if (targetContentEncoding.equals("gzip")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                                ZlibWrapper.GZIP, gzipOptions.compressionLevel()
+                                , gzipOptions.windowBits(), gzipOptions.memLevel())));
+            }
+            if (targetContentEncoding.equals("deflate")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                                ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
+                                deflateOptions.windowBits(), deflateOptions.memLevel())));
+            }
+            if (targetContentEncoding.equals("br")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters())));
+            }
             throw new Error();
-        }
+        } else {
+            ZlibWrapper wrapper = determineWrapper(acceptEncoding);
+            if (wrapper == null) {
+                return null;
+            }
 
-        return new Result(
-                targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                        wrapper, compressionLevel, windowBits, memLevel)));
+            String targetContentEncoding;
+            switch (wrapper) {
+                case GZIP:
+                    targetContentEncoding = "gzip";
+                    break;
+                case ZLIB:
+                    targetContentEncoding = "deflate";
+                    break;
+                default:
+                    throw new Error();
+            }
+
+            return new Result(
+                    targetContentEncoding,
+                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
+                            wrapper, compressionLevel, windowBits, memLevel)));
+        }
     }
 
+    @SuppressWarnings("FloatingPointEquality")
+    protected String determineEncoding(String acceptEncoding) {
+        float starQ = -1.0f;
+        float brQ = -1.0f;
+        float gzipQ = -1.0f;
+        float deflateQ = -1.0f;
+        for (String encoding : acceptEncoding.split(",")) {
+            float q = 1.0f;
+            int equalsPos = encoding.indexOf('=');
+            if (equalsPos != -1) {
+                try {
+                    q = Float.parseFloat(encoding.substring(equalsPos + 1));
+                } catch (NumberFormatException e) {
+                    // Ignore encoding
+                    q = 0.0f;
+                }
+            }
+            if (encoding.contains("*")) {
+                starQ = q;
+            } else if (encoding.contains("br") && q > brQ) {
+                brQ = q;
+            } else if (encoding.contains("gzip") && q > gzipQ) {
+                gzipQ = q;
+            } else if (encoding.contains("deflate") && q > deflateQ) {
+                deflateQ = q;
+            }
+        }
+        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ != -1.0f && brQ >= gzipQ) {
+                return Brotli.isAvailable() ? "br" : null;
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
+                return "gzip";
+            } else if (deflateQ != -1.0f) {
+                return "deflate";
+            }
+        }
+        if (starQ > 0.0f) {
+            if (brQ == -1.0f) {
+                return Brotli.isAvailable() ? "br" : null;
+            }
+            if (gzipQ == -1.0f) {
+                return "gzip";
+            }
+            if (deflateQ == -1.0f) {
+                return "deflate";
+            }
+        }
+        return null;
+    }
+
+    @Deprecated
     @SuppressWarnings("FloatingPointEquality")
     protected ZlibWrapper determineWrapper(String acceptEncoding) {
         float starQ = -1.0f;

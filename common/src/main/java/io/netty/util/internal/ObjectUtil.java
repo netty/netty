@@ -42,6 +42,26 @@ public final class ObjectUtil {
     }
 
     /**
+     * Check that the given varargs is not null and does not contain elements
+     * null elements.
+     *
+     * If it is, throws {@link NullPointerException}.
+     * Otherwise, returns the argument.
+     */
+    public static <T> T[] deepCheckNotNull(String text, T... varargs) {
+        if (varargs == null) {
+            throw new NullPointerException(text);
+        }
+
+        for (T element : varargs) {
+            if (element == null) {
+                throw new NullPointerException(text);
+            }
+        }
+        return varargs;
+    }
+
+    /**
      * Checks that the given argument is not null. If it is, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
