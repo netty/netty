@@ -94,6 +94,10 @@ class Hidden {
                     "io.netty.handler.ssl.SslHandler",
                     "runAllDelegatedTasks"
             );
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.SslHandler",
+                    "runDelegatedTasks"
+            );
 
             builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",

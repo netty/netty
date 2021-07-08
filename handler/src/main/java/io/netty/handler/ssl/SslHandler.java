@@ -392,6 +392,9 @@ public class SslHandler extends ByteToMessageDecoder {
 
     private final boolean startTls;
 
+    private final SslTasksRunner sslTaskRunnerForUnwrap = new SslTasksRunner(true);
+    private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
+
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
     private Promise<Channel> handshakePromise = new LazyPromise();
     private final Promise<Channel> sslClosePromise = new LazyPromise();
@@ -1510,19 +1513,24 @@ public class SslHandler extends ByteToMessageDecoder {
      */
     private boolean runDelegatedTasks(boolean inUnwrap) {
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
-            // We should run the task directly in the EventExecutor thread and not offload at all.
+            // We should run the task directly in the EventExecutor thread and not offload at all. As we are on the
+            // EventLoop we can just run all tasks at once.
             runAllDelegatedTasks(engine);
             return true;
         } else {
-            executeDelegatedTasks(inUnwrap);
+            executeDelegatedTask(inUnwrap);
             return false;
         }
     }
 
-    private void executeDelegatedTasks(boolean inUnwrap) {
+    private void executeDelegatedTask(boolean inUnwrap) {
+        executeDelegatedTask(inUnwrap ? sslTaskRunnerForUnwrap : sslTaskRunner);
+    }
+
+    private void executeDelegatedTask(SslTasksRunner task) {
         setState(STATE_PROCESS_TASK);
         try {
-            delegatedTaskExecutor.execute(new SslTasksRunner(inUnwrap));
+            delegatedTaskExecutor.execute(task);
         } catch (RejectedExecutionException e) {
             clearState(STATE_PROCESS_TASK);
             throw e;
@@ -1600,9 +1608,10 @@ public class SslHandler extends ByteToMessageDecoder {
             try {
                 HandshakeStatus status = engine.getHandshakeStatus();
                 switch (status) {
-                    // There is another task that needs to be executed and offloaded to the delegatingTaskExecutor.
+                    // There is another task that needs to be executed and offloaded to the delegatingTaskExecutor as
+                    // a result of this. Let's reschedule....
                     case NEED_TASK:
-                        executeDelegatedTasks(inUnwrap);
+                        executeDelegatedTask(this);
 
                         break;
 
@@ -1678,13 +1687,19 @@ public class SslHandler extends ByteToMessageDecoder {
         @Override
         public void run() {
             try {
-                runAllDelegatedTasks(engine);
+                Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    // The task was processed in the meantime. Let's just return.
+                    return;
+                }
+                task.run();
 
-                // All tasks were processed.
-                assert engine.getHandshakeStatus() != HandshakeStatus.NEED_TASK;
-
-                // Jump back on the EventExecutor.
-                ctx.executor().execute(this::resumeOnEventExecutor);
+                EventExecutor executor = ctx.executor();
+                if (executor.inEventLoop()) {
+                    resumeOnEventExecutor();
+                } else {
+                    executor.execute(this::resumeOnEventExecutor);
+                }
             } catch (final Throwable cause) {
                 handleException(cause);
             }
