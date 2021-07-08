@@ -254,3 +254,11 @@ This private header is also used by Apple's open source
     * license/LICENSE.dnsinfo.txt (Apple Public Source License 2.0)
   * HOMEPAGE:
     * https://www.opensource.apple.com/source/configd/configd-453.19/dnsinfo/dnsinfo.h
+
+This product optionally depends on 'Brotli4j', Brotli compression and
+decompression for Java., which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.brotli4j.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/hyperxpro/Brotli4j
