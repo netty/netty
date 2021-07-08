@@ -51,7 +51,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
         });
     }
 
-    void testBind(Bootstrap cb) throws Throwable {
+    private void testBind(Bootstrap cb) throws Throwable {
         Channel channel = null;
         try {
             channel = cb.handler(new ChannelInboundHandlerAdapter())
