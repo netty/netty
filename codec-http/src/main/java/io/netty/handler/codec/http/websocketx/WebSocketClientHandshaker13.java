@@ -305,5 +305,4 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         super.setForceCloseTimeoutMillis(forceCloseTimeoutMillis);
         return this;
     }
-
 }
