@@ -13,8 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec.compression;
 
 /**
- * This package contains classes required for HTTP Compression.
+ * {@link CompressionOptions} provides compression options for
+ * various types of compressor types, like Brotli.
+ *
+ * A {@link CompressionOptions} instance is thread-safe
+ * and should be shared between multiple instances of Compressor.
  */
-package io.netty.handler.codec.http.compression;
+public interface CompressionOptions {
+    // Empty
+}

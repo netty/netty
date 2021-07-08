@@ -13,31 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http.compression;
-
-import io.netty.util.internal.ObjectUtil;
+package io.netty.handler.codec.compression;
 
 /**
- * {@link DeflateOptions} holds {@link #compressionLevel()},
- * {@link #memLevel()} and {@link #windowBits()} for Deflate compression.
+ * {@link GzipOptions} holds {@link #compressionLevel()},
+ * {@link #memLevel()} and {@link #windowBits()} for Gzip compression.
+ * This class is an extension of {@link DeflateOptions}
  */
-public class DeflateOptions implements CompressionOptions {
-
-    private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
+public final class GzipOptions extends DeflateOptions {
 
     /**
-     * Default implementation of {@link DeflateOptions} with
-     * {@link #compressionLevel} set to 6, {@link #windowBits} set to 15
-     * and {@link #memLevel} set to 8.
+     * Default implementation of {@link GzipOptions} with
+     * {@link #compressionLevel()} set to 6, {@link #windowBits()} set to 15
+     * and {@link #memLevel()} set to 8.
      */
-    static final DeflateOptions DEFAULT = new DeflateOptions(
+    static final GzipOptions DEFAULT = new GzipOptions(
             6, 15, 8
     );
 
     /**
-     * Create a new {@link DeflateOptions} Instance
+     * Create a new {@link GzipOptions} Instance
      *
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
@@ -53,21 +48,7 @@ public class DeflateOptions implements CompressionOptions {
      *                         memory.  Larger values result in better and faster compression
      *                         at the expense of memory usage.  The default value is {@code 8}
      */
-    DeflateOptions(int compressionLevel, int windowBits, int memLevel) {
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
-    }
-
-    public int compressionLevel() {
-        return compressionLevel;
-    }
-
-    public int windowBits() {
-        return windowBits;
-    }
-
-    public int memLevel() {
-        return memLevel;
+    GzipOptions(int compressionLevel, int windowBits, int memLevel) {
+        super(compressionLevel, windowBits, memLevel);
     }
 }

@@ -21,14 +21,12 @@ import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.http.compression.BrotliOptions;
-import io.netty.handler.codec.http.compression.CompressionOptions;
-import io.netty.handler.codec.http.compression.DeflateOptions;
-import io.netty.handler.codec.http.compression.GzipOptions;
-import io.netty.handler.codec.http.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.DeflateOptions;
+import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.util.internal.ObjectUtil;
-
-import java.util.Arrays;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or

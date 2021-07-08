@@ -41,7 +41,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
      */
     public BrotliEncoder() {
-        this(new Encoder.Parameters().setQuality(4).setMode(Encoder.Mode.TEXT));
+        this(BrotliOptions.DEFAULT);
     }
 
     /**
@@ -51,6 +51,15 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public BrotliEncoder(Encoder.Parameters parameters) {
         this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+    }
+
+    /**
+     * Create a new {@link BrotliEncoder} Instance
+     *
+     * @param brotliOptions {@link BrotliOptions} to use.
+     */
+    public BrotliEncoder(BrotliOptions brotliOptions) {
+        this(brotliOptions.parameters());
     }
 
     @Override

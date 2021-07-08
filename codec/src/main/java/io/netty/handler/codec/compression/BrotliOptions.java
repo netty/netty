@@ -13,10 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http.compression;
+package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
-import io.netty.handler.codec.compression.Brotli;
 import io.netty.util.internal.ObjectUtil;
 
 /**

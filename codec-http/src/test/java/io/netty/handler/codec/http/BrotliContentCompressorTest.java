@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.compression.StandardCompressionOptions;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
