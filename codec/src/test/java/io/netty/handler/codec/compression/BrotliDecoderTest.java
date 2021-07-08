@@ -62,8 +62,7 @@ public class BrotliDecoderTest {
     }
 
     static boolean isNotSupported() {
-        return (PlatformDependent.isOsx() || PlatformDependent.isWindows())
-                && "aarch_64".equals(PlatformDependent.normalizedArch());
+        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 
     private static void fillArrayWithCompressibleData(byte[] array) {
