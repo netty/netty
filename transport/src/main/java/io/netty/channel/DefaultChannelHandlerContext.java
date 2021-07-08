@@ -24,7 +24,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectPool;
-import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -483,7 +482,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -523,7 +522,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -562,7 +561,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().disconnect(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -595,7 +594,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().close(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, true, promise);
         }
     }
 
@@ -628,7 +627,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().register(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -661,7 +660,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().deregister(this, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -688,20 +687,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().read(this);
         } catch (Throwable t) {
-            invokeExceptionCaughtFromOutbound(t);
-        }
-    }
-
-    private void invokeExceptionCaughtFromOutbound(Throwable t) {
-        if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
-            invokeExceptionCaught(t);
-        } else {
-            DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
-            if (ctx == null) {
-                notifyHandlerRemovedAlready();
-                return;
-            }
-            ctx.invokeExceptionCaught(t);
+            handleOutboundHandlerException(t, false, null);
         }
     }
 
@@ -722,7 +708,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().write(this, m, promise);
         } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+            handleOutboundHandlerException(t, false, promise);
         }
     }
 
@@ -753,7 +739,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().flush(this);
         } catch (Throwable t) {
-            invokeExceptionCaughtFromOutbound(t);
+            handleOutboundHandlerException(t, false, null);
         }
     }
 
@@ -817,8 +803,24 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return writeAndFlush(msg, newPromise());
     }
 
-    private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        PromiseNotificationUtil.tryFailure(promise, cause, logger);
+    private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow, ChannelPromise promise) {
+        String msg = handler() + " threw an exception while handling an outbound event. This is most likely a bug";
+
+        if (promise != null && !promise.isDone()) {
+            // This is a "best-effort" approach to at least ensure the promise will be completed somehow.
+            promise.tryFailure(new IllegalStateException(msg, cause));
+        }
+
+        logger.warn("{}. This is most likely a bug, closing the channel.", msg, cause);
+        if (closeDidThrow) {
+            // Close itself did throw, just call close() directly and so have the next handler invoked. If we would
+            // call close() on the Channel we would risk an infinite-loop.
+            close();
+        } else {
+            // Let's close the channel. Calling close on the Channel ensure we start from the end of the pipeline
+            // and so give all handlers the chance to do something during close.
+            channel().close();
+        }
     }
 
     @Override

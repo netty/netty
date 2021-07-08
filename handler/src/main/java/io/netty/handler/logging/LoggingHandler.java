@@ -222,7 +222,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND", localAddress));
         }
@@ -232,7 +232,7 @@ public class LoggingHandler implements ChannelHandler {
     @Override
     public void connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT", remoteAddress, localAddress));
         }
@@ -240,7 +240,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT"));
         }
@@ -248,7 +248,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE"));
         }
@@ -256,7 +256,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER"));
         }
@@ -280,7 +280,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "WRITE", msg));
         }
@@ -296,7 +296,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "FLUSH"));
         }

@@ -44,7 +44,7 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWrite() {
         assertWrite(new TestHandler() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWrite();
@@ -58,7 +58,7 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWriteAll() {
         assertWrite(new TestHandler() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWriteAll();
@@ -73,7 +73,7 @@ public class PendingWriteQueueTest {
         assertWriteFails(new TestHandler() {
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 queue.removeAndFail(new TestException());
                 super.flush(ctx);
             }
@@ -84,7 +84,7 @@ public class PendingWriteQueueTest {
     public void testRemoveAndFailAll() {
         assertWriteFails(new TestHandler() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 queue.removeAndFailAll(new TestException());
                 super.flush(ctx);
             }
@@ -358,7 +358,7 @@ public class PendingWriteQueueTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             queue.add(msg, promise);
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());

@@ -91,29 +91,29 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         encoder.bind(ctx, localAddress, promise);
     }
 
     @Override
     public void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) {
         encoder.connect(ctx, remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         encoder.disconnect(ctx, promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         encoder.close(ctx, promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         encoder.deregister(ctx, promise);
     }
 
@@ -123,7 +123,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         encoder.flush(ctx);
     }
 

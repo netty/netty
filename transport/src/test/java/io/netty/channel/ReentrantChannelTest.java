@@ -173,7 +173,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
@@ -182,7 +182,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 if (flushCount < 5) {
                     flushCount++;
                     ctx.channel().write(createTestBuf(2000));
@@ -227,7 +227,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 promise.addListener(future -> ctx.channel().close());
                 ctx.write(msg, promise);
                 ctx.channel().flush();
@@ -257,14 +257,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
-                throw new Exception("intentional failure");
-            }
-
-        }, new ChannelHandler() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                ctx.close();
+            public void flush(ChannelHandlerContext ctx) {
+                throw new RuntimeException("intentional failure");
             }
         });
 
