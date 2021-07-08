@@ -33,6 +33,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -192,11 +193,11 @@ public class HttpContentDecoderTest {
         assertFalse(channel.finish()); // assert that no messages are left in channel
     }
 
+    @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
     @Test
     public void testResponseBrotliDecompression() throws Throwable {
         Brotli.ensureAvailability();
-        // Failing on windows atm
-        assumeFalse(PlatformDependent.isWindows());
+
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
@@ -213,11 +214,8 @@ public class HttpContentDecoderTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse resp = (FullHttpResponse) o;
         assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
-        assertEquals(SAMPLE_STRING.length(),
-          resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue(),
-          "Content-Length header should match uncompressed string's length");
         assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
-          "Response body should match uncompressed string");
+                "Response body should match uncompressed string");
         resp.release();
 
         assertHasInboundMessages(channel, false);
@@ -225,11 +223,11 @@ public class HttpContentDecoderTest {
         assertFalse(channel.finish()); // assert that no messages are left in channel
     }
 
+    @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
     @Test
     public void testResponseChunksBrotliDecompression() throws Throwable {
         Brotli.ensureAvailability();
-        // Failing on windows atm
-        assumeFalse(PlatformDependent.isWindows());
+
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
@@ -257,9 +255,6 @@ public class HttpContentDecoderTest {
         Object o = channel.readInbound();
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse resp = (FullHttpResponse) o;
-        assertEquals(SAMPLE_STRING.length(),
-          resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue(),
-          "Content-Length header should match uncompressed string's length");
         assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
           "Response body should match uncompressed string");
         resp.release();
@@ -859,5 +854,9 @@ public class HttpContentDecoderTest {
             o = channel.readOutbound();
             assertNull(o);
         }
+    }
+
+    static boolean isNotSupported() {
+        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 }
