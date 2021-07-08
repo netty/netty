@@ -53,7 +53,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * Creates a new BrotliDecoder with a default 8kB input buffer
      */
     public BrotliDecoder() {
-        this(1024 * 8);
+        this(8 * 1024);
     }
 
     /**
