@@ -89,6 +89,13 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths);
     }
 
+    public HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+            int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders,
+              initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(

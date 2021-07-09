@@ -147,56 +147,64 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunkedExceedBufferSize() {
-      EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+    public void testResponseDisallowPartialChunks() {
+        HttpResponseDecoder decoder = new HttpResponseDecoder(
+            HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
+            HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE,
+            HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE,
+            HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS,
+            HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE,
+            HttpObjectDecoder.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS,
+            false);
+        EmbeddedChannel ch = new EmbeddedChannel(decoder);
 
-      String headers = "HTTP/1.1 200 OK\r\n"
-          + "Transfer-Encoding: chunked\r\n"
-          + "\r\n";
-      ch.writeInbound(Unpooled.copiedBuffer(headers, CharsetUtil.US_ASCII));
+        String headers = "HTTP/1.1 200 OK\r\n"
+            + "Transfer-Encoding: chunked\r\n"
+            + "\r\n";
+        ch.writeInbound(Unpooled.copiedBuffer(headers, CharsetUtil.US_ASCII));
 
-      HttpResponse res = ch.readInbound();
-      assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-      assertThat(res.status(), is(HttpResponseStatus.OK));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
 
-      byte[] chunk = new byte[10];
-      for (int i = 0; i < chunk.length; i++) {
-          chunk[i] = (byte) i;
-      }
+        byte[] chunk = new byte[10];
+        for (int i = 0; i < chunk.length; i++) {
+            chunk[i] = (byte) i;
+        }
 
-      byte[] partialChunk1 = new byte[5];
-      System.arraycopy(chunk, 0, partialChunk1, 0, 5);
-      byte[] partialChunk2 = new byte[5];
-      System.arraycopy(chunk, 5, partialChunk2, 0, 5);
+        byte[] partialChunk1 = new byte[5];
+        System.arraycopy(chunk, 0, partialChunk1, 0, 5);
+        byte[] partialChunk2 = new byte[5];
+        System.arraycopy(chunk, 5, partialChunk2, 0, 5);
 
-      for (int i = 0; i < 10; i++) {
-          assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(chunk.length)
-              + "\r\n", CharsetUtil.US_ASCII)));
-          assertTrue(ch.writeInbound(Unpooled.copiedBuffer(partialChunk1), Unpooled.copiedBuffer(partialChunk2)));
+        for (int i = 0; i < 10; i++) {
+            assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(chunk.length)
+                + "\r\n", CharsetUtil.US_ASCII)));
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(partialChunk1), Unpooled.copiedBuffer(partialChunk2)));
 
-          HttpContent content = ch.readInbound();
-          assertEquals(chunk.length, content.content().readableBytes());
+            HttpContent content = ch.readInbound();
+            assertEquals(chunk.length, content.content().readableBytes());
 
-          byte[] decodedChunk = new byte[chunk.length];
-          int toRead = Math.min(content.content().readableBytes(), chunk.length);
-          content.content().readBytes(decodedChunk, 0, toRead);
+            byte[] decodedChunk = new byte[chunk.length];
+            int toRead = Math.min(content.content().readableBytes(), chunk.length);
+            content.content().readBytes(decodedChunk, 0, toRead);
 
-          assertArrayEquals(chunk, decodedChunk);
-          content.release();
+            assertArrayEquals(chunk, decodedChunk);
+            content.release();
 
-          assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-      }
+            assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+        }
 
-      // Write the last chunk.
-      ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+        // Write the last chunk.
+        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
 
-      // Ensure the last chunk was decoded.
-      LastHttpContent content = ch.readInbound();
-      assertFalse(content.content().isReadable());
-      content.release();
+        // Ensure the last chunk was decoded.
+        LastHttpContent content = ch.readInbound();
+        assertFalse(content.content().isReadable());
+        content.release();
 
-      ch.finish();
-      assertNull(ch.readInbound());
+        ch.finish();
+        assertNull(ch.readInbound());
     }
 
     @Test
