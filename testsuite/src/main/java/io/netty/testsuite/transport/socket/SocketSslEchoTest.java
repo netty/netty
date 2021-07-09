@@ -519,7 +519,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public void handlerAdded(final ChannelHandlerContext ctx) {
             if (!autoRead) {
-                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(new GenericFutureListener<Future<? super Channel>>() {
+                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
+                        new GenericFutureListener<Future<? super Channel>>() {
                     @Override
                     public void operationComplete(Future<? super Channel> future) {
                         ctx.read();
