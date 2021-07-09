@@ -42,6 +42,20 @@ public final class StandardCompressionOptions {
     }
 
     /**
+     * @see ZstdOptions#DEFAULT
+     */
+    public static ZstdOptions zstd() {
+        return ZstdOptions.DEFAULT;
+    }
+
+    /**
+     * @see ZstdOptions(int)
+     */
+    public static ZstdOptions zstd(int compressionLevel) {
+        return new ZstdOptions(compressionLevel);
+    }
+
+    /**
      * @see GzipOptions#DEFAULT
      */
     public static GzipOptions gzip() {
