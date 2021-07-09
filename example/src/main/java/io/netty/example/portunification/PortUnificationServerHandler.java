@@ -73,7 +73,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
                 switchToFactorial(ctx);
             } else {
                 // Unknown protocol; discard everything and close the connection.
-                in.clear();
+                in.release();
                 ctx.close();
             }
         }
