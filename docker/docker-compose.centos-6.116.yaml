@@ -22,3 +22,9 @@ services:
 
   shell:
     image: netty:centos-6-1.16
+
+  partly-build-leak:
+    image: netty:centos-6-1.16
+
+  partly-build-leak-boringssl-static:
+    image: netty:centos-6-1.16
