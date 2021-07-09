@@ -49,7 +49,7 @@ public final class StandardCompressionOptions {
     }
 
     /**
-     * @see ZstdOptions(int)
+     * @see ZstdOptions#ZstdOptions(int)
      */
     public static ZstdOptions zstd(int compressionLevel) {
         return new ZstdOptions(compressionLevel);

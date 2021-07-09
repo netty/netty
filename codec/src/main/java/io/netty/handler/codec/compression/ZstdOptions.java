@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 
 /**
  * {@link ZstdOptions} holds compressionLevel for
@@ -39,7 +40,7 @@ public class ZstdOptions implements CompressionOptions {
      * @param  compressionLevel
      */
     ZstdOptions(int compressionLevel) {
-        this.compressionLevel = ObjectUtil.checkPositive(compressionLevel, "compressionLevel");
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
     }
 
     public int compressionLevel() {
