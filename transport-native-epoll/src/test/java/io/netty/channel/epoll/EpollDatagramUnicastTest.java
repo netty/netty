@@ -27,7 +27,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.DatagramUnicastTest;
+import io.netty.testsuite.transport.socket.DatagramUnicastInetTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class EpollDatagramUnicastTest extends DatagramUnicastTest {
+public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);

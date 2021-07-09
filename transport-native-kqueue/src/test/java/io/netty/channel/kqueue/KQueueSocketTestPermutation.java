@@ -175,6 +175,22 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 }
         );
     }
+
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> domainDatagram() {
+        return combo(domainDatagramSocket(), domainDatagramSocket());
+    }
+
+    public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public static DomainSocketAddress newSocketAddress() {
         return UnixTestUtils.newSocketAddress();
     }

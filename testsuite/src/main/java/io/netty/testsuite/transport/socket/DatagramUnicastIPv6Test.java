@@ -26,7 +26,7 @@ import java.net.StandardProtocolFamily;
 import java.nio.channels.Channel;
 import java.nio.channels.spi.SelectorProvider;
 
-public class DatagramUnicastIPv6Test extends DatagramUnicastTest {
+public class DatagramUnicastIPv6Test extends DatagramUnicastInetTest {
 
     @SuppressJava6Requirement(reason = "Guarded by java version check")
     @BeforeAll

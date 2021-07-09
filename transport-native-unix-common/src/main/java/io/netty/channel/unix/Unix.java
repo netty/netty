@@ -43,7 +43,7 @@ public final class Unix {
                 IOException.class, PortUnreachableException.class,
 
                 // netty_unix_socket
-                DatagramSocketAddress.class, InetSocketAddress.class
+                DatagramSocketAddress.class, DomainDatagramSocketAddress.class, InetSocketAddress.class
         );
     }
 

@@ -92,6 +92,10 @@ final class BsdSocket extends Socket {
         return new BsdSocket(newSocketDomain0());
     }
 
+    public static BsdSocket newSocketDomainDgram() {
+        return new BsdSocket(newSocketDomainDgram0());
+    }
+
     private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,
                                         long offset, long length) throws IOException;
 
