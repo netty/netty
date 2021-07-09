@@ -42,14 +42,18 @@ public final class StandardCompressionOptions {
     }
 
     /**
-     * @see ZstdOptions#DEFAULT
+     * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
+     * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL}
      */
     public static ZstdOptions zstd() {
         return ZstdOptions.DEFAULT;
     }
 
     /**
-     * @see ZstdOptions#ZstdOptions(int)
+     * Create a new {@link ZstdOptions}
+     *
+     * @param  compressionLevel
+     *           specifies the level of the compression
      */
     public static ZstdOptions zstd(int compressionLevel) {
         return new ZstdOptions(compressionLevel);

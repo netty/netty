@@ -30,7 +30,7 @@ public class ZstdOptions implements CompressionOptions {
 
     /**
      * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
-     * ZstdConstants#DEFAULT_COMPRESSION_LEVEL
+     * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL}
      */
     static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL);
 
@@ -38,6 +38,7 @@ public class ZstdOptions implements CompressionOptions {
      * Create a new {@link ZstdOptions}
      *
      * @param  compressionLevel
+     *           specifies the level of the compression
      */
     ZstdOptions(int compressionLevel) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
