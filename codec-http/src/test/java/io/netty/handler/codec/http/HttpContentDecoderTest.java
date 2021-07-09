@@ -66,7 +66,8 @@ public class HttpContentDecoderTest {
         InputStream uncompressed = HttpContentDecoderTest.class.getClassLoader()
           .getResourceAsStream("sample.json");
         try {
-            SAMPLE_STRING = IOUtils.toString(uncompressed, CharsetUtil.UTF_8);
+            assert uncompressed != null;
+            SAMPLE_STRING = new String(IOUtils.readFully(uncompressed, uncompressed.available()), CharsetUtil.UTF_8);
         } catch (Throwable e) {
             throw new ExceptionInInitializerError(e);
         } finally {
