@@ -254,7 +254,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
             if (targetContentEncoding.equals("zstd")) {
                 return new Result(targetContentEncoding,
                         new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                                ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel())));
+                                ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
+                                zstdOptions.blockSize(), zstdOptions.maxEncodeSize())));
             }
             throw new Error();
         } else {

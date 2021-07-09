@@ -19,6 +19,8 @@ import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
 
 /**
  * {@link ZstdOptions} holds compressionLevel for
@@ -26,25 +28,42 @@ import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_L
  */
 public class ZstdOptions implements CompressionOptions {
 
+    private final int blockSize;
     private final int compressionLevel;
+    private final int maxEncodeSize;
 
     /**
      * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
-     * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL}
+     * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL},{@link ZstdConstants#DEFAULT_BLOCK_SIZE},
+     * {@link ZstdConstants#MAX_BLOCK_SIZE}
      */
-    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL);
+    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE);
 
     /**
      * Create a new {@link ZstdOptions}
      *
+     * @param  blockSize
+     *           is used to calculate the compressionLevel
+     * @param  maxEncodeSize
+     *           specifies the size of the largest compressed object
      * @param  compressionLevel
      *           specifies the level of the compression
      */
-    ZstdOptions(int compressionLevel) {
+    ZstdOptions(int compressionLevel, int blockSize, int maxEncodeSize) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
+        this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");
+        this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
     }
 
     public int compressionLevel() {
         return compressionLevel;
+    }
+
+    public int blockSize() {
+        return blockSize;
+    }
+
+    public int maxEncodeSize() {
+        return maxEncodeSize;
     }
 }
