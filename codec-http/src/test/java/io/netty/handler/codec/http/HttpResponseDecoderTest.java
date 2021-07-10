@@ -184,13 +184,10 @@ public class HttpResponseDecoderTest {
 
         assertEquals(chunkSize, content.content().readableBytes());
 
-        byte[] expectedChunk = new byte[chunkSize];
-        chunk.readBytes(expectedChunk, 0, chunkSize);
+        byte[] decodedChunkBytes = new byte[chunkSize];
+        content.content().readBytes(decodedChunkBytes, 0, chunkSize);
 
-        byte[] actualChunk = new byte[chunkSize];
-        content.content().readBytes(actualChunk, 0, chunkSize);
-
-        assertArrayEquals(expectedChunk, actualChunk);
+        assertArrayEquals(chunkBytes, decodedChunkBytes);
         content.release();
 
         assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
