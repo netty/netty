@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
-
+import java.util.Random;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -167,41 +167,41 @@ public class HttpResponseDecoderTest {
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
 
-        byte[] chunk = new byte[10];
-        for (int i = 0; i < chunk.length; i++) {
-            chunk[i] = (byte) i;
-        }
+        byte[] chunkBytes = new byte[10];
+        Random random = new Random();
+        random.nextBytes(chunkBytes);
+        final ByteBuf chunk = ch.alloc().buffer().writeBytes(chunkBytes);
+        final int chunkSize = chunk.readableBytes();
+        ByteBuf partialChunk1 = chunk.retainedSlice(0, 5);
+        ByteBuf partialChunk2 = chunk.retainedSlice(5, 5);
 
-        byte[] partialChunk1 = new byte[5];
-        System.arraycopy(chunk, 0, partialChunk1, 0, 5);
-        byte[] partialChunk2 = new byte[5];
-        System.arraycopy(chunk, 5, partialChunk2, 0, 5);
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(chunkSize)
+                                                          + "\r\n", CharsetUtil.US_ASCII)));
+        assertFalse(ch.writeInbound(partialChunk1));
+        assertTrue(ch.writeInbound(partialChunk2));
 
-        for (int i = 0; i < 10; i++) {
-            assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(chunk.length)
-                + "\r\n", CharsetUtil.US_ASCII)));
-            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(partialChunk1), Unpooled.copiedBuffer(partialChunk2)));
+        HttpContent content = ch.readInbound();
 
-            HttpContent content = ch.readInbound();
-            assertEquals(chunk.length, content.content().readableBytes());
+        assertEquals(chunkSize, content.content().readableBytes());
 
-            byte[] decodedChunk = new byte[chunk.length];
-            int toRead = Math.min(content.content().readableBytes(), chunk.length);
-            content.content().readBytes(decodedChunk, 0, toRead);
+        byte[] expectedChunk = new byte[chunkSize];
+        chunk.readBytes(expectedChunk, 0, chunkSize);
 
-            assertArrayEquals(chunk, decodedChunk);
-            content.release();
+        byte[] actualChunk = new byte[chunkSize];
+        content.content().readBytes(actualChunk, 0, chunkSize);
 
-            assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-        }
+        assertArrayEquals(expectedChunk, actualChunk);
+        content.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
 
         // Write the last chunk.
         ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
 
         // Ensure the last chunk was decoded.
-        LastHttpContent content = ch.readInbound();
-        assertFalse(content.content().isReadable());
-        content.release();
+        HttpContent lastContent = ch.readInbound();
+        assertFalse(lastContent.content().isReadable());
+        lastContent.release();
 
         ch.finish();
         assertNull(ch.readInbound());
