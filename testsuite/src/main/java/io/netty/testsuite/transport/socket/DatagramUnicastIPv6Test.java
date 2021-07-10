@@ -24,7 +24,7 @@ import java.net.StandardProtocolFamily;
 import java.nio.channels.Channel;
 import java.nio.channels.spi.SelectorProvider;
 
-public class DatagramUnicastIPv6Test extends DatagramUnicastTest {
+public class DatagramUnicastIPv6Test extends DatagramUnicastInetTest {
 
     @BeforeAll
     public static void assumeIpv6Supported() {
