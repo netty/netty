@@ -284,6 +284,54 @@ public class DataCompressionHttp2Test {
     }
 
     @Test
+    public void zstdEncodingSingleEmptyMessage() throws Exception {
+        final String text = "";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void zstdEncodingSingleMessage() throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
     public void deflateEncodingWriteLargeMessage() throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
