@@ -501,7 +501,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     }
 
     /**
-     * Returns the human-readable source address of this {@link HAProxyMessage}.
+     * Returns the human-readable source address of this {@link HAProxyMessage} or {@code null}
+     * if HAProxy performs health check with {@code send-proxy-v2}.
      */
     public String sourceAddress() {
         return sourceAddress;
