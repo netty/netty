@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 
 /**
  *  Compresses a {@link ByteBuf} using the Zstandard algorithm.
@@ -80,7 +81,7 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public ZstdEncoder(int compressionLevel, int blockSize, int maxEncodeSize) {
         super(true);
-        this.compressionLevel = ObjectUtil.checkPositive(compressionLevel, "compressionLevel");
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
         this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");
         this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
     }

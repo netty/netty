@@ -17,12 +17,20 @@ package io.netty.handler.codec.compression;
 
 final class ZstdConstants {
 
-    static final int DEFAULT_COMPRESSION_LEVEL = 10;
+    /**
+     * Default compression level
+     */
+    static final int DEFAULT_COMPRESSION_LEVEL = 3;
+
+    /**
+     * Max compression level
+     */
+    static final int MAX_COMPRESSION_LEVEL = 22;
 
     /**
      * Max block size
      */
-    static final int MAX_BLOCK_SIZE = 1 << DEFAULT_COMPRESSION_LEVEL + 0x0F;   //  32 M
+    static final int MAX_BLOCK_SIZE = 1 << (DEFAULT_COMPRESSION_LEVEL + 7) + 0x0F;   //  32 M
     /**
      * Default block size
      */

@@ -26,6 +26,8 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
 
 /**
@@ -41,6 +43,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final BrotliOptions brotliOptions;
     private final GzipOptions gzipOptions;
     private final DeflateOptions deflateOptions;
+    private final ZstdOptions zstdOptions;
 
     private final int compressionLevel;
     private final int windowBits;
@@ -126,6 +129,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.brotliOptions = null;
         this.gzipOptions = null;
         this.deflateOptions = null;
+        this.zstdOptions = null;
         supportsCompressionOptions = false;
     }
 
@@ -156,10 +160,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
         BrotliOptions brotliOptions = null;
         GzipOptions gzipOptions = null;
         DeflateOptions deflateOptions = null;
+        ZstdOptions zstdOptions = null;
         if (compressionOptions == null || compressionOptions.length == 0) {
             brotliOptions = StandardCompressionOptions.brotli();
             gzipOptions = StandardCompressionOptions.gzip();
             deflateOptions = StandardCompressionOptions.deflate();
+            zstdOptions = StandardCompressionOptions.zstd();
         } else {
             ObjectUtil.deepCheckNotNull("compressionOptionsIterable", compressionOptions);
             for (CompressionOptions compressionOption : compressionOptions) {
@@ -169,6 +175,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
                     gzipOptions = (GzipOptions) compressionOption;
                 } else if (compressionOption instanceof DeflateOptions) {
                     deflateOptions = (DeflateOptions) compressionOption;
+                } else if (compressionOption instanceof ZstdOptions) {
+                    zstdOptions = (ZstdOptions) compressionOption;
                 } else {
                     throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                             ": " + compressionOption);
@@ -183,10 +191,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
             if (deflateOptions == null) {
                 deflateOptions = StandardCompressionOptions.deflate();
             }
+            if (zstdOptions == null) {
+                zstdOptions = StandardCompressionOptions.zstd();
+            }
         }
         this.brotliOptions = brotliOptions;
         this.gzipOptions = gzipOptions;
         this.deflateOptions = deflateOptions;
+        this.zstdOptions = zstdOptions;
         this.compressionLevel = -1;
         this.windowBits = -1;
         this.memLevel = -1;
@@ -239,6 +251,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
                         new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                                 ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters())));
             }
+            if (targetContentEncoding.equals("zstd")) {
+                return new Result(targetContentEncoding,
+                        new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                                ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
+                                zstdOptions.blockSize(), zstdOptions.maxEncodeSize())));
+            }
             throw new Error();
         } else {
             ZlibWrapper wrapper = determineWrapper(acceptEncoding);
@@ -270,6 +288,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     protected String determineEncoding(String acceptEncoding) {
         float starQ = -1.0f;
         float brQ = -1.0f;
+        float zstdQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
         for (String encoding : acceptEncoding.split(",")) {
@@ -287,15 +306,19 @@ public class HttpContentCompressor extends HttpContentEncoder {
                 starQ = q;
             } else if (encoding.contains("br") && q > brQ) {
                 brQ = q;
+            } else if (encoding.contains("zstd") && q > zstdQ) {
+                zstdQ = q;
             } else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
             } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
         }
-        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= gzipQ) {
+        if (brQ > 0.0f || zstdQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ != -1.0f && brQ >= zstdQ) {
                 return Brotli.isAvailable() ? "br" : null;
+            } else if (zstdQ != -1.0f && zstdQ >= gzipQ) {
+                return "zstd";
             } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
                 return "gzip";
             } else if (deflateQ != -1.0f) {
@@ -305,6 +328,9 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (starQ > 0.0f) {
             if (brQ == -1.0f) {
                 return Brotli.isAvailable() ? "br" : null;
+            }
+            if (zstdQ == -1.0f) {
+                return "zstd";
             }
             if (gzipQ == -1.0f) {
                 return "gzip";
