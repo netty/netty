@@ -86,7 +86,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         run(info, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                NioEventLoopGroup group = new NioEventLoopGroup();
+                NioEventLoopGroup group = new NioEventLoopGroup(1);
                 ServerBootstrap sb = new ServerBootstrap().group(group);
                 Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -112,7 +112,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                         }
                     }
                 });
-                bootstrap.connect(serverChannel.localAddress());
+                bootstrap.connect(serverChannel.localAddress()).sync();
 
                 readLatch.await();
                 group.shutdownGracefully().await();
