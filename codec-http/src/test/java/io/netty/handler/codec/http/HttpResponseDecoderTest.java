@@ -181,27 +181,21 @@ public class HttpResponseDecoderTest {
         assertTrue(ch.writeInbound(partialChunk2));
 
         HttpContent content = ch.readInbound();
-
-        assertEquals(chunkSize, content.content().readableBytes());
-
-        byte[] decodedChunkBytes = new byte[chunkSize];
-        content.content().readBytes(decodedChunkBytes, 0, chunkSize);
-
-        assertArrayEquals(chunkBytes, decodedChunkBytes);
+        assertEquals(chunk, content.content());
         content.release();
+        chunk.release();
 
         assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
 
         // Write the last chunk.
-        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII)));
 
         // Ensure the last chunk was decoded.
         HttpContent lastContent = ch.readInbound();
         assertFalse(lastContent.content().isReadable());
         lastContent.release();
 
-        ch.finish();
-        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
     }
 
     @Test
