@@ -16,21 +16,31 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import java.util.concurrent.TimeUnit;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.junit.jupiter.api.Test;
-
-import java.net.SocketException;
-import java.nio.channels.NotYetConnectedException;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
+import java.net.SocketException;
+import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testShutdownNotYetConnected(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
@@ -67,5 +77,69 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         if (!(cause instanceof NotYetConnectedException) && !(cause instanceof SocketException)) {
             throw cause;
         }
+    }
+
+    @Test
+    @Timeout(30)
+    public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
+        run(info, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                System.out.println(bootstrap);
+                final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
+                NioEventLoopGroup group = new NioEventLoopGroup();
+                ServerBootstrap sb = new ServerBootstrap().group(group);
+                Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        queue.add("server channel active: " + ctx.channel());
+                        ctx.writeAndFlush(Unpooled.copyInt(42));
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        queue.add("server exception caught: " + cause.getMessage());
+                        cause.printStackTrace();
+                    }
+                }).channel(NioServerSocketChannel.class).bind(0).sync().channel();
+                queue.add("server bound");
+
+                final CountDownLatch readLatch = new CountDownLatch(1);
+                bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        queue.add("client handler added: " + ctx.channel());
+                        assertFalse(ctx.channel().isActive());
+                        ctx.read();
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        queue.add("client read");
+                        ByteBuf buf = (ByteBuf) msg;
+                        assertThat(buf.readableBytes()).isEqualTo(Integer.BYTES);
+                        assertThat(buf.readInt()).isEqualTo(42);
+                        buf.release();
+                        readLatch.countDown();
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        queue.add("client exception caught: " + cause.getMessage());
+                        cause.printStackTrace();
+                    }
+                });
+                bootstrap.connect(serverChannel.localAddress());
+                queue.add("client connect called");
+
+                try {
+                    readLatch.await();
+                    group.shutdownGracefully().await();
+                } catch (InterruptedException e) {
+                    System.out.println("queue = " + queue);
+                    throw e;
+                }
+            }
+        });
     }
 }

@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLEngine;
 import java.io.File;
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -60,8 +61,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.SSLEngine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
@@ -521,11 +520,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             if (!autoRead) {
                 ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
                         new GenericFutureListener<Future<? super Channel>>() {
-                    @Override
-                    public void operationComplete(Future<? super Channel> future) {
-                        ctx.read();
-                    }
-                });
+                            @Override
+                            public void operationComplete(Future<? super Channel> future) {
+                                ctx.read();
+                            }
+                        });
             }
         }
 
