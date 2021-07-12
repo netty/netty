@@ -91,7 +91,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<>();
         toReturn.add(() -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class));
         toReturn.add(() -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class));
         return toReturn;
@@ -186,5 +186,15 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     public static DomainSocketAddress newSocketAddress() {
         return UnixTestUtils.newSocketAddress();
+    }
+
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> domainDatagram() {
+        return combo(domainDatagramSocket(), domainDatagramSocket());
+    }
+
+    public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
+        return Collections.singletonList(
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainDatagramChannel.class)
+        );
     }
 }

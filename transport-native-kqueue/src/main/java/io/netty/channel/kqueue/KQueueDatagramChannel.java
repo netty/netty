@@ -50,8 +50,7 @@ import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel implements DatagramChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -84,11 +83,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     @Override
     public InetSocketAddress localAddress() {
         return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
@@ -246,44 +240,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = maxMessagesPerWrite();
-        while (maxMessagesPerWrite > 0) {
-            Object msg = in.current();
-            if (msg == null) {
-                break;
-            }
-
-            try {
-                boolean done = false;
-                for (int i = config().getWriteSpinCount(); i > 0; --i) {
-                    if (doWriteMessage(msg)) {
-                        done = true;
-                        break;
-                    }
-                }
-
-                if (done) {
-                    in.remove();
-                    maxMessagesPerWrite --;
-                } else {
-                   break;
-                }
-            } catch (IOException e) {
-                maxMessagesPerWrite --;
-
-                // Continue on write error as a DatagramChannel can write to multiple remote peers
-                //
-                // See https://github.com/netty/netty/issues/2665
-                in.remove(e);
-            }
-        }
-
-        // Whether all messages were written or not.
-        writeFilter(!in.isEmpty());
-    }
-
-    private boolean doWriteMessage(Object msg) throws Exception {
+    protected boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
