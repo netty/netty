@@ -22,8 +22,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * Compression Encoder Factory for create {@link MessageToByteEncoder}
  * used to compress http content
  */
-public interface CompressionEncoderFactory {
-    String name();
-
+interface CompressionEncoderFactory {
     MessageToByteEncoder<ByteBuf> createEncoder();
 }

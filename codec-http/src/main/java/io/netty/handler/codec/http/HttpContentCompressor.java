@@ -32,6 +32,9 @@ import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
@@ -52,7 +55,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int memLevel;
     private final int contentSizeThreshold;
     private ChannelHandlerContext ctx;
-    private final CompressionEncoderFactory[] factories;
+    private final Map<String, CompressionEncoderFactory> factories =
+            new HashMap<String, CompressionEncoderFactory>() {
+                {
+                    factories.put("gzip", new GzipEncoderFactory());
+                    factories.put("deflate", new DeflateEncoderFactory());
+                    factories.put("br", new BrEncoderFactory());
+                    factories.put("zstd", new ZstdEncoderFactory());
+                }
+            };
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
@@ -133,7 +144,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.gzipOptions = null;
         this.deflateOptions = null;
         this.zstdOptions = null;
-        this.factories = null;
         supportsCompressionOptions = false;
     }
 
@@ -203,8 +213,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.gzipOptions = gzipOptions;
         this.deflateOptions = deflateOptions;
         this.zstdOptions = zstdOptions;
-        this.factories = new CompressionEncoderFactory[]{new GzipEncoderFactory(), new DeflateEncoderFactory(),
-                new BrEncoderFactory(), new ZstdEncoderFactory()};
         this.compressionLevel = -1;
         this.windowBits = -1;
         this.memLevel = -1;
@@ -238,7 +246,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
                 return null;
             }
 
-            CompressionEncoderFactory encoderFactory = getEncoderFactory(targetContentEncoding);
+            CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
 
             if (encoderFactory == null) {
                 throw new Error();
@@ -374,21 +382,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         return null;
     }
 
-    private CompressionEncoderFactory getEncoderFactory(String contentEncoding) {
-        for (CompressionEncoderFactory encoderFactory: factories) {
-            if (encoderFactory.name().equals(contentEncoding)) {
-                return encoderFactory;
-            }
-        }
-
-        return null;
-    }
-
-    private class GzipEncoderFactory implements CompressionEncoderFactory {
-        @Override
-        public String name() {
-            return "gzip";
-        }
+    private final class GzipEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
@@ -399,11 +393,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
-    private class DeflateEncoderFactory implements CompressionEncoderFactory {
-        @Override
-        public String name() {
-            return "deflate";
-        }
+    private final class DeflateEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
@@ -414,11 +404,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
-    private class BrEncoderFactory implements CompressionEncoderFactory {
-        @Override
-        public String name() {
-            return "br";
-        }
+    private final class BrEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
@@ -427,11 +413,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
-    private class ZstdEncoderFactory implements CompressionEncoderFactory {
-        @Override
-        public String name() {
-            return "zstd";
-        }
+    private final class ZstdEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
