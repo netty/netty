@@ -167,7 +167,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             deflateOptions = StandardCompressionOptions.deflate();
             zstdOptions = StandardCompressionOptions.zstd();
         } else {
-            ObjectUtil.deepCheckNotNull("compressionOptionsIterable", compressionOptions);
+            ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
             for (CompressionOptions compressionOption : compressionOptions) {
                 if (compressionOption instanceof BrotliOptions) {
                     brotliOptions = (BrotliOptions) compressionOption;
