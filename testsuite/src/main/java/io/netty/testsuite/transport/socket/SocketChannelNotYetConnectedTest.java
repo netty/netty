@@ -25,13 +25,14 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,60 +86,36 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         run(info, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                System.out.println(bootstrap);
-                final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
                 NioEventLoopGroup group = new NioEventLoopGroup();
                 ServerBootstrap sb = new ServerBootstrap().group(group);
                 Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                        queue.add("server channel active: " + ctx.channel());
                         ctx.writeAndFlush(Unpooled.copyInt(42));
                     }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        queue.add("server exception caught: " + cause.getMessage());
-                        cause.printStackTrace();
-                    }
                 }).channel(NioServerSocketChannel.class).bind(0).sync().channel();
-                queue.add("server bound");
 
                 final CountDownLatch readLatch = new CountDownLatch(1);
-                bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                bootstrap.handler(new ByteToMessageDecoder() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                        queue.add("client handler added: " + ctx.channel());
                         assertFalse(ctx.channel().isActive());
                         ctx.read();
                     }
 
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                        queue.add("client read");
-                        ByteBuf buf = (ByteBuf) msg;
-                        assertThat(buf.readableBytes()).isEqualTo(Integer.BYTES);
-                        assertThat(buf.readInt()).isEqualTo(42);
-                        buf.release();
-                        readLatch.countDown();
-                    }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        queue.add("client exception caught: " + cause.getMessage());
-                        cause.printStackTrace();
+                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                        assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
+                        if (in.readableBytes() == Integer.BYTES) {
+                            assertThat(in.readInt()).isEqualTo(42);
+                            readLatch.countDown();
+                        }
                     }
                 });
                 bootstrap.connect(serverChannel.localAddress());
-                queue.add("client connect called");
 
-                try {
-                    readLatch.await();
-                    group.shutdownGracefully().await();
-                } catch (InterruptedException e) {
-                    System.out.println("queue = " + queue);
-                    throw e;
-                }
+                readLatch.await();
+                group.shutdownGracefully().await();
             }
         });
     }
