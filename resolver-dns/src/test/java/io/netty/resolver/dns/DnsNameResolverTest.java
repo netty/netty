@@ -1949,6 +1949,7 @@ public class DnsNameResolverTest {
 
     private static void testRRNameContainsDifferentSearchDomain(final List<String> searchDomains, String unresolved)
             throws Exception {
+        final String ipAddrPrefix = "1.2.3.";
         TestDnsServer searchDomainServer = new TestDnsServer(new RecordStore() {
             @Override
             public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
@@ -1959,7 +1960,7 @@ public class DnsNameResolverTest {
                         continue;
                     }
                     final ResourceRecord rr = newARecord(qName + '.' + searchDomain,
-                            "1.2.3." + ThreadLocalRandom.current().nextInt(1, 10));
+                            ipAddrPrefix + ThreadLocalRandom.current().nextInt(1, 10));
                     logger.info("Adding A record: " + rr);
                     records.add(rr);
                 }
@@ -1974,9 +1975,10 @@ public class DnsNameResolverTest {
 
         try {
             final List<InetAddress> addresses = resolver.resolveAll(unresolved).sync().get();
-            assertThat(addresses, Matchers.<InetAddress>hasSize(searchDomains.size() - 1));
+            assertThat(addresses, Matchers.<InetAddress>hasSize(greaterThan(0)));
             for (InetAddress address : addresses) {
                 assertThat(address.getHostName(), startsWith(unresolved));
+                assertThat(address.getHostAddress(), startsWith(ipAddrPrefix));
             }
         } finally {
             resolver.close();
