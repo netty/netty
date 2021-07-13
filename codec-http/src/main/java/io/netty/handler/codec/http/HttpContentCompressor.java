@@ -415,7 +415,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory for create {@link BrotliEncoder}
+     * Compression Encoder Factory that creates {@link BrotliEncoder}s
      * used to compress http content for br content encoding
      */
     private final class BrEncoderFactory implements CompressionEncoderFactory {
