@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,11 +24,10 @@ import javax.net.ssl.SSLException;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assume.assumeTrue;
 
 public class OpenSslRenegotiateTest extends RenegotiateTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void checkOpenSsl() {
         OpenSsl.ensureAvailability();
     }

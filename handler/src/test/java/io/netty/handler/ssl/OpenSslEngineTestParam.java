@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,20 +15,20 @@
  */
 package io.netty.handler.ssl;
 
-import org.junit.jupiter.api.BeforeAll;
-
-import javax.net.ssl.SSLException;
-import java.io.File;
-
-public class OpenSslServerContextTest extends SslContextTest {
-
-    @BeforeAll
-    public static void checkOpenSsl() {
-        OpenSsl.ensureAvailability();
+final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
+    final boolean useTasks;
+    OpenSslEngineTestParam(boolean useTasks, SSLEngineTest.SSLEngineTestParam param) {
+        super(param.type(), param.combo(), param.delegate());
+        this.useTasks = useTasks;
     }
 
     @Override
-    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new OpenSslServerContext(crtFile, keyFile, pass);
+    public String toString() {
+        return "OpenSslEngineTestParam{" +
+                "type=" + type() +
+                ", protocolCipherCombo=" + combo() +
+                ", delegate=" + delegate() +
+                ", useTasks=" + useTasks +
+                '}';
     }
 }
