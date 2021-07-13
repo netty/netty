@@ -817,7 +817,7 @@ abstract class DnsResolveContext<T> {
                         if (logger.isDebugEnabled()) {
                             logger.debug("Ignoring record {} as it contains a different name than the " +
                                             "question name [{}]. Cnames: {}, Search domains: {}",
-                                    r, questionName, cnames, parent.searchDomains());
+                                    r.toString(), questionName, cnames, parent.searchDomains());
                         }
                         continue;
                     }
@@ -828,7 +828,7 @@ abstract class DnsResolveContext<T> {
             if (converted == null) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Ignoring record {} as the converted record is null. hostname [{}], Additionals: {}",
-                            r, hostname, additionals);
+                            r.toString(), hostname, additionals);
                 }
                 continue;
             }
