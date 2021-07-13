@@ -34,7 +34,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import static io.netty.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
-import static org.junit.Assert.assertNull;
 
 public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     private static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
@@ -176,6 +175,8 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     }
 
     public static void handleUnexpectedException(Throwable t) {
-        assertNull(t);
+        if (t != null) {
+            throw new IllegalStateException(t);
+        }
     }
 }
