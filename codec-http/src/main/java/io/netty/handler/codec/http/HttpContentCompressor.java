@@ -422,7 +422,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
-            ObjectUtil.checkNotNull(brotliOptions, "brotliOptions");
             return new BrotliEncoder(brotliOptions.parameters());
         }
     }
