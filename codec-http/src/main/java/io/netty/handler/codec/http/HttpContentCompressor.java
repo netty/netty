@@ -434,7 +434,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
-            ObjectUtil.checkNotNull(zstdOptions, "zstdOptions");
             return new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize());
         }
