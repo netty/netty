@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
@@ -55,15 +56,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int memLevel;
     private final int contentSizeThreshold;
     private ChannelHandlerContext ctx;
-    private final Map<String, CompressionEncoderFactory> factories =
-            new HashMap<String, CompressionEncoderFactory>() {
-                {
-                    factories.put("gzip", new GzipEncoderFactory());
-                    factories.put("deflate", new DeflateEncoderFactory());
-                    factories.put("br", new BrEncoderFactory());
-                    factories.put("zstd", new ZstdEncoderFactory());
-                }
-            };
+    private final Map<String, CompressionEncoderFactory> factories;
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
@@ -144,6 +137,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.gzipOptions = null;
         this.deflateOptions = null;
         this.zstdOptions = null;
+        this.factories = null;
         supportsCompressionOptions = false;
     }
 
@@ -213,6 +207,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.gzipOptions = gzipOptions;
         this.deflateOptions = deflateOptions;
         this.zstdOptions = zstdOptions;
+        this.factories = new HashMap<String, CompressionEncoderFactory>() {
+            {
+                put("gzip", new GzipEncoderFactory());
+                put("deflate", new DeflateEncoderFactory());
+                put("br", new BrEncoderFactory());
+                put("zstd", new ZstdEncoderFactory());
+            }
+        };
         this.compressionLevel = -1;
         this.windowBits = -1;
         this.memLevel = -1;
@@ -382,6 +384,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
         return null;
     }
 
+    /**
+     * Compression Encoder Factory for create {@link ZlibEncoder}
+     * used to compress http content for gzip content encoding
+     */
     private final class GzipEncoderFactory implements CompressionEncoderFactory {
 
         @Override
@@ -393,6 +399,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
+    /**
+     * Compression Encoder Factory for create {@link ZlibEncoder}
+     * used to compress http content for deflate content encoding
+     */
     private final class DeflateEncoderFactory implements CompressionEncoderFactory {
 
         @Override
@@ -404,6 +414,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
+    /**
+     * Compression Encoder Factory for create {@link BrotliEncoder}
+     * used to compress http content for br content encoding
+     */
     private final class BrEncoderFactory implements CompressionEncoderFactory {
 
         @Override
@@ -413,6 +427,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
+    /**
+     * Compression Encoder Factory for create {@link ZstdEncoder}
+     * used to compress http content for zstd content encoding
+     */
     private final class ZstdEncoderFactory implements CompressionEncoderFactory {
 
         @Override
