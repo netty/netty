@@ -13,28 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression;
+package io.netty.channel.unix;
 
-final class ZstdConstants {
+import io.netty.channel.Channel;
+
+/**
+ * A {@link UnixChannel} that supports communication via
+ * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">UNIX domain datagram sockets</a>.
+ */
+public interface DomainDatagramChannel extends UnixChannel, Channel {
+
+    @Override
+    DomainDatagramChannelConfig config();
 
     /**
-     * Default compression level
+     * Return {@code true} if the {@link DomainDatagramChannel} is connected to the remote peer.
      */
-    static final int DEFAULT_COMPRESSION_LEVEL = 3;
+    boolean isConnected();
 
-    /**
-     * Max compression level
-     */
-    static final int MAX_COMPRESSION_LEVEL = 22;
+    @Override
+    DomainSocketAddress localAddress();
 
-    /**
-     * Max block size
-     */
-    static final int MAX_BLOCK_SIZE = 1 << (DEFAULT_COMPRESSION_LEVEL + 7) + 0x0F;   //  32 M
-    /**
-     * Default block size
-     */
-    static final int DEFAULT_BLOCK_SIZE = 1 << 16;  // 64 KB
-
-    private ZstdConstants() { }
+    @Override
+    DomainSocketAddress remoteAddress();
 }

@@ -13,28 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression;
+package io.netty.handler.codec.http;
 
-final class ZstdConstants {
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.MessageToByteEncoder;
 
-    /**
-     * Default compression level
-     */
-    static final int DEFAULT_COMPRESSION_LEVEL = 3;
-
-    /**
-     * Max compression level
-     */
-    static final int MAX_COMPRESSION_LEVEL = 22;
-
-    /**
-     * Max block size
-     */
-    static final int MAX_BLOCK_SIZE = 1 << (DEFAULT_COMPRESSION_LEVEL + 7) + 0x0F;   //  32 M
-    /**
-     * Default block size
-     */
-    static final int DEFAULT_BLOCK_SIZE = 1 << 16;  // 64 KB
-
-    private ZstdConstants() { }
+/**
+ * Compression Encoder Factory for create {@link MessageToByteEncoder}
+ * used to compress http content
+ */
+interface CompressionEncoderFactory {
+    MessageToByteEncoder<ByteBuf> createEncoder();
 }
