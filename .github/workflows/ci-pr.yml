@@ -135,16 +135,16 @@ jobs:
         include:
           - setup: linux-x86_64-java8
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run partly-build-leak"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run build-leak"
           - setup: linux-x86_64-java11
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run partly-build-leak"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak"
           - setup: linux-x86_64-java11-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm111.yaml run partly-build-leak"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm111.yaml run build-leak"
           - setup: linux-x86_64-java16
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.116.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.116.yaml run partly-build-leak"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.116.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
@@ -177,8 +177,6 @@ jobs:
         run: docker-compose ${{ matrix.docker-compose-build }}
 
       - name: Build project with leak detection
-        env:
-          BRANCH: origin/${{ github.base_ref }}
         run: docker-compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures

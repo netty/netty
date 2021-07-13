@@ -16,7 +16,6 @@ services:
       - GPG_PASSPHRASE
       - GPG_PRIVATE_KEY
       - MAVEN_OPTS
-      - BRANCH
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
@@ -27,10 +26,6 @@ services:
   build-leak:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
-
-  partly-build-leak:
-    <<: *common
-    command: /bin/bash -cl "./.github/scripts/mvn_build_affected_only.sh ${BRANCH} -B -ntp -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
 
   build:
     <<: *common
@@ -66,11 +61,6 @@ services:
   build-leak-boringssl-static:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
-
-
-  partly-build-leak-boringssl-static:
-    <<: *common
-    command: /bin/bash -cl "./.github/scripts/mvn_build_affected_only.sh ${BRANCH} -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
   shell:
     <<: *common
