@@ -68,29 +68,6 @@ public final class StandardCompressionOptions {
         return new ZstdOptions(compressionLevel, blockSize, maxEncodeSize);
     }
 
-    /**
-     * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
-     * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL},{@link ZstdConstants#DEFAULT_BLOCK_SIZE},
-     * {@link ZstdConstants#MAX_BLOCK_SIZE}
-     */
-    public static ZstdOptions zstd() {
-        return ZstdOptions.DEFAULT;
-    }
-
-    /**
-     * Create a new {@link ZstdOptions}
-     *
-     * @param  blockSize
-     *           is used to calculate the compressionLevel
-     * @param  maxEncodeSize
-     *           specifies the size of the largest compressed object
-     * @param  compressionLevel
-     *           specifies the level of the compression
-     */
-    public static ZstdOptions zstd(int compressionLevel, int blockSize, int maxEncodeSize) {
-        return new ZstdOptions(compressionLevel, blockSize, maxEncodeSize);
-    }
-
      /**
      * Default implementation of {@link GzipOptions} with
      * {@code compressionLevel()} set to 6, {@code windowBits()} set to 15 and {@code memLevel()} set to 8.

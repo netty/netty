@@ -64,7 +64,7 @@ public class HttpContentDecoderTest {
 
     static {
         InputStream uncompressed = HttpContentDecoderTest.class.getClassLoader()
-          .getResourceAsStream("sample.json");
+          .getResourceAsStream("sample-data.txt");
         try {
             assert uncompressed != null;
             SAMPLE_STRING = new String(IOUtils.readFully(uncompressed, uncompressed.available()), CharsetUtil.UTF_8);
@@ -74,7 +74,7 @@ public class HttpContentDecoderTest {
             IOUtils.closeQuietly(uncompressed, null);
         }
         InputStream compressed = HttpContentDecoderTest.class.getClassLoader()
-          .getResourceAsStream("sample.json.br");
+          .getResourceAsStream("sample-data.br");
         try {
             SAMPLE_BZ_BYTES = IOUtils.toByteArray(compressed);
         } catch (Throwable e) {
