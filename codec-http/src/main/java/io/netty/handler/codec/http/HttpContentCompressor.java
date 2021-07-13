@@ -385,7 +385,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory for create {@link ZlibEncoder}
+     * Compression Encoder Factory that creates {@link ZlibEncoder}s
      * used to compress http content for gzip content encoding
      */
     private final class GzipEncoderFactory implements CompressionEncoderFactory {
