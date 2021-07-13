@@ -21,38 +21,12 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-git fetch
-
-ALL_MODULES=$(find . -name pom.xml | cut -d '/' -f 2 )
 MODULES=$(git diff --name-only "$1" | cut -d '/' -f 1 | sort -u | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}')
 MAVEN_ARGUMENTS=${*:2}
 if [ -z "$MODULES" ]; then
   echo "No changes detected, skipping build"
   exit 0
 fi
-
-ALL_MODULES_ARRAY=($ALL_MODULES)
-MODULES_ARRAY=($MODULES)
-
-for module in "${MODULES_ARRAY[@]}"
-do
-  found=0;
-  for m in "${ALL_MODULES_ARRAY[@]}"
-  do
-    if [ "$module" == "$m" ]; then
-      found=1;
-      break
-    fi
-  done
-
-  if [ "$found" != 1 ]; then
-    echo "Can't detect module that changed, run a full build"
-    echo "./mvnw $MAVEN_ARGUMENTS"
-    ./mvnw "${@:2}"
-    exit 0
-  fi
-done
-
 echo "Changes detected, start the build"
 echo "./mvnw -pl $MODULES -amd $MAVEN_ARGUMENTS"
 ./mvnw -pl "$MODULES" -amd "${@:2}"
