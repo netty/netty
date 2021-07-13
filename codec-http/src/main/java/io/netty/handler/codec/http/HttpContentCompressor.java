@@ -407,7 +407,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
-            ObjectUtil.checkNotNull(deflateOptions, "deflateOptions");
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
                     deflateOptions.windowBits(), deflateOptions.memLevel());
