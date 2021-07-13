@@ -15,7 +15,6 @@
  */
 package io.netty.microbench.util;
 
-import static org.junit.Assert.assertNull;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
@@ -154,6 +153,8 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
     }
 
     public static void handleUnexpectedException(Throwable t) {
-        assertNull(t);
+        if (t != null) {
+            throw new IllegalStateException(t);
+        }
     }
 }
