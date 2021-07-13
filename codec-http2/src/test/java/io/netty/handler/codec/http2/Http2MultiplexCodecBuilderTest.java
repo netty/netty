@@ -32,7 +32,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,7 +124,7 @@ public class Http2MultiplexCodecBuilderTest {
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdown() {
         group.shutdownGracefully(0, 5, SECONDS);
     }
