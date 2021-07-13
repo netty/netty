@@ -71,7 +71,6 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
     }
 
     static boolean isNotSupported() {
-        return (PlatformDependent.isOsx() || PlatformDependent.isWindows())
-                && "aarch_64".equals(PlatformDependent.normalizedArch());
+        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 }

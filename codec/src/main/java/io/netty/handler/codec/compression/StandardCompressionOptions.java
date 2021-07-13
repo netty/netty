@@ -28,14 +28,18 @@ public final class StandardCompressionOptions {
     }
 
     /**
-     * @see BrotliOptions#DEFAULT
+     * Default implementation of {@link BrotliOptions} with {@link Encoder.Parameters#setQuality(int)} set to 4
+     * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
      */
     public static BrotliOptions brotli() {
         return BrotliOptions.DEFAULT;
     }
 
     /**
-     * @see BrotliOptions#BrotliOptions(Encoder.Parameters)
+     * Create a new {@link BrotliOptions}
+     *
+     * @param parameters {@link Encoder.Parameters} Instance
+     * @throws NullPointerException If {@link Encoder.Parameters} is {@code null}
      */
     public static BrotliOptions brotli(Encoder.Parameters parameters) {
         return new BrotliOptions(parameters);
@@ -64,29 +68,59 @@ public final class StandardCompressionOptions {
         return new ZstdOptions(compressionLevel, blockSize, maxEncodeSize);
     }
 
-    /**
-     * @see GzipOptions#DEFAULT
+     /**
+     * Default implementation of {@link GzipOptions} with
+     * {@code compressionLevel()} set to 6, {@code windowBits()} set to 15 and {@code memLevel()} set to 8.
      */
     public static GzipOptions gzip() {
         return GzipOptions.DEFAULT;
     }
 
     /**
-     * @see GzipOptions#GzipOptions(int, int, int)
+     * Create a new {@link GzipOptions} Instance
+     *
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
+     *                         best compression.  {@code 0} means no compression.  The default
+     *                         compression level is {@code 6}.
+     *
+     * @param windowBits       The base two logarithm of the size of the history buffer.  The
+     *                         value should be in the range {@code 9} to {@code 15} inclusive.
+     *                         Larger values result in better compression at the expense of
+     *                         memory usage.  The default value is {@code 15}.
+     *
+     * @param memLevel         How much memory should be allocated for the internal compression
+     *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *                         memory.  Larger values result in better and faster compression
+     *                         at the expense of memory usage.  The default value is {@code 8}
      */
     public static GzipOptions gzip(int compressionLevel, int windowBits, int memLevel) {
         return new GzipOptions(compressionLevel, windowBits, memLevel);
     }
 
     /**
-     * @see DeflateOptions#DEFAULT
+     * Default implementation of {@link DeflateOptions} with
+     * {@code compressionLevel} set to 6, {@code windowBits} set to 15 and {@code memLevel} set to 8.
      */
     public static DeflateOptions deflate() {
         return DeflateOptions.DEFAULT;
     }
 
     /**
-     * @see DeflateOptions#DeflateOptions(int, int, int)
+     * Create a new {@link DeflateOptions} Instance
+     *
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
+     *                         best compression.  {@code 0} means no compression.  The default
+     *                         compression level is {@code 6}.
+     *
+     * @param windowBits       The base two logarithm of the size of the history buffer.  The
+     *                         value should be in the range {@code 9} to {@code 15} inclusive.
+     *                         Larger values result in better compression at the expense of
+     *                         memory usage.  The default value is {@code 15}.
+     *
+     * @param memLevel         How much memory should be allocated for the internal compression
+     *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *                         memory.  Larger values result in better and faster compression
+     *                         at the expense of memory usage.  The default value is {@code 8}
      */
     public static DeflateOptions deflate(int compressionLevel, int windowBits, int memLevel) {
         return new DeflateOptions(compressionLevel, windowBits, memLevel);
