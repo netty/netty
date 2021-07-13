@@ -395,7 +395,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             ObjectUtil.checkNotNull(gzipOptions, "gzipOptions");
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.GZIP, gzipOptions.compressionLevel()
-                    , gzipOptions.windowBits(), gzipOptions.memLevel());
+                    gzipOptions.windowBits(), gzipOptions.memLevel());
         }
     }
 
