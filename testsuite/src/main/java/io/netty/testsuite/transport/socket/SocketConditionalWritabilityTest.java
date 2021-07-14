@@ -30,8 +30,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SocketConditionalWritabilityTest extends AbstractSocketTest {
     @Test
@@ -96,11 +99,12 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().syncUninterruptibly().channel();
 
+            final AtomicInteger totalRead = new AtomicInteger();
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                        private int totalRead;
+//                        private int totalRead;
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(0));
@@ -109,8 +113,8 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof ByteBuf) {
-                                totalRead += ((ByteBuf) msg).readableBytes();
-                                if (totalRead == expectedBytes) {
+                                totalRead.addAndGet(((ByteBuf) msg).readableBytes());
+                                if (totalRead.get() == expectedBytes) {
                                     latch.countDown();
                                 }
                             }
@@ -120,7 +124,16 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                 }
             });
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
-            latch.await();
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                System.out.println("### Total read: " + totalRead);
+                System.out.println("### Thread Dump:");
+                ThreadInfo[] infos = ManagementFactory.getThreadMXBean().dumpAllThreads(true, true);
+                for (ThreadInfo info : infos) {
+                    System.out.println(info);
+                }
+            }
         } finally {
             if (serverChannel != null) {
                 serverChannel.close();
