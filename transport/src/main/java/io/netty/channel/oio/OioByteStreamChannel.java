@@ -78,8 +78,9 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         }
         this.is = ObjectUtil.checkNotNull(is, "is");
         this.os = ObjectUtil.checkNotNull(os, "os");
-        if (readPending) {
+        if (readWhenInactive) {
             eventLoop().execute(readTask);
+            readWhenInactive = false;
         }
     }
 
