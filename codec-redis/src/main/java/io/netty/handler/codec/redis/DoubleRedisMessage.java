@@ -21,11 +21,11 @@ import io.netty.util.internal.UnstableApi;
  * Double of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
-public class DoubleRedisMessage extends AbstractNumberRedisMessage {
+public final class DoubleRedisMessage extends AbstractNumberRedisMessage {
 
-    public static final DoubleRedisMessage POSITIVE_INFINITY_DOUBLE_INSTANCE = new DoubleRedisMessage(Double.MAX_VALUE);
+    public static final DoubleRedisMessage POSITIVE_INFINITY = new DoubleRedisMessage(Double.MAX_VALUE);
 
-    public static final DoubleRedisMessage NEGATIVE_INFINITY_DOUBLE_INSTANCE = new DoubleRedisMessage(Double.MIN_VALUE);
+    public static final DoubleRedisMessage NEGATIVE_INFINITY = new DoubleRedisMessage(Double.MIN_VALUE);
 
     /**
      * Creates a {@link DoubleRedisMessage} for the given {@code content}.
@@ -44,5 +44,4 @@ public class DoubleRedisMessage extends AbstractNumberRedisMessage {
     public double value() {
         return value.doubleValue();
     }
-
 }

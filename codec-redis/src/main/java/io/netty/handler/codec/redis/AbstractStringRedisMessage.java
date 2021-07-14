@@ -27,7 +27,7 @@ public abstract class AbstractStringRedisMessage implements RedisMessage {
 
     private final String content;
 
-    AbstractStringRedisMessage(String content) {
+    protected AbstractStringRedisMessage(String content) {
         this.content = ObjectUtil.checkNotNull(content, "content");
     }
 

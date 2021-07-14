@@ -22,7 +22,7 @@ import io.netty.util.internal.UnstableApi;
  * but the number of redis message.
  */
 @UnstableApi
-public class MapHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+public final class MapHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
      * Creates a {@link MapHeaderRedisMessage} for the given {@code length}.
@@ -32,5 +32,4 @@ public class MapHeaderRedisMessage extends AggregatedHeaderRedisMessage {
     public MapHeaderRedisMessage(long length) {
         super(length);
     }
-
 }

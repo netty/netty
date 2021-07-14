@@ -302,9 +302,9 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         case DOUBLE: {
             String value = content.toString(CharsetUtil.UTF_8);
             if (DOUBLE_POSITIVE_INF_CONTENT.equals(value)) {
-                return DoubleRedisMessage.POSITIVE_INFINITY_DOUBLE_INSTANCE;
+                return DoubleRedisMessage.POSITIVE_INFINITY;
             } else if (DOUBLE_NEGATIVE_INF_CONTENT.equals(value)) {
-                return DoubleRedisMessage.NEGATIVE_INFINITY_DOUBLE_INSTANCE;
+                return DoubleRedisMessage.NEGATIVE_INFINITY;
             } else {
                 return new DoubleRedisMessage(Double.parseDouble(value));
             }
@@ -314,7 +314,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         }
         case BOOLEAN: {
             return content.readByte() == BOOLEAN_TRUE_CONTENT ?
-                BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE : BooleanRedisMessage.FALSE_BOOLEAN_INSTANCE;
+                BooleanRedisMessage.TRUE : BooleanRedisMessage.FALSE;
         }
         case NULL: {
             return NullRedisMessage.INSTANCE;

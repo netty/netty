@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public class FullBulkVerbatimStringRedisMessage extends FullBulkStringRedisMessage {
+public final class FullBulkVerbatimStringRedisMessage extends FullBulkStringRedisMessage {
 
     /**
      * Creates a {@link FullBulkVerbatimStringRedisMessage} for the given {@code content}.
@@ -35,10 +35,20 @@ public class FullBulkVerbatimStringRedisMessage extends FullBulkStringRedisMessa
         super(content);
     }
 
+    /**
+     * Return the format of the content, which can be `txt` for plain text.
+     *
+     * @return the format which length is always 3.
+     */
     public String format() {
         return new String(ByteBufUtil.getBytes(content(), 0, 3));
     }
 
+    /**
+     * Return the string represent the real content, which exclude format part.
+     *
+     * @return the real content.
+     */
     public String realContent() {
         int length = super.content().writerIndex();
         return new String(ByteBufUtil.getBytes(content(), 4, length - 4));
@@ -54,5 +64,4 @@ public class FullBulkVerbatimStringRedisMessage extends FullBulkStringRedisMessa
                 .append(realContent())
                 .append(']').toString();
     }
-
 }

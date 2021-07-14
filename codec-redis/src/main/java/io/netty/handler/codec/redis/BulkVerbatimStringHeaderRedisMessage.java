@@ -18,7 +18,7 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public class BulkVerbatimStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
+public final class BulkVerbatimStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
 
     /**
      * Creates a {@link BulkVerbatimStringHeaderRedisMessage}.
@@ -32,5 +32,4 @@ public class BulkVerbatimStringHeaderRedisMessage extends BulkStringHeaderRedisM
                     + " must greater than or equal to 4");
         }
     }
-
 }

@@ -292,13 +292,13 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
         return bytes != null ? bytes : RedisCodecUtil.longToAsciiBytes(value);
     }
 
-    private byte[] doubleToBytes(double value) {
+    private static byte[] doubleToBytes(double value) {
         if (value == Double.MAX_VALUE) {
             return DOUBLE_POSITIVE_INF_CONTENT.getBytes(CharsetUtil.US_ASCII);
-        } else if (value == Double.MIN_VALUE) {
-            return DOUBLE_NEGATIVE_INF_CONTENT.getBytes(CharsetUtil.US_ASCII);
-        } else {
-            return RedisCodecUtil.doubleToAsciiBytes(value);
         }
+        if (value == Double.MIN_VALUE) {
+            return DOUBLE_NEGATIVE_INF_CONTENT.getBytes(CharsetUtil.US_ASCII);
+        }
+        return RedisCodecUtil.doubleToAsciiBytes(value);
     }
 }

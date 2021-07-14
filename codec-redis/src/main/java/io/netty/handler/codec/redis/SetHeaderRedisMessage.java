@@ -21,7 +21,7 @@ import io.netty.util.internal.UnstableApi;
  * Header of Redis Set Message.
  */
 @UnstableApi
-public class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+public final class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
      * Creates a {@link SetHeaderRedisMessage} for the given {@code length}.
@@ -31,5 +31,4 @@ public class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
     public SetHeaderRedisMessage(long length) {
         super(length);
     }
-
 }

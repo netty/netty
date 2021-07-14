@@ -205,14 +205,14 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeBoolean() {
-        boolean result = channel.writeOutbound(BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE);
+        boolean result = channel.writeOutbound(BooleanRedisMessage.TRUE);
         assertThat(result, is(true));
 
         ByteBuf written = readAll(channel);
         assertThat(bytesOf(written), is(bytesOf("#t\r\n")));
         written.release();
 
-        result = channel.writeOutbound(BooleanRedisMessage.FALSE_BOOLEAN_INSTANCE);
+        result = channel.writeOutbound(BooleanRedisMessage.FALSE);
         assertThat(result, is(true));
 
         written = readAll(channel);
@@ -229,7 +229,7 @@ public class RedisEncoderTest {
         assertThat(bytesOf(written), is(bytesOf(",1.23\r\n")));
         written.release();
 
-        result = channel.writeOutbound(DoubleRedisMessage.POSITIVE_INFINITY_DOUBLE_INSTANCE);
+        result = channel.writeOutbound(DoubleRedisMessage.POSITIVE_INFINITY);
         assertThat(result, is(true));
 
         written = readAll(channel);
@@ -323,7 +323,7 @@ public class RedisEncoderTest {
         Set<RedisMessage> children = new HashSet<RedisMessage>();
         children.add(new SimpleStringRedisMessage("apple"));
         children.add(new FullBulkStringRedisMessage(byteBufOf("orange").retain()));
-        children.add(BooleanRedisMessage.TRUE_BOOLEAN_INSTANCE);
+        children.add(BooleanRedisMessage.TRUE);
         children.add(new IntegerRedisMessage(100));
         RedisMessage msg = new SetRedisMessage(children);
 

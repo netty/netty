@@ -27,5 +27,4 @@ public final class NullRedisMessage implements RedisMessage {
 
     private NullRedisMessage() {
     }
-
 }

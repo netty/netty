@@ -17,10 +17,10 @@ package io.netty.handler.codec.redis;
 
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Collections;
 import java.util.Map;
 
 @UnstableApi
@@ -30,7 +30,7 @@ public abstract class AbstractMapRedisMessage extends AbstractReferenceCounted
     private final Map<RedisMessage, RedisMessage> children;
 
     protected AbstractMapRedisMessage(Map<RedisMessage, RedisMessage> children) {
-        this.children = ObjectUtil.checkNotNull(children, "children");
+        this.children = Collections.unmodifiableMap(children);
     }
 
     /**

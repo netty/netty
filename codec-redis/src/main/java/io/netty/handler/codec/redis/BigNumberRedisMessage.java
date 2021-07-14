@@ -23,7 +23,7 @@ import java.math.BigInteger;
  * Big number of <a href="https://github.com/antirez/RESP3/blob/master/spec.md">RESP3</a>.
  */
 @UnstableApi
-public class BigNumberRedisMessage extends AbstractNumberRedisMessage {
+public final class BigNumberRedisMessage extends AbstractNumberRedisMessage {
 
     /**
      * Creates a {@link BigNumberRedisMessage} for the given byte {@code content}.
@@ -60,5 +60,4 @@ public class BigNumberRedisMessage extends AbstractNumberRedisMessage {
     public String value() {
         return value.toString();
     }
-
 }

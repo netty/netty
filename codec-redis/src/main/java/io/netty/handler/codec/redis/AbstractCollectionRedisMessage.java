@@ -30,13 +30,13 @@ import java.util.Collection;
 public abstract class AbstractCollectionRedisMessage extends AbstractReferenceCounted
     implements AggregatedRedisMessage {
 
-    protected Collection<RedisMessage> children;
+    protected final Collection<RedisMessage> children;
 
     protected AbstractCollectionRedisMessage(Collection<RedisMessage> children) {
         this.children = ObjectUtil.checkNotNull(children, "children");
     }
 
-    public abstract Collection<RedisMessage> children();
+    protected abstract Collection<RedisMessage> children();
 
     @Override
     protected void deallocate() {

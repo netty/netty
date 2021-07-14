@@ -33,7 +33,7 @@ public abstract class AbstractNumberRedisMessage implements RedisMessage {
      *
      * @param value the message content.
      */
-    AbstractNumberRedisMessage(long value) {
+    protected AbstractNumberRedisMessage(long value) {
         this.value = value;
     }
 
@@ -42,7 +42,7 @@ public abstract class AbstractNumberRedisMessage implements RedisMessage {
      *
      * @param value the message content.
      */
-    AbstractNumberRedisMessage(double value) {
+    protected AbstractNumberRedisMessage(double value) {
         this.value = value;
     }
 
@@ -51,7 +51,7 @@ public abstract class AbstractNumberRedisMessage implements RedisMessage {
      *
      * @param value the message content.
      */
-    AbstractNumberRedisMessage(BigInteger value) {
+    protected AbstractNumberRedisMessage(BigInteger value) {
         this.value = value;
     }
 
@@ -63,5 +63,4 @@ public abstract class AbstractNumberRedisMessage implements RedisMessage {
             .append(value)
             .append(']').toString();
     }
-
 }

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public class FullBulkErrorStringRedisMessage extends FullBulkStringRedisMessage {
+public final class FullBulkErrorStringRedisMessage extends FullBulkStringRedisMessage {
 
     /**
      * Creates a {@link FullBulkErrorStringRedisMessage} for the given {@code content}.

@@ -50,7 +50,7 @@ public class SetRedisMessage extends AbstractCollectionRedisMessage {
     }
 
     /**
-     * A predefined empty array instance for {@link SetRedisMessage}.
+     * A predefined empty set instance for {@link SetRedisMessage}.
      */
     public static final SetRedisMessage EMPTY_INSTANCE = new SetRedisMessage() {
 

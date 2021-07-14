@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 @UnstableApi
-public class PushRedisMessage extends AbstractCollectionRedisMessage {
+public final class PushRedisMessage extends AbstractCollectionRedisMessage {
 
     private PushRedisMessage() {
         super(Collections.<RedisMessage>emptySet());
@@ -39,11 +39,10 @@ public class PushRedisMessage extends AbstractCollectionRedisMessage {
     /**
      * Get children of this Set. It can be null or empty.
      *
-     * @return Set of {@link RedisMessage}s.
+     * @return List of {@link RedisMessage}s.
      */
     @Override
-    public final List<RedisMessage> children() {
+    public List<RedisMessage> children() {
         return (List<RedisMessage>) children;
     }
-
 }

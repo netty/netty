@@ -44,7 +44,7 @@ public class ArrayRedisMessage extends AbstractCollectionRedisMessage {
     /**
      * Get children of this Arrays. It can be null or empty.
      *
-     * @return list of {@link RedisMessage}s.
+     * @return List of {@link RedisMessage}s.
      */
     @Override
     public final List<RedisMessage> children() {

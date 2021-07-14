@@ -26,9 +26,9 @@ public final class BooleanRedisMessage implements RedisMessage {
 
     private boolean value;
 
-    public static final BooleanRedisMessage TRUE_BOOLEAN_INSTANCE = new BooleanRedisMessage(true);
+    public static final BooleanRedisMessage TRUE = new BooleanRedisMessage(true);
 
-    public static final BooleanRedisMessage FALSE_BOOLEAN_INSTANCE = new BooleanRedisMessage(false);
+    public static final BooleanRedisMessage FALSE = new BooleanRedisMessage(false);
 
     /**
      * Creates a {@link BooleanRedisMessage} for the given {@code value}.

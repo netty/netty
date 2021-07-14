@@ -29,7 +29,7 @@ public abstract class AggregatedHeaderRedisMessage implements RedisMessage {
     /**
      * Creates a {@link AggregatedHeaderRedisMessage} for the given {@code length}.
      */
-    public AggregatedHeaderRedisMessage(long length) {
+    protected AggregatedHeaderRedisMessage(long length) {
         if (length < RedisConstants.NULL_VALUE) {
             throw new RedisCodecException("length: " + length + " (expected: >= " + RedisConstants.NULL_VALUE + ")");
         }
@@ -60,5 +60,4 @@ public abstract class AggregatedHeaderRedisMessage implements RedisMessage {
             .append(length)
             .append(']').toString();
     }
-
 }

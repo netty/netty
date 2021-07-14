@@ -68,9 +68,11 @@ public final class RedisMapAggregator extends MessageToMessageDecoder<RedisMessa
         // encode to Null types message if map is null or empty
         if (header.isNull()) {
             return NullRedisMessage.INSTANCE;
-        } else if (header.length() == 0L) {
+        }
+        if (header.length() == 0L) {
             return MapRedisMessage.EMPTY_INSTANCE;
-        } else if (header.length() > 0L) {
+        }
+        if (header.length() > 0L) {
             // Currently, this codec doesn't support `long` length for arrays because Java's Map.size() is int.
             if (header.length() > Integer.MAX_VALUE) {
                 throw new CodecException("this codec doesn't support longer length than " + Integer.MAX_VALUE);
@@ -78,10 +80,8 @@ public final class RedisMapAggregator extends MessageToMessageDecoder<RedisMessa
 
             // start aggregating array or set according header type
             depths.push(new AggregateState(header, (int) header.length()));
-            return null;
-        } else {
-            throw new CodecException("bad length: " + header.length());
         }
+        return null;
     }
 
     private static final class AggregateState {

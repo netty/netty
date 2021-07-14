@@ -37,7 +37,7 @@ public class MapRedisMessage extends AbstractMapRedisMessage {
     }
 
     /**
-     * A predefined empty array instance for {@link MapRedisMessage}.
+     * A predefined empty map instance for {@link MapRedisMessage}.
      */
     public static final MapRedisMessage EMPTY_INSTANCE = new MapRedisMessage() {
 
@@ -76,5 +76,4 @@ public class MapRedisMessage extends AbstractMapRedisMessage {
             return "EmptyMapRedisMessage";
         }
     };
-
 }

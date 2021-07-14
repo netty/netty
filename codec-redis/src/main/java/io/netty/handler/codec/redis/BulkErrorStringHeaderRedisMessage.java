@@ -18,7 +18,7 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public class BulkErrorStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
+public final class BulkErrorStringHeaderRedisMessage extends BulkStringHeaderRedisMessage {
 
     /**
      * Creates a {@link BulkErrorStringHeaderRedisMessage}.
