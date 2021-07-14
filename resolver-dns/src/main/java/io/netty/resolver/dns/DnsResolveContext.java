@@ -41,6 +41,8 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -61,6 +63,7 @@ import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.lang.Math.min;
 
 abstract class DnsResolveContext<T> {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolveContext.class);
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
             DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned",
@@ -792,12 +795,41 @@ abstract class DnsResolveContext<T> {
                 } while (resolved != null);
 
                 if (resolved == null) {
-                    continue;
+                    assert questionName.isEmpty() || questionName.charAt(questionName.length() - 1) == '.';
+
+                    for (String searchDomain : parent.searchDomains()) {
+                        if (searchDomain.isEmpty()) {
+                            continue;
+                        }
+
+                        final String fqdn;
+                        if (searchDomain.charAt(searchDomain.length() - 1) == '.') {
+                            fqdn = questionName + searchDomain;
+                        } else {
+                            fqdn = questionName + searchDomain + '.';
+                        }
+                        if (recordName.equals(fqdn)) {
+                            resolved = recordName;
+                            break;
+                        }
+                    }
+                    if (resolved == null) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Ignoring record {} as it contains a different name than the " +
+                                            "question name [{}]. Cnames: {}, Search domains: {}",
+                                    r.toString(), questionName, cnames, parent.searchDomains());
+                        }
+                        continue;
+                    }
                 }
             }
 
             final T converted = convertRecord(r, hostname, additionals, parent.executor());
             if (converted == null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Ignoring record {} as the converted record is null. hostname [{}], Additionals: {}",
+                            r.toString(), hostname, additionals);
+                }
                 continue;
             }
 
