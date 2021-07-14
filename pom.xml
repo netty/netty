@@ -216,6 +216,9 @@
         <jdk>15</jdk>
       </activation>
       <properties>
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
@@ -237,6 +240,9 @@
         <jdk>14</jdk>
       </activation>
       <properties>
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
@@ -258,6 +264,9 @@
         <jdk>13</jdk>
       </activation>
       <properties>
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
