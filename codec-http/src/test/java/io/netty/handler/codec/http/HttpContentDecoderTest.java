@@ -59,30 +59,12 @@ public class HttpContentDecoderTest {
             31, -117, 8, 8, 12, 3, -74, 84, 0, 3, 50, 0, -53, 72, -51, -55, -55,
             -41, 81, 40, -49, 47, -54, 73, 1, 0, 58, 114, -85, -1, 12, 0, 0, 0
     };
-    private static final String SAMPLE_STRING;
-    private static final byte[] SAMPLE_BZ_BYTES;
-
-    static {
-        InputStream uncompressed = HttpContentDecoderTest.class.getClassLoader()
-          .getResourceAsStream("sample-data.txt");
-        try {
-            assert uncompressed != null;
-            SAMPLE_STRING = new String(IOUtils.readFully(uncompressed, uncompressed.available()), CharsetUtil.UTF_8);
-        } catch (Throwable e) {
-            throw new ExceptionInInitializerError(e);
-        } finally {
-            IOUtils.closeQuietly(uncompressed, null);
-        }
-        InputStream compressed = HttpContentDecoderTest.class.getClassLoader()
-          .getResourceAsStream("sample-data.br");
-        try {
-            SAMPLE_BZ_BYTES = IOUtils.toByteArray(compressed);
-        } catch (Throwable e) {
-            throw new ExceptionInInitializerError(e);
-        } finally {
-            IOUtils.closeQuietly(compressed, null);
-        }
-    }
+    private static final String SAMPLE_STRING = "Hello, I am Meow!. A small kitten. :)" +
+            "I sleep all day, and meow all night.";;
+    private static final byte[] SAMPLE_BZ_BYTES = new byte[]{27, 72, 0, 0, -60, -102, 91, -86, 103, 20,
+            -28, -23, 54, -101, 11, -106, -16, -32, -95, -61, -37, 94, -16, 97, -40, -93, -56, 18, 21, 86,
+            -110, 82, -41, 102, -89, 20, 11, 10, -68, -31, 96, -116, -55, -80, -31, -91, 96, -64, 83, 51,
+            -39, 13, -21, 92, -16, -119, 124, -31, 18, 78, -1, 91, 82, 105, -116, -95, -22, -11, -70, -45, 0};
 
     @Test
     public void testBinaryDecompression() throws Exception {
