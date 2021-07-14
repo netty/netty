@@ -716,7 +716,7 @@ public abstract class SSLEngineTest {
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
     }
 
-    private void mySetupMutualAuth(KeyManagerFactory serverKMF, final File serverTrustManager,
+    protected void mySetupMutualAuth(KeyManagerFactory serverKMF, final File serverTrustManager,
                                    KeyManagerFactory clientKMF, File clientTrustManager,
                                    ClientAuth clientAuth, final boolean failureExpected,
                                    final boolean serverInitEngine)
