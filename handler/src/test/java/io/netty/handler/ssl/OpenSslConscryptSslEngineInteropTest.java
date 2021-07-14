@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
@@ -27,6 +28,7 @@ import java.util.List;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@DisabledIf("checkConscryptDisabled")
 public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest {
     @Override
     protected List<SSLEngineTestParam> newTestParams() {
