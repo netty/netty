@@ -21,7 +21,7 @@ import io.netty.util.internal.UnstableApi;
  * Header of Redis Array Message.
  */
 @UnstableApi
-public final class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+public class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
      * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
