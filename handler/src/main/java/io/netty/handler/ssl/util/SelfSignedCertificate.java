@@ -237,16 +237,16 @@ public final class SelfSignedCertificate {
 
         String[] paths;
         try {
-            // Try the OpenJDK's proprietary implementation.
-            paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
+            // Try Bouncy Castle first as otherwise we will see an IllegalAccessError on more recent JDKs.
+            paths = BouncyCastleSelfSignedCertGenerator.generate(
+                    fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable t) {
-            logger.debug("Failed to generate a self-signed X.509 certificate using sun.security.x509:", t);
+            logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
             try {
-                // Try Bouncy Castle if the current JVM didn't have sun.security.x509.
-                paths = BouncyCastleSelfSignedCertGenerator.generate(
-                        fqdn, keypair, random, notBefore, notAfter, algorithm);
+                // Try the OpenJDK's proprietary implementation.
+                paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
             } catch (Throwable t2) {
-                logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t2);
+                logger.debug("Failed to generate a self-signed X.509 certificate using sun.security.x509:", t2);
                 final CertificateException certificateException = new CertificateException(
                         "No provider succeeded to generate a self-signed certificate. " +
                                 "See debug log for the root cause.", t2);
