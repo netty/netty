@@ -16,21 +16,32 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import java.util.concurrent.TimeUnit;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.api.Test;
-
-import java.net.SocketException;
-import java.nio.channels.NotYetConnectedException;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
+import java.net.SocketException;
+import java.nio.channels.NotYetConnectedException;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testShutdownNotYetConnected(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
@@ -67,5 +78,45 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         if (!(cause instanceof NotYetConnectedException) && !(cause instanceof SocketException)) {
             throw cause;
         }
+    }
+
+    @Test
+    @Timeout(30)
+    public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
+        run(info, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                NioEventLoopGroup group = new NioEventLoopGroup(1);
+                ServerBootstrap sb = new ServerBootstrap().group(group);
+                Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        ctx.writeAndFlush(Unpooled.copyInt(42));
+                    }
+                }).channel(NioServerSocketChannel.class).bind(0).sync().channel();
+
+                final CountDownLatch readLatch = new CountDownLatch(1);
+                bootstrap.handler(new ByteToMessageDecoder() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        assertFalse(ctx.channel().isActive());
+                        ctx.read();
+                    }
+
+                    @Override
+                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                        assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
+                        if (in.readableBytes() == Integer.BYTES) {
+                            assertThat(in.readInt()).isEqualTo(42);
+                            readLatch.countDown();
+                        }
+                    }
+                });
+                bootstrap.connect(serverChannel.localAddress()).sync();
+
+                readLatch.await();
+                group.shutdownGracefully().await();
+            }
+        });
     }
 }

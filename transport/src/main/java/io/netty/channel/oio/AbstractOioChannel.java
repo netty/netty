@@ -34,7 +34,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     protected static final int SO_TIMEOUT = 1000;
 
     boolean readPending;
-    private final Runnable readTask = new Runnable() {
+    boolean readWhenInactive;
+    final Runnable readTask = new Runnable() {
         @Override
         public void run() {
             doRead();
@@ -101,6 +102,10 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         if (readPending) {
+            return;
+        }
+        if (!isActive()) {
+            readWhenInactive = true;
             return;
         }
 
