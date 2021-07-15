@@ -23,26 +23,23 @@ import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFac
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.security.Provider;
-import java.util.ArrayList;
-import java.util.Collection;
 
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.AssumptionViolatedException;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNoException;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class JdkSslEngineTest extends SSLEngineTest {
     public enum ProviderType {
         NPN_JETTY {
@@ -141,75 +138,88 @@ public class JdkSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
     private static final String APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE = "my-protocol-FOO";
 
-    @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}, delegate = {3}")
-    public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
-        for (ProviderType providerType : ProviderType.values()) {
-            for (BufferType bufferType : BufferType.values()) {
-                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
-                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
-
-                if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
-                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
-                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
-                }
-            }
-        }
-        return params;
-    }
-
-    private final ProviderType providerType;
-
     private Provider provider;
 
-    public JdkSslEngineTest(ProviderType providerType, BufferType bufferType,
-                            ProtocolCipherCombo protocolCipherCombo, boolean delegate) {
-        super(bufferType, protocolCipherCombo, delegate);
-        this.providerType = providerType;
+    public JdkSslEngineTest() {
+        super(SslProvider.isTlsv13Supported(SslProvider.JDK));
     }
 
-    @Test
-    public void testTlsExtension() throws Exception {
+    List<JdkSSLEngineTestParam> newJdkParams() {
+        List<SSLEngineTestParam> params = newTestParams();
+
+        List<JdkSSLEngineTestParam> jdkParams = new ArrayList<JdkSSLEngineTestParam>();
+        for (ProviderType providerType: ProviderType.values()) {
+            for (SSLEngineTestParam param: params) {
+                jdkParams.add(new JdkSSLEngineTestParam(providerType, param));
+            }
+        }
+        return jdkParams;
+    }
+
+    private static final class JdkSSLEngineTestParam extends SSLEngineTestParam {
+        final ProviderType providerType;
+        JdkSSLEngineTestParam(ProviderType providerType, SSLEngineTestParam param) {
+            super(param.type(), param.combo(), param.delegate());
+            this.providerType = providerType;
+        }
+
+        @Override
+        public String toString() {
+            return "JdkSSLEngineTestParam{" +
+                    "type=" + type() +
+                    ", protocolCipherCombo=" + combo() +
+                    ", delegate=" + delegate() +
+                    ", providerType=" + providerType +
+                    '}';
+        }
+    }
+
+    @MethodSource("newJdkParams")
+    @ParameterizedTest
+    public void testTlsExtension(JdkSSLEngineTestParam param) throws Exception {
         try {
-            providerType.activate(this);
-            ApplicationProtocolConfig apn = failingNegotiator(providerType.protocol(),
+            param.providerType.activate(this);
+            ApplicationProtocolConfig apn = failingNegotiator(param.providerType.protocol(),
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-            setupHandlers(apn);
+            setupHandlers(param, apn);
             runTest();
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            assumeNoException(e);
+            throw new AssumptionViolatedException("Not expected", e);
         }
     }
 
-    @Test
-    public void testTlsExtensionNoCompatibleProtocolsNoHandshakeFailure() throws Exception {
+    @MethodSource("newJdkParams")
+    @ParameterizedTest
+    public void testTlsExtensionNoCompatibleProtocolsNoHandshakeFailure(JdkSSLEngineTestParam param) throws Exception {
         try {
-            providerType.activate(this);
-            ApplicationProtocolConfig clientApn = acceptingNegotiator(providerType.protocol(),
+            param.providerType.activate(this);
+            ApplicationProtocolConfig clientApn = acceptingNegotiator(param.providerType.protocol(),
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-            ApplicationProtocolConfig serverApn = acceptingNegotiator(providerType.protocol(),
+            ApplicationProtocolConfig serverApn = acceptingNegotiator(param.providerType.protocol(),
                 APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            setupHandlers(serverApn, clientApn);
+            setupHandlers(param, serverApn, clientApn);
             runTest(null);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            assumeNoException(e);
+            throw new AssumptionViolatedException("Not expected", e);
         }
     }
 
-    @Test
-    public void testTlsExtensionNoCompatibleProtocolsClientHandshakeFailure() throws Exception {
+    @MethodSource("newJdkParams")
+    @ParameterizedTest
+    public void testTlsExtensionNoCompatibleProtocolsClientHandshakeFailure(JdkSSLEngineTestParam param)
+            throws Exception {
         try {
-            providerType.activate(this);
-            if (providerType == ProviderType.NPN_JETTY) {
-                ApplicationProtocolConfig clientApn = failingNegotiator(providerType.protocol(),
+            param.providerType.activate(this);
+            if (param.providerType == ProviderType.NPN_JETTY) {
+                ApplicationProtocolConfig clientApn = failingNegotiator(param.providerType.protocol(),
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-                ApplicationProtocolConfig serverApn = acceptingNegotiator(providerType.protocol(),
+                ApplicationProtocolConfig serverApn = acceptingNegotiator(param.providerType.protocol(),
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-                setupHandlers(serverApn, clientApn);
+                setupHandlers(param, serverApn, clientApn);
                 assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
                 assertTrue(clientException instanceof SSLHandshakeException);
             } else {
@@ -235,14 +245,15 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
 
-                SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
+                SslContext serverSslCtx = new JdkSslServerContext(param.providerType.provider(),
                     ssc.certificate(), ssc.privateKey(), null, null,
                     IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0, null);
-                SslContext clientSslCtx = new JdkSslClientContext(providerType.provider(), null,
+                SslContext clientSslCtx = new JdkSslClientContext(param.providerType.provider(), null,
                     InsecureTrustManagerFactory.INSTANCE, null,
                     IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);
 
-                setupHandlers(new TestDelegatingSslContext(serverSslCtx), new TestDelegatingSslContext(clientSslCtx));
+                setupHandlers(param.type(), param.delegate(), new TestDelegatingSslContext(param, serverSslCtx),
+                        new TestDelegatingSslContext(param, clientSslCtx));
                 assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
                 // When using TLSv1.3 the handshake is NOT sent in an extra round trip which means there will be
                 // no exception reported in this case but just the channel will be closed.
@@ -251,35 +262,38 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            assumeNoException(e);
+            throw new AssumptionViolatedException("Not expected", e);
         }
     }
 
-    @Test
-    public void testTlsExtensionNoCompatibleProtocolsServerHandshakeFailure() throws Exception {
+    @MethodSource("newJdkParams")
+    @ParameterizedTest
+    public void testTlsExtensionNoCompatibleProtocolsServerHandshakeFailure(JdkSSLEngineTestParam param)
+            throws Exception {
         try {
-            providerType.activate(this);
-            ApplicationProtocolConfig clientApn = acceptingNegotiator(providerType.protocol(),
+            param.providerType.activate(this);
+            ApplicationProtocolConfig clientApn = acceptingNegotiator(param.providerType.protocol(),
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-            ApplicationProtocolConfig serverApn = failingNegotiator(providerType.protocol(),
+            ApplicationProtocolConfig serverApn = failingNegotiator(param.providerType.protocol(),
                 APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-            setupHandlers(serverApn, clientApn);
+            setupHandlers(param, serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
             assertTrue(serverException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            assumeNoException(e);
+            throw new AssumptionViolatedException("Not expected", e);
         }
     }
 
-    @Test
-    public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
+    @MethodSource("newJdkParams")
+    @ParameterizedTest
+    public void testAlpnCompatibleProtocolsDifferentClientOrder(JdkSSLEngineTestParam param) throws Exception {
         try {
-            providerType.activate(this);
-            if (providerType == ProviderType.NPN_JETTY) {
+            param.providerType.activate(this);
+            if (param.providerType == ProviderType.NPN_JETTY) {
                 // This test only applies to ALPN.
-                throw tlsExtensionNotFound(providerType.protocol());
+                throw tlsExtensionNotFound(param.providerType.protocol());
             }
             // Even the preferred application protocol appears second in the client's list, it will be picked
             // because it's the first one on server's list.
@@ -287,29 +301,32 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             ApplicationProtocolConfig serverApn = failingNegotiator(Protocol.ALPN,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL, FALLBACK_APPLICATION_LEVEL_PROTOCOL);
-            setupHandlers(serverApn, clientApn);
+            setupHandlers(param, serverApn, clientApn);
             assertNull(serverException);
             runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            assumeNoException(e);
+            throw new AssumptionViolatedException("Not expected", e);
         }
     }
 
-    @Test
-    public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
-        testEnablingAnAlreadyDisabledSslProtocol(new String[]{}, new String[]{ SslProtocols.TLS_v1_2 });
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testEnablingAnAlreadyDisabledSslProtocol(SSLEngineTestParam param) throws Exception {
+        testEnablingAnAlreadyDisabledSslProtocol(param, new String[]{}, new String[]{ SslProtocols.TLS_v1_2 });
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
+            throws Exception {
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
+            throws Exception {
     }
 
     @Override
@@ -368,15 +385,18 @@ public class JdkSslEngineTest extends SSLEngineTest {
         }
     }
 
-    private final class TestDelegatingSslContext extends DelegatingSslContext {
-        TestDelegatingSslContext(SslContext ctx) {
+    private static final class TestDelegatingSslContext extends DelegatingSslContext {
+        private final SSLEngineTestParam param;
+
+        TestDelegatingSslContext(SSLEngineTestParam param, SslContext ctx) {
             super(ctx);
+            this.param = param;
         }
 
         @Override
         protected void initEngine(SSLEngine engine) {
-            engine.setEnabledProtocols(protocols());
-            engine.setEnabledCipherSuites(ciphers().toArray(EmptyArrays.EMPTY_STRINGS));
+            engine.setEnabledProtocols(param.protocols().toArray(EmptyArrays.EMPTY_STRINGS));
+            engine.setEnabledCipherSuites(param.ciphers().toArray(EmptyArrays.EMPTY_STRINGS));
         }
     }
 }

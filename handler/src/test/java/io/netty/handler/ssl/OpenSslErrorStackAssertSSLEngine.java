@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -28,6 +27,8 @@ import javax.net.ssl.SSLSession;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.BiFunction;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Special {@link SSLEngine} which allows to wrap a {@link ReferenceCountedOpenSslEngine} and verify that that
@@ -436,6 +437,6 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
 
     private static void assertErrorStackEmpty() {
         long error = SSL.getLastErrorNumber();
-        Assert.assertEquals("SSL error stack non-empty: " + SSL.getErrorString(error), 0, error);
+        assertEquals(0, error, "SSL error stack non-empty: " + SSL.getErrorString(error));
     }
 }
