@@ -31,7 +31,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -124,7 +124,7 @@ public abstract class SslContextTest {
         } catch (IllegalArgumentException e) {
             exception = e;
         }
-        assumeNotNull(exception);
+        assumeTrue(exception != null);
         File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 

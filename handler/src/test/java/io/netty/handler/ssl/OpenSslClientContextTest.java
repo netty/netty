@@ -16,14 +16,14 @@
 package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
 
 public class OpenSslClientContextTest extends SslContextTest  {
 
-    @BeforeClass
+    @BeforeAll
     public static void checkOpenSsl() {
         OpenSsl.ensureAvailability();
     }

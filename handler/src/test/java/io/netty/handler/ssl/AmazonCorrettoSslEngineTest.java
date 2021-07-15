@@ -17,48 +17,28 @@ package io.netty.handler.ssl;
 
 import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 import com.amazon.corretto.crypto.provider.SelfTestStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import javax.crypto.Cipher;
 import java.security.Security;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-@RunWith(Parameterized.class)
+
+@DisabledIf("checkIfAccpIsDisabled")
 public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
-    public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
-        for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
-
-            if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
-                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true });
-                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false });
-            }
-        }
-        return params;
+    static boolean checkIfAccpIsDisabled() {
+        return AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() != null ||
+                !AmazonCorrettoCryptoProvider.INSTANCE.runSelfTests().equals(SelfTestStatus.PASSED);
     }
 
-    public AmazonCorrettoSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
-        super(type, combo, delegate);
-    }
-
-    @BeforeClass
-    public static void checkAccp() {
-        assumeTrue(AmazonCorrettoCryptoProvider.INSTANCE.getLoadingError() == null &&
-                AmazonCorrettoCryptoProvider.INSTANCE.runSelfTests().equals(SelfTestStatus.PASSED));
+    public AmazonCorrettoSslEngineTest() {
+        super(SslProvider.isTlsv13Supported(SslProvider.JDK));
     }
 
     @Override
@@ -71,7 +51,7 @@ public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
         return SslProvider.JDK;
     }
 
-    @Before
+    @BeforeEach
     @Override
     public void setup() {
         // See https://github.com/corretto/amazon-corretto-crypto-provider/blob/develop/README.md#code
@@ -81,7 +61,7 @@ public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
         try {
             AmazonCorrettoCryptoProvider.INSTANCE.assertHealthy();
             String providerName = Cipher.getInstance("AES/GCM/NoPadding").getProvider().getName();
-            Assert.assertEquals(AmazonCorrettoCryptoProvider.PROVIDER_NAME, providerName);
+            assertEquals(AmazonCorrettoCryptoProvider.PROVIDER_NAME, providerName);
         } catch (Throwable e) {
             Security.removeProvider(AmazonCorrettoCryptoProvider.PROVIDER_NAME);
             throw new AssertionError(e);
@@ -89,24 +69,24 @@ public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
         super.setup();
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() throws InterruptedException {
         super.tearDown();
 
         // Remove the provider again and verify that it was removed
         Security.removeProvider(AmazonCorrettoCryptoProvider.PROVIDER_NAME);
-        Assert.assertNull(Security.getProvider(AmazonCorrettoCryptoProvider.PROVIDER_NAME));
+        assertNull(Security.getProvider(AmazonCorrettoCryptoProvider.PROVIDER_NAME));
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() {
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param) {
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param) {
     }
 
     @Override
