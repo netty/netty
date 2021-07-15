@@ -34,7 +34,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThrowableUtil;
-import org.junit.Assert;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -66,6 +65,11 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * In extra class to be able to run tests with java7 without trying to load classes that not exists in java7.
@@ -171,17 +175,17 @@ final class SniClientJava8TestUtil {
     }
 
     private static void assertSSLSession(boolean clientSide, SSLSession session, SNIServerName name) {
-        Assert.assertNotNull(session);
+        assertNotNull(session);
         if (session instanceof ExtendedSSLSession) {
             ExtendedSSLSession extendedSSLSession = (ExtendedSSLSession) session;
             List<SNIServerName> names = extendedSSLSession.getRequestedServerNames();
-            Assert.assertEquals(1, names.size());
-            Assert.assertEquals(name, names.get(0));
-            Assert.assertTrue(extendedSSLSession.getLocalSupportedSignatureAlgorithms().length > 0);
+            assertEquals(1, names.size());
+            assertEquals(name, names.get(0));
+            assertTrue(extendedSSLSession.getLocalSupportedSignatureAlgorithms().length > 0);
             if (clientSide) {
-                Assert.assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);
+                assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);
             } else {
-                Assert.assertTrue(extendedSSLSession.getPeerSupportedSignatureAlgorithms().length >= 0);
+                assertTrue(extendedSSLSession.getPeerSupportedSignatureAlgorithms().length >= 0);
             }
         }
     }
@@ -214,19 +218,19 @@ final class SniClientJava8TestUtil {
                 @Override
                 public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
                         throws CertificateException {
-                    Assert.fail();
+                    fail();
                 }
 
                 @Override
                 public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
                         throws CertificateException {
-                    Assert.fail();
+                    fail();
                 }
 
                 @Override
                 public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
                         throws CertificateException {
-                    Assert.fail();
+                    fail();
                 }
 
                 @Override
@@ -238,13 +242,13 @@ final class SniClientJava8TestUtil {
                 @Override
                 public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
                         throws CertificateException {
-                    Assert.fail();
+                    fail();
                 }
 
                 @Override
                 public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
                         throws CertificateException {
-                    Assert.fail();
+                    fail();
                 }
 
                 @Override

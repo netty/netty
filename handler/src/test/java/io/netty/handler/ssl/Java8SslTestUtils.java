@@ -29,7 +29,7 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public final class Java8SslTestUtils {
 
@@ -70,7 +70,7 @@ public final class Java8SslTestUtils {
             InputStream is = null;
             try {
                 is = SslContextTest.class.getResourceAsStream(resourceName);
-                assertNotNull("Cannot find " + resourceName, is);
+                assertNotNull(is, "Cannot find " + resourceName);
                 certCollection[i] = (X509Certificate) certFactory
                         .generateCertificate(is);
             } finally {
