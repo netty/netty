@@ -36,7 +36,7 @@ public class TcpDnsTest {
         int randomID = new Random().nextInt(60000 - 1000) + 1000;
         DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                 .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-        channel.writeInbound(query);
+        assertTrue(channel.writeInbound(query));
 
         DnsQuery readQuery = channel.readInbound();
         assertThat(readQuery, is(query));
