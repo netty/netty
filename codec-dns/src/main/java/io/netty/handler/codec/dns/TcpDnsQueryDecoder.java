@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,7 +25,7 @@ public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
     private final DnsRecordDecoder decoder;
 
     public TcpDnsQueryDecoder() {
-        this(DnsRecordDecoder.DEFAULT, Integer.MAX_VALUE);
+        this(DnsRecordDecoder.DEFAULT, 65535);
     }
 
     public TcpDnsQueryDecoder(DnsRecordDecoder decoder, int maxFrameLength) {
