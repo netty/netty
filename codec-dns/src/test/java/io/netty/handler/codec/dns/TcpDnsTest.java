@@ -62,6 +62,9 @@ public class TcpDnsTest {
                 DnsRecordType.A, TTL, Unpooled.wrappedBuffer(QUERY_RESULT));
         assertThat(readResponse.recordAt(DnsSection.ANSWER), is((DnsRecord) record));
         assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
+        ReferenceCountUtil.release(readResponse);
+        ReferenceCountUtil.release(record);
+         assertFalse(channel.finish());
     }
 
     private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, byte[]... addresses) {
