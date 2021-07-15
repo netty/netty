@@ -67,7 +67,7 @@ public class TcpDnsTest {
          assertFalse(channel.finish());
     }
 
-    private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, byte[]... addresses) {
+    private static DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, byte[]... addresses) {
         DefaultDnsResponse response = new DefaultDnsResponse(query.id());
         response.addRecord(DnsSection.QUESTION, question);
 
