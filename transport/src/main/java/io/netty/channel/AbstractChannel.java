@@ -60,6 +60,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile boolean registered;
     private boolean closeInitiated;
     private Throwable initialCloseCause;
+    private boolean readBeforeActive;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -433,7 +434,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     protected final void readIfIsAutoRead() {
-        if (config().isAutoRead()) {
+        if (config().isAutoRead() || readBeforeActive) {
+            readBeforeActive = false;
             read();
         }
     }
@@ -807,6 +809,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             if (!isActive()) {
+                readBeforeActive = true;
                 return;
             }
 
