@@ -27,10 +27,16 @@ import java.util.List;
 public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
     private final DnsRecordEncoder encoder;
 
+    /**
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}.
+     */
     public TcpDnsResponseEncoder() {
         this(DnsRecordEncoder.DEFAULT);
     }
 
+    /**
+     * Creates a new encoder with the specified {@code encoder}.
+     */
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
         this.encoder = ObjectUtil.checkNotNull(encoder, "encoder");
     }

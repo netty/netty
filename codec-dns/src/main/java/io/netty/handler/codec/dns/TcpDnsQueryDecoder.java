@@ -24,10 +24,16 @@ import io.netty.util.internal.ObjectUtil;
 public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
     private final DnsRecordDecoder decoder;
 
+    /**
+     * Creates a new decoder with {@linkplain DnsRecordDecoder#DEFAULT the default record decoder}.
+     */
     public TcpDnsQueryDecoder() {
         this(DnsRecordDecoder.DEFAULT, 65535);
     }
 
+    /**
+     * Creates a new decoder with the specified {@code decoder}.
+     */
     public TcpDnsQueryDecoder(DnsRecordDecoder decoder, int maxFrameLength) {
         super(maxFrameLength, 0, 2, 0, 2);
         this.decoder = ObjectUtil.checkNotNull(decoder, "decoder");
