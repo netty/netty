@@ -43,8 +43,15 @@ static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
+#ifdef __NetBSD__
+#ifndef TCP_NOPUSH
+// See https://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/sys/netinet/tcp.h
+#define	TCP_NOPUSH	4	/* reserved for FreeBSD compat */
+#endif // TCP_NOPUSH
+#endif // __NetBSD__
 // JNI Registered Methods Begin
 static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint socketFd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+#if !defined(__NetBSD__)
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
@@ -81,6 +88,10 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
         return sbytes;
     }
     return res < 0 ? -err : 0;
+#else
+    // Not supported in netbsd.
+    return -ENOSYS;
+#endif // !defined(__NetBSD__)
 }
 
 static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
@@ -156,6 +167,22 @@ static jint netty_kqueue_bsdsocket_getSndLowAt(JNIEnv* env, jclass clazz, jint f
 }
 
 static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
+#ifdef __NetBSD__
+    struct unpcbid cred;
+    socklen_t credlen = sizeof(cred);
+
+    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, LOCAL_PEEREID, &cred, credlen) == -1)
+        return NULL;
+
+    pid_t pid = cred.unp_pid;
+    uid_t euid = cred.unp_euid;
+    gid_t egid = cred.unp_egid;
+
+    jintArray gids = NULL;
+    (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &egid);
+
+    return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, euid, gids);
+#else
     struct xucred credentials;
     // It has been observed on MacOS that this method can complete successfully but not set all fields of xucred.
     credentials.cr_ngroups = 0;
@@ -186,6 +213,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 #endif
 
     return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
+#endif
 }
 // JNI Registered Methods End
 
