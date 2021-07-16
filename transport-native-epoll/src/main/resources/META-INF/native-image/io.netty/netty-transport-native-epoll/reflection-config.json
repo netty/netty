@@ -1,0 +1,32 @@
+[
+  {
+    "name": "io.netty.channel.epoll.EpollServerSocketChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.netty.channel.epoll.EpollServerDomainSocketChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.netty.channel.epoll.EpollSocketChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.netty.channel.epoll.EpollDatagramChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.netty.channel.epoll.EpollDomainSocketChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  }
+]

@@ -85,10 +85,16 @@ public abstract class InternalLoggerFactory {
 
     private static InternalLoggerFactory useLog4JLoggerFactory(String name) {
         try {
+            // Fail immediately if the Log4j Priority class is not on the class path.
+            // This works around a Graal issue with build-time class initialisation.
+            Class.forName("org.apache.log4j.Priority");
+
             InternalLoggerFactory f = Log4JLoggerFactory.INSTANCE;
             f.newInstance(name).debug("Using Log4J as the default logging framework");
             return f;
         } catch (LinkageError ignore) {
+            return null;
+        } catch (ClassNotFoundException ignore) {
             return null;
         } catch (Exception ignore) {
             // We catch Exception and not ReflectiveOperationException as we still support java 6
