@@ -76,6 +76,15 @@ import java.util.List;
  *     The duplicated field-values will be replaced with a single valid Content-Length field.
  *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
  * </tr>
+ * <tr>
+ * <td>{@code allowPartialChunks}</td>
+ * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
+ * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
+ *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
+ *     Otherwise if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into a {@link HttpContent} util
+ *     the readable bytes is grater or equal to the chunk size.</td>
+ * </tr>
  * </table>
  *
  * <h3>Chunked Content</h3>
