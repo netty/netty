@@ -148,7 +148,7 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders,
-          initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
+              initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
     }
 
     @Override
