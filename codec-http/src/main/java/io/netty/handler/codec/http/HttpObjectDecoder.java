@@ -81,9 +81,9 @@ import java.util.List;
  * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
  * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
  *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
- *     Otherwise if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
- *     is set to {@code false}, the {@link ByteBuf} is not decoded into a {@link HttpContent} util
- *     the readable bytes is grater or equal to the chunk size.</td>
+ *     Otherwise, if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} util
+ *     the readable bytes are grater or equal to the chunk size.</td>
  * </tr>
  * </table>
  *
