@@ -72,8 +72,8 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
  *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
  *     Otherwise, if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
- *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} util
- *     the readable bytes are grater or equal to the chunk size.</td>
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} until
+ *     the readable bytes are greater or equal to the chunk size.</td>
  * </tr>
  * </table>
  *
