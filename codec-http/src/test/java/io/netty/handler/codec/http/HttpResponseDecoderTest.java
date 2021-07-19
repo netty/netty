@@ -161,7 +161,7 @@ public class HttpResponseDecoderTest {
         String headers = "HTTP/1.1 200 OK\r\n"
             + "Transfer-Encoding: chunked\r\n"
             + "\r\n";
-        ch.writeInbound(Unpooled.copiedBuffer(headers, CharsetUtil.US_ASCII));
+       assertTrue(ch.writeInbound(Unpooled.copiedBuffer(headers, CharsetUtil.US_ASCII)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
