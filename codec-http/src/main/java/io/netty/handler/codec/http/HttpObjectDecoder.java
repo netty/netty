@@ -393,7 +393,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             assert chunkSize <= Integer.MAX_VALUE;
             int toRead = Math.min((int) chunkSize, maxChunkSize);
             if (!allowPartialChunks && buffer.readableBytes() < toRead) {
-              return;
+                return;
             }
             toRead = Math.min(toRead, buffer.readableBytes());
             if (toRead == 0) {
