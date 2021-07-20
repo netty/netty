@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -15,21 +15,19 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
-/**
- * Header of Redis Array Message.
- */
 @UnstableApi
-public class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+public final class FullBulkErrorStringRedisMessage extends FullBulkStringRedisMessage {
 
     /**
-     * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
+     * Creates a {@link FullBulkErrorStringRedisMessage} for the given {@code content}.
      *
-     * @param length
+     * @param content the content, must not be {@code null}. If content is null or empty,
+     *                use {@link NullRedisMessage#INSTANCE instead of constructor.
      */
-    public ArrayHeaderRedisMessage(long length) {
-        super(length);
+    public FullBulkErrorStringRedisMessage(ByteBuf content) {
+        super(content);
     }
-
 }
