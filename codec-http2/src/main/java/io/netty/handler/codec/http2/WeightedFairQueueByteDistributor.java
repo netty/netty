@@ -550,14 +550,28 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                 events.add(new ParentChangedEvent(child, child.parent));
                 child.setParent(null);
 
-                // Move up any grand children to be directly dependent on this node.
-                Iterator<IntObjectMap.PrimitiveEntry<State>> itr = child.children.entries().iterator();
-                while (itr.hasNext()) {
-                    takeChild(itr, itr.next().value(), false, events);
+                if (!child.children.isEmpty()) {
+                    // Move up any grand children to be directly dependent on this node.
+                    Iterator<IntObjectMap.PrimitiveEntry<State>> itr = child.children.entries().iterator();
+                    long totalWeight = child.getTotalWeight();
+                    do {
+                        // Redistribute the weight of child to its dependency proportionally.
+                        State dependency = itr.next().value();
+                        dependency.weight = (short) Math.max(1, dependency.weight * child.weight / totalWeight);
+                        takeChild(itr, dependency, false, events);
+                    } while (itr.hasNext());
                 }
 
                 notifyParentChanged(events);
             }
+        }
+
+        private long getTotalWeight() {
+            long totalWeight = 0L;
+            for (State state : children.values()) {
+                totalWeight += state.weight;
+            }
+            return totalWeight;
         }
 
         /**
