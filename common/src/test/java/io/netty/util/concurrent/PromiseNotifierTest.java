@@ -97,17 +97,14 @@ public class PromiseNotifierTest {
 
     @Test
     public void testCancelPropagationWhenFusedFromFuture() {
-        @SuppressWarnings("unchecked")
-        Promise<Void> p1 = mock(Promise.class);
-        when(p1.cancel(false)).thenReturn(true);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-
-        Promise<Void> returned = PromiseNotifier.link(promise, p1);
-        assertSame(promise, returned);
+        Promise<Void> returned = PromiseNotifier.link(p1, p2);
+        assertSame(p1, returned);
 
         assertTrue(returned.cancel(false));
         assertTrue(returned.isCancelled());
-        verify(p1).cancel(false);
+        assertTrue(p2.isCancelled());
     }
 }
