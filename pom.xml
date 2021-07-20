@@ -452,7 +452,7 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
-    <bouncycastle.version>1.68</bouncycastle.version>
+    <bouncycastle.version>1.69</bouncycastle.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
