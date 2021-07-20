@@ -29,6 +29,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_ALLOW_PARTIAL_CHUNKS;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
@@ -136,8 +137,20 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest,
             boolean allowDuplicateContentLengths) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders,
+            initialBufferSize, parseHttpAfterConnectRequest, allowDuplicateContentLengths,
+            DEFAULT_ALLOW_PARTIAL_CHUNKS);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest,
+            boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
         init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
-                         allowDuplicateContentLengths),
+                         allowDuplicateContentLengths, allowPartialChunks),
              new Encoder());
         this.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
         this.failOnMissingResponse = failOnMissingResponse;
@@ -204,9 +217,9 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         }
 
         Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
-                int initialBufferSize, boolean allowDuplicateContentLengths) {
+                int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
-                  allowDuplicateContentLengths);
+                  allowDuplicateContentLengths, allowPartialChunks);
         }
 
         @Override

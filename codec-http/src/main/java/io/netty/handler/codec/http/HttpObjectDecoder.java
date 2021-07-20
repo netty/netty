@@ -76,6 +76,15 @@ import java.util.List;
  *     The duplicated field-values will be replaced with a single valid Content-Length field.
  *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
  * </tr>
+ * <tr>
+ * <td>{@code allowPartialChunks}</td>
+ * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
+ * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
+ *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
+ *     Otherwise, if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} until
+ *     the readable bytes are greater or equal to the chunk size.</td>
+ * </tr>
  * </table>
  *
  * <h3>Chunked Content</h3>
@@ -123,6 +132,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
     public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
     public static final boolean DEFAULT_CHUNKED_SUPPORTED = true;
+    public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS = true;
     public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
@@ -132,6 +142,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
+    private final boolean allowPartialChunks;
     protected final boolean validateHeaders;
     private final boolean allowDuplicateContentLengths;
     private final HeaderParser headerParser;
@@ -206,10 +217,24 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
              DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
     }
 
+    /**
+     * Creates a new instance with the specified parameters.
+     */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
+            allowDuplicateContentLengths, DEFAULT_ALLOW_PARTIAL_CHUNKS);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
         checkPositive(maxInitialLineLength, "maxInitialLineLength");
         checkPositive(maxHeaderSize, "maxHeaderSize");
         checkPositive(maxChunkSize, "maxChunkSize");
@@ -221,6 +246,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
         this.allowDuplicateContentLengths = allowDuplicateContentLengths;
+        this.allowPartialChunks = allowPartialChunks;
     }
 
     @Override
@@ -366,6 +392,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_CHUNKED_CONTENT: {
             assert chunkSize <= Integer.MAX_VALUE;
             int toRead = Math.min((int) chunkSize, maxChunkSize);
+            if (!allowPartialChunks && buffer.readableBytes() < toRead) {
+                return;
+            }
             toRead = Math.min(toRead, buffer.readableBytes());
             if (toRead == 0) {
                 return;

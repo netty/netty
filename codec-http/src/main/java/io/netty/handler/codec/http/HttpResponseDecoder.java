@@ -53,6 +53,30 @@ import io.netty.handler.codec.TooLongFrameException;
  * </tr>
  * </table>
  *
+ * <h3>Parameters that control parsing behavior</h3>
+ * <table border="1">
+ * <tr>
+ * <th>Name</th><th>Default value</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code allowDuplicateContentLengths}</td>
+ * <td>{@value #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS}</td>
+ * <td>When set to {@code false}, will reject any messages that contain multiple Content-Length header fields.
+ *     When set to {@code true}, will allow multiple Content-Length headers only if they are all the same decimal value.
+ *     The duplicated field-values will be replaced with a single valid Content-Length field.
+ *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code allowPartialChunks}</td>
+ * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
+ * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
+ *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
+ *     Otherwise, if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} until
+ *     the readable bytes are greater or equal to the chunk size.</td>
+ * </tr>
+ * </table>
+ *
  * <h3>Decoding a response for a <tt>HEAD</tt> request</h3>
  * <p>
  * Unlike other HTTP requests, the successful response of a <tt>HEAD</tt>
@@ -118,6 +142,13 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
             int initialBufferSize, boolean allowDuplicateContentLengths) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders,
               initialBufferSize, allowDuplicateContentLengths);
+    }
+
+    public HttpResponseDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+            int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders,
+              initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
     }
 
     @Override
