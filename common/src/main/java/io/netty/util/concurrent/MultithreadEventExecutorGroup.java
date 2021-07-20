@@ -17,6 +17,8 @@ package io.netty.util.concurrent;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
+import io.netty.util.internal.ObservableTaskConsumerUtil;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -30,7 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
  */
-public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
+public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup
+        implements ObservableTaskConsumer {
 
     private final EventExecutor[] children;
     private final Set<EventExecutor> readonlyChildren;
@@ -128,6 +131,32 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
+    @Override
+    public long submittedTasks() {
+        long tasks = 0;
+        for (int i = 0, size = children.length; i < size; i++) {
+            final long t = submittedTasks(i);
+            if (t == ObservableTaskConsumer.UNSUPPORTED) {
+                return ObservableTaskConsumer.UNSUPPORTED;
+            }
+            tasks += t;
+        }
+        return tasks;
+    }
+
+    @Override
+    public long completedTasks() {
+        long tasks = 0;
+        for (int i = 0, size = children.length; i < size; i++) {
+            final long t = completedTasks(i);
+            if (t == ObservableTaskConsumer.UNSUPPORTED) {
+                return ObservableTaskConsumer.UNSUPPORTED;
+            }
+            tasks += t;
+        }
+        return tasks;
+    }
+
     protected ThreadFactory newDefaultThreadFactory() {
         return new DefaultThreadFactory(getClass());
     }
@@ -148,6 +177,24 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     public final int executorCount() {
         return children.length;
+    }
+
+    /**
+     * It allows to query the {@link #submittedTasks()} of a specific {@link EventExecutor}.<br>
+     *
+     * @throws IndexOutOfBoundsException if {@code executorIndex} is not >=0 and <{@link #executorCount()}
+     */
+    public final long submittedTasks(int executorIndex) {
+        return ObservableTaskConsumerUtil.submittedTasks(children[executorIndex]);
+    }
+
+    /**
+     * It allows to query the {@link #completedTasks()} of a specific {@link EventExecutor}.<br>
+     *
+     * @throws IndexOutOfBoundsException if {@code executorIndex} is not >=0 and <{@link #executorCount()}
+     */
+    public final long completedTasks(int executorIndex) {
+        return ObservableTaskConsumerUtil.completedTasks(children[executorIndex]);
     }
 
     /**
