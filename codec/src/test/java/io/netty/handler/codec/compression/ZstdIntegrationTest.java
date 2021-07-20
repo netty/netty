@@ -15,30 +15,18 @@
  */
 package io.netty.handler.codec.compression;
 
-final class ZstdConstants {
+import io.netty.channel.embedded.EmbeddedChannel;
 
-    /**
-     * Default compression level
-     */
-    static final int DEFAULT_COMPRESSION_LEVEL = 3;
+public class ZstdIntegrationTest extends AbstractIntegrationTest {
 
-    /**
-     * Max compression level
-     */
-    static final int MAX_COMPRESSION_LEVEL = 22;
+    @Override
+    protected EmbeddedChannel createEncoder() {
+        return new EmbeddedChannel(new ZstdEncoder());
+    }
 
-    /**
-     * Max block size
-     */
-    static final int MAX_BLOCK_SIZE = 1 << (DEFAULT_COMPRESSION_LEVEL + 7) + 0x0F;   //  32 M
-    /**
-     * Default block size
-     */
-    static final int DEFAULT_BLOCK_SIZE = 1 << 16;  // 64 KB
-    /**
-     * Default buffer size
-     */
-    static final int BUFFER_SIZE = 1 << 19; // 512 KB
-
-    private ZstdConstants() { }
+    @Override
+    protected EmbeddedChannel createDecoder() {
+        return new EmbeddedChannel(new ZstdDecoder());
+    }
 }
+
