@@ -61,6 +61,57 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
         this.logNotifyFailure = logNotifyFailure;
     }
 
+    /**
+     * Fuse the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
+     * will be notified. That said cancellation is propagated both ways. This means if the {@link Future} is cancelled
+     * the {@link Promise} is cancelled as well and vise-versa.
+     *
+     * @param future    the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise   the {@link Promise} which will be notified
+     * @param <V>       the type of the value.
+     * @param <F>       the type of the {@link Future}
+     * @return          the passed in {@link Future}
+     */
+    public static <V, F extends Future<V>> F fuse(final F future, final Promise<? super V> promise) {
+        return fuse(true, future, promise);
+    }
+
+    /**
+     * Fuse the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
+     * will be notified. That said cancellation is propagated both ways. This means if the {@link Future} is cancelled
+     * the {@link Promise} is cancelled as well and vise-versa.
+     *
+     * @param logNotifyFailure  {@code true} if logging should be done in case notification fails.
+     * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise           the {@link Promise} which will be notified
+     * @param <V>               the type of the value.
+     * @param <F>               the type of the {@link Future}
+     * @return                  the passed in {@link Future}
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <V, F extends Future<V>> F fuse(boolean logNotifyFailure, final F future,
+                                                  final Promise<? super V> promise) {
+        promise.addListener(new FutureListener() {
+            @Override
+            public void operationComplete(Future f) {
+                if (f.isCancelled()) {
+                    future.cancel(false);
+                }
+            }
+        });
+        future.addListener(new PromiseNotifier(logNotifyFailure, promise) {
+            @Override
+            public void operationComplete(Future f) throws Exception {
+                if (promise.isCancelled() && f.isCancelled()) {
+                    // Just return if we propagate a cancel from the promise to the future and both are notified already
+                    return;
+                }
+                super.operationComplete(future);
+            }
+        });
+        return future;
+    }
+
     @Override
     public void operationComplete(F future) throws Exception {
         InternalLogger internalLogger = logNotifyFailure ? logger : null;
