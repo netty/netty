@@ -17,12 +17,15 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TcpDnsTest {
     private static final String QUERY_DOMAIN = "www.example.com";
@@ -64,7 +67,7 @@ public class TcpDnsTest {
         assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
         ReferenceCountUtil.release(readResponse);
         ReferenceCountUtil.release(record);
-         assertFalse(channel.finish());
+        assertFalse(channel.finish());
     }
 
     private static DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question, byte[]... addresses) {
