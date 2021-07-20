@@ -229,9 +229,9 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWriteAllReentrantWrite() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
-                ctx.writeAndFlush(msg, promise);
+                return ctx.writeAndFlush(msg);
             }
         }, new ChannelHandler() { });
 
@@ -358,11 +358,13 @@ public class PendingWriteQueueTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
+            ChannelPromise promise = ctx.newPromise();
             queue.add(msg, promise);
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());
             assertNotNull(queue.current());
+            return promise;
         }
 
         @Override

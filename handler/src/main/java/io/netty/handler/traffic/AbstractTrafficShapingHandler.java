@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -549,9 +550,10 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public ChannelFuture write(final ChannelHandlerContext ctx, final Object msg) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
+        ChannelPromise promise = ctx.newPromise();
         if (size > 0) {
             // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
@@ -561,11 +563,12 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);
-                return;
+                return promise;
             }
         }
         // to maintain order of write
         submitWrite(ctx, msg, size, 0, now, promise);
+        return promise;
     }
 
     @Deprecated

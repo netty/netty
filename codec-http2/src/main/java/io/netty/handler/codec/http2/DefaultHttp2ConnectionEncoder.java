@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -482,7 +483,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         // queue and it is not end of stream yet. Just complete their promises by getting the buffer
                         // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
                         ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                        ctx.write(queue.remove(0, writePromise), writePromise);
+                        ctx.write(queue.remove(0, writePromise)).addListener(new PromiseNotifier<>(writePromise));
                     }
                     return;
                 }

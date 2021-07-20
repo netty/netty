@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
@@ -53,11 +52,6 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
 
     @Override
     public final ChannelFuture write(Object msg) {
-        return write(msg, newPromise());
-    }
-
-    @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
         try {
             if (msg instanceof ByteBuf) {
                 if (cumulation == null) {
@@ -65,19 +59,17 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, (ByteBuf) msg);
                 }
-                promise.setSuccess();
-            } else {
-                channel().write(msg, promise);
+                return channel().newSucceededFuture();
             }
+            return channel().write(msg);
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public final ChannelFuture writeAndFlush(Object msg) {
         try {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
@@ -86,19 +78,13 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, buf);
                 }
-                promise.setSuccess();
+                return channel().newSucceededFuture();
             } else {
-                channel().writeAndFlush(msg, promise);
+                return channel().writeAndFlush(msg);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
     }
 }

@@ -60,7 +60,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -475,8 +474,7 @@ public class SslHandler extends ByteToMessageDecoder {
      * Sets the number of bytes to pass to each {@link SSLEngine#wrap(ByteBuffer[], int, int, ByteBuffer)} call.
      * <p>
      * This value will partition data which is passed to write
-     * {@link ChannelHandler#write(ChannelHandlerContext, Object, ChannelPromise)}.
-     * The partitioning will work as follows:
+     * {@link #write(ChannelHandlerContext, Object)}. The partitioning will work as follows:
      * <ul>
      * <li>If {@code wrapDataSize <= 0} then we will write each data chunk as is.</li>
      * <li>If {@code wrapDataSize > data size} then we will attempt to aggregate multiple data chunks together.</li>
@@ -701,40 +699,17 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-        ctx.bind(localAddress, promise);
+    public ChannelFuture disconnect(final ChannelHandlerContext ctx) {
+        return closeOutboundAndChannel(ctx, true);
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+    public ChannelFuture close(final ChannelHandlerContext ctx) {
+        return closeOutboundAndChannel(ctx, false);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.register(promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void disconnect(final ChannelHandlerContext ctx,
-                           final ChannelPromise promise) {
-        closeOutboundAndChannel(ctx, promise, true);
-    }
-
-    @Override
-    public void close(final ChannelHandlerContext ctx,
-                      final ChannelPromise promise) {
-        closeOutboundAndChannel(ctx, promise, false);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (!handshakePromise.isDone()) {
             setState(STATE_READ_DURING_HANDSHAKE);
         }
@@ -747,16 +722,18 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(final ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof ByteBufConvertible)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
             ReferenceCountUtil.safeRelease(msg);
-            promise.setFailure(exception);
+            return ctx.newFailedFuture(exception);
         } else if (pendingUnencryptedWrites == null) {
             ReferenceCountUtil.safeRelease(msg);
-            promise.setFailure(newPendingWritesNullException());
+            return ctx.newFailedFuture(newPendingWritesNullException());
         } else {
+            ChannelPromise promise = ctx.newPromise();
             pendingUnencryptedWrites.add(((ByteBufConvertible) msg).asByteBuf(), promise);
+            return promise;
         }
     }
 
@@ -838,12 +815,12 @@ public class SslHandler extends ByteToMessageDecoder {
                     final ByteBuf b = out;
                     out = null;
                     if (promise != null) {
-                        ctx.write(b, promise);
+                        ctx.write(b).addListener(new PromiseNotifier<>(promise));
                     } else {
                         ctx.write(b);
                     }
                 } else if (promise != null) {
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    ctx.write(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(promise));
                 }
                 // else out is not readable we can re-use it and so save an extra allocation
 
@@ -1903,20 +1880,19 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
-    private void closeOutboundAndChannel(
-            final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect)  {
+    private ChannelFuture closeOutboundAndChannel(
+            final ChannelHandlerContext ctx, boolean disconnect) {
         setState(STATE_OUTBOUND_CLOSED);
         engine.closeOutbound();
 
         if (!ctx.channel().isActive()) {
             if (disconnect) {
-                ctx.disconnect(promise);
-            } else {
-                ctx.close(promise);
+                return ctx.disconnect();
             }
-            return;
+            return ctx.close();
         }
 
+        ChannelPromise promise = ctx.newPromise();
         ChannelPromise closeNotifyPromise = ctx.newPromise();
         try {
             flush(ctx, closeNotifyPromise);
@@ -1938,6 +1914,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 sslClosePromise.addListener((FutureListener<Channel>) future -> promise.setSuccess());
             }
         }
+        return promise;
     }
 
     private void flush(ChannelHandlerContext ctx, ChannelPromise promise) {
@@ -2117,7 +2094,7 @@ public class SslHandler extends ByteToMessageDecoder {
             final ChannelHandlerContext ctx, final ChannelFuture flushFuture,
             final ChannelPromise promise) {
         if (!ctx.channel().isActive()) {
-            ctx.close(promise);
+            ctx.close().addListener(new PromiseNotifier<>(promise));
             return;
         }
 
@@ -2131,7 +2108,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     if (!flushFuture.isDone()) {
                         logger.warn("{} Last write attempt timed out; force-closing the connection.",
                                 ctx.channel());
-                        addCloseListener(ctx.close(ctx.newPromise()), promise);
+                        addCloseListener(ctx.close(), promise);
                     }
                 }, closeNotifyTimeout, TimeUnit.MILLISECONDS);
             } else {
@@ -2151,7 +2128,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (ctx.channel().isActive()) {
                     // Trigger the close in all cases to make sure the promise is notified
                     // See https://github.com/netty/netty/issues/2358
-                    addCloseListener(ctx.close(ctx.newPromise()), promise);
+                    addCloseListener(ctx.close(), promise);
                 } else {
                     promise.trySuccess();
                 }
@@ -2166,7 +2143,7 @@ public class SslHandler extends ByteToMessageDecoder {
                                     ctx.channel(), closeNotifyReadTimeout);
 
                             // Do the close now...
-                            addCloseListener(ctx.close(ctx.newPromise()), promise);
+                            addCloseListener(ctx.close(), promise);
                         }
                     }, closeNotifyReadTimeout, TimeUnit.MILLISECONDS);
                 } else {
@@ -2179,7 +2156,7 @@ public class SslHandler extends ByteToMessageDecoder {
                         closeNotifyReadTimeoutFuture.cancel(false);
                     }
                     if (ctx.channel().isActive()) {
-                        addCloseListener(ctx.close(ctx.newPromise()), promise);
+                        addCloseListener(ctx.close(), promise);
                     } else {
                         promise.trySuccess();
                     }

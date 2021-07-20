@@ -241,72 +241,71 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void bind(
+    public ChannelFuture bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelPromise promise) {
+            SocketAddress localAddress) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.bind(outboundCtx, localAddress, promise);
+            return outboundHandler.bind(outboundCtx, localAddress);
         } else {
-            outboundCtx.bind(localAddress, promise);
+            return outboundCtx.bind(localAddress);
         }
     }
 
     @Override
-    public void connect(
+    public ChannelFuture connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+            SocketAddress remoteAddress, SocketAddress localAddress) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
+            return outboundHandler.connect(outboundCtx, remoteAddress, localAddress);
         } else {
-            outboundCtx.connect(remoteAddress, localAddress, promise);
+            return outboundCtx.connect(remoteAddress, localAddress);
         }
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture disconnect(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.disconnect(outboundCtx, promise);
+            return outboundHandler.disconnect(outboundCtx);
         } else {
-            outboundCtx.disconnect(promise);
+            return outboundCtx.disconnect();
         }
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture close(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.close(outboundCtx, promise);
+            return outboundHandler.close(outboundCtx);
         } else {
-            outboundCtx.close(promise);
+            return outboundCtx.close();
         }
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture register(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.register(outboundCtx, promise);
+            return outboundHandler.register(outboundCtx);
         } else {
-            outboundCtx.register(promise);
+            return outboundCtx.register();
         }
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture deregister(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.deregister(outboundCtx, promise);
+            return outboundHandler.deregister(outboundCtx);
         } else {
-            outboundCtx.deregister(promise);
+            return outboundCtx.deregister();
         }
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.read(outboundCtx);
@@ -316,12 +315,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.write(outboundCtx, msg, promise);
+            return outboundHandler.write(outboundCtx, msg);
         } else {
-            outboundCtx.write(msg, promise);
+            return outboundCtx.write(msg);
         }
     }
 
@@ -461,42 +460,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.bind(localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(
-                SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            return ctx.disconnect(promise);
-        }
-
-        @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            return ctx.close(promise);
-        }
-
-        @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            return ctx.register(promise);
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            return ctx.deregister(promise);
-        }
-
-        @Override
         public ChannelHandlerContext read() {
             ctx.read();
             return this;
@@ -508,19 +471,9 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return ctx.write(msg, promise);
-        }
-
-        @Override
         public ChannelHandlerContext flush() {
             ctx.flush();
             return this;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            return ctx.writeAndFlush(msg, promise);
         }
 
         @Override

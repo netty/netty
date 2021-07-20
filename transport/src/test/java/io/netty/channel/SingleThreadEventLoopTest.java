@@ -367,8 +367,6 @@ public class SingleThreadEventLoopTest {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
-        ChannelPromise promise = ch.newPromise();
-        promise.addListener((ChannelFutureListener) future -> latch.countDown());
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -380,7 +378,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = ch.register(promise);
+            ChannelFuture f = ch.register().addListener((ChannelFutureListener) future -> latch.countDown());
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));

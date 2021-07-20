@@ -15,6 +15,7 @@
  */
 package io.netty.handler.address;
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -22,14 +23,15 @@ import io.netty.channel.ChannelPromise;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 
 /**
  * {@link ChannelHandler} which will resolve the {@link SocketAddress} that is passed to
- * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)} if it is not
- * already resolved and the {@link AddressResolver} supports the type of {@link SocketAddress}.
+ * {@link #connect(ChannelHandlerContext, SocketAddress, SocketAddress)} if it is not already resolved
+ * and the {@link AddressResolver} supports the type of {@link SocketAddress}.
  */
 @Sharable
 public class ResolveAddressHandler implements ChannelHandler {
@@ -41,22 +43,25 @@ public class ResolveAddressHandler implements ChannelHandler {
     }
 
     @Override
-    public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        final SocketAddress localAddress, final ChannelPromise promise) {
+    public ChannelFuture connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                 final SocketAddress localAddress)  {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
+            ChannelPromise promise = ctx.newPromise();
             resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {
                 Throwable cause = future.cause();
                 if (cause != null) {
                     promise.setFailure(cause);
                 } else {
-                    ctx.connect(future.getNow(), localAddress, promise);
+                    ctx.connect(future.getNow(), localAddress).addListener(new PromiseNotifier<>(promise));
                 }
                 ctx.pipeline().remove(ResolveAddressHandler.this);
             });
+            return promise;
         } else {
-            ctx.connect(remoteAddress, localAddress, promise);
+            ChannelFuture f = ctx.connect(remoteAddress, localAddress);
             ctx.pipeline().remove(this);
+            return f;
         }
     }
 }

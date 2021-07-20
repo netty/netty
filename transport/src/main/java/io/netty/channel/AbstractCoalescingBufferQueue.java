@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -249,7 +250,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof ChannelPromise) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (ChannelPromise) entry);
+                    ctx.write(previousBuf).addListener(new PromiseNotifier<>((ChannelPromise) entry));
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());

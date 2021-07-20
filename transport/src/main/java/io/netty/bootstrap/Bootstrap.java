@@ -32,6 +32,7 @@ import io.netty.resolver.NameResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -262,12 +263,14 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // the pipeline in its channelRegistered() implementation.
         final Channel channel = connectPromise.channel();
         channel.eventLoop().execute(() -> {
+            final ChannelFuture future;
             if (localAddress == null) {
-                channel.connect(remoteAddress, connectPromise);
+                future = channel.connect(remoteAddress);
             } else {
-                channel.connect(remoteAddress, localAddress, connectPromise);
+                future = channel.connect(remoteAddress, localAddress);
             }
             connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            PromiseNotifier.fuse(future, connectPromise);
         });
     }
 

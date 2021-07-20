@@ -15,13 +15,11 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -201,32 +199,5 @@ public class WebSocketServerExtensionHandlerTest {
 
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
-    }
-
-    @Test
-    public void testExtensionHandlerNotRemovedByFailureWritePromise() {
-        // initialize
-        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
-                .thenReturn(mainExtensionMock);
-        when(mainExtensionMock.newResponseData()).thenReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
-
-        // execute
-        WebSocketServerExtensionHandler extensionHandler =
-                new WebSocketServerExtensionHandler(mainHandshakerMock);
-        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
-
-        HttpRequest req = newUpgradeRequest("main");
-        ch.writeInbound(req);
-
-        HttpResponse res = newUpgradeResponse(null);
-        ChannelPromise failurePromise = ch.newPromise();
-        ch.writeOneOutbound(res, failurePromise);
-        failurePromise.setFailure(new IOException("Cannot write response"));
-
-        // test
-        assertNull(ch.readOutbound());
-        assertNotNull(ch.pipeline().context(extensionHandler));
-        assertTrue(ch.finish());
     }
 }

@@ -21,7 +21,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCounted;
 
@@ -313,9 +312,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         @Override
         protected ChannelFuture write0(ChannelHandlerContext ctx, Object msg) {
-            ChannelPromise promise = ctx.newPromise();
-            Http2MultiplexCodec.this.write(ctx, msg, promise);
-            return promise;
+            return Http2MultiplexCodec.this.write(ctx, msg);
         }
 
         @Override

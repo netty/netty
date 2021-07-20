@@ -139,21 +139,23 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     }
 
     private void writeQuery(final DnsQuery query, final boolean flush, final ChannelPromise writePromise) {
-        final ChannelFuture writeFuture = flush ? channel().writeAndFlush(query, writePromise) :
-                channel().write(query, writePromise);
+        final ChannelFuture writeFuture = flush ? channel().writeAndFlush(query) :
+                channel().write(query);
         if (writeFuture.isDone()) {
-            onQueryWriteCompletion(writeFuture);
+            onQueryWriteCompletion(writeFuture, writePromise);
         } else {
-            writeFuture.addListener((ChannelFutureListener) future -> onQueryWriteCompletion(writeFuture));
+            writeFuture.addListener((ChannelFutureListener) future ->
+                    onQueryWriteCompletion(writeFuture, writePromise));
         }
     }
 
-    private void onQueryWriteCompletion(ChannelFuture writeFuture) {
+    private void onQueryWriteCompletion(ChannelFuture writeFuture, ChannelPromise writePromise) {
         if (!writeFuture.isSuccess()) {
+            writePromise.setFailure(writeFuture.cause());
             tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
             return;
         }
-
+        writePromise.setSuccess();
         // Schedule a query timeout task if necessary.
         final long queryTimeoutMillis = parent.queryTimeoutMillis();
         if (queryTimeoutMillis > 0) {

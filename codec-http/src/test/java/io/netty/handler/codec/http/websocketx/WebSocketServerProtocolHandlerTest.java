@@ -16,9 +16,9 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -459,9 +459,9 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler implements ChannelHandler {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
             responses.add((FullHttpResponse) msg);
-            promise.setSuccess();
+            return ctx.newSucceededFuture();
         }
 
         @Override

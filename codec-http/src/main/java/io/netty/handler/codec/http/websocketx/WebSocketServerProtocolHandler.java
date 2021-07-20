@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.Objects;
 
@@ -239,7 +240,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 frame.retain();
                 ChannelPromise promise = ctx.newPromise();
                 closeSent(promise);
-                handshaker.close(ctx, (CloseWebSocketFrame) frame, promise);
+                handshaker.close(ctx, (CloseWebSocketFrame) frame).addListener(new PromiseNotifier<>(promise));
             } else {
                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
             }

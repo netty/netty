@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.redis.ArrayRedisMessage;
 import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
 import io.netty.handler.codec.redis.RedisEncoder;
@@ -88,11 +88,7 @@ public class RedisEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void writeArray() throws Exception {
-        encoder.write(context, redisArray.retain(), newPromise());
-    }
-
-    private ChannelPromise newPromise() {
-        return context.newPromise();
+    public ChannelFuture writeArray() {
+        return encoder.write(context, redisArray.retain());
     }
 }

@@ -16,11 +16,11 @@
 package io.netty.handler.flush;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Future;
@@ -28,9 +28,8 @@ import java.util.concurrent.Future;
 /**
  * {@link ChannelHandler} which consolidates {@link Channel#flush()} / {@link ChannelHandlerContext#flush()}
  * operations (which also includes
- * {@link Channel#writeAndFlush(Object)} / {@link Channel#writeAndFlush(Object, ChannelPromise)} and
- * {@link ChannelOutboundInvoker#writeAndFlush(Object)} /
- * {@link ChannelOutboundInvoker#writeAndFlush(Object, ChannelPromise)}).
+ * {@link Channel#writeAndFlush(Object)} and
+ * {@link ChannelOutboundInvoker#writeAndFlush(Object)}.
  * <p>
  * Flush operations are generally speaking expensive as these may trigger a syscall on the transport level. Thus it is
  * in most cases (where write latency can be traded with throughput) a good idea to try to minimize flush operations
@@ -155,17 +154,17 @@ public class FlushConsolidationHandler implements ChannelHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture disconnect(ChannelHandlerContext ctx) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.disconnect(promise);
+        return ctx.disconnect();
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture close(ChannelHandlerContext ctx) {
         // Try to flush one last time if flushes are pending before close the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.close(promise);
+        return ctx.close();
     }
 
     @Override

@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeadersSubframe;
@@ -92,15 +92,10 @@ public class StompEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void writeStompFrame() throws Exception {
-        stompEncoder.write(context, stompFrame.retain(), newPromise());
+    public ChannelFuture writeStompFrame() {
+        return stompEncoder.write(context, stompFrame.retain());
     }
 
-    private ChannelPromise newPromise() {
-        return context.newPromise();
-    }
-
-    @Override
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
         return super.newOptionsBuilder().addProfiler(GCProfiler.class);
     }

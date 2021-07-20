@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
@@ -157,20 +158,15 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    @Override
-    public ChannelFuture close(final ChannelPromise promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            return finishEncode(ctx);
         } else {
             final ChannelPromise p = ctx.newPromise();
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), p);
-                f.addListener(new ChannelPromiseNotifier(promise));
+                ChannelFuture f = finishEncode(ctx());
+                f.addListener(new ChannelPromiseNotifier(p));
             });
             return p;
         }
@@ -262,22 +258,23 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(() -> {
-                ctx.close(promise);
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+    public ChannelFuture close(final ChannelHandlerContext ctx) {
+        ChannelFuture f = finishEncode(ctx);
+        if (f.isDone()) {
+            return ctx.close();
         }
+        ChannelPromise promise = ctx.newPromise();
+        f.addListener((ChannelFutureListener) f1 -> ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        // Ensure the channel is closed even if the write operation completes in time.
+        ctx.executor().schedule(() -> {
+            ctx.close().addListener(new PromiseNotifier<>(false, promise));
+        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        return promise;
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            return ctx.newSucceededFuture();
         }
 
         finished = true;
@@ -311,7 +308,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             footer.writeByte(uncBytes >>> 24);
         }
         deflater.end();
-        return ctx.writeAndFlush(footer, promise);
+        return ctx.writeAndFlush(footer);
     }
 
     private void deflate(ByteBuf out) {

@@ -31,12 +31,12 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -740,7 +740,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             channelOpen.set(future.channel().isOpen());
             channelActive.set(future.channel().isActive());
         });
-        childChannel.close(p).syncUninterruptibly();
+        childChannel.close().addListener(new PromiseNotifier<>(p)).syncUninterruptibly();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());

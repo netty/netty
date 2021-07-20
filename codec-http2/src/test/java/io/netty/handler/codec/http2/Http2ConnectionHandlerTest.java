@@ -199,6 +199,10 @@ public class Http2ConnectionHandlerTest {
             ReferenceCountUtil.release(msg);
             return null;
         }).when(ctx).fireChannelRead(any());
+        doAnswer((Answer<ChannelFuture>) in ->
+                new DefaultChannelPromise(channel, executor).setSuccess()).when(ctx).write(any());
+        doAnswer((Answer<ChannelFuture>) in ->
+                new DefaultChannelPromise(channel, executor).setSuccess()).when(ctx).close();
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
@@ -561,14 +565,14 @@ public class Http2ConnectionHandlerTest {
             listener.operationComplete(future);
             return future;
         }).when(future).addListener(any(GenericFutureListener.class));
-        handler.close(ctx, promise);
+        handler.close(ctx);
         if (future.isDone()) {
             when(connection.numActiveStreams()).thenReturn(0);
         }
         handler.closeStream(stream, future);
         // Simulate another stream close call being made after the context should already be closed.
         handler.closeStream(stream, future);
-        verify(ctx, times(1)).close(any(ChannelPromise.class));
+        verify(ctx, times(1)).close();
     }
 
     @SuppressWarnings("unchecked")
@@ -666,7 +670,7 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(false);
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
-        handler.close(ctx, promise);
+        handler.close(ctx);
         verifyZeroInteractions(frameWriter);
     }
 
@@ -694,7 +698,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         final long expectedMillis = 1234;
         handler.gracefulShutdownTimeoutMillis(expectedMillis);
-        handler.close(ctx, promise);
+        handler.close(ctx);
         verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
@@ -704,7 +708,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.numActiveStreams()).thenReturn(0);
         final long expectedMillis = 1234;
         handler.gracefulShutdownTimeoutMillis(expectedMillis);
-        handler.close(ctx, promise);
+        handler.close(ctx);
         verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
@@ -712,7 +716,7 @@ public class Http2ConnectionHandlerTest {
     public void gracefulShutdownIndefiniteTimeoutTest() throws Exception {
         handler = newHandler();
         handler.gracefulShutdownTimeoutMillis(-1);
-        handler.close(ctx, promise);
+        handler.close(ctx);
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
     }
 

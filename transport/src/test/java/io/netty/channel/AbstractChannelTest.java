@@ -189,9 +189,7 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
-        DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.register(future);
-        future.sync(); // Cause any exceptions to be thrown
+        channel.register().sync(); // Cause any exceptions to be thrown
     }
 
     private static class TestChannel extends AbstractChannel {

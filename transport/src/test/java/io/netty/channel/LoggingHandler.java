@@ -30,9 +30,9 @@ final class LoggingHandler implements ChannelHandler {
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
         log(Event.WRITE);
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     @Override
@@ -42,44 +42,43 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public ChannelFuture bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
         log(Event.BIND, "localAddress=" + localAddress);
-        ctx.bind(localAddress, promise);
+        return  ctx.bind(localAddress);
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+    public ChannelFuture connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
         log(Event.CONNECT, "remoteAddress=" + remoteAddress + " localAddress=" + localAddress);
-        ctx.connect(remoteAddress, localAddress, promise);
+        return ctx.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture disconnect(ChannelHandlerContext ctx) {
         log(Event.DISCONNECT);
-        ctx.disconnect(promise);
+        return ctx.disconnect();
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture close(ChannelHandlerContext ctx) {
         log(Event.CLOSE);
-        ctx.close(promise);
+        return ctx.close();
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture register(ChannelHandlerContext ctx) {
         log(Event.REGISTER);
-        ctx.register(promise);
+        return ctx.register();
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public ChannelFuture deregister(ChannelHandlerContext ctx) {
         log(Event.DEREGISTER);
-        ctx.deregister(promise);
+        return ctx.deregister();
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         log(Event.READ);
         ctx.read();
     }

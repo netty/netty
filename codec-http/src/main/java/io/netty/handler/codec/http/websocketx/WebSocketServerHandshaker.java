@@ -342,25 +342,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
-        return close(channel, frame, channel.newPromise());
-    }
-
-    /**
-     * Performs the closing handshake.
-     *
-     * When called from within a {@link ChannelHandler} you most likely want to use
-     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
-     *
-     * @param channel
-     *            the {@link Channel} to use.
-     * @param frame
-     *            Closing Frame that was received.
-     * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done
-     */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        requireNonNull(channel, "channel");
-        return close0(channel, frame, promise);
+        return close0(channel, frame);
     }
 
     /**
@@ -373,26 +355,11 @@ public abstract class WebSocketServerHandshaker {
      */
     public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         requireNonNull(ctx, "ctx");
-        return close(ctx, frame, ctx.newPromise());
+        return close0(ctx, frame);
     }
 
-    /**
-     * Performs the closing handshake.
-     *
-     * @param ctx
-     *            the {@link ChannelHandlerContext} to use.
-     * @param frame
-     *            Closing Frame that was received.
-     * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
-     */
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
-        requireNonNull(ctx, "ctx");
-        return close0(ctx, frame, promise).addListener(ChannelFutureListener.CLOSE);
-    }
-
-    private ChannelFuture close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame, ChannelPromise promise) {
-        return invoker.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
+    private ChannelFuture close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame) {
+        return invoker.writeAndFlush(frame).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**

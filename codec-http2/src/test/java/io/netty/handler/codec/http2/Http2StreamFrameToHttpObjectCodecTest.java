@@ -19,9 +19,9 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -454,13 +454,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
                 new ChannelHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
-                            ctx.write(Unpooled.EMPTY_BUFFER, promise);
-                        } else {
-                            ctx.write(msg, promise);
+                            return ctx.write(Unpooled.EMPTY_BUFFER);
                         }
+                        return ctx.write(msg);
                     }
                 }, new Http2StreamFrameToHttpObjectCodec(false));
 
@@ -884,26 +883,24 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
             new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
-                    } else {
-                        ctx.write(msg, promise);
+                        return ctx.newSucceededFuture();
                     }
+                    return ctx.write(msg);
                 }
             }, sharedHandler);
 
         EmbeddedChannel plaintextCh = new EmbeddedChannel(
             new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
-                    } else {
-                        ctx.write(msg, promise);
+                        return ctx.newSucceededFuture();
                     }
+                    return ctx.write(msg);
                 }
             }, sharedHandler);
 

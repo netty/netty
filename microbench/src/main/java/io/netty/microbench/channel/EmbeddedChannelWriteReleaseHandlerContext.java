@@ -17,7 +17,6 @@ package io.netty.microbench.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
 
@@ -36,43 +35,29 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
 
     @Override
     public final ChannelFuture write(Object msg) {
-        return write(msg, newPromise());
-    }
-
-    @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess();
-            } else {
-                channel().write(msg, promise);
+                return channel().newSucceededFuture();
             }
+            return channel().write(msg);
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
-                promise.setSuccess();
-            } else {
-                channel().writeAndFlush(msg, promise);
-            }
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
     }
 
     @Override
     public final ChannelFuture writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        try {
+            if (msg instanceof ReferenceCounted) {
+                ((ReferenceCounted) msg).release();
+                return channel().newSucceededFuture();
+            }
+            return channel().writeAndFlush(msg);
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 }

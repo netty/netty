@@ -20,7 +20,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -102,22 +101,18 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void fullMessage() throws Exception {
-        encoder.write(context, fullRequest, newPromise());
+        encoder.write(context, fullRequest);
     }
 
     @Benchmark
     public void contentLength() throws Exception {
-        encoder.write(context, contentLengthRequest, newPromise());
-        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, contentLengthRequest);
+        encoder.write(context, lastContent);
     }
 
     @Benchmark
     public void chunked() throws Exception {
-        encoder.write(context, chunkedRequest, newPromise());
-        encoder.write(context, lastContent, newPromise());
-    }
-
-    private ChannelPromise newPromise() {
-        return context.newPromise();
+        encoder.write(context, chunkedRequest);
+        encoder.write(context, lastContent);
     }
 }

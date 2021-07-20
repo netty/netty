@@ -17,9 +17,9 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
@@ -56,7 +56,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(final ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpRequest) msg).headers())) {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
@@ -71,7 +71,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
             request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
         }
 
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     @Override

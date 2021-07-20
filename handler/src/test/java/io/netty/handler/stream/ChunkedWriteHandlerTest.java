@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -326,13 +325,12 @@ public class ChunkedWriteHandlerTest {
             private int passedWrites;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 if (++this.passedWrites < 4) {
-                    ctx.write(msg, promise);
-                } else {
-                    ReferenceCountUtil.release(msg);
-                    promise.tryFailure(new RuntimeException());
+                    return ctx.write(msg);
                 }
+                ReferenceCountUtil.release(msg);
+                return ctx.newFailedFuture(new RuntimeException());
             }
         };
 
@@ -460,9 +458,9 @@ public class ChunkedWriteHandlerTest {
 
         ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
-                promise.tryFailure(new RuntimeException());
+                return ctx.newFailedFuture(new RuntimeException());
             }
         };
 
@@ -616,11 +614,11 @@ public class ChunkedWriteHandlerTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
                 // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
                 ctx.close();
-                promise.setSuccess();
+                return ctx.newSucceededFuture();
             }
         }, new ChunkedWriteHandler());
 
@@ -683,9 +681,9 @@ public class ChunkedWriteHandlerTest {
     private static void checkFirstFailed(Object input) {
         ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
-                promise.tryFailure(new RuntimeException());
+                return ctx.newFailedFuture(new RuntimeException());
             }
         };
 
@@ -702,14 +700,13 @@ public class ChunkedWriteHandlerTest {
             private boolean alreadyFailed;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 if (alreadyFailed) {
-                    ctx.write(msg, promise);
-                } else {
-                    this.alreadyFailed = true;
-                    ReferenceCountUtil.release(msg);
-                    promise.tryFailure(new RuntimeException());
+                    return ctx.write(msg);
                 }
+                this.alreadyFailed = true;
+                ReferenceCountUtil.release(msg);
+                return ctx.newFailedFuture(new RuntimeException());
             }
         };
 

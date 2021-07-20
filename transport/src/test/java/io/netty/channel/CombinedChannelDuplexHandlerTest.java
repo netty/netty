@@ -17,13 +17,11 @@ package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -86,8 +84,8 @@ public class CombinedChannelDuplexHandlerTest {
             () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
                   new ChannelHandler() {
                       @Override
-                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-                          promise.setFailure(new UnsupportedOperationException());
+                      public ChannelFuture bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
+                          return ctx.newFailedFuture(new UnsupportedOperationException());
                       }
                   }, new ChannelHandler() { }));
     }
@@ -254,42 +252,6 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testPromisesPassed() {
-        OutboundEventHandler outboundHandler = new OutboundEventHandler();
-        EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
-                new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
-                        new ChannelHandler() {
-                        }, new ChannelHandler() { }));
-        ChannelPipeline pipeline = ch.pipeline();
-
-        ChannelPromise promise = ch.newPromise();
-        pipeline.bind(LOCAL_ADDRESS, promise);
-        promise.syncUninterruptibly();
-
-        promise = ch.newPromise();
-        pipeline.connect(REMOTE_ADDRESS, LOCAL_ADDRESS, promise);
-        promise.syncUninterruptibly();
-
-        promise = ch.newPromise();
-        pipeline.close(promise);
-        promise.syncUninterruptibly();
-
-        promise = ch.newPromise();
-        pipeline.disconnect(promise);
-        promise.syncUninterruptibly();
-
-        promise = ch.newPromise();
-        pipeline.write(MSG, promise);
-        promise.syncUninterruptibly();
-
-        promise = ch.newPromise();
-        pipeline.deregister(promise);
-        promise.syncUninterruptibly();
-        ch.finish();
-    }
-
-    @Test
     public void testNotSharable() {
         assertThrows(IllegalStateException.class,
             () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>() {
@@ -381,45 +343,45 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+        public ChannelFuture bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
             try {
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.BIND);
-                promise.setSuccess();
+                return ctx.newSucceededFuture();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                return ctx.newFailedFuture(e);
             }
         }
 
         @Override
-        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                            SocketAddress localAddress, ChannelPromise promise) {
+        public ChannelFuture connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                            SocketAddress localAddress) {
             try {
                 assertSame(REMOTE_ADDRESS, remoteAddress);
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.CONNECT);
-                promise.setSuccess();
+                return ctx.newSucceededFuture();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                return ctx.newFailedFuture(e);
             }
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public ChannelFuture disconnect(ChannelHandlerContext ctx) {
             queue.add(Event.DISCONNECT);
-            promise.setSuccess();
+            return ctx.newSucceededFuture();
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public ChannelFuture close(ChannelHandlerContext ctx) {
             queue.add(Event.CLOSE);
-            promise.setSuccess();
+            return ctx.newSucceededFuture();
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public ChannelFuture deregister(ChannelHandlerContext ctx) {
             queue.add(Event.DEREGISTER);
-            promise.setSuccess();
+            return ctx.newSucceededFuture();
         }
 
         @Override
@@ -428,13 +390,13 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
             try {
                 assertSame(MSG, msg);
                 queue.add(Event.WRITE);
-                promise.setSuccess();
+                return ctx.newSucceededFuture();
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                return ctx.newFailedFuture(e);
             }
         }
 

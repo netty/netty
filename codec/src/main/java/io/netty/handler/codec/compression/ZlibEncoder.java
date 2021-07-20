@@ -46,12 +46,4 @@ public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
      * operation completes.
      */
     public abstract ChannelFuture close();
-
-    /**
-     * Close this {@link ZlibEncoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public abstract ChannelFuture close(ChannelPromise promise);
-
 }

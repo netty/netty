@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -153,20 +152,22 @@ public class WebSocketProtocolHandlerTest {
 
     @Test
     public void testTimeout() throws Exception {
-        final AtomicReference<ChannelPromise> ref = new AtomicReference<ChannelPromise>();
+        final AtomicReference<ChannelFuture> ref = new AtomicReference<ChannelFuture>();
         WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
                 false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                ref.set(promise);
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
+                ChannelFuture future = ctx.newPromise();
+                ref.set(future);
                 ReferenceCountUtil.release(msg);
+                return future;
             }
         }, handler);
 
         ChannelFuture future = channel.writeAndFlush(new CloseWebSocketFrame());
         ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
-        handler.close(ctx, ctx.newPromise());
+        handler.close(ctx);
 
         do {
             Thread.sleep(10);

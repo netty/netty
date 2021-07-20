@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
@@ -306,10 +307,9 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         ctx.flush();
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            return ctx.newSucceededFuture();
         }
         finished = true;
 
@@ -327,7 +327,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
         footer.writerIndex(idx + HEADER_LENGTH);
 
-        return ctx.writeAndFlush(footer, promise);
+        return ctx.writeAndFlush(footer);
     }
 
     /**
@@ -343,22 +343,14 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * The returned {@link ChannelFuture} will be notified once the operation completes.
      */
     public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public ChannelFuture close(final ChannelPromise promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            return finishEncode(ctx);
         } else {
+            ChannelPromise promise = ctx.newPromise();
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), promise);
+                ChannelFuture f = finishEncode(ctx());
                 f.addListener(new ChannelPromiseNotifier(promise));
             });
             return promise;
@@ -366,16 +358,19 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(() -> {
-                ctx.close(promise);
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+    public ChannelFuture close(final ChannelHandlerContext ctx) {
+        ChannelFuture f = finishEncode(ctx);
+        if (f.isDone()) {
+            return ctx.close();
         }
+        ChannelPromise promise = ctx.newPromise();
+        f.addListener((ChannelFutureListener) f1 ->
+                ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        // Ensure the channel is closed even if the write operation completes in time.
+        ctx.executor().schedule(() -> {
+            ctx.close().addListener(new PromiseNotifier<>(false, promise));
+        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        return promise;
     }
 
     private ChannelHandlerContext ctx() {

@@ -185,54 +185,8 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        return ctx.register(promise);
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return ctx.connect(remoteAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        return ctx.disconnect(promise);
-    }
-
-    @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        return ctx.close(promise);
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return ctx.deregister(promise);
-    }
-
-    @Override
     public ChannelFuture write(Object msg) {
         return ctx.write(msg);
-    }
-
-    @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return ctx.write(msg, promise);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return ctx.writeAndFlush(msg, promise);
     }
 
     @Override

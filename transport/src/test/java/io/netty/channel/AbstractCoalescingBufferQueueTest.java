@@ -45,9 +45,9 @@ public class AbstractCoalescingBufferQueueTest {
     private static void testDecrementAll(boolean write) {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
-                promise.setSuccess();
+                return ctx.newSucceededFuture();
             }
         }, new ChannelHandlerAdapter() { });
         final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {

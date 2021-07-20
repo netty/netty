@@ -19,9 +19,9 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.util.internal.StringUtil;
@@ -91,34 +91,34 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-        encoder.bind(ctx, localAddress, promise);
+    public ChannelFuture bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
+        return encoder.bind(ctx, localAddress);
     }
 
     @Override
-    public void connect(
+    public ChannelFuture connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) {
-        encoder.connect(ctx, remoteAddress, localAddress, promise);
+            SocketAddress localAddress) {
+        return encoder.connect(ctx, remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-        encoder.disconnect(ctx, promise);
+    public ChannelFuture disconnect(ChannelHandlerContext ctx) {
+        return encoder.disconnect(ctx);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-        encoder.close(ctx, promise);
+    public ChannelFuture close(ChannelHandlerContext ctx) {
+        return encoder.close(ctx);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-        encoder.deregister(ctx, promise);
+    public ChannelFuture deregister(ChannelHandlerContext ctx) {
+        return encoder.deregister(ctx);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         encoder.read(ctx);
     }
 

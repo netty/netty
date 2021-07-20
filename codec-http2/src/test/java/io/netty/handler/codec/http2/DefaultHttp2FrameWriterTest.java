@@ -29,7 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
@@ -88,7 +87,7 @@ public class DefaultHttp2FrameWriterTest {
             return future;
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(ChannelPromise.class))).then(answer);
+        when(ctx.write(any())).then(answer);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
@@ -159,7 +158,7 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     /**
-     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize}
+     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize()}
      * the remaining headers will be sent in a CONTINUATION frame
      */
     @Test

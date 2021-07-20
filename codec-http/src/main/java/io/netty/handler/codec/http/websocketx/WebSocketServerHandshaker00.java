@@ -20,8 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundInvoker;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -204,12 +202,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            the {@link Channel} to use.
      * @param frame
      *            Web Socket frame that was received.
-     * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     * @return    the {@link ChannelFuture} which will be notified once the operations completes.
+
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        return channel.writeAndFlush(frame, promise);
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        return channel.writeAndFlush(frame);
     }
 
     /**
@@ -219,13 +217,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            the {@link ChannelHandlerContext} to use.
      * @param frame
      *            Closing Frame that was received.
-     * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     * @return    the {@link ChannelFuture} which will be notified once the operations completes.
      */
     @Override
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame,
-                               ChannelPromise promise) {
-        return ctx.writeAndFlush(frame, promise);
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+        return ctx.writeAndFlush(frame);
     }
 
     @Override

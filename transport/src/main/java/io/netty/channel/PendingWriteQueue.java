@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -114,7 +115,7 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and performs them via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelHandlerContext#write(Object)}.
      *
      * @return  {@link ChannelFuture} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
@@ -141,8 +142,7 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     ChannelPromise promise = write.promise;
                     recycle(write, false);
-                    combiner.add(promise);
-                    ctx.write(msg, promise);
+                    PromiseNotifier.fuse(ctx.write(msg), promise);
                     write = next;
                 }
             }
@@ -203,7 +203,7 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelHandlerContext#write(Object)}.
      *
      * @return  {@link ChannelFuture} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
@@ -217,7 +217,10 @@ public final class PendingWriteQueue {
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
         recycle(write, true);
-        return ctx.write(msg, promise);
+
+        ChannelFuture future = ctx.write(msg);
+        PromiseNotifier.fuse(future, promise);
+        return future;
     }
 
     /**

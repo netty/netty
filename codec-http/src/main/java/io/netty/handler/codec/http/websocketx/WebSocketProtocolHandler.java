@@ -16,11 +16,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.nio.channels.ClosedChannelException;
@@ -82,30 +84,33 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+    public ChannelFuture close(final ChannelHandlerContext ctx) {
         if (closeStatus == null || !ctx.channel().isActive()) {
-            ctx.close(promise);
-        } else {
-            if (closeSent == null) {
-                write(ctx, new CloseWebSocketFrame(closeStatus), ctx.newPromise());
-            }
-            flush(ctx);
-            applyCloseSentTimeout(ctx);
-            closeSent.addListener(future -> ctx.close(promise));
+            return ctx.close();
         }
+        if (closeSent == null) {
+            write(ctx, new CloseWebSocketFrame(closeStatus));
+        }
+        flush(ctx);
+        applyCloseSentTimeout(ctx);
+        ChannelPromise promise = ctx.newPromise();
+        closeSent.addListener(future -> ctx.close().addListener(new PromiseNotifier<>(promise)));
+        return promise;
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(final ChannelHandlerContext ctx, Object msg) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
-            promise.setFailure(new ClosedChannelException());
-        } else if (msg instanceof CloseWebSocketFrame) {
+            return ctx.newFailedFuture(new ClosedChannelException());
+        }
+        if (msg instanceof CloseWebSocketFrame) {
+            ChannelPromise promise = ctx.newPromise();
             closeSent(promise);
             ctx.write(msg).addListener(new ChannelPromiseNotifier(false, closeSent));
-        } else {
-            ctx.write(msg, promise);
+            return promise;
         }
+        return ctx.write(msg);
     }
 
     void closeSent(ChannelPromise promise) {

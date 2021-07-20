@@ -233,14 +233,6 @@ public class BootstrapTest {
                             close();
                             return newFailedFuture(new SocketException());
                         }
-
-                        @Override
-                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-                            // Close the Channel to emulate what NIO and others impl do on bind failure
-                            // See https://github.com/netty/netty/issues/2586
-                            close();
-                            return promise.setFailure(new SocketException());
-                        }
                     });
             bootstrap.childHandler(new DummyHandler());
             bootstrap.handler(registerHandler);
@@ -274,8 +266,8 @@ public class BootstrapTest {
             ChannelFuture future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            assertTrue(assertThrows(CompletionException.class, future::syncUninterruptibly)
-                .getCause() instanceof ConnectException);
+            CompletionException cause = assertThrows(CompletionException.class, future::syncUninterruptibly);
+            assertThat(cause.getCause(), instanceOf(ConnectException.class));
         } finally {
             group.shutdownGracefully();
         }
@@ -397,16 +389,16 @@ public class BootstrapTest {
         private ChannelPromise registerPromise;
 
         @Override
-        public void register(ChannelHandlerContext ctx, final ChannelPromise promise) {
-            registerPromise = promise;
+        public ChannelFuture register(ChannelHandlerContext ctx) {
+            registerPromise = ctx.newPromise();
             latch.countDown();
-            ChannelPromise newPromise = ctx.newPromise();
-            newPromise.addListener((ChannelFutureListener) future -> {
+            return ctx.register().addListener((ChannelFutureListener) future -> {
+                System.err.println("HERE!!!");
                 if (!future.isSuccess()) {
+                    future.cause().printStackTrace();
                     registerPromise.tryFailure(future.cause());
                 }
             });
-            ctx.register(newPromise);
         }
 
         ChannelPromise registerPromise() throws InterruptedException {

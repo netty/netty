@@ -277,11 +277,11 @@ public interface ChannelHandler {
      *
      * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
      * @param localAddress  the {@link SocketAddress} to which it should bound
-     * @param promise       the {@link ChannelPromise} to notify once the operation completes
+     * @return              the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-        ctx.bind(localAddress, promise);
+    default ChannelFuture bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
+        return ctx.bind(localAddress);
     }
 
     /**
@@ -290,64 +290,63 @@ public interface ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the connect operation is made
      * @param remoteAddress     the {@link SocketAddress} to which it should connect
      * @param localAddress      the {@link SocketAddress} which is used as source on connect
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @return                  the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void connect(
+    default ChannelFuture connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+            SocketAddress localAddress) {
+        return ctx.connect(remoteAddress, localAddress);
     }
 
     /**
      * Called once a disconnect operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @return                  the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.disconnect(promise);
+    default ChannelFuture disconnect(ChannelHandlerContext ctx) {
+        return ctx.disconnect();
     }
 
     /**
      * Called once a close operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @return                  the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.close(promise);
+    default ChannelFuture close(ChannelHandlerContext ctx) {
+        return ctx.close();
     }
 
     /**
      * Called once a register operation is made to register for IO on the {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the register operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @return                  the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void register(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.register(promise);
+    default ChannelFuture register(ChannelHandlerContext ctx) {
+        return ctx.register();
     }
 
     /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      */
     @Skip
-    default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.deregister(promise);
+    default ChannelFuture deregister(ChannelHandlerContext ctx) {
+        return ctx.deregister();
     }
 
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
      */
     @Skip
-    default void read(ChannelHandlerContext ctx) throws Exception {
+    default void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
 
@@ -358,11 +357,11 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
      * @param msg               the message to write
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @return                  the {@link ChannelFuture} which will be notified once the operation completes.
      */
     @Skip
-    default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        ctx.write(msg, promise);
+    default ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
+        return ctx.write(msg);
     }
 
     /**

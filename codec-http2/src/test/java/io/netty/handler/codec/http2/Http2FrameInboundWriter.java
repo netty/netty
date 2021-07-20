@@ -259,65 +259,25 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            return channel.bind(localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            return channel.connect(remoteAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            return channel.connect(remoteAddress, localAddress, promise);
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            return channel.disconnect(promise);
-        }
-
-        @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            return channel.close(promise);
-        }
-
-        @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            return channel.register(promise);
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            return channel.deregister(promise);
-        }
-
-        @Override
         public ChannelFuture write(Object msg) {
-            return write(msg, newPromise());
-        }
-
-        @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return writeAndFlush(msg, promise);
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
-                promise.setSuccess();
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                return newFailedFuture(cause);
             }
-            return promise;
+            return newSucceededFuture();
         }
 
         @Override
         public ChannelFuture writeAndFlush(Object msg) {
-            return writeAndFlush(msg, newPromise());
+            try {
+                channel.writeInbound(msg);
+                channel.runPendingTasks();
+            } catch (Throwable cause) {
+                return newFailedFuture(cause);
+            }
+            return newSucceededFuture();
         }
 
         @Override

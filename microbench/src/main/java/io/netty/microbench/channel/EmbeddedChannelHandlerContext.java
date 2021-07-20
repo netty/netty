@@ -137,117 +137,75 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
+    public final ChannelFuture register() {
+        try {
+            return channel().register();
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
+    }
+
+    @Override
     public final ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+        try {
+            this.localAddress = localAddress;
+            return channel().bind(localAddress);
+        } catch (Exception e) {
+            this.localAddress = null;
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 
     @Override
     public final ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
+        try {
+            return channel().connect(remoteAddress, localAddress);
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 
     @Override
     public final ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
+        try {
+            return channel().connect(remoteAddress, localAddress);
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 
     @Override
     public final ChannelFuture disconnect() {
-        return disconnect(newPromise());
+        try {
+            return channel().disconnect();
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 
     @Override
     public final ChannelFuture close() {
-        return close(newPromise());
-    }
-
-    @Override
-    public ChannelFuture register() {
-        return register(newPromise());
-    }
-
-    @Override
-    public ChannelFuture register(ChannelPromise promise) {
         try {
-            channel().register(promise);
+            return channel().close();
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
     }
 
     @Override
     public final ChannelFuture deregister() {
-        return deregister(newPromise());
-    }
-
-    @Override
-    public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         try {
-            channel().bind(localAddress, promise);
-            this.localAddress = localAddress;
+            return channel().deregister();
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        try {
-            channel().connect(remoteAddress, localAddress, promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                                 ChannelPromise promise) {
-        try {
-            channel().connect(remoteAddress, localAddress, promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        try {
-            channel().disconnect(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture close(ChannelPromise promise) {
-        try {
-            channel().close(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public final ChannelFuture deregister(ChannelPromise promise) {
-        try {
-            channel().deregister(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
     }
 
     @Override
@@ -266,24 +224,14 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return channel().write(msg, promise);
-    }
-
-    @Override
     public final ChannelHandlerContext flush() {
         channel().flush();
         return this;
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return channel().writeAndFlush(msg, promise);
-    }
-
-    @Override
     public ChannelFuture writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        return channel().writeAndFlush(msg);
     }
 
     @Override

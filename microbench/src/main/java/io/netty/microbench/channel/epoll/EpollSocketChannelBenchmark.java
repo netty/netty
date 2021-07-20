@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -104,12 +105,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
                         if (lastWritePromise != null) {
                             throw new IllegalStateException();
                         }
-                        lastWritePromise = promise;
-                        ctx.write(msg);
+                        lastWritePromise = ctx.newPromise();
+                        return ctx.write(msg);
                     }
                 });
             }

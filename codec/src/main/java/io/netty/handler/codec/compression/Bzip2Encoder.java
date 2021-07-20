@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.concurrent.TimeUnit;
 
@@ -170,22 +171,14 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      * The returned {@link ChannelFuture} will be notified once the operation completes.
      */
     public ChannelFuture close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public ChannelFuture close(final ChannelPromise promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            return finishEncode(ctx);
         } else {
+            ChannelPromise promise = ctx.newPromise();
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), promise);
+                ChannelFuture f = finishEncode(ctx());
                 f.addListener(new ChannelPromiseNotifier(promise));
             });
             return promise;
@@ -193,22 +186,23 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(() -> {
-                ctx.close(promise);
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+    public ChannelFuture close(final ChannelHandlerContext ctx) {
+        ChannelFuture f = finishEncode(ctx);
+        if (f.isDone()) {
+            return ctx.close();
         }
+        ChannelPromise promise = ctx.newPromise();
+        f.addListener((ChannelFutureListener) f1 -> ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        // Ensure the channel is closed even if the write operation completes in time.
+        ctx.executor().schedule(() -> {
+            ctx.close().addListener(new PromiseNotifier<>(false, promise));
+        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        return promise;
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            return ctx.newSucceededFuture();
         }
         finished = true;
 
@@ -225,7 +219,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        return ctx.writeAndFlush(footer);
     }
 
     private ChannelHandlerContext ctx() {

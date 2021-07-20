@@ -32,6 +32,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -282,7 +283,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * streams.
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public ChannelFuture write(ChannelHandlerContext ctx, Object msg) {
+        ChannelPromise promise = ctx.newPromise();
         if (msg instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) msg;
             encoder().writeData(ctx, dataFrame.stream().id(), dataFrame.content(),
@@ -339,11 +341,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
                     unknownFrame.flags(), unknownFrame.content(), promise);
         } else if (!(msg instanceof Http2Frame)) {
-            ctx.write(msg, promise);
+            ctx.write(msg).addListener(new PromiseNotifier<>(promise));
         } else {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new UnsupportedMessageTypeException(msg));
         }
+        return promise;
     }
 
     private void increaseInitialConnectionWindow(int deltaBytes) throws Http2Exception {
