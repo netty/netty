@@ -1948,7 +1948,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // because of a propagated Exception.
                 //
                 // See https://github.com/netty/netty/issues/5931
-                safeClose(ctx, closeNotifyPromise, PromiseNotifier.fuse(false, ctx.newPromise(), promise));
+                safeClose(ctx, closeNotifyPromise, PromiseNotifier.link(false, ctx.newPromise(), promise));
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
                 sslClosePromise.addListener(new FutureListener<Channel>() {
@@ -2051,7 +2051,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
-            PromiseNotifier.fuse(oldHandshakePromise, newHandshakePromise);
+            PromiseNotifier.link(oldHandshakePromise, newHandshakePromise);
         } else {
             handshakePromise = newHandshakePromise;
             handshake(true);
@@ -2232,7 +2232,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // IllegalStateException.
         // Also we not want to log if the notification happens as this is expected in some cases.
         // See https://github.com/netty/netty/issues/5598
-        PromiseNotifier.fuse(false, future, promise);
+        PromiseNotifier.link(false, future, promise);
     }
 
     /**

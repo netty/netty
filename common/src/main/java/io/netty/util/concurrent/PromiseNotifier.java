@@ -62,7 +62,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     }
 
     /**
-     * Fuse the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
+     * Link the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
      * will be notified. That said cancellation is propagated both ways. This means if the {@link Future} is cancelled
      * the {@link Promise} is cancelled as well and vise-versa.
      *
@@ -72,12 +72,12 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * @param <F>       the type of the {@link Future}
      * @return          the passed in {@link Future}
      */
-    public static <V, F extends Future<V>> F fuse(final F future, final Promise<? super V> promise) {
-        return fuse(true, future, promise);
+    public static <V, F extends Future<V>> F link(final F future, final Promise<? super V> promise) {
+        return link(true, future, promise);
     }
 
     /**
-     * Fuse the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
+     * Link the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
      * will be notified. That said cancellation is propagated both ways. This means if the {@link Future} is cancelled
      * the {@link Promise} is cancelled as well and vise-versa.
      *
@@ -89,7 +89,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * @return                  the passed in {@link Future}
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static <V, F extends Future<V>> F fuse(boolean logNotifyFailure, final F future,
+    public static <V, F extends Future<V>> F link(boolean logNotifyFailure, final F future,
                                                   final Promise<? super V> promise) {
         promise.addListener(new FutureListener() {
             @Override

@@ -359,7 +359,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 @Override
                 public void run() {
                     ChannelFuture f = finishEncode(ctx(), promise);
-                    PromiseNotifier.fuse(f, promise);
+                    PromiseNotifier.link(f, promise);
                 }
             });
             return promise;

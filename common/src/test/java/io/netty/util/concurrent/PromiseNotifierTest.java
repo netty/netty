@@ -103,7 +103,7 @@ public class PromiseNotifierTest {
 
         Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        Promise<Void> returned = PromiseNotifier.fuse(promise, p1);
+        Promise<Void> returned = PromiseNotifier.link(promise, p1);
         assertSame(promise, returned);
 
         assertTrue(returned.cancel(false));
