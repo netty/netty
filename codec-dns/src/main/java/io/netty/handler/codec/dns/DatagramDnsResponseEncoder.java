@@ -61,19 +61,7 @@ public class DatagramDnsResponseEncoder
         final DnsResponse response = in.content();
         final ByteBuf buf = allocateBuffer(ctx, in);
 
-        boolean success = false;
-        try {
-            encodeHeader(response, buf);
-            encodeQuestions(response, buf);
-            encodeRecords(response, DnsSection.ANSWER, buf);
-            encodeRecords(response, DnsSection.AUTHORITY, buf);
-            encodeRecords(response, DnsSection.ADDITIONAL, buf);
-            success = true;
-        } finally {
-            if (!success) {
-                buf.release();
-            }
-        }
+        DnsMessageUtil.encodeDnsResponse(recordEncoder, response, buf);
 
         out.add(new DatagramPacket(buf, recipient, null));
     }
@@ -86,50 +74,5 @@ public class DatagramDnsResponseEncoder
         ChannelHandlerContext ctx,
         @SuppressWarnings("unused") AddressedEnvelope<DnsResponse, InetSocketAddress> msg) throws Exception {
         return ctx.alloc().ioBuffer(1024);
-    }
-
-    /**
-     * Encodes the header that is always 12 bytes long.
-     *
-     * @param response the response header being encoded
-     * @param buf      the buffer the encoded data should be written to
-     */
-    private static void encodeHeader(DnsResponse response, ByteBuf buf) {
-        buf.writeShort(response.id());
-        int flags = 32768;
-        flags |= (response.opCode().byteValue() & 0xFF) << 11;
-        if (response.isAuthoritativeAnswer()) {
-            flags |= 1 << 10;
-        }
-        if (response.isTruncated()) {
-            flags |= 1 << 9;
-        }
-        if (response.isRecursionDesired()) {
-            flags |= 1 << 8;
-        }
-        if (response.isRecursionAvailable()) {
-            flags |= 1 << 7;
-        }
-        flags |= response.z() << 4;
-        flags |= response.code().intValue();
-        buf.writeShort(flags);
-        buf.writeShort(response.count(DnsSection.QUESTION));
-        buf.writeShort(response.count(DnsSection.ANSWER));
-        buf.writeShort(response.count(DnsSection.AUTHORITY));
-        buf.writeShort(response.count(DnsSection.ADDITIONAL));
-    }
-
-    private void encodeQuestions(DnsResponse response, ByteBuf buf) throws Exception {
-        final int count = response.count(DnsSection.QUESTION);
-        for (int i = 0; i < count; i++) {
-            recordEncoder.encodeQuestion((DnsQuestion) response.recordAt(DnsSection.QUESTION, i), buf);
-        }
-    }
-
-    private void encodeRecords(DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
-        final int count = response.count(section);
-        for (int i = 0; i < count; i++) {
-            recordEncoder.encodeRecord(response.recordAt(section, i), buf);
-        }
     }
 }
