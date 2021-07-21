@@ -290,7 +290,7 @@ final class DnsMessageUtil {
         }
     }
 
-    public interface DnsQuerySupplier {
+    interface DnsQuerySupplier {
         DnsQuery get(int id, DnsOpCode dnsOpCode);
     }
 
