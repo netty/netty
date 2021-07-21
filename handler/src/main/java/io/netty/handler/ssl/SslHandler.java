@@ -33,7 +33,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -1949,8 +1948,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // because of a propagated Exception.
                 //
                 // See https://github.com/netty/netty/issues/5931
-                safeClose(ctx, closeNotifyPromise, ctx.newPromise().addListener(
-                        new ChannelPromiseNotifier(false, promise)));
+                safeClose(ctx, closeNotifyPromise, PromiseNotifier.cascade(false, ctx.newPromise(), promise));
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
                 sslClosePromise.addListener(new FutureListener<Channel>() {
@@ -2053,7 +2051,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
-            oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
+            PromiseNotifier.cascade(oldHandshakePromise, newHandshakePromise);
         } else {
             handshakePromise = newHandshakePromise;
             handshake(true);
@@ -2234,7 +2232,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // IllegalStateException.
         // Also we not want to log if the notification happens as this is expected in some cases.
         // See https://github.com/netty/netty/issues/5598
-        future.addListener(new ChannelPromiseNotifier(false, promise));
+        PromiseNotifier.cascade(false, future, promise);
     }
 
     /**

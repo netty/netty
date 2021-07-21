@@ -19,7 +19,9 @@ package io.netty.util.concurrent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class PromiseNotifierTest {
@@ -93,4 +95,16 @@ public class PromiseNotifierTest {
         verify(p2).tryFailure(t);
     }
 
+    @Test
+    public void testCancelPropagationWhenFusedFromFuture() {
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
+
+        Promise<Void> returned = PromiseNotifier.cascade(p1, p2);
+        assertSame(p1, returned);
+
+        assertTrue(returned.cancel(false));
+        assertTrue(returned.isCancelled());
+        assertTrue(p2.isCancelled());
+    }
 }
