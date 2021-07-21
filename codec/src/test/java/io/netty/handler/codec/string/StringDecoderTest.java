@@ -33,10 +33,9 @@ public class StringDecoderTest {
         ByteBuf byteBuf = Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new StringDecoder());
         assertTrue(channel.writeInbound(byteBuf));
-        assertTrue(channel.finish());
         String result = channel.readInbound();
         assertEquals(msg, result);
         assertNull(channel.readInbound());
-        channel.close();
+        assertFalse(channel.finish());
     }
 }
