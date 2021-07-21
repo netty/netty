@@ -19,7 +19,10 @@ import io.netty.util.concurrent.PromiseNotifier;
 
 /**
  * ChannelFutureListener implementation which takes other {@link ChannelPromise}(s) and notifies them on completion.
+ *
+ * @deprecated use {@link PromiseNotifier}.
  */
+@Deprecated
 public final class ChannelPromiseNotifier
     extends PromiseNotifier<Void, ChannelFuture>
     implements ChannelFutureListener {

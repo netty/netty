@@ -21,9 +21,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.SocketAddress;
@@ -113,7 +113,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             promise.setFailure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
             closeSent(promise.unvoid());
-            ctx.write(msg).addListener(new ChannelPromiseNotifier(false, closeSent));
+            ctx.write(msg).addListener(new PromiseNotifier<Void, ChannelFuture>(false, closeSent));
         } else {
             ctx.write(msg, promise);
         }
