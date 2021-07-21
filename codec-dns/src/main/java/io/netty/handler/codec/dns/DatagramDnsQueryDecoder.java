@@ -54,9 +54,9 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     protected void decode(ChannelHandlerContext ctx, final DatagramPacket packet, List<Object> out) throws Exception {
         final ByteBuf buf = packet.content();
 
-        DnsMessageUtil.decodeDnsQuery(recordDecoder, buf, new DnsMessageUtil.DnsQuerySupplier() {
+        DnsMessageUtil.decodeDnsQuery(recordDecoder, buf, new DnsMessageUtil.DnsQueryFactory() {
             @Override
-            public DnsQuery get(int id, DnsOpCode dnsOpCode) {
+            public DnsQuery newQuery(int id, DnsOpCode dnsOpCode) {
                 return new DatagramDnsQuery(packet.sender(), packet.recipient(), id, dnsOpCode);
             }
         });

@@ -179,7 +179,7 @@ final class DnsMessageUtil {
         }
     }
 
-    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder, ByteBuf buf, DnsQuerySupplier supplier) throws Exception {
+    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder, ByteBuf buf, DnsQueryFactory supplier) throws Exception {
         DnsQuery query = newQuery(buf, supplier);
         boolean success = false;
         try {
@@ -200,14 +200,14 @@ final class DnsMessageUtil {
         }
     }
 
-    private static DnsQuery newQuery(ByteBuf buf, DnsQuerySupplier supplier) {
+    private static DnsQuery newQuery(ByteBuf buf, DnsQueryFactory supplier) {
         int id = buf.readUnsignedShort();
         int flags = buf.readUnsignedShort();
         if (flags >> 15 == 1) {
             throw new CorruptedFrameException("not a query");
         }
 
-        DnsQuery query = supplier.get(id, DnsOpCode.valueOf((byte) (flags >> 11 & 0xf)));
+        DnsQuery query = supplier.newQuery(id, DnsOpCode.valueOf((byte) (flags >> 11 & 0xf)));
         query.setRecursionDesired((flags >> 8 & 1) == 1);
         query.setZ(flags >> 4 & 0x7);
         return query;
@@ -290,8 +290,8 @@ final class DnsMessageUtil {
         }
     }
 
-    interface DnsQuerySupplier {
-        DnsQuery get(int id, DnsOpCode dnsOpCode);
+    interface DnsQueryFactory {
+        DnsQuery newQuery(int id, DnsOpCode dnsOpCode);
     }
 
     private DnsMessageUtil() {
