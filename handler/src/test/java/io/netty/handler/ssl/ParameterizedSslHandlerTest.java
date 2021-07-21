@@ -436,7 +436,7 @@ public class ParameterizedSslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            PromiseNotifier.link(handler.sslCloseFuture(), serverPromise);
+                            PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {
@@ -474,7 +474,7 @@ public class ParameterizedSslHandlerTest {
 
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            PromiseNotifier.link(handler.sslCloseFuture(), clientPromise);
+                            PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {

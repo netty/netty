@@ -100,7 +100,7 @@ public class PromiseNotifierTest {
         Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        Promise<Void> returned = PromiseNotifier.link(p1, p2);
+        Promise<Void> returned = PromiseNotifier.cascade(p1, p2);
         assertSame(p1, returned);
 
         assertTrue(returned.cancel(false));

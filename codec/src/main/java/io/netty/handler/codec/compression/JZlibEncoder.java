@@ -254,7 +254,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 @Override
                 public void run() {
                     ChannelFuture f = finishEncode(ctx(), p);
-                    PromiseNotifier.link(f, promise);
+                    PromiseNotifier.cascade(f, promise);
                 }
             });
             return p;
