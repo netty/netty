@@ -217,6 +217,10 @@ static jint netty_quiche_err_final_size(JNIEnv* env, jclass clazz) {
     return QUICHE_ERR_FINAL_SIZE;
 }
 
+static jint netty_quiche_err_stream_reset(JNIEnv* env, jclass clazz) {
+    return QUICHE_ERR_STREAM_RESET;
+}
+
 static jint netty_quiche_err_stream_stopped(JNIEnv* env, jclass clazz) {
     return QUICHE_ERR_STREAM_STOPPED;
 }
@@ -660,6 +664,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "quiche_err_stream_limit", "()I", (void *) netty_quiche_err_stream_limit },
   { "quiche_err_final_size", "()I", (void *) netty_quiche_err_final_size },
   { "quiche_err_stream_stopped", "()I", (void *) netty_quiche_err_stream_stopped },
+  { "quiche_err_stream_reset", "()I", (void *) netty_quiche_err_stream_reset },
   { "quiche_err_congestion_control", "()I", (void *) netty_quiche_err_congestion_control },
   { "quiche_cc_reno", "()I", (void *) netty_quiche_cc_reno },
   { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic }
