@@ -213,13 +213,15 @@ final class DnsMessageUtil {
         return query;
     }
 
-    private static void decodeQuestions(DnsRecordDecoder decoder, DnsQuery query, ByteBuf buf, int questionCount) throws Exception {
+    private static void decodeQuestions(DnsRecordDecoder decoder,
+                                        DnsQuery query, ByteBuf buf, int questionCount) throws Exception {
         for (int i = questionCount; i > 0; --i) {
             query.addRecord(DnsSection.QUESTION, decoder.decodeQuestion(buf));
         }
     }
 
-    private static void decodeRecords(DnsRecordDecoder decoder, DnsQuery query, DnsSection section, ByteBuf buf, int count) throws Exception {
+    private static void decodeRecords(DnsRecordDecoder decoder,
+                                      DnsQuery query, DnsSection section, ByteBuf buf, int count) throws Exception {
         for (int i = count; i > 0; --i) {
             DnsRecord r = decoder.decodeRecord(buf);
             if (r == null) {
@@ -283,7 +285,8 @@ final class DnsMessageUtil {
         }
     }
 
-    private static void encodeRecords(DnsRecordEncoder encoder, DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
+    private static void encodeRecords(DnsRecordEncoder encoder,
+                                      DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
         int count = response.count(section);
         for (int i = 0; i < count; ++i) {
             encoder.encodeRecord(response.recordAt(section, i), buf);
