@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class StringDecoderTest {
 
     @Test
-    public void testEncode() {
+    public void testDecode() {
         String msg = "abc123";
         ByteBuf byteBuf = Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new StringDecoder());
@@ -37,5 +37,6 @@ public class StringDecoderTest {
         String result = channel.readInbound();
         assertEquals(msg, result);
         assertNull(channel.readInbound());
+        channel.close();
     }
 }
