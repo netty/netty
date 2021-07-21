@@ -22,8 +22,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
@@ -170,7 +170,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             final ChannelPromise p = ctx.newPromise();
             executor.execute(() -> {
                 ChannelFuture f = finishEncode(ctx(), p);
-                f.addListener(new ChannelPromiseNotifier(promise));
+                PromiseNotifier.cascade(f, promise);
             });
             return p;
         }

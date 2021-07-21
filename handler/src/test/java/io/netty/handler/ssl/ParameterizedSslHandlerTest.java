@@ -432,8 +432,8 @@ public class ParameterizedSslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<>(serverPromise));
+                            PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
+
                             handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
                                 if (!future.isSuccess()) {
                                     // Something bad happened during handshake fail the promise!
@@ -468,8 +468,7 @@ public class ParameterizedSslHandlerTest {
 
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<>(clientPromise));
+                            PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
                             handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
                                 if (future.isSuccess()) {
                                     closeSent.compareAndSet(false, true);
