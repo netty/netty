@@ -24,6 +24,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -31,7 +32,7 @@ import javax.net.ssl.SSLException;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
- * {@link SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
+ * {@link SslHandler}. For example, you could configure your HTTP pipeline depending on the result of ALPN:
  * <pre>
  * public class MyInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     private final {@link SslContext} sslCtx;
@@ -63,6 +64,10 @@ import javax.net.ssl.SSLException;
  *     }
  * }
  * </pre>
+ *
+ * <strong>Important:</strong> The {@link ApplicationProtocolNegotiationHandler} depends on the presents of
+ * {@link SslHandler} in the {@link ChannelPipeline}. Trying to add the {@link ApplicationProtocolNegotiationHandler}
+ * to the {@link ChannelPipeline} without the {@link SslHandler} present will result in an exception.
  */
 public abstract class ApplicationProtocolNegotiationHandler extends ChannelInboundHandlerAdapter {
 
@@ -85,6 +90,11 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.pipeline().get(SslHandler.class) == null) {
+            throw new IllegalStateException(StringUtil.simpleClassName(ApplicationProtocolNegotiationHandler.class) +
+                    " depends on " + StringUtil.simpleClassName(SslHandler.class) +
+                    " to be in the pipeline, but it was not found");
+        }
         this.ctx = ctx;
         super.handlerAdded(ctx);
     }

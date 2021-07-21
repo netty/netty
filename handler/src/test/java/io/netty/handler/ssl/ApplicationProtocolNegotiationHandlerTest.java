@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipelineException;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
@@ -33,6 +34,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,10 +44,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+
 public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
-    public void testHandshakeFailure() {
+    public void testNoSslHandlerInPipeline() {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -52,7 +56,29 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
 
-        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast(alpnHandler);
+        ChannelPipelineException pipelineException = assertThrows(ChannelPipelineException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.checkException();
+            }
+        });
+        assertThat(pipelineException.getCause(), instanceOf(IllegalStateException.class));
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testHandshakeFailure() throws NoSuchAlgorithmException {
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+        };
+
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new SslHandler(SSLContext.getDefault().createSSLEngine()), alpnHandler);
         SSLHandshakeException exception = new SSLHandshakeException("error");
         SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
         channel.pipeline().fireUserEventTriggered(completionEvent);
@@ -89,19 +115,21 @@ public class ApplicationProtocolNegotiationHandlerTest {
     }
 
     @Test
-    public void testHandshakeSuccessButNoSslHandler() {
+    public void testHandshakeSuccessButNoSslHandler() throws NoSuchAlgorithmException {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
                 fail();
             }
         };
-        final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        SslHandler sslHandler = new SslHandler(SSLContext.getDefault().createSSLEngine());
+        final EmbeddedChannel channel = new EmbeddedChannel(sslHandler, alpnHandler);
+        channel.pipeline().remove(sslHandler);
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
-            public void execute() throws Throwable {
+            public void execute() {
                 channel.finishAndReleaseAll();
             }
         });
