@@ -117,29 +117,6 @@ public class ApplicationProtocolNegotiationHandlerTest {
     }
 
     @Test
-    public void testHandshakeSuccessButNoSslHandler() throws NoSuchAlgorithmException {
-        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
-            @Override
-            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
-                fail();
-            }
-        };
-        SslHandler sslHandler = new SslHandler(SSLContext.getDefault().createSSLEngine());
-        final EmbeddedChannel channel = new EmbeddedChannel(sslHandler, alpnHandler);
-        channel.runPendingTasks();
-
-        channel.pipeline().remove(sslHandler);
-        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
-        assertNull(channel.pipeline().context(alpnHandler));
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.finishAndReleaseAll();
-            }
-        });
-    }
-
-    @Test
     public void testBufferMessagesUntilHandshakeComplete() throws Exception {
         testBufferMessagesUntilHandshakeComplete(null);
     }
