@@ -99,18 +99,16 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // Let's buffer all data until this handler will be removed from the pipeline.
+        bufferedMessages.add(msg);
         if (!sslHandlerChecked) {
             sslHandlerChecked = true;
             if (ctx.pipeline().get(SslHandler.class) == null) {
-                // Add to the buffered messages and just remove ourself. This will take care of keep the correct
-                // ordering.
-                bufferedMessages.add(msg);
+                // Just remove ourself if there is no SslHandler in the pipeline and so we would otherwise
+                // buffer forever.
                 removeSelfIfPresent(ctx);
-                return;
             }
         }
-        // Let's buffer all data until this handler will be removed from the pipeline.
-        bufferedMessages.add(msg);
     }
 
     /**
