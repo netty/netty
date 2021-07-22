@@ -102,13 +102,9 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         if (!sslHandlerChecked) {
             sslHandlerChecked = true;
             if (ctx.pipeline().get(SslHandler.class) == null) {
-                if (bufferedMessages.isEmpty()) {
-                    ctx.fireChannelRead(msg);
-                } else {
-                    // Add to the buffered messages and just remove ourself. This will take care of keep the correct
-                    // ordering.
-                    bufferedMessages.add(msg);
-                }
+                // Add to the buffered messages and just remove ourself. This will take care of keep the correct
+                // ordering.
+                bufferedMessages.add(msg);
                 removeSelfIfPresent(ctx);
                 return;
             }

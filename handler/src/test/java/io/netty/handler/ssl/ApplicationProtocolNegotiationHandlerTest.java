@@ -59,11 +59,15 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         String msg = "msg";
+        String msg2 = "msg2";
+
         assertTrue(channel.writeInbound(msg));
+        assertTrue(channel.writeInbound(msg2));
         assertNull(channel.pipeline().context(alpnHandler));
         assertEquals(msg, channel.readInbound());
+        assertEquals(msg2, channel.readInbound());
 
-        channel.finishAndReleaseAll();
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
