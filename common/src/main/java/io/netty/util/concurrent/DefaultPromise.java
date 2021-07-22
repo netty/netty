@@ -671,7 +671,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         synchronized (this) {
             boolean interrupted = false;
             try {
-                while(!isDone() && (timeoutNanos -= System.nanoTime() - startTime) > 0) {
+                while (!isDone() && (timeoutNanos -= System.nanoTime() - startTime) > 0) {
                     incWaiters();
                     try {
                         wait(timeoutNanos / 1000000, (int) (timeoutNanos % 1000000));
