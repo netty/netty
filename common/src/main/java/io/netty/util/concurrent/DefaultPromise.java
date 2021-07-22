@@ -652,6 +652,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
+        final long startTime = System.nanoTime();
+
         if (isDone()) {
             return true;
         }
@@ -666,18 +668,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
-        long startTime = System.nanoTime();
-        long waitTime = timeoutNanos;
-        boolean interrupted = false;
-        try {
-            for (;;) {
-                synchronized (this) {
-                    if (isDone()) {
-                        return true;
-                    }
+        synchronized (this) {
+            boolean interrupted = false;
+            try {
+                while(!isDone() && (timeoutNanos -= System.nanoTime() - startTime) > 0) {
                     incWaiters();
                     try {
-                        wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                        wait(timeoutNanos / 1000000, (int) (timeoutNanos % 1000000));
                     } catch (InterruptedException e) {
                         if (interruptable) {
                             throw e;
@@ -688,18 +685,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         decWaiters();
                     }
                 }
-                if (isDone()) {
-                    return true;
-                } else {
-                    waitTime = timeoutNanos - (System.nanoTime() - startTime);
-                    if (waitTime <= 0) {
-                        return isDone();
-                    }
+                return isDone();
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
                 }
-            }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
             }
         }
     }
