@@ -44,6 +44,29 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
+    public void testRemoveItselfIfNoSslHandlerPresent() throws NoSuchAlgorithmException {
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+        };
+
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        // This test is mocked/simulated and doesn't go through full TLS handshake. Currently only JDK SSLEngineImpl
+        // client mode will generate a close_notify.
+        engine.setUseClientMode(true);
+
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        String msg = "msg";
+        assertTrue(channel.writeInbound(msg));
+        assertNull(channel.pipeline().context(alpnHandler));
+        assertEquals(msg, channel.readInbound());
+
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
     public void testHandshakeFailure() {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override

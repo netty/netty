@@ -72,6 +72,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private final String fallbackProtocol;
     private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
     private ChannelHandlerContext ctx;
+    private boolean sslHandlerChecked;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -98,6 +99,20 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (!sslHandlerChecked) {
+            sslHandlerChecked = true;
+            if (ctx.pipeline().get(SslHandler.class) == null) {
+                if (bufferedMessages.isEmpty()) {
+                    ctx.fireChannelRead(msg);
+                } else {
+                    // Add to the buffered messages and just remove ourself. This will take care of keep the correct
+                    // ordering.
+                    bufferedMessages.add(msg);
+                }
+                removeSelfIfPresent(ctx);
+                return;
+            }
+        }
         // Let's buffer all data until this handler will be removed from the pipeline.
         bufferedMessages.add(msg);
     }
