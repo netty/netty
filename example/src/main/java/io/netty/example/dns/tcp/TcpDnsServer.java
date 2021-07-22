@@ -57,7 +57,8 @@ public final class TcpDnsServer {
     private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
 
     public static void main(String[] args) throws Exception {
-        final ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1), new NioEventLoopGroup())
+        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1),
+                new NioEventLoopGroup())
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {
@@ -66,7 +67,8 @@ public final class TcpDnsServer {
                         ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
                                 new SimpleChannelInboundHandler<DnsQuery>() {
                                     @Override
-                                    protected void channelRead0(ChannelHandlerContext ctx, DnsQuery msg) throws Exception {
+                                    protected void channelRead0(ChannelHandlerContext ctx,
+                                                                DnsQuery msg) throws Exception {
                                         DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
                                         System.out.println("Query domain: " + question);
 
@@ -74,13 +76,15 @@ public final class TcpDnsServer {
                                         ctx.writeAndFlush(newResponse(msg, question, 600, QUERY_RESULT));
                                     }
 
-                                    private DefaultDnsResponse newResponse(DnsQuery query, DnsQuestion question,
+                                    private DefaultDnsResponse newResponse(DnsQuery query,
+                                                                           DnsQuestion question,
                                                                            long ttl, byte[]... addresses) {
                                         DefaultDnsResponse response = new DefaultDnsResponse(query.id());
                                         response.addRecord(DnsSection.QUESTION, question);
 
                                         for (byte[] address : addresses) {
-                                            DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(question.name(),
+                                            DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(
+                                                    question.name(),
                                                     DnsRecordType.A, ttl, Unpooled.wrappedBuffer(address));
                                             response.addRecord(DnsSection.ANSWER, queryAnswer);
                                         }
