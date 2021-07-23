@@ -652,8 +652,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
-        final long startTime = System.nanoTime();
-
         if (isDone()) {
             return true;
         }
@@ -668,13 +666,20 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
+        // We start counting time from here instead of the first line of this method,
+        // to avoid/postpone performance cost of System.nanoTime().
+        final long startTime = System.nanoTime();
         synchronized (this) {
             boolean interrupted = false;
             try {
-                while (!isDone() && (timeoutNanos -= System.nanoTime() - startTime) > 0) {
+                long waitTime = timeoutNanos;
+                while (!isDone() && waitTime > 0) {
                     incWaiters();
                     try {
-                        wait(timeoutNanos / 1000000, (int) (timeoutNanos % 1000000));
+                        wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                        // We calculate the elapsed time here instead of in the while condition,
+                        // to avoid performance cost of System.nanoTime() in the first loop of while.
+                        waitTime = timeoutNanos - (System.nanoTime() - startTime);
                     } catch (InterruptedException e) {
                         if (interruptable) {
                             throw e;
