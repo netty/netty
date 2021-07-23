@@ -666,7 +666,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
-        // We start counting time from here instead of the first line of this method,
+        // Start counting time from here instead of the first line of this method,
         // to avoid/postpone performance cost of System.nanoTime().
         final long startTime = System.nanoTime();
         synchronized (this) {
@@ -677,8 +677,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     incWaiters();
                     try {
                         wait(waitTime / 1000000, (int) (waitTime % 1000000));
-                        // We calculate the elapsed time here instead of in the while condition,
-                        // to avoid performance cost of System.nanoTime() in the first loop of while.
+                        // Check isDone() in advance, try to avoid calculating the elapsed time later.
+                        if (isDone()) {
+                            return true;
+                        }
+                        // Calculate the elapsed time here instead of in the while condition,
+                        // try to avoid performance cost of System.nanoTime() in the first loop of while.
                         waitTime = timeoutNanos - (System.nanoTime() - startTime);
                     } catch (InterruptedException e) {
                         if (interruptable) {
