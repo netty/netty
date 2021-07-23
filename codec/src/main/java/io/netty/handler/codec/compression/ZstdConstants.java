@@ -36,5 +36,17 @@ final class ZstdConstants {
      */
     static final int DEFAULT_BLOCK_SIZE = 1 << 16;  // 64 KB
 
+    /**
+     * Default max block size
+     */
+    static final int DEFAULT_MAX_BLOCK_SIZE = 1 << 26; // 64M
+
+    /**
+     * Max decompress size
+     * When greater than max decompress size,
+     * need to ensure that there is enough space for decompression
+     */
+    static final int MAX_DECOMPRESS_SIZE = 1 << 16;
+
     private ZstdConstants() { }
 }
