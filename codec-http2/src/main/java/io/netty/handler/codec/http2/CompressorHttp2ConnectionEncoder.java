@@ -74,7 +74,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, StandardCompressionOptions.brotli(), StandardCompressionOptions.gzip(),
-                StandardCompressionOptions.deflate());
+                StandardCompressionOptions.deflate(), StandardCompressionOptions.zstd());
     }
 
     /**
