@@ -53,7 +53,7 @@ public class ChannelException extends RuntimeException {
 
     @UnstableApi
     protected ChannelException(String message, Throwable cause, boolean shared) {
-        super(message, cause, false, true);
+        super(message, cause, false, false);
         assert shared;
     }
 }

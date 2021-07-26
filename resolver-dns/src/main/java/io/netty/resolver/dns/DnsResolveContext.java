@@ -118,7 +118,7 @@ abstract class DnsResolveContext<T> {
         private static final long serialVersionUID = 1209303419266433003L;
 
         private DnsResolveContextException(String message) {
-            super(message, null, false, true);
+            super(message, null, false, true); // Need to keep the stack trace mutable.
         }
 
         // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
