@@ -666,15 +666,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
-        long startTime = System.nanoTime();
-        long waitTime = timeoutNanos;
-        boolean interrupted = false;
-        try {
-            for (;;) {
-                synchronized (this) {
-                    if (isDone()) {
-                        return true;
-                    }
+        // Start counting time from here instead of the first line of this method,
+        // to avoid/postpone performance cost of System.nanoTime().
+        final long startTime = System.nanoTime();
+        synchronized (this) {
+            boolean interrupted = false;
+            try {
+                long waitTime = timeoutNanos;
+                while (!isDone() && waitTime > 0) {
                     incWaiters();
                     try {
                         wait(waitTime / 1000000, (int) (waitTime % 1000000));
@@ -687,19 +686,19 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     } finally {
                         decWaiters();
                     }
-                }
-                if (isDone()) {
-                    return true;
-                } else {
-                    waitTime = timeoutNanos - (System.nanoTime() - startTime);
-                    if (waitTime <= 0) {
-                        return isDone();
+                    // Check isDone() in advance, try to avoid calculating the elapsed time later.
+                    if (isDone()) {
+                        return true;
                     }
+                    // Calculate the elapsed time here instead of in the while condition,
+                    // try to avoid performance cost of System.nanoTime() in the first loop of while.
+                    waitTime = timeoutNanos - (System.nanoTime() - startTime);
                 }
-            }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
+                return isDone();
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
