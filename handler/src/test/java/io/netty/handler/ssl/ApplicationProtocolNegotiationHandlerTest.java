@@ -90,6 +90,15 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testHandshakeSuccess() throws NoSuchAlgorithmException {
+        testHandshakeSuccess0(false);
+    }
+
+    @Test
+    public void testHandshakeSuccessWithSslHandlerAddedLater() throws NoSuchAlgorithmException {
+        testHandshakeSuccess0(true);
+    }
+
+    private static void testHandshakeSuccess0(boolean addLater) throws NoSuchAlgorithmException {
         final AtomicBoolean configureCalled = new AtomicBoolean(false);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
@@ -104,7 +113,14 @@ public class ApplicationProtocolNegotiationHandlerTest {
         // client mode will generate a close_notify.
         engine.setUseClientMode(true);
 
-        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), alpnHandler);
+        EmbeddedChannel channel = new EmbeddedChannel();
+        if (addLater) {
+            channel.pipeline().addLast(alpnHandler);
+            channel.pipeline().addFirst(new SslHandler(engine));
+        } else {
+            channel.pipeline().addLast(new SslHandler(engine));
+            channel.pipeline().addLast(alpnHandler);
+        }
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
