@@ -44,6 +44,33 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
+    public void testRemoveItselfIfNoSslHandlerPresent() throws NoSuchAlgorithmException {
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+        };
+
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        // This test is mocked/simulated and doesn't go through full TLS handshake. Currently only JDK SSLEngineImpl
+        // client mode will generate a close_notify.
+        engine.setUseClientMode(true);
+
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
+        String msg = "msg";
+        String msg2 = "msg2";
+
+        assertTrue(channel.writeInbound(msg));
+        assertTrue(channel.writeInbound(msg2));
+        assertNull(channel.pipeline().context(alpnHandler));
+        assertEquals(msg, channel.readInbound());
+        assertEquals(msg2, channel.readInbound());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testHandshakeFailure() {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
@@ -63,6 +90,15 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testHandshakeSuccess() throws NoSuchAlgorithmException {
+        testHandshakeSuccess0(false);
+    }
+
+    @Test
+    public void testHandshakeSuccessWithSslHandlerAddedLater() throws NoSuchAlgorithmException {
+        testHandshakeSuccess0(true);
+    }
+
+    private static void testHandshakeSuccess0(boolean addLater) throws NoSuchAlgorithmException {
         final AtomicBoolean configureCalled = new AtomicBoolean(false);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
@@ -77,7 +113,14 @@ public class ApplicationProtocolNegotiationHandlerTest {
         // client mode will generate a close_notify.
         engine.setUseClientMode(true);
 
-        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), alpnHandler);
+        EmbeddedChannel channel = new EmbeddedChannel();
+        if (addLater) {
+            channel.pipeline().addLast(alpnHandler);
+            channel.pipeline().addFirst(new SslHandler(engine));
+        } else {
+            channel.pipeline().addLast(new SslHandler(engine));
+            channel.pipeline().addLast(alpnHandler);
+        }
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
