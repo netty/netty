@@ -285,7 +285,7 @@ public final class SelfSignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key file in PEM format.
+     * Returns the generated EC/RSA private key file in PEM format.
      */
     public File privateKey() {
         return privateKey;
@@ -299,14 +299,14 @@ public final class SelfSignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key.
+     * Returns the generated EC/RSA private key.
      */
     public PrivateKey key() {
         return key;
     }
 
     /**
-     * Deletes the generated X.509 certificate file and RSA private key file.
+     * Deletes the generated X.509 certificate file and EC/RSA private key file.
      */
     public void delete() {
         safeDelete(certificate);
