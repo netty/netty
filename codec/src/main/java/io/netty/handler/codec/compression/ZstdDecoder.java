@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -37,6 +38,7 @@ import static io.netty.handler.codec.compression.ZstdConstants.MAX_DECOMPRESS_SI
 public final class ZstdDecoder extends ByteToMessageDecoder {
 
      private final int maxBlockSize;
+     private ByteBuf buffer;
 
     /**
      * Creates a new Zstd decoder.
@@ -63,6 +65,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
      */
     private enum State {
         DECOMPRESS_DATA,
+        NEED_MORE_DATA,
         FINISHED,
         CORRUPTED
     }
@@ -75,54 +78,11 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             while (in.isReadable()) {
                 switch (currentState) {
                     case DECOMPRESS_DATA:
-                        ByteBuf uncompressed = null;
-                        int compressedLength = in.readableBytes();
-                        if (compressedLength > maxBlockSize) {
-                            in.skipBytes(compressedLength);
-                            throw new TooLongFrameException("too large message: " + compressedLength + " bytes");
-                        }
-                        try {
-                            ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
-                            int bufferSize = compressedLength << 2;
-                            if (in.isDirect()) {
-                                int decompressedSize = (int) Zstd.decompressedSize(src);
-                                // ZstdOutputStream compressed data using Zstd.decompressedSize() will return 0,
-                                // so compressedLength can only be used to determine the size of the allocated memory
-                                if (decompressedSize > 0) {
-                                    bufferSize = decompressedSize < MAX_DECOMPRESS_SIZE ?
-                                            decompressedSize : decompressedSize << 6;
-                                }
-                                uncompressed = ctx.alloc().directBuffer(bufferSize);
-                                ByteBuffer dst = CompressionUtil.safeNioBuffer(uncompressed, 0,
-                                        bufferSize);
-                                int srcSize = Zstd.decompress(dst, src);
-                                // Update the writerIndex now to reflect what we decompressed.
-                                uncompressed.writerIndex(uncompressed.writerIndex() + srcSize);
-                            } else {
-                                byte[] srcBytes = ByteBufUtil.getBytes(in);
-                                int decompressedSize = (int) Zstd.decompressedSize(srcBytes);
-                                if (decompressedSize > 0) {
-                                    bufferSize = decompressedSize;
-                                }
-                                byte[] dstBytes = PlatformDependent.allocateUninitializedArray(bufferSize);
-                                int srcSize = (int) Zstd.decompress(dstBytes, srcBytes);
-                                uncompressed = Unpooled.wrappedBuffer(dstBytes);
-                                uncompressed.writerIndex(srcSize);
-                            }
-
-                            // Skip inbound bytes after we processed them.
-                            in.skipBytes(compressedLength);
-
-                            out.add(uncompressed);
-                            uncompressed = null;
-                            currentState = State.FINISHED;
-                        } catch (Exception e) {
-                            throw new DecompressionException(e);
-                        } finally {
-                            if (uncompressed != null) {
-                                uncompressed.release();
-                            }
-                        }
+                        decompressData(ctx, in, out);
+                        break;
+                    case NEED_MORE_DATA:
+                        buffer.writeBytes(in.retain());
+                        decompressData(ctx, buffer, out);
                         break;
                     case FINISHED:
                     case CORRUPTED:
@@ -135,6 +95,66 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         } catch (Exception e) {
             currentState = State.CORRUPTED;
             throw e;
+        }
+    }
+
+    private void decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        ByteBuf uncompressed = null;
+        final int compressedLength = in.readableBytes();
+        if (compressedLength > maxBlockSize) {
+            in.skipBytes(compressedLength);
+            throw new TooLongFrameException("too large message: " + compressedLength + " bytes");
+        }
+        try {
+            final ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
+            int bufferSize = compressedLength << 2;
+            if (in.isDirect()) {
+                int decompressedSize = (int) Zstd.decompressedSize(src);
+                // ZstdOutputStream compressed data using Zstd.decompressedSize() will return 0,
+                // so compressedLength can only be used to determine the size of the allocated memory
+                if (decompressedSize > 0) {
+                    bufferSize = decompressedSize < MAX_DECOMPRESS_SIZE ?
+                            decompressedSize : decompressedSize << 6;
+                }
+                uncompressed = ctx.alloc().directBuffer(bufferSize);
+                final ByteBuffer dst = CompressionUtil.safeNioBuffer(uncompressed, 0,
+                        bufferSize);
+                int srcSize = Zstd.decompress(dst, src);
+                // Update the writerIndex now to reflect what we decompressed.
+                uncompressed.writerIndex(uncompressed.writerIndex() + srcSize);
+            } else {
+                byte[] srcBytes = ByteBufUtil.getBytes(in);
+                int decompressedSize = (int) Zstd.decompressedSize(srcBytes);
+                if (decompressedSize > 0) {
+                    bufferSize = decompressedSize;
+                }
+                byte[] dstBytes = PlatformDependent.allocateUninitializedArray(bufferSize);
+                int srcSize = (int) Zstd.decompress(dstBytes, srcBytes);
+                uncompressed = Unpooled.wrappedBuffer(dstBytes);
+                uncompressed.writerIndex(srcSize);
+            }
+
+            // Skip inbound bytes after we processed them.
+            in.skipBytes(compressedLength);
+
+            out.add(uncompressed);
+            if (buffer != null) {
+                buffer.clear();
+            }
+            uncompressed = null;
+            currentState = State.FINISHED;
+        } catch (ZstdException e) {
+            if (currentState == State.DECOMPRESS_DATA) {
+                buffer = ctx.alloc().buffer(compressedLength);
+                buffer.writeBytes(in.retain());
+                currentState = State.NEED_MORE_DATA;
+            }
+        } catch (Exception e) {
+            throw new DecompressionException(e);
+        } finally {
+            if (uncompressed != null) {
+                uncompressed.release();
+            }
         }
     }
 

@@ -16,12 +16,8 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.ZstdOutputStream;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.io.ByteArrayOutputStream;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ZstdDecoderTest extends AbstractDecoderTest {
 
@@ -34,20 +30,6 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     @Override
-    public void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) throws Exception {
-        final int compressedLength = data.readableBytes();
-        int written = 0;
-        ByteBuf compressedBuf = data.slice(written, compressedLength - written);
-        assertTrue(channel.writeInbound(compressedBuf.retain()));
-
-        ByteBuf decompressedBuf = readDecompressed(channel);
-        assertEquals(expected, decompressedBuf);
-
-        decompressedBuf.release();
-        data.release();
-    }
-
-    @Override
     protected byte[] compress(byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         ZstdOutputStream zstdOs = new ZstdOutputStream(os);
@@ -56,5 +38,4 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
 
         return os.toByteArray();
     }
-
 }
