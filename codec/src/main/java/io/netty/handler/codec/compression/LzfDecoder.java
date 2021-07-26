@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkDecoder;
+import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -137,6 +138,15 @@ public class LzfDecoder extends ByteToMessageDecoder {
                 }
                 chunkLength = in.readUnsignedShort();
 
+                // chunkLength can never exceed MAX_CHUNK_LEN as MAX_CHUNK_LEN is 64kb and readUnsignedShort can
+                // never return anything bigger as well. Let's add some check any way to make things easier in terms
+                // of debugging if we ever hit this because of an bug.
+                if (chunkLength > LZFChunk.MAX_CHUNK_LEN) {
+                    throw new DecompressionException(String.format(
+                            "chunk length exceeds maximum: %d (expected: =< %d)",
+                            chunkLength, LZFChunk.MAX_CHUNK_LEN));
+                }
+
                 if (type != BLOCK_TYPE_COMPRESSED) {
                     break;
                 }
@@ -146,6 +156,15 @@ public class LzfDecoder extends ByteToMessageDecoder {
                     break;
                 }
                 originalLength = in.readUnsignedShort();
+
+                // originalLength can never exceed MAX_CHUNK_LEN as MAX_CHUNK_LEN is 64kb and readUnsignedShort can
+                // never return anything bigger as well. Let's add some check any way to make things easier in terms
+                // of debugging if we ever hit this because of an bug.
+                if (originalLength > LZFChunk.MAX_CHUNK_LEN) {
+                    throw new DecompressionException(String.format(
+                            "original length exceeds maximum: %d (expected: =< %d)",
+                            chunkLength, LZFChunk.MAX_CHUNK_LEN));
+                }
 
                 currentState = State.DECOMPRESS_DATA;
                 // fall through
