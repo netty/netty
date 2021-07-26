@@ -26,6 +26,10 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.FailedFuture;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
@@ -184,6 +188,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     }
 
     /**
+     * Create and register a new channel, but asynchronously.
+     * <p>
+     * The returned future completes after the channel has been created and initialised,
+     * but before {@link Channel#register()} has completed.
+     *
+     * @return A future producing the channel object as soon as it has been initialised.
+     */
+    public Future<Channel> registerAsynchronously() {
+        validate();
+        return initThenRegister();
+    }
+
+    /**
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind() {
@@ -265,6 +282,29 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         loop.execute(() -> init(channel).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
                 channel.register(promise);
+            } else {
+                channel.unsafe().closeForcibly();
+                promise.setFailure(future.cause());
+            }
+        }));
+
+        return promise;
+    }
+
+    final Future<Channel> initThenRegister() {
+        EventLoop loop = group.next();
+        final Channel channel;
+        try {
+            channel = newChannel(loop);
+        } catch (Throwable t) {
+            return new FailedFuture<>(loop, t);
+        }
+
+        Promise<Channel> promise = new DefaultPromise<>(loop);
+        loop.execute(() -> init(channel).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                promise.setSuccess(channel);
+                channel.register();
             } else {
                 channel.unsafe().closeForcibly();
                 promise.setFailure(future.cause());
