@@ -149,21 +149,11 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
 
                 try {
                     if (isCompressed) {
-                        final byte[] input;
-                        final int inputOffset;
-                        if (in.hasArray()) {
-                            input = in.array();
-                            inputOffset = in.arrayOffset() + idx;
-                        } else {
-                            input = new byte[chunkLength];
-                            in.getBytes(idx, input);
-                            inputOffset = 0;
-                        }
 
-                        output = ctx.alloc().heapBuffer(originalLength);
-                        int outputOffset = output.arrayOffset() + output.writerIndex();
-                        final int decompressedBytes = decompress(input, inputOffset, chunkLength,
-                                output.array(), outputOffset, originalLength);
+                        output = ctx.alloc().buffer(originalLength);
+                        int outputOffset = output.writerIndex();
+                        final int decompressedBytes = decompress(in, idx, chunkLength,
+                                output, outputOffset, originalLength);
                         if (originalLength != decompressedBytes) {
                             throw new DecompressionException(String.format(
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
