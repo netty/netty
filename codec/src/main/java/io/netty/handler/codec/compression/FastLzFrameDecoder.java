@@ -182,6 +182,8 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                     }
                     output = null;
                     in.skipBytes(chunkLength);
+
+                    currentState = State.INIT_BLOCK;
                 } finally {
                     if (output != null) {
                         output.release();
