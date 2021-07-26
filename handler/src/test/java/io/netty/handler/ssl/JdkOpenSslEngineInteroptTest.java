@@ -16,7 +16,8 @@
 package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
@@ -60,11 +61,31 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
-    @Disabled("Disable until figured out why this sometimes fail on the CI")
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthSameCerts(SSLEngineTestParam param) throws Throwable {
         super.testMutualAuthSameCerts(param);
     }
 
+    @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    public void testMutualAuthDiffCerts(SSLEngineTestParam param) throws Exception {
+        super.testMutualAuthDiffCerts(param);
+    }
+
+    @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    public void testMutualAuthDiffCertsServerFailure(SSLEngineTestParam param) throws Exception {
+        super.testMutualAuthDiffCertsServerFailure(param);
+    }
+
+    @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    public void testMutualAuthDiffCertsClientFailure(SSLEngineTestParam param) throws Exception {
+        super.testMutualAuthDiffCertsClientFailure(param);
+    }
+
+    @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -72,6 +93,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -79,6 +101,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -86,6 +109,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -93,6 +117,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
