@@ -285,11 +285,23 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeBytes(byte[] source) {
-        int size = source.length;
+        return writeBytes(source, 0, source.length);
+    }
+
+    /**
+     * Writes into this buffer, all the bytes from the given byte array.
+     * This updates the {@linkplain #writerOffset() write offset} of this buffer by the length of the array.
+     *
+     * @param source The byte array to read from.
+     * @param srcPos Position in the {@code source} from where bytes should be written to this buffer.
+     * @param length The number of bytes to copy.
+     * @return This buffer.
+     */
+    default Buffer writeBytes(byte[] source, int srcPos, int length) {
         int woff = writerOffset();
-        writerOffset(woff + size);
-        for (int i = 0; i < size; i++) {
-            setByte(woff + i, source[i]);
+        writerOffset(woff + length);
+        for (int i = 0; i < length; i++) {
+            setByte(woff + i, source[srcPos + i]);
         }
         return this;
     }
