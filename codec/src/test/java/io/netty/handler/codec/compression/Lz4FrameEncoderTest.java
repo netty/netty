@@ -22,7 +22,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -33,7 +32,6 @@ import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.EncoderException;
-import java.util.concurrent.TimeUnit;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
@@ -46,6 +44,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Checksum;
 
@@ -244,7 +243,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void writingAfterClosedChannelDoesNotNPE() throws InterruptedException {
+    public void writingAfterClosedChannelDoesNotNPE() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -270,8 +269,8 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(0)).get();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
 
             final Channel finalClientChannel = clientChannel;
             clientChannel.eventLoop().execute(() -> {

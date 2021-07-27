@@ -62,13 +62,13 @@ public class HAProxyIntegrationTest {
                   });
               }
           });
-        Channel serverChannel = sb.bind(localAddress).sync().channel();
+        Channel serverChannel = sb.bind(localAddress).get();
 
         Bootstrap b = new Bootstrap();
         Channel clientChannel = b.channel(LocalChannel.class)
                                  .handler(HAProxyMessageEncoder.INSTANCE)
                                  .group(group)
-                                 .connect(localAddress).sync().channel();
+                                 .connect(localAddress).get();
 
         try {
             HAProxyMessage message = new HAProxyMessage(

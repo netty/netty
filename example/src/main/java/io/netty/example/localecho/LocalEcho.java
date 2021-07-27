@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -80,7 +80,7 @@ public final class LocalEcho {
             sb.bind(addr).sync();
 
             // Start the client.
-            Channel ch = cb.connect(addr).sync().channel();
+            Channel ch = cb.connect(addr).get();
 
             // Read commands from the stdin.
             System.out.println("Enter text (quit to end)");

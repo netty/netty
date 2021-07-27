@@ -17,7 +17,7 @@ package io.netty.testsuite.autobahn;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -46,9 +46,9 @@ public class AutobahnServer {
              .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
              .childHandler(new AutobahnServerInitializer());
 
-            ChannelFuture f = b.bind(port).sync();
+            Channel channel = b.bind(port).get();
             System.out.println("Web Socket Server started at port " + port);
-            f.channel().closeFuture().sync();
+            channel.closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

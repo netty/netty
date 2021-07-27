@@ -31,12 +31,15 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import static io.netty.handler.ssl.SslProvider.JDK;
+import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty.handler.ssl.SslProvider.isAlpnSupported;
 
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
@@ -55,7 +58,7 @@ public final class Http2Server {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
+            SslProvider provider = isAlpnSupported(OPENSSL) ? OPENSSL : JDK;
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(provider)
@@ -84,7 +87,7 @@ public final class Http2Server {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new Http2ServerInitializer(sslCtx));
 
-            Channel ch = b.bind(PORT).sync().channel();
+            Channel ch = b.bind(PORT).get();
 
             System.err.println("Open your HTTP/2-enabled web browser and navigate to " +
                     (SSL? "https" : "http") + "://127.0.0.1:" + PORT + '/');

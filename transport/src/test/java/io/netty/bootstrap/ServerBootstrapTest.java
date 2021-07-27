@@ -17,13 +17,11 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -130,9 +128,9 @@ public class ServerBootstrapTest {
                     .channel(LocalChannel.class)
                     .handler(new ChannelHandler() { });
 
-            sch = sb.bind(addr).syncUninterruptibly().channel();
+            sch = sb.bind(addr).get();
 
-            cch = cb.connect(addr).syncUninterruptibly().channel();
+            cch = cb.connect(addr).get();
 
             initLatch.await();
             readLatch.await();
@@ -148,7 +146,7 @@ public class ServerBootstrapTest {
     }
 
     @Test
-    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws InterruptedException {
+    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
         final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
@@ -167,13 +165,13 @@ public class ServerBootstrapTest {
                         requestServed.set(true);
                     }
                 });
-        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
+        Channel serverChannel = sb.bind(addr).get();
 
         Bootstrap cb = new Bootstrap();
         cb.group(group)
                 .channel(LocalChannel.class)
                 .handler(new ChannelHandler() { });
-        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
+        Channel clientChannel = cb.connect(addr).get();
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();

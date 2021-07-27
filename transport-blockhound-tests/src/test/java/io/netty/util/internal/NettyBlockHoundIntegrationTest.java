@@ -19,13 +19,12 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -42,6 +41,8 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -67,7 +68,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -183,10 +183,8 @@ public class NettyBlockHoundIntegrationTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testHashedWheelTimerStartStop() throws Exception {
         HashedWheelTimer timer = new HashedWheelTimer();
-        Future<?> futureStart = GlobalEventExecutor.INSTANCE.submit(timer::start);
-        futureStart.get(5, TimeUnit.SECONDS);
-        Future<?> futureStop = GlobalEventExecutor.INSTANCE.submit(timer::stop);
-        futureStop.get(5, TimeUnit.SECONDS);
+        GlobalEventExecutor.INSTANCE.submit(timer::start).get(5, TimeUnit.SECONDS);
+        GlobalEventExecutor.INSTANCE.submit(timer::stop).get(5, TimeUnit.SECONDS);
     }
 
     // Tests copied from io.netty.handler.ssl.SslHandlerTest
@@ -274,7 +272,7 @@ public class NettyBlockHoundIntegrationTest {
                                  .sslProvider(SslProvider.JDK)
                                  .build();
         final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        final EventLoopGroup group = new NioEventLoopGroup();
+        final EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         final CountDownLatch activeLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
@@ -286,8 +284,7 @@ public class NettyBlockHoundIntegrationTest {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInboundHandlerAdapter())
                     .bind(new InetSocketAddress(0))
-                    .syncUninterruptibly()
-                    .channel();
+                    .get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -318,10 +315,9 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     })
                     .connect(sc.localAddress())
-                    .addListener((ChannelFutureListener) future ->
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
-                    .syncUninterruptibly()
-                    .channel();
+                    .addListener((GenericFutureListener<Future<Channel>>) future ->
+                        future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
+                    .get();
 
             assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
             assertNull(error.get());
@@ -353,7 +349,7 @@ public class NettyBlockHoundIntegrationTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testUnixResolverDnsServerAddressStreamProvider_ParseEtcResolverSearchDomainsAndOptions()
             throws InterruptedException {
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .channelFactory(NioDatagramChannel::new);
@@ -439,7 +435,7 @@ public class NettyBlockHoundIntegrationTest {
 
     private static void testHandshake(SslContext sslClientCtx, SslHandler clientSslHandler,
                                       SslHandler serverSslHandler) throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -447,9 +443,9 @@ public class NettyBlockHoundIntegrationTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(serverSslHandler)
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -470,7 +466,7 @@ public class NettyBlockHoundIntegrationTest {
                               });
                         }
                     }).connect(sc.localAddress());
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             clientSslHandler.handshakeFuture().await().sync();
             serverSslHandler.handshakeFuture().await().sync();

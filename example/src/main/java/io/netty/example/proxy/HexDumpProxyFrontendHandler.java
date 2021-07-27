@@ -18,11 +18,12 @@ package io.netty.example.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
+
+import java.net.InetSocketAddress;
 
 public class HexDumpProxyFrontendHandler implements ChannelHandler {
 
@@ -48,9 +49,10 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
          .channel(ctx.channel().getClass())
          .handler(new HexDumpProxyBackendHandler(inboundChannel))
          .option(ChannelOption.AUTO_READ, false);
-        ChannelFuture f = b.connect(remoteHost, remotePort);
-        outboundChannel = f.channel();
-        f.addListener((ChannelFutureListener) future -> {
+        Channel channel = b.register().syncUninterruptibly().getNow();
+        InetSocketAddress remote = InetSocketAddress.createUnresolved(remoteHost, remotePort);
+        channel.connect(remote).addListener((ChannelFutureListener) future -> {
+            outboundChannel = future.channel();
             if (future.isSuccess()) {
                 // connection complete start to read first data
                 inboundChannel.read();

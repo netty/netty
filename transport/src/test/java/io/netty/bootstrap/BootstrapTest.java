@@ -41,6 +41,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -201,12 +202,12 @@ public class BootstrapTest {
             bootstrap.channel(LocalServerChannel.class);
             bootstrap.childHandler(new DummyHandler());
             bootstrap.localAddress(new LocalAddress("1"));
-            ChannelFuture future = bootstrap.bind();
+            Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener((ChannelFutureListener) future1 -> {
-                queue.add(future1.channel().eventLoop().inEventLoop(Thread.currentThread()));
+            future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
+                queue.add(future1.getNow().eventLoop().inEventLoop(Thread.currentThread()));
                 queue.add(future1.isSuccess());
             });
             assertTrue(queue.take());
@@ -245,12 +246,12 @@ public class BootstrapTest {
             bootstrap.childHandler(new DummyHandler());
             bootstrap.handler(registerHandler);
             bootstrap.localAddress(new LocalAddress("1"));
-            ChannelFuture future = bootstrap.bind();
+            Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener((ChannelFutureListener) future1 -> {
-                queue.add(future1.channel().eventLoop().inEventLoop(Thread.currentThread()));
+            future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
+                queue.add(future1.getNow().eventLoop().inEventLoop(Thread.currentThread()));
                 queue.add(future1.isSuccess());
             });
             assertTrue(queue.take());
@@ -271,7 +272,7 @@ public class BootstrapTest {
             bootstrapA.group(group);
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(registerHandler);
-            ChannelFuture future = bootstrapA.connect(LocalAddress.ANY);
+            Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             assertTrue(assertThrows(CompletionException.class, future::syncUninterruptibly)
@@ -317,7 +318,7 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         bootstrapA.connect(localAddress).sync();
@@ -335,15 +336,14 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+        Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
-        assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
     @Test
@@ -357,12 +357,11 @@ public class BootstrapTest {
                     throw exception;
                 });
 
-        ChannelFuture connectFuture = bootstrap.connect(LocalAddress.ANY);
+        Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
-        assertThat(connectFuture.channel(), is(not(nullValue())));
     }
 
     @Test

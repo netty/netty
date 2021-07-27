@@ -44,8 +44,8 @@ import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forClient;
 import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forServer;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -78,7 +78,7 @@ public class Http2StreamChannelBootstrapTest {
                             serverChannelLatch.countDown();
                         }
                     });
-            serverChannel = sb.bind(serverAddress).sync().channel();
+            serverChannel = sb.bind(serverAddress).get();
 
             Bootstrap cb = new Bootstrap()
                     .channel(LocalChannel.class)
@@ -89,7 +89,7 @@ public class Http2StreamChannelBootstrapTest {
                             ch.pipeline().addLast(forClient().build(), newMultiplexedHandler());
                         }
                     });
-            clientChannel = cb.connect(serverAddress).sync().channel();
+            clientChannel = cb.connect(serverAddress).get();
             assertTrue(serverChannelLatch.await(3, SECONDS));
 
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
@@ -145,7 +145,7 @@ public class Http2StreamChannelBootstrapTest {
         when(ctx.executor()).thenReturn(executor);
         when(ctx.handler()).thenReturn(handler);
 
-        Promise<Http2StreamChannel> promise = new DefaultPromise(mock(EventExecutor.class));
+        Promise<Http2StreamChannel> promise = new DefaultPromise<>(mock(EventExecutor.class));
         bootstrap.open0(ctx, promise);
         assertThat(promise.isDone(), is(true));
         assertThat(promise.cause(), is(instanceOf(IllegalStateException.class)));

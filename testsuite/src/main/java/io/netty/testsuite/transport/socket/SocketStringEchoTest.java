@@ -104,8 +104,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
         for (String element : data) {
             String delimiter = random.nextBoolean() ? "\r\n" : "\n";
             cc.writeAndFlush(element + delimiter);

@@ -321,7 +321,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch serverSettingsAckLatch2 = new CountDownLatch(2);
         final CountDownLatch serverDataLatch = new CountDownLatch(1);
         final CountDownLatch clientWriteDataLatch = new CountDownLatch(1);
-        final byte[] data = new byte[] {1, 2, 3, 4, 5};
+        final byte[] data = {1, 2, 3, 4, 5};
         final ByteArrayOutputStream out = new ByteArrayOutputStream(data.length);
 
         doAnswer((Answer<Void>) invocationOnMock -> {
@@ -868,7 +868,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch probeStreamCount = new CountDownLatch(1);
         final AtomicBoolean stream3Exists = new AtomicBoolean();
         final AtomicInteger streamCount = new AtomicInteger();
-        runInChannel(this.clientChannel, () -> {
+        runInChannel(clientChannel, () -> {
             stream3Exists.set(http2Client.connection().stream(3) != null);
             streamCount.set(http2Client.connection().numActiveStreams());
             probeStreamCount.countDown();
@@ -1089,11 +1089,9 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("Http2ConnectionRoundtripTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress("Http2ConnectionRoundtripTest")).get();
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = cb.connect(serverChannel.localAddress()).get();
         assertTrue(prefaceWrittenLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
         assertTrue(serverInitLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
@@ -1126,8 +1124,7 @@ public class Http2ConnectionRoundtripTest {
         doAnswer((Answer<Integer>) invocation -> {
             ByteBuf buf = (ByteBuf) invocation.getArguments()[2];
             int padding = (Integer) invocation.getArguments()[3];
-            int processedBytes = buf.readableBytes() + padding;
-            return processedBytes;
+            return buf.readableBytes() + padding;
         }).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
     }

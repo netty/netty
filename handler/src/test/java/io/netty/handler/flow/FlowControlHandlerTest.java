@@ -27,8 +27,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -47,7 +47,8 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -74,7 +75,7 @@ public class FlowControlHandlerTest {
         return Unpooled.wrappedBuffer(new byte[]{ 1 });
     }
 
-    private static Channel newServer(final boolean autoRead, final ChannelHandler... handlers) {
+    private static Channel newServer(final boolean autoRead, final ChannelHandler... handlers) throws Exception {
         assertTrue(handlers.length >= 1);
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -90,12 +91,10 @@ public class FlowControlHandlerTest {
                 }
             });
 
-        return serverBootstrap.bind(0)
-                .syncUninterruptibly()
-                .channel();
+        return serverBootstrap.bind(0).get();
     }
 
-    private static Channel newClient(SocketAddress server) {
+    private static Channel newClient(SocketAddress server) throws Exception {
         Bootstrap bootstrap = new Bootstrap();
 
         bootstrap.group(GROUP)
@@ -108,9 +107,7 @@ public class FlowControlHandlerTest {
                 }
             });
 
-        return bootstrap.connect(server)
-                .syncUninterruptibly()
-                .channel();
+        return bootstrap.connect(server).get();
     }
 
     /**

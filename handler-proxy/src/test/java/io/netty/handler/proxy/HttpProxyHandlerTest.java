@@ -18,7 +18,6 @@ package io.netty.handler.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -41,18 +40,23 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
-
-import java.util.concurrent.atomic.AtomicReference;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.same;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 public class HttpProxyHandlerTest {
 
@@ -185,7 +189,7 @@ public class HttpProxyHandlerTest {
             group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
             final LocalAddress addr = new LocalAddress("a");
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-            ChannelFuture sf =
+            Future<Channel> sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
                     new ChannelInitializer<Channel>() {
 
@@ -205,8 +209,8 @@ public class HttpProxyHandlerTest {
                             });
                         }
                     }).bind(addr);
-            serverChannel = sf.sync().channel();
-            ChannelFuture cf = new Bootstrap().channel(LocalChannel.class).group(group).handler(
+            serverChannel = sf.get();
+            Future<Channel> cf = new Bootstrap().channel(LocalChannel.class).group(group).handler(
                 new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
@@ -220,7 +224,7 @@ public class HttpProxyHandlerTest {
                         });
                     }
                 }).connect(new InetSocketAddress("localhost", 1234));
-            clientChannel = cf.sync().channel();
+            clientChannel = cf.get();
             clientChannel.close().sync();
 
             assertTrue(exception.get() instanceof HttpProxyConnectException);

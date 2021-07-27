@@ -51,7 +51,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
         Channel channel = null;
         try {
             channel = cb.handler(new ChannelHandlerAdapter() { })
-                    .bind(newSocketAddress()).sync().channel();
+                    .bind(newSocketAddress()).get();
             assertThat(channel.localAddress()).isNotNull()
                     .isInstanceOf(DomainSocketAddress.class);
         } finally {
@@ -104,7 +104,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return cb.bind(newSocketAddress()).sync().channel();
+        return cb.bind(newSocketAddress()).get();
     }
 
     @Override
@@ -149,7 +149,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
                 });
             }
         });
-        return sb.bind(newSocketAddress()).sync().channel();
+        return sb.bind(newSocketAddress()).get();
     }
 
     @Override

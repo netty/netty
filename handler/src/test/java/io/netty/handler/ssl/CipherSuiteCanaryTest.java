@@ -25,8 +25,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -41,6 +41,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import java.net.SocketAddress;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -51,9 +53,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -243,7 +242,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .childHandler(handler);
 
-        return bootstrap.bind(address).sync().channel();
+        return bootstrap.bind(address).get();
     }
 
     private static Channel client(Channel server, ChannelHandler handler) throws Exception {
@@ -254,7 +253,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .handler(handler);
 
-        return bootstrap.connect(remoteAddress).sync().channel();
+        return bootstrap.connect(remoteAddress).get();
     }
 
     private static List<Object[]> expand(String rfcCipherName) {

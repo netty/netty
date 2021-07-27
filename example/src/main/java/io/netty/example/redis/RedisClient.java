@@ -60,7 +60,7 @@ public class RedisClient {
              });
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             // Read commands from the stdin.
             System.out.println("Enter Redis commands (quit to end)");
@@ -72,7 +72,8 @@ public class RedisClient {
                 if (line == null || "quit".equalsIgnoreCase(line)) { // EOF or "quit"
                     ch.close().sync();
                     break;
-                } else if (line.isEmpty()) { // skip `enter` or `enter` with spaces.
+                }
+                if (line.isEmpty()) { // skip `enter` or `enter` with spaces.
                     continue;
                 }
                 // Sends the received line to the server.

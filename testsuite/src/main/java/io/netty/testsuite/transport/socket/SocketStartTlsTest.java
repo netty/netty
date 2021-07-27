@@ -110,8 +110,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         run(testInfo, (sb, cb) -> testStartTls(sb, cb, serverCtx, clientCtx));
     }
 
-    public void testStartTls(ServerBootstrap sb, Bootstrap cb,
-                             SslContext serverCtx, SslContext clientCtx) throws Throwable {
+    public static void testStartTls(ServerBootstrap sb, Bootstrap cb,
+                                    SslContext serverCtx, SslContext clientCtx) throws Throwable {
         testStartTls(sb, cb, serverCtx, clientCtx, true);
     }
 
@@ -123,13 +123,13 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         run(testInfo, (sb, cb) -> testStartTlsNotAutoRead(sb, cb, serverCtx, clientCtx));
     }
 
-    public void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb,
-                                        SslContext serverCtx, SslContext clientCtx) throws Throwable {
+    public static void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb,
+                                               SslContext serverCtx, SslContext clientCtx) throws Throwable {
         testStartTls(sb, cb, serverCtx, clientCtx, false);
     }
 
-    private void testStartTls(ServerBootstrap sb, Bootstrap cb,
-                              SslContext serverCtx, SslContext clientCtx, boolean autoRead) throws Throwable {
+    private static void testStartTls(ServerBootstrap sb, Bootstrap cb,
+                                     SslContext serverCtx, SslContext clientCtx, boolean autoRead) throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
@@ -159,8 +159,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         while (cc.isActive()) {
             if (sh.exception.get() != null) {

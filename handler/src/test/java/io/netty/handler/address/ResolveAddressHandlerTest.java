@@ -18,7 +18,6 @@ package io.netty.handler.address;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
@@ -31,11 +30,11 @@ import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
@@ -48,8 +47,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class ResolveAddressHandlerTest {
 
-    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID().toString());
-    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID().toString());
+    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID());
+    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID());
     private static final Exception ERROR = new UnknownHostException();
 
     private static EventLoopGroup group;
@@ -67,16 +66,16 @@ public class ResolveAddressHandlerTest {
     }
 
     @Test
-    public void testResolveSuccessful() {
+    public void testResolveSuccessful() throws Exception {
         testResolve(false);
     }
 
     @Test
-    public void testResolveFails() {
+    public void testResolveFails() throws Exception {
         testResolve(true);
     }
 
-    private static void testResolve(boolean fail) {
+    private static void testResolve(boolean fail) throws Exception {
         AddressResolverGroup<SocketAddress> resolverGroup = new TestResolverGroup(fail);
         Bootstrap cb = new Bootstrap();
         cb.group(group).channel(LocalChannel.class).handler(new ResolveAddressHandler(resolverGroup));
@@ -92,17 +91,16 @@ public class ResolveAddressHandlerTest {
                 });
 
         // Start server
-        Channel sc = sb.bind(RESOLVED).syncUninterruptibly().channel();
-        ChannelFuture future = cb.connect(UNRESOLVED).awaitUninterruptibly();
+        Channel sc = sb.bind(RESOLVED).get();
+        Future<Channel> future = cb.connect(UNRESOLVED).awaitUninterruptibly();
         try {
             if (fail) {
                 assertSame(ERROR, future.cause());
             } else {
                 assertTrue(future.isSuccess());
+                future.get().close().syncUninterruptibly();
             }
-            future.channel().close().syncUninterruptibly();
         } finally {
-            future.channel().close().syncUninterruptibly();
             sc.close().syncUninterruptibly();
             resolverGroup.close();
         }
@@ -139,5 +137,5 @@ public class ResolveAddressHandlerTest {
                 }
             };
         }
-    };
+    }
 }

@@ -168,11 +168,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             final SocketAddress sender;
             if (bindClient) {
-                cc = cb.bind(newSocketAddress()).sync().channel();
+                cc = cb.bind(newSocketAddress()).get();
                 sender = cc.localAddress();
             } else {
                 cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-                cc = cb.register().sync().channel();
+                cc = cb.register().get();
                 sender = null;
             }
 

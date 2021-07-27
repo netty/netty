@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.UnixChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
 import org.junit.jupiter.api.Test;
@@ -85,10 +86,10 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
                 ctx.close();
             }
         });
-        cb.option(EpollChannelOption.DOMAIN_SOCKET_READ_MODE,
-                DomainSocketReadMode.FILE_DESCRIPTORS);
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        cb.option(UnixChannelOption.DOMAIN_SOCKET_READ_MODE,
+                  DomainSocketReadMode.FILE_DESCRIPTORS);
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         Object received = queue.take();
         cc.close().sync();

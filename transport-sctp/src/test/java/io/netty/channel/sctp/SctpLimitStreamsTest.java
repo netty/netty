@@ -44,7 +44,7 @@ public abstract class SctpLimitStreamsTest {
     @SuppressForbidden(reason = "test-only")
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testSctpInitMaxstreams() {
+    public void testSctpInitMaxstreams() throws Exception {
         EventLoopGroup loop = newEventLoopGroup();
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -63,10 +63,8 @@ public abstract class SctpLimitStreamsTest {
                             SctpStandardSocketOptions.InitMaxStreams.create(112, 112))
                     .handler(new ChannelHandlerAdapter() { });
 
-            Channel serverChannel = serverBootstrap.bind()
-                    .syncUninterruptibly().channel();
-            SctpChannel clientChannel = (SctpChannel) clientBootstrap.connect(serverChannel.localAddress())
-                    .syncUninterruptibly().channel();
+            Channel serverChannel = serverBootstrap.bind().get();
+            SctpChannel clientChannel = (SctpChannel) clientBootstrap.connect(serverChannel.localAddress()).get();
             assertEquals(1, clientChannel.association().maxOutboundStreams());
             assertEquals(1, clientChannel.association().maxInboundStreams());
             serverChannel.close().syncUninterruptibly();

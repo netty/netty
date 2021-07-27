@@ -54,12 +54,12 @@ public class EpollSocketTcpMd5Test {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).get();
     }
 
     @AfterEach
@@ -80,7 +80,7 @@ public class EpollSocketTcpMd5Test {
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
 
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
@@ -102,7 +102,7 @@ public class EpollSocketTcpMd5Test {
                     .option(EpollChannelOption.TCP_MD5SIG,
                             Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                    .connect(server.localAddress()).syncUninterruptibly().channel();
+                    .connect(server.localAddress()).get();
             client.close().syncUninterruptibly();
         });
         assertTrue(completion.getCause() instanceof ConnectTimeoutException);
@@ -118,7 +118,7 @@ public class EpollSocketTcpMd5Test {
                 .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
-                .connect(server.localAddress()).syncUninterruptibly().channel();
+                .connect(server.localAddress()).get();
         client.close().syncUninterruptibly();
     }
 }

@@ -16,7 +16,6 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.handler.codec.http2.Http2SecurityUtil.CIPHERS;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -35,9 +34,10 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
+import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
 
-import javax.net.ssl.SSLException;
+import static io.netty.handler.codec.http2.Http2SecurityUtil.CIPHERS;
 
 /**
  * Demonstrates an Http2 server using Netty to display a bunch of images and
@@ -65,7 +65,7 @@ public class Http2Server {
             }
         });
 
-        Channel ch = b.bind(PORT).sync().channel();
+        Channel ch = b.bind(PORT).get();
         return ch.closeFuture();
     }
 

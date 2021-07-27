@@ -19,7 +19,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -107,7 +106,7 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @AfterEach
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         cleanupCapturedRequests();
         cleanupCapturedResponses();
         if (clientChannel != null) {
@@ -596,13 +595,12 @@ public class InboundHttp2ToHttpAdapterTest {
         assertEquals(settings, settingsCaptor.getValue());
     }
 
-    private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount)
-                throws InterruptedException {
+    private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount) throws Exception {
         boostrapEnv(clientLatchCount, clientLatchCount, serverLatchCount, serverLatchCount, settingsLatchCount);
     }
 
     private void boostrapEnv(int clientLatchCount, int clientLatchCount2, int serverLatchCount, int serverLatchCount2,
-            int settingsLatchCount) throws InterruptedException {
+            int settingsLatchCount) throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         clientDelegator = null;
         serverDelegator = null;
@@ -678,6 +676,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     }
                 });
                 p.addLast(new ChannelHandler() {
+                    @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
@@ -688,11 +687,9 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).get();
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = cb.connect(serverChannel.localAddress()).get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }

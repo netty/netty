@@ -43,13 +43,11 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
@@ -74,8 +72,8 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -107,7 +105,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     @AfterEach
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
             clientChannel = null;
@@ -593,11 +591,9 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("HttpToHttp2ConnectionHandlerTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress("HttpToHttp2ConnectionHandlerTest")).get();
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = cb.connect(serverChannel.localAddress()).get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(WAIT_TIME_SECONDS, SECONDS));
     }

@@ -56,7 +56,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 
@@ -87,7 +88,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 }
             });
 
-            SocketAddress address = sb.bind(0).sync().channel().localAddress();
+            SocketAddress address = sb.bind(0).get().localAddress();
 
             Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
@@ -98,7 +99,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                     break;
                 }
 
-                // Wait a little bit so that the write attempts are split into multiple flush attempts.
+                // Wait for a bit so that the write attempts are split into multiple flush attempts.
                 Thread.sleep(10);
             }
             s.close();
@@ -142,7 +143,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 }
             });
 
-            SocketAddress address = sb.bind(0).sync().channel().localAddress();
+            SocketAddress address = sb.bind(0).get().localAddress();
 
             Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
@@ -183,7 +184,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                      pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                          @Override
                          protected void messageReceived(ChannelHandlerContext ctx, ByteBuf byteBuf) {
-                             // We was able to read something from the Channel after reregister.
+                             // We were able to read something from the Channel after re-register.
                              latch.countDown();
                          }
 
@@ -206,12 +207,12 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                  }
              });
 
-            sc = b.bind(0).syncUninterruptibly().channel();
+            sc = b.bind(0).get();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(NioSocketChannel.class);
             bootstrap.handler(new ChannelHandler() { });
-            cc = bootstrap.connect(sc.localAddress()).syncUninterruptibly().channel();
+            cc = bootstrap.connect(sc.localAddress()).get();
             cc.writeAndFlush(Unpooled.wrappedBuffer(bytes)).syncUninterruptibly();
             latch.await();
         } finally {
@@ -227,7 +228,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownOutputAndClose() throws IOException {
+    public void testShutdownOutputAndClose() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         ServerSocket socket = new ServerSocket();
         socket.bind(new InetSocketAddress(0));
@@ -237,8 +238,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             sb.group(group).channel(NioSocketChannel.class);
             sb.handler(new ChannelHandler() { });
 
-            SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress())
-                    .syncUninterruptibly().channel();
+            SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).get();
 
             accepted = socket.accept();
             channel.shutdownOutput().syncUninterruptibly();

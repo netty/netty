@@ -282,7 +282,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
      * @param multipleMessage
      *            how many message to send at each step (for READ: the first should be 1, as the two last steps to
      *            ensure correct testing)
-     * @throws Throwable
+     * @throws Throwable if something goes wrong, and the test fails.
      */
     private static void testTrafficShapping0(
             ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
@@ -334,8 +334,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         int totalNb = 0;
         for (int i = 1; i < multipleMessage.length; i++) {

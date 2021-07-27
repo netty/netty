@@ -34,7 +34,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -49,6 +48,9 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.ssl.SslProvider.JDK;
+import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty.handler.ssl.SslProvider.isAlpnSupported;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server using HTTP1-style approaches
@@ -72,7 +74,7 @@ public final class Http2Client {
         // Configure SSL.
         final SslContext sslCtx;
         if (SSL) {
-            SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
+            SslProvider provider = isAlpnSupported(OPENSSL) ? OPENSSL : JDK;
             sslCtx = SslContextBuilder.forClient()
                 .sslProvider(provider)
                 /* NOTE: the cipher filter may not include all ciphers required by the HTTP/2 specification.
@@ -105,7 +107,7 @@ public final class Http2Client {
             b.handler(initializer);
 
             // Start the client.
-            Channel channel = b.connect().syncUninterruptibly().channel();
+            Channel channel = b.connect().get();
             System.out.println("Connected to [" + HOST + ':' + PORT + ']');
 
             // Wait for the HTTP/2 upgrade to occur.

@@ -43,7 +43,7 @@ public final class HexDumpProxy {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HexDumpProxyInitializer(REMOTE_HOST, REMOTE_PORT))
              .childOption(ChannelOption.AUTO_READ, false)
-             .bind(LOCAL_PORT).sync().channel().closeFuture().sync();
+             .bind(LOCAL_PORT).get().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

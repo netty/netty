@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -61,7 +62,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         SocketChannel ch = null;
         try {
             ss.bind(newSocketAddress());
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             assertFalse(ch.isOutputShutdown());
 
@@ -109,7 +110,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         Socket s = null;
         try {
             ss.bind(newSocketAddress());
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             s = ss.accept();
 
@@ -149,20 +150,20 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         try {
             ss.bind(newSocketAddress());
             cb.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2, 4));
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
 
-            byte[] expectedBytes = new byte[]{ 1, 2, 3, 4, 5, 6 };
+            byte[] expectedBytes = { 1, 2, 3, 4, 5, 6 };
             ChannelFuture writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
             h.assertWritability(false);
             ch.flush();
             writeFuture.sync();
             h.assertWritability(true);
-            for (int i = 0; i < expectedBytes.length; ++i) {
-                assertEquals(expectedBytes[i], s.getInputStream().read());
+            for (byte expectedByte : expectedBytes) {
+                assertEquals(expectedByte, s.getInputStream().read());
             }
 
             assertTrue(h.ch.isOpen());
@@ -222,26 +223,24 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         ServerSocket ss = new ServerSocket();
         Socket s = null;
 
-        ChannelFuture cf = null;
+        Channel client = null;
         try {
             ss.bind(newSocketAddress());
-            cf = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelHandler() { })
-                    .connect(ss.getLocalSocketAddress()).sync();
+            client = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelHandler() { })
+                    .connect(ss.getLocalSocketAddress()).get();
             s = ss.accept();
 
-            cf.sync();
-
             if (output) {
-                ((SocketChannel) cf.channel()).shutdownOutput().sync();
+                ((SocketChannel) client).shutdownOutput().sync();
             } else {
-                ((SocketChannel) cf.channel()).shutdown().sync();
+                ((SocketChannel) client).shutdown().sync();
             }
         } finally {
             if (s != null) {
                 s.close();
             }
-            if (cf != null) {
-                cf.channel().close();
+            if (client != null) {
+                client.close();
             }
             ss.close();
         }
@@ -274,7 +273,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         private void drainWritabilityQueue() throws InterruptedException {
-            while ((writabilityQueue.poll(100, TimeUnit.MILLISECONDS)) != null) {
+            while (writabilityQueue.poll(100, TimeUnit.MILLISECONDS) != null) {
                 // Just drain the queue.
             }
         }

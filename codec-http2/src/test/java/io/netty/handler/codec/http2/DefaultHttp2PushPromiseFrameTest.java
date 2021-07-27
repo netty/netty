@@ -18,18 +18,22 @@ package io.netty.handler.codec.http2;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,14 +45,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
 
-    private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+    private final EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
     private final ClientHandler clientHandler = new ClientHandler();
     private final Map<Integer, String> contentMap = new ConcurrentHashMap<Integer, String>();
 
-    private ChannelFuture connectionFuture;
+    private Future<Channel> connectionFuture;
 
     @BeforeEach
-    public void setup() throws InterruptedException {
+    public void setup() throws Exception {
         ServerBootstrap serverBootstrap = new ServerBootstrap()
                 .group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
@@ -67,7 +71,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        ChannelFuture channelFuture = serverBootstrap.bind(0).sync();
+        Channel channel = serverBootstrap.bind(0).get();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
@@ -88,16 +92,13 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        connectionFuture = bootstrap.connect(channelFuture.channel().localAddress());
+        connectionFuture = bootstrap.connect(channel.localAddress());
     }
 
     @Test
     public void send() {
-        connectionFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                clientHandler.write();
-            }
+        connectionFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
+            clientHandler.write();
         });
     }
 

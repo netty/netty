@@ -20,7 +20,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.haproxy.HAProxyCommand;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
@@ -28,14 +29,14 @@ import io.netty.handler.codec.haproxy.HAProxyProtocolVersion;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.example.haproxy.HAProxyServer.*;
+import static io.netty.example.haproxy.HAProxyServer.PORT;
 
 public final class HAProxyClient {
 
     private static final String HOST = System.getProperty("host", "127.0.0.1");
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
@@ -43,7 +44,7 @@ public final class HAProxyClient {
              .handler(new HAProxyHandler());
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             HAProxyMessage message = new HAProxyMessage(
                     HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,

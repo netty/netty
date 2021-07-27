@@ -50,7 +50,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         sb.option(ChannelOption.AUTO_READ, false);
         sb.childHandler(counter);
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
 
         List<Socket> sockets = new ArrayList<>();
 

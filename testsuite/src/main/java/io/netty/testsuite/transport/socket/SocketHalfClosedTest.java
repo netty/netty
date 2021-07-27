@@ -39,7 +39,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -104,8 +103,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.closeFuture().await();
             assertEquals(1, shutdownEventReceivedCounter.get());
             assertEquals(1, shutdownReadCompleteEventReceivedCounter.get());
@@ -203,8 +202,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();
@@ -239,7 +238,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     private static void testAutoCloseFalseDoesShutdownOutput(boolean allowHalfClosed,
                                                              final boolean clientIsLeader,
                                                              ServerBootstrap sb,
-                                                             Bootstrap cb) throws InterruptedException {
+                                                             Bootstrap cb) throws Exception {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(1);
@@ -272,8 +271,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             doneLatch.await();
             assertNull(causeRef.get());
@@ -327,7 +326,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     // but the close will be done after the Selector did process all events. Because of
                     // this we will need to give it a bit time to ensure the FD is actual closed before we
                     // count down the latch and try to write.
-                    future1.channel().eventLoop().schedule(followerCloseLatch::countDown, 200, TimeUnit.MILLISECONDS);
+                    future1.channel().eventLoop().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
                 }));
             }
         }
@@ -508,8 +507,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();

@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,6 +55,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
@@ -145,7 +145,7 @@ public class DnsNameResolver extends InetNameResolver {
             List<String> list = PlatformDependent.isWindows()
                     ? getSearchDomainsHack()
                     : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
-            searchDomains = list.toArray(new String[0]);
+            searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
             searchDomains = EmptyArrays.EMPTY_STRINGS;
@@ -225,7 +225,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
     final Future<Channel> channelFuture;
-    final Channel ch;
+    volatile Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
     private final Comparator<InetSocketAddress> nameServerComparator;
@@ -482,7 +482,7 @@ public class DnsNameResolver extends InetNameResolver {
         });
 
         channelFuture = responseHandler.channelActivePromise;
-        final ChannelFuture future;
+        Future<Channel> future;
         if (localAddress == null) {
             future = b.register();
         } else {
@@ -498,13 +498,15 @@ public class DnsNameResolver extends InetNameResolver {
             }
             throw new IllegalStateException("Unable to create / register Channel", cause);
         }
-        ch = future.channel();
-        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
+        future.addListener((GenericFutureListener<Future<Channel>>) f -> {
+            ch = f.getNow();
+            ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
-        ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
-            resolveCache.clear();
-            cnameCache.clear();
-            authoritativeDnsServerCache.clear();
+            ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
+                resolveCache.clear();
+                cnameCache.clear();
+                authoritativeDnsServerCache.clear();
+            });
         });
     }
 
@@ -712,7 +714,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static boolean isLocalWindowsHost(String hostname) {
         return PlatformDependent.isWindows() &&
                 (LOCALHOST.equalsIgnoreCase(hostname) ||
-                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
+                 WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname));
     }
 
     /**
@@ -1286,7 +1288,7 @@ public class DnsNameResolver extends InetNameResolver {
             .group(executor())
             .channelFactory(socketChannelFactory)
             .handler(TCP_ENCODER);
-            bs.connect(res.sender()).addListener((ChannelFutureListener) future -> {
+            bs.connect(res.sender()).addListener((GenericFutureListener<Future<Channel>>) future -> {
                 if (!future.isSuccess()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
@@ -1296,7 +1298,7 @@ public class DnsNameResolver extends InetNameResolver {
                     qCtx.finish(res);
                     return;
                 }
-                final Channel channel = future.channel();
+                final Channel channel = future.getNow();
 
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
                         channel.eventLoop().newPromise();
@@ -1341,8 +1343,7 @@ public class DnsNameResolver extends InetNameResolver {
                     }
                 });
 
-                promise.addListener(
-                        new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
+                promise.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
                     @Override
                     public void operationComplete(
                             Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
@@ -1357,7 +1358,7 @@ public class DnsNameResolver extends InetNameResolver {
                         }
                     }
                 });
-                tcpCtx.query(true, future.channel().newPromise());
+                tcpCtx.query(true, channel.newPromise());
             });
         }
 
