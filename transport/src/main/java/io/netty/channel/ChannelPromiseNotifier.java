@@ -30,7 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * @deprecated use {@link PromiseNotifier}.
  */
 @Deprecated
-public class ChannelPromiseNotifier
+public final class ChannelPromiseNotifier
     extends PromiseNotifier<Void, ChannelFuture>
     implements ChannelFutureListener {
 
