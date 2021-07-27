@@ -291,12 +291,14 @@ public class BootstrapTest {
             bootstrapA.group(group);
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(registerHandler);
-            Future<Channel> channelFuture = bootstrapA.registerAsynchronously();
+            Future<Channel> channelFuture = bootstrapA.createUnregistered();
             Channel channel = channelFuture.get();
-            ChannelFuture future = channel.connect(LocalAddress.ANY);
-            assertFalse(future.isDone());
+            ChannelFuture registerFuture = channel.register();
+            ChannelFuture connectFuture = channel.connect(LocalAddress.ANY);
+            assertFalse(connectFuture.isDone());
             registerHandler.registerPromise().setSuccess();
-            assertTrue(assertThrows(CompletionException.class, future::syncUninterruptibly)
+            registerFuture.sync();
+            assertTrue(assertThrows(CompletionException.class, connectFuture::syncUninterruptibly)
                 .getCause() instanceof ConnectException);
         } finally {
             group.shutdownGracefully();

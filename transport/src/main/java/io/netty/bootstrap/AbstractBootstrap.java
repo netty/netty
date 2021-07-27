@@ -188,16 +188,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     }
 
     /**
-     * Create and register a new channel, but asynchronously.
+     * Create a new unregistered channel.
      * <p>
-     * The returned future completes after the channel has been created and initialised,
-     * but before {@link Channel#register()} has completed.
+     * The returned future completes after the channel has been created and initialised.
+     * The channel must then be {@linkplain Channel#register() registered} separately.
      *
      * @return A future producing the channel object as soon as it has been initialised.
      */
-    public Future<Channel> registerAsynchronously() {
+    public Future<Channel> createUnregistered() {
         validate();
-        return initThenRegister();
+        return initWithoutRegister();
     }
 
     /**
@@ -291,7 +291,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         return promise;
     }
 
-    final Future<Channel> initThenRegister() {
+    final Future<Channel> initWithoutRegister() {
         EventLoop loop = group.next();
         final Channel channel;
         try {
@@ -304,7 +304,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         loop.execute(() -> init(channel).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
                 promise.setSuccess(channel);
-                channel.register();
             } else {
                 channel.unsafe().closeForcibly();
                 promise.setFailure(future.cause());
