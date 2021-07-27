@@ -154,9 +154,12 @@ public class JdkZlibTest extends ZlibTest {
         ByteBuf uncompressedBuffer = Unpooled.wrappedBuffer(bytes);
         ByteBuf read = channel.readInbound();
         assertEquals(uncompressedBuffer, read);
+        read.release();
 
         read = channel.readInbound();
         assertEquals(uncompressedBuffer, read);
+        read.release();
+
         uncompressedBuffer.release();
     }
 }
