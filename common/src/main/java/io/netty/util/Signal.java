@@ -51,6 +51,7 @@ public final class Signal extends Error implements Constant<Signal> {
      * Creates a new {@link Signal} with the specified {@code name}.
      */
     private Signal(int id, String name) {
+        super(null, null, false, false);
         constant = new SignalConstant(id, name);
     }
 
@@ -62,18 +63,6 @@ public final class Signal extends Error implements Constant<Signal> {
         if (this != signal) {
             throw new IllegalStateException("unexpected signal: " + signal);
         }
-    }
-
-    // Suppress a warning since the method doesn't need synchronization
-    @Override
-    public Throwable initCause(Throwable cause) {   // lgtm[java/non-sync-override]
-        return this;
-    }
-
-    // Suppress a warning since the method doesn't need synchronization
-    @Override
-    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
-        return this;
     }
 
     @Override

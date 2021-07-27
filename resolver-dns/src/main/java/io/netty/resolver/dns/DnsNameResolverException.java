@@ -33,14 +33,14 @@ public class DnsNameResolverException extends RuntimeException {
     private final DnsQuestion question;
 
     public DnsNameResolverException(InetSocketAddress remoteAddress, DnsQuestion question, String message) {
-        super(message);
+        super(message, null, true, false);
         this.remoteAddress = validateRemoteAddress(remoteAddress);
         this.question = validateQuestion(question);
     }
 
     public DnsNameResolverException(
             InetSocketAddress remoteAddress, DnsQuestion question, String message, Throwable cause) {
-        super(message, cause);
+        super(message, cause, true, false);
         this.remoteAddress = validateRemoteAddress(remoteAddress);
         this.question = validateQuestion(question);
     }
@@ -65,12 +65,5 @@ public class DnsNameResolverException extends RuntimeException {
      */
     public DnsQuestion question() {
         return question;
-    }
-
-    // Suppress a warning since the method doesn't need synchronization
-    @Override
-    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
-        setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        return this;
     }
 }

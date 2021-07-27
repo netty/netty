@@ -573,17 +573,7 @@ public class ResourceLeakDetector<T> {
     private static class TraceRecord extends Throwable {
         private static final long serialVersionUID = 6065153674892850720L;
 
-        private static final TraceRecord BOTTOM = new TraceRecord() {
-            private static final long serialVersionUID = 7396077602074694571L;
-
-            // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
-            // Classloader.
-            // See https://github.com/netty/netty/pull/10691
-            @Override
-            public Throwable fillInStackTrace() {
-                return this;
-            }
-        };
+        private static final TraceRecord BOTTOM = new TraceRecord();
 
         private final String hintString;
         private final TraceRecord next;
@@ -593,17 +583,18 @@ public class ResourceLeakDetector<T> {
             // This needs to be generated even if toString() is never called as it may change later on.
             hintString = hint instanceof ResourceLeakHint ? ((ResourceLeakHint) hint).toHintString() : hint.toString();
             this.next = next;
-            this.pos = next.pos + 1;
+            pos = next.pos + 1;
         }
 
         TraceRecord(TraceRecord next) {
            hintString = null;
            this.next = next;
-           this.pos = next.pos + 1;
+           pos = next.pos + 1;
         }
 
         // Used to terminate the stack
         private TraceRecord() {
+            super(null, null, false, false);
             hintString = null;
             next = null;
             pos = -1;
