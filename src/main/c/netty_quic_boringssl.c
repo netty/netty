@@ -794,14 +794,10 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, certificateCallbackClass, name, done);
     NETTY_JNI_UTIL_GET_METHOD(env, certificateCallbackClass, certificateCallbackMethod, "handle", "(J[B[[B[Ljava/lang/String;)[J", done);
-    free((void*) packagePrefix);
-    packagePrefix = NULL;
-
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, verifyCallbackClass, name, done);
     NETTY_JNI_UTIL_GET_METHOD(env, verifyCallbackClass, verifyCallbackMethod, "verify", "(J[[BLjava/lang/String;)I", done);
-
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLHandshakeCompleteCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, handshakeCompleteCallbackClass, name, done);
