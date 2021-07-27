@@ -563,7 +563,7 @@ public class DnsNameResolver extends InetNameResolver {
     /**
      * Returns the {@link DnsCnameCache}.
      */
-    DnsCnameCache cnameCache() {
+    public DnsCnameCache cnameCache() {
         return cnameCache;
     }
 
