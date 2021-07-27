@@ -15,11 +15,8 @@
  */
 package io.netty.bootstrap;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -27,17 +24,24 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.resolver.AddressResolver;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
-import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.SucceededFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+
+import static io.netty.channel.ChannelPromiseNotifier.cascadeChannel;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -138,7 +142,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     /**
      * Connect a {@link Channel} to the remote peer.
      */
-    public ChannelFuture connect() {
+    public Future<Channel> connect() {
         validate();
         SocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
@@ -151,21 +155,21 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     /**
      * Connect a {@link Channel} to the remote peer.
      */
-    public ChannelFuture connect(String inetHost, int inetPort) {
+    public Future<Channel> connect(String inetHost, int inetPort) {
         return connect(InetSocketAddress.createUnresolved(inetHost, inetPort));
     }
 
     /**
      * Connect a {@link Channel} to the remote peer.
      */
-    public ChannelFuture connect(InetAddress inetHost, int inetPort) {
+    public Future<Channel> connect(InetAddress inetHost, int inetPort) {
         return connect(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
      * Connect a {@link Channel} to the remote peer.
      */
-    public ChannelFuture connect(SocketAddress remoteAddress) {
+    public Future<Channel> connect(SocketAddress remoteAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
 
         validate();
@@ -175,7 +179,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     /**
      * Connect a {@link Channel} to the remote peer.
      */
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public Future<Channel> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
@@ -184,35 +188,41 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     /**
      * @see #connect()
      */
-    private ChannelFuture doResolveAndConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
-        final Channel channel = regFuture.channel();
+    private Future<Channel> doResolveAndConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
+        EventLoop loop = group.next();
+        final Future<Channel> regFuture = initAndRegister(loop);
 
+        Promise<Channel> resolveAndConnectPromise = new DefaultPromise<>(loop);
         if (regFuture.isDone()) {
             if (!regFuture.isSuccess()) {
                 return regFuture;
             }
-            return doResolveAndConnect0(channel, remoteAddress, localAddress, channel.newPromise());
+            Channel channel = regFuture.getNow();
+            ChannelPromise promise = channel.newPromise();
+            cascadeChannel(promise, resolveAndConnectPromise);
+            doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final ChannelPromise promise = channel.newPromise();
-            regFuture.addListener((ChannelFutureListener) future -> {
+            regFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
                 // Directly obtain the cause and do a null check so we only need one volatile read in case of a
                 // failure.
                 Throwable cause = future.cause();
                 if (cause != null) {
                     // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
-                    promise.setFailure(cause);
+                    resolveAndConnectPromise.setFailure(cause);
                 } else {
+                    Channel channel = future.getNow();
+                    ChannelPromise promise = channel.newPromise();
+                    cascadeChannel(promise, resolveAndConnectPromise);
                     doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
                 }
             });
-            return promise;
         }
+        return resolveAndConnectPromise;
     }
 
-    private ChannelFuture doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
+    private void doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
                                                final SocketAddress localAddress, final ChannelPromise promise) {
         try {
             final EventLoop eventLoop = channel.eventLoop();
@@ -221,7 +231,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
                 // Resolver has no idea about what to do with the specified remote address or it's resolved already.
                 doConnect(remoteAddress, localAddress, promise);
-                return promise;
             }
 
             final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
@@ -237,7 +246,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                     // Succeeded to resolve immediately; cached? (or did a blocking lookup)
                     doConnect(resolveFuture.getNow(), localAddress, promise);
                 }
-                return promise;
             }
 
             // Wait until the name resolution is finished.
@@ -252,7 +260,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         } catch (Throwable cause) {
             promise.tryFailure(cause);
         }
-        return promise;
     }
 
     private static void doConnect(
@@ -272,8 +279,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     }
 
     @Override
-    ChannelFuture init(Channel channel) {
-        ChannelPromise promise = channel.newPromise();
+    Future<Channel> init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
 
         setChannelOptions(channel, newOptionsArray(), logger);
@@ -281,7 +287,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         p.addLast(config.handler());
 
-        return promise.setSuccess();
+        return new SucceededFuture<>(channel.eventLoop(), channel);
     }
 
     @Override
