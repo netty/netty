@@ -258,4 +258,17 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(toByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7, 0);
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesWithOffsetMustWriteAllBytesFromByteArray(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(3)) {
+            buffer.writeByte((byte) 1);
+            buffer.writeBytes(new byte[] {2, 3, 4, 5, 6, 7}, 1, 2);
+            assertThat(buffer.writerOffset()).isEqualTo(3);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(toByteArray(buffer)).containsExactly(1, 3, 4);
+        }
+    }
 }

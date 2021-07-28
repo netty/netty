@@ -79,6 +79,29 @@ public final class ByteBufAdaptor extends ByteBuf {
         return null;
     }
 
+    /**
+     * Extracts the underlying {@link Buffer} instance that is backing this {@link ByteBuf}, if any.
+     * This is similar to {@link #unwrap()} except the return type is a {@link Buffer}.
+     * If this {@link ByteBuf} does not wrap a {@link Buffer}, then a new {@code Buffer} instance is returned with the
+     * contents copied from the given {@link ByteBuf}.
+     *
+     * @param byteBuf The {@link ByteBuf} to extract the {@link Buffer} from.
+     * @return The {@link Buffer} instance that is backing the given {@link ByteBuf}, or a new {@code Buffer}
+     * containing the contents copied from the given {@link ByteBuf}. If the data is copied, the passed {@link ByteBuf}
+     * will be {@link ByteBuf#release() released}.
+     */
+    public static Buffer extractOrCopy(BufferAllocator allocator, ByteBuf byteBuf) {
+        final Buffer extracted = extract(byteBuf);
+        if (extracted != null) {
+            return extracted;
+        }
+        try {
+            return allocator.allocate(byteBuf.capacity()).writeBytes(ByteBufUtil.getBytes(byteBuf));
+        } finally {
+            byteBuf.release();
+        }
+    }
+
     @Override
     public int capacity() {
         return buffer.capacity();
