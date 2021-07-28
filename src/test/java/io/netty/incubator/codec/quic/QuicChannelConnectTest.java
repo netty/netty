@@ -29,7 +29,6 @@ import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -43,6 +42,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.AlreadyConnectedException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertificateException;
@@ -467,7 +467,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Disabled
     @Test
     public void testALPNProtocolMissmatch() throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
@@ -496,7 +495,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect()
                     .await().cause();
-            assertThat(cause, Matchers.instanceOf(SSLHandshakeException.class));
+            assertThat(cause, Matchers.instanceOf(ClosedChannelException.class));
             latch.await();
         } finally {
             server.close().sync();

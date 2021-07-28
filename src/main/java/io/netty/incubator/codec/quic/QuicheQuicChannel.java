@@ -326,6 +326,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         statsAtClose = collectStats0(eventLoop().newPromise());
         QuicheQuicConnection conn = connection;
         try {
+            ChannelPromise promise = QuicheQuicChannel.this.connectPromise;
+            if (promise != null) {
+                QuicheQuicChannel.this.connectPromise = null;
+                promise.tryFailure(new ClosedChannelException());
+            }
             connection = null;
             state = CLOSED;
 
@@ -471,6 +476,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // Call connectionSend() so we ensure we send all that is queued before we close the channel
         boolean written = connectionSend();
 
+        if (connectPromise != null) {
+            ChannelPromise promise = connectPromise;
+            this.connectPromise = null;
+            promise.tryFailure(new ClosedChannelException());
+        }
         Quiche.throwIfError(Quiche.quiche_conn_close(connectionAddressChecked(), app, err,
                 Quiche.memoryAddress(reason) + reason.readerIndex(), reason.readableBytes()));
 
