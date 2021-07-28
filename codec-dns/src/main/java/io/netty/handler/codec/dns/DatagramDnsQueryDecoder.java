@@ -53,6 +53,13 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         final ByteBuf buf = packet.content();
 
+        DnsMessageUtil.decodeDnsQuery(recordDecoder, buf, new DnsMessageUtil.DnsQueryFactory() {
+            @Override
+            public DnsQuery newQuery(int id, DnsOpCode dnsOpCode) {
+                return new DatagramDnsQuery(packet.sender(), packet.recipient(), id, dnsOpCode);
+            }
+        });
+
         DnsQuery query = newQuery(packet, buf);
         try {
             final int questionCount = buf.readUnsignedShort();
