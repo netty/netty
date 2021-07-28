@@ -64,7 +64,9 @@ jobs:
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
 
   build-linux-aarch64:
     runs-on: ubuntu-latest
@@ -98,7 +100,9 @@ jobs:
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
 
   build-windows:
     runs-on: windows-2016
@@ -151,7 +155,9 @@ jobs:
         if: ${{ failure() }}
         with:
           name: build-windows-target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
 
   build-android:
     runs-on: ubuntu-latest
@@ -200,4 +206,6 @@ jobs:
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
