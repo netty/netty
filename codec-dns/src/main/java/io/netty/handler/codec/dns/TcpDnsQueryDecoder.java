@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
+@UnstableApi
 public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
     private final DnsRecordDecoder decoder;
 
