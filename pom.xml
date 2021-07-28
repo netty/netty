@@ -1026,6 +1026,7 @@
               <exclude>io.netty.util.internal.shaded</exclude>
               <!-- Added to fix false-positive -->
               <exclude>io.netty.handler.codec.dns.TcpDnsQueryDecoder</exclude>
+              <exclude>io.netty.handler.codec.dns.TcpDnsResponseEncoder</exclude>
             </excludes>
           </parameter>
           <skip>${skipJapicmp}</skip>
