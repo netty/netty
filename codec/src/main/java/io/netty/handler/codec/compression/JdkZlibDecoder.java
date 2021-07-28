@@ -204,12 +204,15 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (gzipState != GzipState.HEADER_END) {
                 if (gzipState == GzipState.FOOTER_START) {
                     if (!handleGzipFooter(in)) {
+                        // Either there was not enough data or the input is finished.
                         return;
                     }
-                } else {
-                    if (!readGZIPHeader(in)) {
-                        return;
-                    }
+                    // If we consumed the footer we will start with the header again.
+                    assert gzipState == GzipState.HEADER_START;
+                }
+                if (!readGZIPHeader(in)) {
+                    // There was not enough data readable to read the GZIP header.
+                    return;
                 }
                 // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
                 readableBytes = in.readableBytes();
