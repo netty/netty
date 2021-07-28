@@ -1024,6 +1024,8 @@
             <excludes>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
               <exclude>io.netty.util.internal.shaded</exclude>
+              <!-- Added to fix false-positive -->
+              <exclude>io.netty.handler.codec.dns.TcpDnsQueryDecoder</exclude>
             </excludes>
           </parameter>
           <skip>${skipJapicmp}</skip>
