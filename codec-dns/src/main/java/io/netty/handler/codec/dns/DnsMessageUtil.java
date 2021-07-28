@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -177,5 +179,124 @@ final class DnsMessageUtil {
         }
     }
 
-    private DnsMessageUtil() { }
+    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder, ByteBuf buf, DnsQueryFactory supplier) throws Exception {
+        DnsQuery query = newQuery(buf, supplier);
+        boolean success = false;
+        try {
+            int questionCount = buf.readUnsignedShort();
+            int answerCount = buf.readUnsignedShort();
+            int authorityRecordCount = buf.readUnsignedShort();
+            int additionalRecordCount = buf.readUnsignedShort();
+            decodeQuestions(decoder, query, buf, questionCount);
+            decodeRecords(decoder, query, DnsSection.ANSWER, buf, answerCount);
+            decodeRecords(decoder, query, DnsSection.AUTHORITY, buf, authorityRecordCount);
+            decodeRecords(decoder, query, DnsSection.ADDITIONAL, buf, additionalRecordCount);
+            success = true;
+            return query;
+        } finally {
+            if (!success) {
+                query.release();
+            }
+        }
+    }
+
+    private static DnsQuery newQuery(ByteBuf buf, DnsQueryFactory supplier) {
+        int id = buf.readUnsignedShort();
+        int flags = buf.readUnsignedShort();
+        if (flags >> 15 == 1) {
+            throw new CorruptedFrameException("not a query");
+        }
+
+        DnsQuery query = supplier.newQuery(id, DnsOpCode.valueOf((byte) (flags >> 11 & 0xf)));
+        query.setRecursionDesired((flags >> 8 & 1) == 1);
+        query.setZ(flags >> 4 & 0x7);
+        return query;
+    }
+
+    private static void decodeQuestions(DnsRecordDecoder decoder,
+                                        DnsQuery query, ByteBuf buf, int questionCount) throws Exception {
+        for (int i = questionCount; i > 0; --i) {
+            query.addRecord(DnsSection.QUESTION, decoder.decodeQuestion(buf));
+        }
+    }
+
+    private static void decodeRecords(DnsRecordDecoder decoder,
+                                      DnsQuery query, DnsSection section, ByteBuf buf, int count) throws Exception {
+        for (int i = count; i > 0; --i) {
+            DnsRecord r = decoder.decodeRecord(buf);
+            if (r == null) {
+                break;
+            }
+            query.addRecord(section, r);
+        }
+    }
+
+    static void encodeDnsResponse(DnsRecordEncoder encoder, DnsResponse response, ByteBuf buf) throws Exception {
+        boolean success = false;
+        try {
+            encodeHeader(response, buf);
+            encodeQuestions(encoder, response, buf);
+            encodeRecords(encoder, response, DnsSection.ANSWER, buf);
+            encodeRecords(encoder, response, DnsSection.AUTHORITY, buf);
+            encodeRecords(encoder, response, DnsSection.ADDITIONAL, buf);
+            success = true;
+        } finally {
+            if (!success) {
+                buf.release();
+            }
+        }
+    }
+
+    /**
+     * Encodes the header that is always 12 bytes long.
+     *
+     * @param response the response header being encoded
+     * @param buf      the buffer the encoded data should be written to
+     */
+    private static void encodeHeader(DnsResponse response, ByteBuf buf) {
+        buf.writeShort(response.id());
+        int flags = 32768;
+        flags |= (response.opCode().byteValue() & 0xFF) << 11;
+        if (response.isAuthoritativeAnswer()) {
+            flags |= 1 << 10;
+        }
+        if (response.isTruncated()) {
+            flags |= 1 << 9;
+        }
+        if (response.isRecursionDesired()) {
+            flags |= 1 << 8;
+        }
+        if (response.isRecursionAvailable()) {
+            flags |= 1 << 7;
+        }
+        flags |= response.z() << 4;
+        flags |= response.code().intValue();
+        buf.writeShort(flags);
+        buf.writeShort(response.count(DnsSection.QUESTION));
+        buf.writeShort(response.count(DnsSection.ANSWER));
+        buf.writeShort(response.count(DnsSection.AUTHORITY));
+        buf.writeShort(response.count(DnsSection.ADDITIONAL));
+    }
+
+    private static void encodeQuestions(DnsRecordEncoder encoder, DnsResponse response, ByteBuf buf) throws Exception {
+        int count = response.count(DnsSection.QUESTION);
+        for (int i = 0; i < count; ++i) {
+            encoder.encodeQuestion(response.<DnsQuestion>recordAt(DnsSection.QUESTION, i), buf);
+        }
+    }
+
+    private static void encodeRecords(DnsRecordEncoder encoder,
+                                      DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
+        int count = response.count(section);
+        for (int i = 0; i < count; ++i) {
+            encoder.encodeRecord(response.recordAt(section, i), buf);
+        }
+    }
+
+    interface DnsQueryFactory {
+        DnsQuery newQuery(int id, DnsOpCode dnsOpCode);
+    }
+
+    private DnsMessageUtil() {
+    }
 }
