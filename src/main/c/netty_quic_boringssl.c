@@ -507,7 +507,7 @@ void quic_SSL_info_callback(const SSL *ssl, int type, int value) {
                  (jlong) ssl, session_id, cipher, version, peerCert, certChain, creationTime, timeout, alpnSelected);
     }
 }
-static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, int verifyMode, jobjectArray subjectNames) {
+static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jint verifyMode, jobjectArray subjectNames) {
     jobject handshakeCompleteCallbackRef = NULL;
     jobject certificateCallbackRef = NULL;
     jobject verifyCallbackRef = NULL;
@@ -585,7 +585,7 @@ error:
     return -1;
 }
 
-static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, long ctx) {
+static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx) {
     SSL_CTX* ssl_ctx = (SSL_CTX*) ctx;
 
     jobject handshakeCompleteCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, handshakeCompleteCallbackIdx);
