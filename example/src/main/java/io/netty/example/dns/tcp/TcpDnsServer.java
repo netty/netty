@@ -22,8 +22,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -54,11 +56,13 @@ public final class TcpDnsServer {
     private static final String QUERY_DOMAIN = "www.example.com";
     private static final int DNS_SERVER_PORT = 53;
     private static final String DNS_SERVER_HOST = "127.0.0.1";
-    private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
+    private static final byte[] QUERY_RESULT = {(byte) 192, (byte) 168, 1, 1};
 
     public static void main(String[] args) throws Exception {
-        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1),
-                new NioEventLoopGroup())
+        IoHandlerFactory ioHandlerFactory = NioHandler.newFactory();
+        ServerBootstrap bootstrap = new ServerBootstrap()
+                .group(new MultithreadEventLoopGroup(1, ioHandlerFactory),
+                       new MultithreadEventLoopGroup(ioHandlerFactory))
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {
@@ -93,7 +97,7 @@ public final class TcpDnsServer {
                                 });
                     }
                 });
-        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).channel();
+        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).get();
         Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
             @Override
             public void run() {
@@ -110,7 +114,7 @@ public final class TcpDnsServer {
 
     // copy from TcpDnsClient.java
     private static void clientQuery() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        MultithreadEventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
@@ -134,7 +138,7 @@ public final class TcpDnsServer {
                         }
                     });
 
-            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).sync().channel();
+            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).get();
 
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)

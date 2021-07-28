@@ -31,13 +31,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 @Deprecated
 public final class ChannelPromiseNotifier
-    extends PromiseNotifier<Void, ChannelFuture>
-    implements ChannelFutureListener {
+        extends PromiseNotifier<Void, ChannelFuture>
+        implements ChannelFutureListener {
 
     /**
      * Create a new instance
      *
-     * @param promises  the {@link ChannelPromise}s to notify once this {@link ChannelFutureListener} is notified.
+     * @param promises the {@link ChannelPromise}s to notify once this {@link ChannelFutureListener} is notified.
      */
     public ChannelPromiseNotifier(ChannelPromise... promises) {
         super(promises);
@@ -47,38 +47,38 @@ public final class ChannelPromiseNotifier
      * Create a new instance
      *
      * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
-     * @param promises  the {@link ChannelPromise}s to notify once this {@link ChannelFutureListener} is notified.
+     * @param promises         the {@link ChannelPromise}s to notify once this {@link ChannelFutureListener} is
+     *                         notified.
      */
     public ChannelPromiseNotifier(boolean logNotifyFailure, ChannelPromise... promises) {
         super(logNotifyFailure, promises);
     }
 
     /**
-     * Link the {@link ChannelFuture} and {@link Promise} such that if the {@link ChannelFuture} completes the
-     * {@link Promise} will be notified, and completed with the channel in question.
-     * Cancellation is propagated both ways such that if the {@link Future} is cancelled the {@link Promise} is
-     * cancelled and vise-versa.
+     * Link the {@link ChannelFuture} and {@link Promise} such that if the {@link ChannelFuture} completes the {@link
+     * Promise} will be notified, and completed with the channel in question. Cancellation is propagated both ways such
+     * that if the {@link Future} is cancelled the {@link Promise} is cancelled and vise-versa.
      *
-     * @param future    the {@link ChannelFuture} which will be used to listen to for notifying the {@link Promise}.
-     * @param promise   the {@link Promise} which will be notified
-     * @return          the passed in {@link ChannelFuture}
+     * @param future  the {@link ChannelFuture} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise the {@link Promise} which will be notified
+     * @return the passed in {@link ChannelFuture}
      */
     public static ChannelFuture cascadeChannel(ChannelFuture future, final Promise<? super Channel> promise) {
         return cascadeChannel(true, future, promise);
     }
 
     /**
-     * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise}
-     * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
-     * the {@link Promise} is cancelled and vise-versa.
+     * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise} will be
+     * notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled the {@link Promise}
+     * is cancelled and vise-versa.
      *
-     * @param logNotifyFailure  {@code true} if logging should be done in case notification fails.
-     * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
-     * @param promise           the {@link Promise} which will be notified
-     * @return                  the passed in {@link Future}
+     * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
+     * @param future           the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise          the {@link Promise} which will be notified
+     * @return the passed in {@link Future}
      */
     public static ChannelFuture cascadeChannel(boolean logNotifyFailure, final ChannelFuture future,
-                                                     final Promise<? super Channel> promise) {
+                                               final Promise<? super Channel> promise) {
         promise.addListener(new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> f) {
@@ -94,11 +94,13 @@ public final class ChannelPromiseNotifier
                     // Just return if we propagate a cancel from the promise to the future and both are notified already
                     return;
                 }
-                InternalLogger internalLogger = logNotifyFailure ?
-                        InternalLoggerFactory.getInstance(PromiseNotifier.class) : null;
                 if (f.isSuccess()) {
                     promise.setSuccess(f.channel());
                 } else if (f.isCancelled()) {
+                    InternalLogger internalLogger = null;
+                    if (logNotifyFailure) {
+                        internalLogger = InternalLoggerFactory.getInstance(PromiseNotifier.class);
+                    }
                     PromiseNotificationUtil.tryCancel(promise, internalLogger);
                 } else {
                     Throwable cause = future.cause();

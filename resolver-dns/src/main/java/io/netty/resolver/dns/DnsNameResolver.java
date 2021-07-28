@@ -478,8 +478,14 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
+                ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
+                    resolveCache.clear();
+                    cnameCache.clear();
+                    authoritativeDnsServerCache.clear();
+                });
             }
         });
+        b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(maxPayloadSize));
 
         channelFuture = responseHandler.channelActivePromise;
         Future<Channel> future;
@@ -498,16 +504,6 @@ public class DnsNameResolver extends InetNameResolver {
             }
             throw new IllegalStateException("Unable to create / register Channel", cause);
         }
-        future.addListener((GenericFutureListener<Future<Channel>>) f -> {
-            ch = f.getNow();
-            ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
-
-            ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
-                resolveCache.clear();
-                cnameCache.clear();
-                authoritativeDnsServerCache.clear();
-            });
-        });
     }
 
     static InternetProtocolFamily preferredAddressType(ResolvedAddressTypes resolvedAddressTypes) {

@@ -49,10 +49,9 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
          .channel(ctx.channel().getClass())
          .handler(new HexDumpProxyBackendHandler(inboundChannel))
          .option(ChannelOption.AUTO_READ, false);
-        Channel channel = b.register().syncUninterruptibly().getNow();
+        outboundChannel = b.register().syncUninterruptibly().getNow();
         InetSocketAddress remote = InetSocketAddress.createUnresolved(remoteHost, remotePort);
-        channel.connect(remote).addListener((ChannelFutureListener) future -> {
-            outboundChannel = future.channel();
+        outboundChannel.connect(remote).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
                 // connection complete start to read first data
                 inboundChannel.read();

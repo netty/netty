@@ -62,12 +62,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.Matchers.sameInstance;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -275,8 +270,9 @@ public class BootstrapTest {
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            assertTrue(assertThrows(CompletionException.class, future::syncUninterruptibly)
-                .getCause() instanceof ConnectException);
+            CompletionException exception =
+                    assertThrows(CompletionException.class, future::syncUninterruptibly);
+            assertThat(exception.getCause()).isInstanceOf(ConnectException.class);
         } finally {
             group.shutdownGracefully();
         }
@@ -284,7 +280,7 @@ public class BootstrapTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testLateRegistrationConnectWithAsynchronousRegister() throws Throwable {
+    public void testLateRegistrationConnectWithCreateUnregistered() throws Throwable {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
@@ -299,8 +295,9 @@ public class BootstrapTest {
             assertFalse(connectFuture.isDone());
             registerHandler.registerPromise().setSuccess();
             registerFuture.sync();
-            assertTrue(assertThrows(CompletionException.class, connectFuture::syncUninterruptibly)
-                .getCause() instanceof ConnectException);
+            CompletionException exception =
+                    assertThrows(CompletionException.class, connectFuture::syncUninterruptibly);
+            assertTrue(exception.getCause() instanceof ConnectException);
         } finally {
             group.shutdownGracefully();
         }
@@ -342,8 +339,8 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
-        assertThat(connectFuture.await(10000), is(true));
-        assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
+        assertThat(connectFuture.await(10000)).isTrue();
+        assertThat(connectFuture.cause()).isInstanceOf(UnknownHostException.class);
     }
 
     @Test
@@ -360,8 +357,8 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
-        assertThat(connectFuture.await(10000), is(true));
-        assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
+        assertThat(connectFuture.await(10000)).isTrue();
+        assertThat(connectFuture.cause()).isSameAs(exception);
     }
 
     @Test
@@ -380,7 +377,7 @@ public class BootstrapTest {
         }
         final CountDownLatch latch = new CountDownLatch(1);
         final Bootstrap bootstrap = new Bootstrap()
-                .handler(new ChannelInitializer() {
+                .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
                         latch.countDown();

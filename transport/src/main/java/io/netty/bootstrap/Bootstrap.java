@@ -231,6 +231,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
                 // Resolver has no idea about what to do with the specified remote address or it's resolved already.
                 doConnect(remoteAddress, localAddress, promise);
+                return;
             }
 
             final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
@@ -245,6 +246,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 } else {
                     // Succeeded to resolve immediately; cached? (or did a blocking lookup)
                     doConnect(resolveFuture.getNow(), localAddress, promise);
+                    return;
                 }
             }
 
