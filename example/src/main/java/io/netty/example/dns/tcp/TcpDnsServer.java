@@ -67,7 +67,7 @@ public final class TcpDnsServer {
                         ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
                                 new SimpleChannelInboundHandler<DnsQuery>() {
                                     @Override
-                                    protected void channelRead0(ChannelHandlerContext ctx,
+                                    protected void messageReceived(ChannelHandlerContext ctx,
                                                                 DnsQuery msg) throws Exception {
                                         DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
                                         System.out.println("Query domain: " + question);
@@ -122,7 +122,8 @@ public final class TcpDnsServer {
                                     .addLast(new TcpDnsResponseDecoder())
                                     .addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
                                         @Override
-                                        protected void channelRead0(ChannelHandlerContext ctx, DefaultDnsResponse msg) {
+                                        protected void messageReceived(
+                                                ChannelHandlerContext ctx, DefaultDnsResponse msg) {
                                             try {
                                                 handleQueryResp(msg);
                                             } finally {
