@@ -597,6 +597,37 @@ public class JdkZlibTest {
         }
     }
 
+    @Test
+    public void testDecodeWithHeaderFollowingFooter() throws Exception {
+        byte[] bytes = new byte[1024];
+        ThreadLocalRandom.current().nextBytes(bytes);
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        GZIPOutputStream out = new GZIPOutputStream(bytesOut);
+        out.write(bytes);
+        out.close();
+
+        byte[] compressed = bytesOut.toByteArray();
+        ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
+        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true));
+        // Write it into the Channel in a way that we were able to decompress the first data completely but not the
+        // whole footer.
+        assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));
+        assertTrue(channel.writeInbound(buffer));
+        assertTrue(channel.finish());
+
+        ByteBuf uncompressedBuffer = Unpooled.wrappedBuffer(bytes);
+        ByteBuf read = channel.readInbound();
+        assertEquals(uncompressedBuffer, read);
+        read.release();
+
+        read = channel.readInbound();
+        assertEquals(uncompressedBuffer, read);
+        read.release();
+
+        assertNull(channel.readInbound());
+        uncompressedBuffer.release();
+    }
+
     private static byte[] gzip(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         GZIPOutputStream stream = new GZIPOutputStream(out);
