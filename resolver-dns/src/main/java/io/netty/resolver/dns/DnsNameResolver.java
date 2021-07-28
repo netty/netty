@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -225,7 +226,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
     final Future<Channel> channelFuture;
-    volatile Channel ch;
+    final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
     private final Comparator<InetSocketAddress> nameServerComparator;
@@ -488,11 +489,26 @@ public class DnsNameResolver extends InetNameResolver {
         b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(maxPayloadSize));
 
         channelFuture = responseHandler.channelActivePromise;
-        Future<Channel> future;
+        Future<Channel> channelFuture = b.createUnregistered();
+        if (!channelFuture.isSuccess()) {
+            Throwable cause = channelFuture.cause();
+            if (cause != null) {
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                }
+                if (cause instanceof Error) {
+                    throw (Error) cause;
+                }
+            }
+            throw new IllegalStateException(
+                    "Failed to obtain a datagram channel immediately: " + channelFuture, channelFuture.cause());
+        }
+        ch = channelFuture.getNow();
+        ChannelFuture future;
         if (localAddress == null) {
-            future = b.register();
+            future = ch.register();
         } else {
-            future = b.bind(localAddress);
+            future = ch.bind(localAddress);
         }
         Throwable cause = future.cause();
         if (cause != null) {

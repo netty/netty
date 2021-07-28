@@ -48,7 +48,9 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().get();
 
-        cb.connect(sc.localAddress()).get().closeFuture().syncUninterruptibly();
+        Channel channel = cb.register().get();
+        channel.connect(sc.localAddress());
+        channel.closeFuture().syncUninterruptibly();
         sc.close().sync();
     }
 }

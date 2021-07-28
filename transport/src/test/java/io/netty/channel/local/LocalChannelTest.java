@@ -248,7 +248,7 @@ public class LocalChannelTest {
                                 /* Only slow down the anonymous class in LocalChannel#doRegister() */
                                 if (task.getClass().getEnclosingClass() == LocalChannel.class) {
                                     try {
-                                        closeLatch.await(1, TimeUnit.SECONDS);
+                                        closeLatch.await(1, SECONDS);
                                     } catch (InterruptedException e) {
                                         throw new Error(e);
                                     }
@@ -286,7 +286,7 @@ public class LocalChannelTest {
                     });
             Future<Channel> future = bootstrap.connect(sc.localAddress());
             assertTrue(future.await(2000), "Connection should finish, not time out");
-            cc = future.get();
+            cc = future.await().isSuccess() ? future.get() : null;
         } finally {
             closeChannel(cc);
             closeChannel(sc);

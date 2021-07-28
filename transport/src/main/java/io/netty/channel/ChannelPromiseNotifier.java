@@ -104,7 +104,7 @@ public final class ChannelPromiseNotifier
                     PromiseNotificationUtil.tryCancel(promise, internalLogger);
                 } else {
                     Throwable cause = future.cause();
-                    promise.setFailure(cause);
+                    promise.tryFailure(cause);
                 }
             }
         });

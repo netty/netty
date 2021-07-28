@@ -246,7 +246,7 @@ public class BootstrapTest {
             registerHandler.registerPromise().setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
-                queue.add(future1.getNow().eventLoop().inEventLoop(Thread.currentThread()));
+                queue.add(future1.executor().inEventLoop(Thread.currentThread()));
                 queue.add(future1.isSuccess());
             });
             assertTrue(queue.take());
