@@ -479,7 +479,7 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
-                ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
+                ch.closeFuture().addListener(closeFuture -> {
                     resolveCache.clear();
                     cnameCache.clear();
                     authoritativeDnsServerCache.clear();
