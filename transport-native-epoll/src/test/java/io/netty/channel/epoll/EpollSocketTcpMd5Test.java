@@ -33,7 +33,9 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -94,7 +96,7 @@ public class EpollSocketTcpMd5Test {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
-        final CompletionException completion = assertThrows(CompletionException.class, () -> {
+        ExecutionException completion = assertThrows(ExecutionException.class, () -> {
             EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                     .channel(EpollSocketChannel.class)
                     .handler(new ChannelHandler() {
@@ -105,7 +107,8 @@ public class EpollSocketTcpMd5Test {
                     .connect(server.localAddress()).get();
             client.close().syncUninterruptibly();
         });
-        assertTrue(completion.getCause() instanceof ConnectTimeoutException);
+        assertThat(completion.getCause())
+                .isInstanceOf(ConnectTimeoutException.class);
     }
 
     @Test
