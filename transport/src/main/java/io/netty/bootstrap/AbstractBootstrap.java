@@ -194,8 +194,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * The channel must then be {@linkplain Channel#register() registered} separately.
      *
      * @return A future producing the channel before the channel has been registered.
+     * @throws Exception If the channel cannot be created.
      */
-    public Future<Channel> createUnregistered() {
+    public Channel createUnregistered() throws Exception {
         validate();
         return initWithoutRegister();
     }
@@ -298,20 +299,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         return promise;
     }
 
-    final Future<Channel> initWithoutRegister() {
+    final Channel initWithoutRegister() throws Exception {
         EventLoop loop = group.next();
-        final Channel channel;
-        try {
-            channel = newChannel(loop);
-        } catch (Throwable t) {
-            return new FailedFuture<>(loop, t);
-        }
+        Channel channel = newChannel(loop);
 
-        return init(channel).addListener(future -> {
+        init(channel).addListener(future -> {
             if (!future.isSuccess()) {
                 channel.unsafe().closeForcibly();
             }
         });
+        return channel;
     }
 
     abstract C newChannel(EventLoop loop) throws Exception;

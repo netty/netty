@@ -39,7 +39,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         SocketChannel ch = null;
         try {
             cb.handler(h);
-            ch = (SocketChannel) cb.createUnregistered().get();
+            ch = (SocketChannel) cb.createUnregistered();
             ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 }));
             ch.register().sync();
             ch.connect(newSocketAddress());

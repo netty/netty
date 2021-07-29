@@ -489,35 +489,15 @@ public class DnsNameResolver extends InetNameResolver {
         b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(maxPayloadSize));
 
         channelFuture = responseHandler.channelActivePromise;
-        Future<Channel> channelFuture = b.createUnregistered();
-        if (!channelFuture.isSuccess()) {
-            Throwable cause = channelFuture.cause();
-            if (cause != null) {
-                if (cause instanceof RuntimeException) {
-                    throw (RuntimeException) cause;
-                }
-                if (cause instanceof Error) {
-                    throw (Error) cause;
-                }
+        try {
+            ch = b.createUnregistered();
+            ChannelFuture future = localAddress == null ? ch.register() : ch.bind(localAddress);
+            if (future.cause() != null) {
+                throw future.cause();
             }
-            throw new IllegalStateException(
-                    "Failed to obtain a datagram channel immediately: " + channelFuture, channelFuture.cause());
-        }
-        ch = channelFuture.getNow();
-        ChannelFuture future;
-        if (localAddress == null) {
-            future = ch.register();
-        } else {
-            future = ch.bind(localAddress);
-        }
-        Throwable cause = future.cause();
-        if (cause != null) {
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
+        } catch (Error | RuntimeException e) {
+            throw e;
+        } catch (Throwable cause) {
             throw new IllegalStateException("Unable to create / register Channel", cause);
         }
     }

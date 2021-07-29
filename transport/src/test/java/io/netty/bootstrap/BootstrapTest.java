@@ -288,8 +288,7 @@ public class BootstrapTest {
             bootstrapA.group(group);
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(registerHandler);
-            Future<Channel> channelFuture = bootstrapA.createUnregistered();
-            Channel channel = channelFuture.get();
+            Channel channel = bootstrapA.createUnregistered();
             ChannelFuture registerFuture = channel.register();
             ChannelFuture connectFuture = channel.connect(LocalAddress.ANY);
             assertFalse(connectFuture.isDone());
