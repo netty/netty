@@ -74,4 +74,6 @@ jobs:
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
