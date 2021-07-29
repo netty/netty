@@ -81,7 +81,9 @@ jobs:
         if: ${{ failure() }}
         with:
           name: build-pr-windows-target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
 
   build-pr-aarch64:
     name: linux-aarch64-verify-native
@@ -196,5 +198,6 @@ jobs:
         if: ${{ failure() }}
         with:
           name: build-${{ matrix.setup }}-target
-          path: "**/target/"
-
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
