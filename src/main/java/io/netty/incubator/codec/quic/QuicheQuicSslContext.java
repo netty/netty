@@ -20,6 +20,7 @@ import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.Mapping;
 import io.netty.util.ReferenceCounted;
 
 import javax.crypto.NoSuchPaddingException;
@@ -61,11 +62,12 @@ final class QuicheQuicSslContext extends QuicSslContext {
     private long sessionTimeout;
     private final QuicheQuicSslSessionContext sessionCtx;
     private final QuicheQuicSslEngineMap engineMap = new QuicheQuicSslEngineMap();
-    private final NativeSslContext nativeSslContext;
+    final NativeSslContext nativeSslContext;
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
                          ClientAuth clientAuth, TrustManagerFactory trustManagerFactory,
                          KeyManagerFactory keyManagerFactory, String password,
+                         Mapping<? super String, ? extends QuicSslContext> mapping,
                          Boolean earlyData,
                          String... applicationProtocols) {
         Quic.ensureAvailability();
@@ -98,6 +100,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
+                mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
                 verifyMode, BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
         this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), sessionCacheSize);
@@ -169,7 +172,30 @@ final class QuicheQuicSslContext extends QuicSslContext {
             return null;
         }
         // The connection will call nativeSslContext.release() once it is freed.
-        return new QuicheQuicConnection(connection, engine, nativeSslContext);
+        return new QuicheQuicConnection(connection, ssl, engine, nativeSslContext);
+    }
+
+    /**
+     * Add the given engine to this context
+     *
+     * @param engine    the engine to add.
+     * @return          the pointer address of this context.
+     */
+    long add(QuicheQuicSslEngine engine) {
+        nativeSslContext.retain();
+        engine.connection.reattach(nativeSslContext);
+        engineMap.put(engine.connection.ssl, engine);
+        return nativeSslContext.address();
+    }
+
+    /**
+     * Remove the given engine from this context.
+     *
+     * @param engine    the engine to remove.
+     */
+    void remove(QuicheQuicSslEngine engine) {
+        QuicheQuicSslEngine removed = engineMap.remove(engine.connection.ssl);
+        assert removed == engine;
     }
 
     @Override
@@ -328,7 +354,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
     }
 
-    private static final class NativeSslContext extends AbstractReferenceCounted {
+    static final class NativeSslContext extends AbstractReferenceCounted {
         private final long ctx;
 
         NativeSslContext(long ctx) {
@@ -347,6 +373,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
         @Override
         public ReferenceCounted touch(Object hint) {
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return "NativeSslContext{" +
+                    "ctx=" + ctx +
+                    '}';
         }
     }
 }

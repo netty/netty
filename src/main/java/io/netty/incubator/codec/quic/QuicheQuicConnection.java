@@ -24,8 +24,9 @@ import java.util.function.Supplier;
 
 final class QuicheQuicConnection {
     private static final int TOTAL_RECV_INFO_SIZE = Quiche.SIZEOF_QUICHE_RECV_INFO + Quiche.SIZEOF_SOCKADDR_STORAGE;
-    private final ReferenceCounted refCnt;
     private final QuicheQuicSslEngine engine;
+    final long ssl;
+    private ReferenceCounted refCnt;
 
     // This block of memory is used to store the following structs (in this order):
     // - quiche_recv_info
@@ -49,8 +50,9 @@ final class QuicheQuicConnection {
 
     private long connection;
 
-    QuicheQuicConnection(long connection, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
+    QuicheQuicConnection(long connection, long ssl, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
         this.connection = connection;
+        this.ssl = ssl;
         this.engine = engine;
         this.refCnt = refCnt;
         // TODO: Maybe cache these per thread as we only use them temporary within a limited scope.
@@ -66,6 +68,12 @@ final class QuicheQuicConnection {
 
         sendInfoBuffer1 = sendInfoBuffer.nioBuffer(0, Quiche.SIZEOF_QUICHE_SEND_INFO);
         sendInfoBuffer2 = sendInfoBuffer.nioBuffer(Quiche.SIZEOF_QUICHE_SEND_INFO, Quiche.SIZEOF_QUICHE_SEND_INFO);
+        this.engine.connection = this;
+    }
+
+    synchronized void reattach(ReferenceCounted refCnt) {
+        this.refCnt.release();
+        this.refCnt = refCnt;
     }
 
     void free() {
@@ -75,13 +83,13 @@ final class QuicheQuicConnection {
                 try {
                     Quiche.quiche_conn_free(connection);
                     release = true;
+                    refCnt.release();
                 } finally {
                     connection = -1;
                 }
             }
         }
         if (release) {
-            refCnt.release();
             recvInfoBuffer.release();
             sendInfoBuffer.release();
         }

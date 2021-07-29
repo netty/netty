@@ -43,12 +43,16 @@ static jmethodID certificateCallbackMethod = NULL;
 static jclass handshakeCompleteCallbackClass = NULL;
 static jmethodID handshakeCompleteCallbackMethod = NULL;
 
+static jclass servernameCallbackClass = NULL;
+static jmethodID servernameCallbackMethod = NULL;
+
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 
 static int handshakeCompleteCallbackIdx = -1;
 static int verifyCallbackIdx = -1;
 static int certificateCallbackIdx = -1;
+static int servernameCallbackIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
 
@@ -507,10 +511,64 @@ void quic_SSL_info_callback(const SSL *ssl, int type, int value) {
                  (jlong) ssl, session_id, cipher, version, peerCert, certChain, creationTime, timeout, alpnSelected);
     }
 }
-static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jint verifyMode, jobjectArray subjectNames) {
+
+int quic_tlsext_servername_callback(SSL *ssl, int *out_alert, void *arg) {
+    SSL_CTX* ctx = SSL_get_SSL_CTX((SSL*) ssl);
+    jobject servernameCallback = SSL_CTX_get_ex_data(ctx, servernameCallbackIdx);
+    if (servernameCallback == NULL) {
+        // No SNI should be used
+        return SSL_TLSEXT_ERR_NOACK;
+    }
+
+    JNIEnv *e = NULL;
+    if (quic_get_java_env(&e) != JNI_OK) {
+        // There is something serious wrong just fail the SSL in a fatal way.
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    jstring servername = NULL;
+    int resultValue = SSL_TLSEXT_ERR_OK;
+    int type = SSL_get_servername_type(ssl);
+    if (type == TLSEXT_NAMETYPE_host_name) {
+        const char *name = SSL_get_servername(ssl, type);
+        if (name != NULL) {
+            servername = (*e)->NewStringUTF(e, name);
+            if (servername == NULL) {
+                // There is something serious wrong just fail the SSL in a fatal way.
+                return SSL_TLSEXT_ERR_ALERT_FATAL;
+            }
+        } else {
+            // There was no SNI infos provided so not ack at the end.
+            resultValue = SSL_TLSEXT_ERR_NOACK;
+        }
+    }
+
+    jlong result = (*e)->CallLongMethod(e, servernameCallback, servernameCallbackMethod, (jlong) ssl, servername);
+
+    if ((*e)->ExceptionCheck(e) == JNI_TRUE) {
+        // Some exception was thrown. Let's fail.
+        (*e)->ExceptionClear(e);
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+    if (result < 0) {
+        // If we returned a negative number we want to fail.
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    // Change the ctx to the one that was returned.
+    SSL_CTX* newCtx = SSL_set_SSL_CTX(ssl, (SSL_CTX*) result);
+    if (newCtx == NULL) {
+        // Setting the SSL_CTX failed.
+        return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+    return resultValue;
+}
+
+static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jint verifyMode, jobjectArray subjectNames) {
     jobject handshakeCompleteCallbackRef = NULL;
     jobject certificateCallbackRef = NULL;
     jobject verifyCallbackRef = NULL;
+    jobject servernameCallbackRef = NULL;
 
     if ((handshakeCompleteCallbackRef = (*env)->NewGlobalRef(env, handshakeCompleteCallback)) == NULL) {
         goto error;
@@ -522,6 +580,12 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
 
     if ((verifyCallbackRef = (*env)->NewGlobalRef(env, verifyCallback)) == NULL) {
         goto error;
+    }
+
+    if (servernameCallback != NULL) {
+        if ((servernameCallbackRef = (*env)->NewGlobalRef(env, servernameCallback)) == NULL) {
+            goto error;
+        }
     }
 
     SSL_CTX *ctx = SSL_CTX_new(TLS_with_buffers_method());
@@ -546,6 +610,10 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     SSL_CTX_set_ex_data(ctx, certificateCallbackIdx, certificateCallbackRef);
     SSL_CTX_set_cert_cb(ctx, quic_certificate_cb, certificateCallbackRef);
 
+    if (servernameCallbackRef != NULL) {
+        SSL_CTX_set_ex_data(ctx, servernameCallbackIdx, servernameCallbackRef);
+        SSL_CTX_set_tlsext_servername_callback(ctx, quic_tlsext_servername_callback);
+    }
     // Use a pool for our certificates so we can share these across connections.
     SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
 
@@ -599,6 +667,11 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
     jobject certificateCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, certificateCallbackIdx);
     if (certificateCallbackRef != NULL) {
         (*env)->DeleteLocalRef(env, certificateCallbackRef);
+    }
+
+    jobject servernameCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, servernameCallbackIdx);
+    if (servernameCallbackRef != NULL) {
+        (*env)->DeleteLocalRef(env, servernameCallbackRef);
     }
 
     alpn_data* data = SSL_CTX_get_ex_data(ssl_ctx, alpn_data_idx);
@@ -741,7 +814,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
-  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
+  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
@@ -803,9 +876,15 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, handshakeCompleteCallbackClass, name, done);
     NETTY_JNI_UTIL_GET_METHOD(env, handshakeCompleteCallbackClass, handshakeCompleteCallbackMethod, "handshakeComplete", "(J[BLjava/lang/String;Ljava/lang/String;[B[[BJJ[B)V", done);
 
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTlsextServernameCallback", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, servernameCallbackClass, name, done);
+    NETTY_JNI_UTIL_GET_METHOD(env, servernameCallbackClass, servernameCallbackMethod, "selectCtx", "(JLjava/lang/String;)J", done);
+
     verifyCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     certificateCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     handshakeCompleteCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    servernameCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     ret = NETTY_JNI_UTIL_JNI_VERSION;
@@ -823,7 +902,7 @@ done:
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateCallbackClass);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyCallbackClass);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
-
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
     }
     return ret;
 }
@@ -833,7 +912,7 @@ void netty_boringssl_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateCallbackClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyCallbackClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
-
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, packagePrefix, CLASSNAME);

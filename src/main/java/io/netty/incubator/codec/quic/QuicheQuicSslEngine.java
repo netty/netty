@@ -42,7 +42,7 @@ import java.util.Map;
 import java.util.function.LongFunction;
 
 final class QuicheQuicSslEngine extends QuicSslEngine {
-    private final QuicheQuicSslContext ctx;
+    QuicheQuicSslContext ctx;
     private final String peerHost;
     private final int peerPort;
     private final QuicheQuicSslSession session = new QuicheQuicSslSession();
@@ -51,6 +51,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     private boolean handshakeFinished;
     private String applicationProtocol;
     final String tlsHostName;
+    volatile QuicheQuicConnection connection;
 
     QuicheQuicSslEngine(QuicheQuicSslContext ctx, String peerHost, int peerPort) {
         this.ctx = ctx;
@@ -64,6 +65,13 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         } else {
             tlsHostName = null;
         }
+    }
+
+    long moveTo(QuicheQuicSslContext ctx) {
+        // First of remove the engine from its previous QuicheQuicSslContext.
+        this.ctx.remove(this);
+        this.ctx = ctx;
+        return ctx.add(this);
     }
 
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator) {

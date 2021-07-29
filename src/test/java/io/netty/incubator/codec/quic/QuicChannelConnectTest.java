@@ -26,6 +26,7 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
+import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
@@ -592,6 +593,115 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .await().cause();
             assertThat(cause, Matchers.instanceOf(SSLException.class));
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testSniMatch() throws Throwable {
+        QuicSslContext defaultServerSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols("default-protocol").build();
+
+        QuicSslContext sniServerSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols("sni-protocol").build();
+
+        QuicSslContext serverSslContext = QuicSslContextBuilder.buildForServerWithSni(
+                        new DomainWildcardMappingBuilder<>(defaultServerSslContext)
+                                .add("quic.netty.io", sniServerSslContext).build());
+
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(serverSslContext),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("sni-protocol").build();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), "quic.netty.io", 8080)));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void testSniFallbackToDefault() throws Throwable {
+        testSniFallbackToDefault(true);
+    }
+
+    @Test
+    public void testNoSniFallbackToDefault() throws Throwable {
+        testSniFallbackToDefault(false);
+    }
+
+    private void testSniFallbackToDefault(boolean sendSni) throws Throwable {
+        QuicSslContext defaultServerSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols("default-protocol").build();
+
+        QuicSslContext sniServerSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols("sni-protocol").build();
+
+        QuicSslContext serverSslContext = QuicSslContextBuilder.buildForServerWithSni(
+                new DomainWildcardMappingBuilder<>(defaultServerSslContext)
+                        .add("quic.netty.io", sniServerSslContext).build());
+
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(serverSslContext),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("default-protocol").build();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+                .sslEngineProvider(c -> {
+                    if (sendSni) {
+                        return clientSslContext.newEngine(c.alloc(), "netty.io", 8080);
+                    } else {
+                        return clientSslContext.newEngine(c.alloc());
+                    }
+                }));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
