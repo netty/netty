@@ -163,13 +163,11 @@ public class EpollReuseAddrTest {
         int count = 16;
         final CountDownLatch latch = new CountDownLatch(count);
         Runnable r = () -> {
-            try {
-                DatagramSocket socket = new DatagramSocket();
+            try (DatagramSocket socket = new DatagramSocket()) {
                 while (!received1.get() || !received2.get()) {
                     socket.send(new DatagramPacket(
                             bytes, 0, bytes.length, address1.getAddress(), address1.getPort()));
                 }
-                socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

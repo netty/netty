@@ -139,17 +139,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         checkSize(newsize);
         RandomAccessFile accessFile = new RandomAccessFile(file, "r");
         ByteBuffer byteBuffer;
-        try {
-            FileChannel fileChannel = accessFile.getChannel();
-            try {
-                byte[] array = new byte[(int) newsize];
-                byteBuffer = ByteBuffer.wrap(array);
-                int read = 0;
-                while (read < newsize) {
-                    read += fileChannel.read(byteBuffer);
-                }
-            } finally {
-                fileChannel.close();
+        try (FileChannel fileChannel = accessFile.getChannel()) {
+            byte[] array = new byte[(int) newsize];
+            byteBuffer = ByteBuffer.wrap(array);
+            int read = 0;
+            while (read < newsize) {
+                read += fileChannel.read(byteBuffer);
             }
         } finally {
             accessFile.close();
@@ -245,24 +240,19 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int length = byteBuf.readableBytes();
         long written = 0;
         RandomAccessFile accessFile = new RandomAccessFile(dest, "rw");
-        try {
-            FileChannel fileChannel = accessFile.getChannel();
-            try {
-                if (byteBuf.nioBufferCount() == 1) {
-                    ByteBuffer byteBuffer = byteBuf.nioBuffer();
-                    while (written < length) {
-                        written += fileChannel.write(byteBuffer);
-                    }
-                } else {
-                    ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
-                    while (written < length) {
-                        written += fileChannel.write(byteBuffers);
-                    }
+        try (FileChannel fileChannel = accessFile.getChannel()) {
+            if (byteBuf.nioBufferCount() == 1) {
+                ByteBuffer byteBuffer = byteBuf.nioBuffer();
+                while (written < length) {
+                    written += fileChannel.write(byteBuffer);
                 }
-                fileChannel.force(false);
-            } finally {
-                fileChannel.close();
+            } else {
+                ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
+                while (written < length) {
+                    written += fileChannel.write(byteBuffers);
+                }
             }
+            fileChannel.force(false);
         } finally {
             accessFile.close();
         }
