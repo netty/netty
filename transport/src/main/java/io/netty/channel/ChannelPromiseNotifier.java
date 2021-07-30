@@ -63,8 +63,8 @@ public final class ChannelPromiseNotifier
      * @param promise the {@link Promise} which will be notified
      * @return the passed in {@link ChannelFuture}
      */
-    public static ChannelFuture cascadeChannel(ChannelFuture future, final Promise<? super Channel> promise) {
-        return cascadeChannel(true, future, promise);
+    public static ChannelFuture cascadeChannel(ChannelFuture future, final Promise<Void> promise) {
+        return cascadeChannel(true, future, promise, null);
     }
 
     /**
@@ -75,10 +75,11 @@ public final class ChannelPromiseNotifier
      * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
      * @param future           the {@link Future} which will be used to listen to for notifying the {@link Promise}.
      * @param promise          the {@link Promise} which will be notified
+     * @param successResult    the result that will be propagated to the promise on success
      * @return the passed in {@link Future}
      */
-    public static ChannelFuture cascadeChannel(boolean logNotifyFailure, final ChannelFuture future,
-                                               final Promise<? super Channel> promise) {
+    public static <R> ChannelFuture cascadeChannel(boolean logNotifyFailure, ChannelFuture future,
+                                                   Promise<R> promise, R successResult) {
         promise.addListener(new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> f) {
@@ -95,7 +96,7 @@ public final class ChannelPromiseNotifier
                     return;
                 }
                 if (f.isSuccess()) {
-                    promise.setSuccess(f.channel());
+                    promise.setSuccess(successResult);
                 } else if (f.isCancelled()) {
                     InternalLogger internalLogger = null;
                     if (logNotifyFailure) {

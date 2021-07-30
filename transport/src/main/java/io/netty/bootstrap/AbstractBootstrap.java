@@ -37,7 +37,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -193,7 +192,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * <p>
      * The channel must then be {@linkplain Channel#register() registered} separately.
      *
-     * @return A future producing the channel before the channel has been registered.
+     * @return A new unregistered channel.
      * @throws Exception If the channel cannot be created.
      */
     public Channel createUnregistered() throws Exception {
@@ -253,7 +252,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
             ChannelPromise promise = channel.newPromise();
-            cascadeChannel(promise, bindPromise);
+            cascadeChannel(true, promise, bindPromise, channel);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -266,7 +265,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 } else {
                     Channel channel = future.getNow();
                     ChannelPromise promise = channel.newPromise();
-                    cascadeChannel(promise, bindPromise);
+                    cascadeChannel(true, promise, bindPromise, channel);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
@@ -402,7 +401,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         if (map.isEmpty()) {
             return Collections.emptyMap();
         }
-        return Collections.unmodifiableMap(new HashMap<>(map));
+        return Map.copyOf(map);
     }
 
     static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {

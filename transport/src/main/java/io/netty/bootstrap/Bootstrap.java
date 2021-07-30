@@ -199,7 +199,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             }
             Channel channel = regFuture.getNow();
             ChannelPromise promise = channel.newPromise();
-            cascadeChannel(promise, resolveAndConnectPromise);
+            cascadeChannel(true, promise, resolveAndConnectPromise, channel);
             doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -214,7 +214,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 } else {
                     Channel channel = future.getNow();
                     ChannelPromise promise = channel.newPromise();
-                    cascadeChannel(promise, resolveAndConnectPromise);
+                    cascadeChannel(true, promise, resolveAndConnectPromise, channel);
                     doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
                 }
             });
