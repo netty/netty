@@ -1972,10 +1972,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private SSLEngineResult.HandshakeStatus mayFinishHandshake(SSLEngineResult.HandshakeStatus status)
             throws SSLException {
-        if (status == NOT_HANDSHAKING && handshakeState != HandshakeState.FINISHED) {
-            // If the status was NOT_HANDSHAKING and we not finished the handshake we need to call
-            // SSL_do_handshake() again
-            return handshake();
+        if (status == NOT_HANDSHAKING) {
+            if (handshakeState != HandshakeState.FINISHED) {
+                // If the status was NOT_HANDSHAKING and we not finished the handshake we need to call
+                // SSL_do_handshake() again
+                return handshake();
+            }
+            if (!isDestroyed() && SSL.bioLengthNonApplication(networkBIO) > 0) {
+                // We have something left that needs to be wrapped.
+                return NEED_WRAP;
+            }
         }
         return status;
     }
