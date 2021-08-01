@@ -108,15 +108,15 @@
     </profile>
     <profile>
       <id>coverage</id>
-      <properties>
-        <argLine.coverage>${jacoco.argLine}</argLine.coverage>
-      </properties>
+<!--      <properties>-->
+<!--        <argLine.coverage>${jacoco.argLine}</argLine.coverage>-->
+<!--      </properties>-->
       <build>
         <plugins>
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.7.201606060606</version>
+            <version>0.7.8</version>
             <executions>
               <execution>
                 <id>jacoco-prepare-agent</id>
@@ -240,6 +240,7 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
+    <!--suppress UnresolvedMavenProperty -->
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
@@ -262,7 +263,8 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <!--suppress UnresolvedMavenProperty -->
+    <testJavaHome>${JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
   </properties>
@@ -282,8 +284,8 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <module>testsuite-autobahn</module>
-    <module>testsuite-osgi</module>
+<!--    <module>testsuite-autobahn</module>
+    <module>testsuite-osgi</module>-->
     <module>microbench</module>
     <module>all</module>
     <module>bom</module>
@@ -573,8 +575,40 @@
 
     <plugins>
       <plugin>
+        <groupId>org.robotframework</groupId>
+        <artifactId>robotframework-maven-plugin</artifactId>
+        <version>1.4.7</version>
+        <executions>
+          <execution>
+            <id>test</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.robotframework</groupId>
+            <artifactId>robotframework</artifactId>
+            <version>3.0.2</version>
+          </dependency>
+          <dependency>
+            <groupId>org.python</groupId>
+            <artifactId>jython-standalone</artifactId>
+            <version>2.7.0</version>
+          </dependency>
+          <dependency>
+            <groupId>org.python</groupId>
+            <artifactId>jython</artifactId>
+            <version>2.7.0</version>
+          </dependency>
+        </dependencies>
+
+      </plugin>
+      <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${enforcer.plugin.version}</version>
+        <version>1.2</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -869,7 +903,9 @@
               <Bundle-Name>${project.name}</Bundle-Name>
               <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
               <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+              <!--suppress UnresolvedMavenProperty -->
               <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+              <!--suppress UnresolvedMavenProperty -->
               <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
             </manifestEntries>
           </archive>
@@ -881,13 +917,13 @@
             ~ See http://jira.codehaus.org/browse/MSOURCES-13
             ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
             -->
-          <execution>
-            <id>attach-sources</id>
-            <phase>invalid</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
+<!--          <execution>-->
+<!--            <id>attach-sources</id>-->
+<!--            <phase>invalid</phase>-->
+<!--            <goals>-->
+<!--              <goal>jar</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
           <execution>
             <id>attach-sources-no-fork</id>
             <phase>package</phase>
@@ -899,7 +935,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
+        <version>2.8.1</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -915,30 +951,30 @@
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <!-- Downgrade to 2.4.1 if release fails -->
-        <version>2.5.3</version>
-        <configuration>
-          <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
-          <autoVersionSubmodules>true</autoVersionSubmodules>
-          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
-          <tagNameFormat>netty-@{project.version}</tagNameFormat>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-        </dependencies>
-      </plugin>
+<!--      <plugin>-->
+<!--        <artifactId>maven-release-plugin</artifactId>-->
+<!--        &lt;!&ndash; Downgrade to 2.4.1 if release fails &ndash;&gt;-->
+<!--        <version>2.5.3</version>-->
+<!--        <configuration>-->
+<!--          <useReleaseProfile>false</useReleaseProfile>-->
+<!--          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>-->
+<!--          <autoVersionSubmodules>true</autoVersionSubmodules>-->
+<!--          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>-->
+<!--          <tagNameFormat>netty-@{project.version}</tagNameFormat>-->
+<!--        </configuration>-->
+<!--        <dependencies>-->
+<!--          <dependency>-->
+<!--            <groupId>org.apache.maven.scm</groupId>-->
+<!--            <artifactId>maven-scm-api</artifactId>-->
+<!--            <version>1.9.4</version>-->
+<!--          </dependency>-->
+<!--          <dependency>-->
+<!--            <groupId>org.apache.maven.scm</groupId>-->
+<!--            <artifactId>maven-scm-provider-gitexe</artifactId>-->
+<!--            <version>1.9.4</version>-->
+<!--          </dependency>-->
+<!--        </dependencies>-->
+<!--      </plugin>-->
 
       <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
            so that they are run lastly in the same phase. -->
@@ -963,8 +999,11 @@
                   <arg value="--format=format:%h %H %cd" />
                   <arg value="--date=iso" />
                 </exec>
+                <!--suppress UnresolvedMavenProperty -->
                 <propertyregex property="shortCommitHash" input="${gitOutput.lastCommit}" regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true" defaultValue="0" />
+                <!--suppress UnresolvedMavenProperty -->
                 <propertyregex property="longCommitHash" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true" defaultValue="0000000000000000000000000000000000000000" />
+                <!--suppress UnresolvedMavenProperty -->
                 <propertyregex property="commitDate" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true" defaultValue="1970-01-01 00:00:00 +0000" />
 
                 <!-- Get the information abount whether the repository is clean or dirty -->
@@ -973,9 +1012,11 @@
                   <arg value="--porcelain" />
                 </exec>
                 <if>
+                  <!--suppress UnresolvedMavenProperty -->
                   <equals arg2="0" arg1="${gitExitCode.repoStatus}" />
                   <then>
                     <if>
+                      <!--suppress UnresolvedMavenProperty -->
                       <equals arg2="" arg1="${gitOutput.repoStatus}" />
                       <then>
                         <property name="repoStatus" value="clean" />
@@ -991,6 +1032,7 @@
                 </if>
 
                 <!-- Print the obtained commit information. -->
+                <!--suppress UnresolvedMavenProperty -->
                 <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
 
                 <!-- Generate the .properties file. -->
@@ -998,16 +1040,24 @@
                 <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
                 -->
                 <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF" />
+                <!--suppress UnresolvedMavenProperty -->
                 <property name="versionPropFile" value="${metaInfDir}/${project.groupId}.versions.properties" />
+                <!--suppress UnresolvedMavenProperty -->
                 <mkdir dir="${metaInfDir}" />
+                <!--suppress UnresolvedMavenProperty -->
                 <delete file="${versionPropFile}" quiet="true" />
 
+                <!--suppress UnresolvedMavenProperty -->
                 <propertyfile file="${versionPropFile}" comment="Generated by netty-parent/pom.xml">
                   <entry key="${project.artifactId}.version" value="${project.version}" />
                   <entry key="${project.artifactId}.buildDate" type="date" value="now" pattern="yyyy-MM-dd HH:mm:ss Z" />
+                  <!--suppress UnresolvedMavenProperty -->
                   <entry key="${project.artifactId}.commitDate" value="${commitDate}" />
+                  <!--suppress UnresolvedMavenProperty -->
                   <entry key="${project.artifactId}.shortCommitHash" value="${shortCommitHash}" />
+                  <!--suppress UnresolvedMavenProperty -->
                   <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}" />
+                  <!--suppress UnresolvedMavenProperty -->
                   <entry key="${project.artifactId}.repoStatus" value="${repoStatus}" />
                 </propertyfile>
               </target>
@@ -1054,7 +1104,7 @@
       <plugins>
         <plugin>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4.1</version>
+          <version>1.2</version>
           <dependencies>
             <!-- Provides the 'requireFilesContent' enforcer rule. -->
             <dependency>
@@ -1072,7 +1122,7 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.19.1</version>
+          <version>2.22.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -1113,11 +1163,11 @@
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.6</version>
         </plugin>
-        <plugin>
-          <!-- Do NOT upgrade -->
-          <artifactId>maven-jxr-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
+<!--        <plugin>-->
+<!--          &lt;!&ndash; Do NOT upgrade &ndash;&gt;-->
+<!--          <artifactId>maven-jxr-plugin</artifactId>-->
+<!--          <version>2.2</version>-->
+<!--        </plugin>-->
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
           <version>1.8</version>
@@ -1158,111 +1208,111 @@
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <versionRange>[1.7,)</versionRange>
-                    <goals>
-                      <goal>run</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-checkstyle-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>check</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-enforcer-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>enforce</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-clean-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>clean</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-bundle-plugin</artifactId>
-                    <versionRange>[2.4,)</versionRange>
-                    <goals>
-                      <goal>manifest</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.fusesource.hawtjni</groupId>
-                    <artifactId>maven-hawtjni-plugin</artifactId>
-                    <versionRange>[1.10,)</versionRange>
-                    <goals>
-                      <goal>generate</goal>
-                      <goal>build</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <versionRange>[2.8,)</versionRange>
-                    <goals>
-                      <goal>get</goal>
-                      <goal>copy</goal>
-                      <goal>properties</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
+<!--        <plugin>-->
+<!--          <groupId>org.eclipse.m2e</groupId>-->
+<!--          <artifactId>lifecycle-mapping</artifactId>-->
+<!--          <version>1.0.0</version>-->
+<!--          <configuration>-->
+<!--            <lifecycleMappingMetadata>-->
+<!--              <pluginExecutions>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.maven.plugins</groupId>-->
+<!--                    <artifactId>maven-antrun-plugin</artifactId>-->
+<!--                    <versionRange>[1.7,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>run</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.maven.plugins</groupId>-->
+<!--                    <artifactId>maven-checkstyle-plugin</artifactId>-->
+<!--                    <versionRange>[1.0,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>check</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.maven.plugins</groupId>-->
+<!--                    <artifactId>maven-enforcer-plugin</artifactId>-->
+<!--                    <versionRange>[1.0,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>enforce</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.maven.plugins</groupId>-->
+<!--                    <artifactId>maven-clean-plugin</artifactId>-->
+<!--                    <versionRange>[1.0,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>clean</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.felix</groupId>-->
+<!--                    <artifactId>maven-bundle-plugin</artifactId>-->
+<!--                    <versionRange>[2.4,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>manifest</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.fusesource.hawtjni</groupId>-->
+<!--                    <artifactId>maven-hawtjni-plugin</artifactId>-->
+<!--                    <versionRange>[1.10,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>generate</goal>-->
+<!--                      <goal>build</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--                <pluginExecution>-->
+<!--                  <pluginExecutionFilter>-->
+<!--                    <groupId>org.apache.maven.plugins</groupId>-->
+<!--                    <artifactId>maven-dependency-plugin</artifactId>-->
+<!--                    <versionRange>[2.8,)</versionRange>-->
+<!--                    <goals>-->
+<!--                      <goal>get</goal>-->
+<!--                      <goal>copy</goal>-->
+<!--                      <goal>properties</goal>-->
+<!--                    </goals>-->
+<!--                  </pluginExecutionFilter>-->
+<!--                  <action>-->
+<!--                    <ignore />-->
+<!--                  </action>-->
+<!--                </pluginExecution>-->
+<!--              </pluginExecutions>-->
+<!--            </lifecycleMappingMetadata>-->
+<!--          </configuration>-->
+<!--        </plugin>-->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-remote-resources-plugin</artifactId>
