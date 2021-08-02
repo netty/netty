@@ -19,8 +19,8 @@ import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static java.util.Objects.requireNonNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link GenericFutureListener} implementation which takes other {@link Promise}s
@@ -98,14 +98,60 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
                 }
             }
         });
-        future.addListener(new PromiseNotifier(logNotifyFailure, promise) {
+        future.addListener(new PromiseNotifier<V, F>(logNotifyFailure, promise) {
             @Override
-            public void operationComplete(Future f) throws Exception {
+            public void operationComplete(F f) throws Exception {
                 if (promise.isCancelled() && f.isCancelled()) {
                     // Just return if we propagate a cancel from the promise to the future and both are notified already
                     return;
                 }
                 super.operationComplete(future);
+            }
+        });
+        return future;
+    }
+
+    /**
+     * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise} will be
+     * notified with the given result.
+     * Cancellation is propagated both ways such that if the {@link Future} is cancelled the {@link Promise}
+     * is cancelled and vise-versa.
+     *
+     * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
+     * @param future           the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise          the {@link Promise} which will be notified
+     * @param successResult    the result that will be propagated to the promise on success
+     * @return the passed in {@link Future}
+     */
+    public static <R, F extends Future<Void>> F cascade(boolean logNotifyFailure, F future,
+                                                               Promise<R> promise, R successResult) {
+        promise.addListener(new FutureListener<Object>() {
+            @Override
+            public void operationComplete(Future<Object> f) {
+                if (f.isCancelled()) {
+                    future.cancel(false);
+                }
+            }
+        });
+        future.addListener(new GenericFutureListener<F>() {
+            @Override
+            public void operationComplete(F f) throws Exception {
+                if (promise.isCancelled() && f.isCancelled()) {
+                    // Just return if we propagate a cancel from the promise to the future and both are notified already
+                    return;
+                }
+                if (f.isSuccess()) {
+                    promise.setSuccess(successResult);
+                } else if (f.isCancelled()) {
+                    InternalLogger internalLogger = null;
+                    if (logNotifyFailure) {
+                        internalLogger = InternalLoggerFactory.getInstance(PromiseNotifier.class);
+                    }
+                    PromiseNotificationUtil.tryCancel(promise, internalLogger);
+                } else {
+                    Throwable cause = future.cause();
+                    promise.tryFailure(cause);
+                }
             }
         });
         return future;

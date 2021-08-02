@@ -41,7 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.netty.channel.ChannelPromiseNotifier.cascadeChannel;
+import static io.netty.util.concurrent.PromiseNotifier.cascade;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -252,7 +252,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
             ChannelPromise promise = channel.newPromise();
-            cascadeChannel(true, promise, bindPromise, channel);
+            cascade(true, promise, bindPromise, channel);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -265,7 +265,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 } else {
                     Channel channel = future.getNow();
                     ChannelPromise promise = channel.newPromise();
-                    cascadeChannel(true, promise, bindPromise, channel);
+                    cascade(true, promise, bindPromise, channel);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });

@@ -40,7 +40,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static io.netty.channel.ChannelPromiseNotifier.cascadeChannel;
+import static io.netty.util.concurrent.PromiseNotifier.cascade;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -199,12 +199,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             }
             Channel channel = regFuture.getNow();
             ChannelPromise promise = channel.newPromise();
-            cascadeChannel(true, promise, resolveAndConnectPromise, channel);
+            cascade(true, promise, resolveAndConnectPromise, channel);
             doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
             regFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
-                // Directly obtain the cause and do a null check so we only need one volatile read in case of a
+                // Directly obtain the cause and do a null check, so we only need one volatile read in case of a
                 // failure.
                 Throwable cause = future.cause();
                 if (cause != null) {
@@ -214,7 +214,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 } else {
                     Channel channel = future.getNow();
                     ChannelPromise promise = channel.newPromise();
-                    cascadeChannel(true, promise, resolveAndConnectPromise, channel);
+                    cascade(true, promise, resolveAndConnectPromise, channel);
                     doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
                 }
             });
@@ -229,7 +229,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
-                // Resolver has no idea about what to do with the specified remote address or it's resolved already.
+                // Resolver has no idea about what to do with the specified remote address, or it's resolved already.
                 doConnect(remoteAddress, localAddress, promise);
                 return;
             }
