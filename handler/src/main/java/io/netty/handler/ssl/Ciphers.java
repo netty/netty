@@ -769,16 +769,6 @@ public final class Ciphers {
     public static final String TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384 = "TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384";
 
     /**
-     * TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256
-     */
-    public static final String TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256";
-
-    /**
-     * TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256
-     */
-    public static final String TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256";
-
-    /**
      * TLS_ECCPWD_WITH_AES_128_GCM_SHA256
      */
     public static final String TLS_ECCPWD_WITH_AES_128_GCM_SHA256 = "TLS_ECCPWD_WITH_AES_128_GCM_SHA256";
@@ -787,16 +777,6 @@ public final class Ciphers {
      * TLS_ECCPWD_WITH_AES_256_GCM_SHA384
      */
     public static final String TLS_ECCPWD_WITH_AES_256_GCM_SHA384 = "TLS_ECCPWD_WITH_AES_256_GCM_SHA384";
-
-    /**
-     * TLS_ECCPWD_WITH_AES_128_CCM_SHA256
-     */
-    public static final String TLS_ECCPWD_WITH_AES_128_CCM_SHA256 = "TLS_ECCPWD_WITH_AES_128_CCM_SHA256";
-
-    /**
-     * TLS_ECCPWD_WITH_AES_256_CCM_SHA384
-     */
-    public static final String TLS_ECCPWD_WITH_AES_256_CCM_SHA384 = "TLS_ECCPWD_WITH_AES_256_CCM_SHA384";
 
     private Ciphers() {
         // Prevent outside initialization
