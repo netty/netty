@@ -64,7 +64,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     /**
      * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise}
      * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
-     * the {@link Promise} is cancelled and vise-versa.
+     * the {@link Promise} is cancelled and vice-versa.
      *
      * @param future    the {@link Future} which will be used to listen to for notifying the {@link Promise}.
      * @param promise   the {@link Promise} which will be notified
@@ -79,7 +79,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     /**
      * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise}
      * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
-     * the {@link Promise} is cancelled and vise-versa.
+     * the {@link Promise} is cancelled and vice-versa.
      *
      * @param logNotifyFailure  {@code true} if logging should be done in case notification fails.
      * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
@@ -115,7 +115,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise} will be
      * notified with the given result.
      * Cancellation is propagated both ways such that if the {@link Future} is cancelled the {@link Promise}
-     * is cancelled and vise-versa.
+     * is cancelled and vice-versa.
      *
      * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
      * @param future           the {@link Future} which will be used to listen to for notifying the {@link Promise}.
@@ -124,7 +124,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * @return the passed in {@link Future}
      */
     public static <R, F extends Future<Void>> F cascade(boolean logNotifyFailure, F future,
-                                                               Promise<R> promise, R successResult) {
+                                                        Promise<R> promise, R successResult) {
         promise.addListener(new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> f) {
