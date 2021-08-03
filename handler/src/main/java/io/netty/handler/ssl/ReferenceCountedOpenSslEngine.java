@@ -1454,12 +1454,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 runnable.run();
                 return;
             }
-            try {
-                task.runAsync(runnable);
-            } finally {
+            task.runAsync(() -> {
                 // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+                // This needs to be done before we run the completion runnable, since that might
+                // query the handshake status.
                 needTask = false;
-            }
+                runnable.run();
+            });
         }
     }
 
