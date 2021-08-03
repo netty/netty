@@ -16,25 +16,25 @@
 
 package io.netty.handler.traffic;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.local.LocalHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -72,7 +72,7 @@ public class TrafficShapingHandlerTest {
         }
     }
 
-    private void testHandlerRemove0(final AbstractTrafficShapingHandler trafficHandler)
+    private static void testHandlerRemove0(final AbstractTrafficShapingHandler trafficHandler)
             throws Exception {
         Channel svrChannel = null;
         Channel ch = null;
@@ -91,7 +91,7 @@ public class TrafficShapingHandlerTest {
                         }
                     });
             final LocalAddress svrAddr = new LocalAddress("foo");
-            svrChannel = serverBootstrap.bind(svrAddr).sync().channel();
+            svrChannel = serverBootstrap.bind(svrAddr).get();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.channel(LocalChannel.class).group(GROUP).handler(new ChannelInitializer<Channel>() {
                 @Override
@@ -99,7 +99,7 @@ public class TrafficShapingHandlerTest {
                     ch.pipeline().addLast("traffic-shaping", trafficHandler);
                 }
             });
-            ch = bootstrap.connect(svrAddr).sync().channel();
+            ch = bootstrap.connect(svrAddr).get();
             Attribute<Runnable> attr = ch.attr(AbstractTrafficShapingHandler.REOPEN_TASK);
             assertNull(attr.get());
             ch.writeAndFlush(Unpooled.wrappedBuffer("foo".getBytes(CharsetUtil.UTF_8)));

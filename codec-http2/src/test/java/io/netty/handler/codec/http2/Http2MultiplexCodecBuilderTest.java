@@ -44,8 +44,8 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -67,7 +67,7 @@ public class Http2MultiplexCodecBuilderTest {
     }
 
     @BeforeEach
-    public void setUp() throws InterruptedException {
+    public void setUp() throws Exception {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         LocalAddress serverAddress = new LocalAddress(getClass().getName());
         serverLastInboundHandler = new SharableLastInboundHandler();
@@ -109,7 +109,7 @@ public class Http2MultiplexCodecBuilderTest {
                         serverChannelLatch.countDown();
                     }
                 });
-        serverChannel = sb.bind(serverAddress).sync().channel();
+        serverChannel = sb.bind(serverAddress).get();
 
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
@@ -120,7 +120,7 @@ public class Http2MultiplexCodecBuilderTest {
                         fail("Should not be called for outbound streams");
                     }
                 }).build());
-        clientChannel = cb.connect(serverAddress).sync().channel();
+        clientChannel = cb.connect(serverAddress).get();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 

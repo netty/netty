@@ -41,10 +41,10 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -61,12 +61,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.Random;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -414,7 +416,7 @@ public class ProxyHandlerTest {
         }
 
         // Randomize the execution order to increase the possibility of exposing failure dependencies.
-        long seed = (reproducibleSeed == 0L) ? System.currentTimeMillis() : reproducibleSeed;
+        long seed = reproducibleSeed == 0L? System.currentTimeMillis() : reproducibleSeed;
         logger.debug("Seed used: {}\n", seed);
         Collections.shuffle(params, new Random(seed));
 
@@ -629,7 +631,7 @@ public class ProxyHandlerTest {
             Bootstrap b = new Bootstrap();
             b.group(group);
             b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.AUTO_READ, this.autoRead);
+            b.option(ChannelOption.AUTO_READ, autoRead);
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
@@ -641,7 +643,8 @@ public class ProxyHandlerTest {
                 }
             });
 
-            boolean finished = b.connect(destination).channel().closeFuture().await(10, TimeUnit.SECONDS);
+            Channel channel = b.connect(destination).get();
+            boolean finished = channel.closeFuture().await(10, TimeUnit.SECONDS);
 
             logger.debug("Received messages: {}", testHandler.received);
 
@@ -689,7 +692,8 @@ public class ProxyHandlerTest {
                 }
             });
 
-            boolean finished = b.connect(destination).channel().closeFuture().await(10, TimeUnit.SECONDS);
+            Channel channel = b.connect(destination).get();
+            boolean finished = channel.closeFuture().await(10, TimeUnit.SECONDS);
             finished &= testHandler.latch.await(10, TimeUnit.SECONDS);
 
             logger.debug("Recorded exceptions: {}", testHandler.exceptions);
@@ -734,7 +738,8 @@ public class ProxyHandlerTest {
                 }
             });
 
-            ChannelFuture cf = b.connect(DESTINATION).channel().closeFuture();
+            Channel channel = b.connect(DESTINATION).get();
+            ChannelFuture cf = channel.closeFuture();
             boolean finished = cf.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
             finished &= testHandler.latch.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
 

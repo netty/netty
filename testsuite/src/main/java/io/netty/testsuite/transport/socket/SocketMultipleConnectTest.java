@@ -46,10 +46,10 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
         Channel cc = null;
         try {
             sb.childHandler(new ChannelHandler() { });
-            sc = sb.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+            sc = sb.bind(NetUtil.LOCALHOST, 0).get();
 
             cb.handler(new ChannelHandler() { });
-            cc = cb.register().syncUninterruptibly().channel();
+            cc = cb.register().get();
             cc.connect(sc.localAddress()).syncUninterruptibly();
             ChannelFuture connectFuture2 = cc.connect(sc.localAddress()).await();
             assertTrue(connectFuture2.cause() instanceof AlreadyConnectedException);

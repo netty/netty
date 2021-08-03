@@ -47,7 +47,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
         Channel channel = null;
         try {
             cb.handler(new ChannelHandlerAdapter() { });
-            channel = cb.bind(0).sync().channel();
+            channel = cb.bind(0).get();
         } finally {
             closeChannel(channel);
         }
@@ -89,7 +89,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return cb.bind(newSocketAddress()).sync().channel();
+        return cb.bind(newSocketAddress()).get();
     }
 
     @Override
@@ -140,7 +140,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
                 });
             }
         });
-        return sb.bind(newSocketAddress()).sync().channel();
+        return sb.bind(newSocketAddress()).get();
     }
 
     @Override

@@ -15,24 +15,23 @@
  */
 package io.netty.bootstrap;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveServerChannelFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -41,6 +40,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
@@ -164,8 +165,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
-    ChannelFuture init(Channel channel) {
-        final ChannelPromise promise = channel.newPromise();
+    Future<Channel> init(Channel channel) {
+        Promise<Channel> promise = new DefaultPromise<>(channel.eventLoop());
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -187,7 +188,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(() -> {
                     pipeline.addLast(new ServerBootstrapAcceptor(
                             ch, currentChildHandler, currentChildOptions, currentChildAttrs));
-                    promise.setSuccess();
+                    promise.setSuccess(ch);
                 });
             }
         });

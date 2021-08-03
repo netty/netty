@@ -388,7 +388,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .group(GROUP)
                 .childHandler(handler);
 
-        return bootstrap.bind(address).sync().channel();
+        return bootstrap.bind(address).get();
     }
 
     private static Channel client(Channel server, ChannelHandler handler) throws Exception {
@@ -399,7 +399,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .group(GROUP)
                 .handler(handler);
 
-        return bootstrap.connect(remoteAddress).sync().channel();
+        return bootstrap.connect(remoteAddress).get();
     }
 
     private static final class DelegateThread extends Thread {

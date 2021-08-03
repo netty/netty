@@ -16,6 +16,7 @@
 package io.netty.channel.group;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,6 +24,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -46,10 +48,10 @@ public class DefaultChannelGroupTest {
         });
         b.channel(NioServerSocketChannel.class);
 
-        ChannelFuture f = b.bind(0).syncUninterruptibly();
+        Future<Channel> f = b.bind(0).syncUninterruptibly();
 
         if (f.isSuccess()) {
-            allChannels.add(f.channel());
+            allChannels.add(f.getNow());
             allChannels.close().awaitUninterruptibly();
         }
 

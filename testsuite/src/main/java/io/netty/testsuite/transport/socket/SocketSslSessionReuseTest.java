@@ -21,8 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -33,7 +33,6 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -41,7 +40,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -85,7 +83,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSslSessionReuse(SslContext serverCtx, SslContext clientCtx, TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> this.testSslSessionReuse(sb, cb, serverCtx, clientCtx));
+        run(testInfo, (sb, cb) -> testSslSessionReuse(sb, cb, serverCtx, clientCtx));
     }
 
     public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb,
@@ -105,7 +103,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                 sch.pipeline().addLast(sh);
             }
         });
-        final Channel sc = sb.bind().sync().channel();
+        final Channel sc = sb.bind().get();
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -123,14 +121,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         try {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
             ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
-            Channel cc = cb.connect(sc.localAddress()).sync().channel();
+            Channel cc = cb.connect(sc.localAddress()).get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
             msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
-            cc = cb.connect(sc.localAddress()).sync().channel();
+            cc = cb.connect(sc.localAddress()).get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");

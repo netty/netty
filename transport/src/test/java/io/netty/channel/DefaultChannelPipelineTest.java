@@ -99,7 +99,7 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        ChannelFuture bindFuture = sb.bind(LocalAddress.ANY).sync();
+        Channel channel = sb.bind(LocalAddress.ANY).get();
 
         Bootstrap b = new Bootstrap();
         b.group(group).channel(LocalChannel.class);
@@ -110,10 +110,10 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        self = b.connect(bindFuture.channel().localAddress()).sync().channel();
+        self = b.connect(channel.localAddress()).get();
         peer = peerRef.get();
 
-        bindFuture.channel().close().sync();
+        channel.close().sync();
     }
 
     @AfterEach

@@ -21,7 +21,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -36,6 +35,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -105,7 +106,7 @@ abstract class ProxyServer {
             }
         });
 
-        ch = (ServerSocketChannel) b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+        ch = (ServerSocketChannel) b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().getNow();
     }
 
     public final InetSocketAddress address() {
@@ -167,13 +168,13 @@ abstract class ProxyServer {
             boolean finished = handleProxyProtocol(ctx, msg);
             if (finished) {
                 this.finished = true;
-                ChannelFuture f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
-                f.addListener((ChannelFutureListener) future -> {
+                Future<Channel> f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
+                f.addListener((GenericFutureListener<Future<Channel>>) future -> {
                     if (!future.isSuccess()) {
                         recordException(future.cause());
                         ctx.close();
                     } else {
-                        backend = future.channel();
+                        backend = future.getNow();
                         flush();
                     }
                 });
@@ -202,7 +203,7 @@ abstract class ProxyServer {
 
         protected abstract SocketAddress intermediaryDestination();
 
-        private ChannelFuture connectToDestination(EventLoop loop, ChannelHandler handler) {
+        private Future<Channel> connectToDestination(EventLoop loop, ChannelHandler handler) {
             Bootstrap b = new Bootstrap();
             b.channel(NioSocketChannel.class);
             b.group(loop);

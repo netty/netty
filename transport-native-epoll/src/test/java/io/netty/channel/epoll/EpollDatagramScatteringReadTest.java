@@ -110,7 +110,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                     // Nothing will be sent.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
             final SocketAddress ccAddress = cc.localAddress();
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
@@ -147,7 +147,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             });
 
             sb.option(ChannelOption.AUTO_READ, false);
-            sc = sb.bind(newSocketAddress()).sync().channel();
+            sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
                 sc.connect(cc.localAddress()).syncUninterruptibly();
@@ -220,7 +220,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                     // Nothing will be sent.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
             final SocketAddress ccAddress = cc.localAddress();
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
@@ -248,7 +248,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
             });
 
-            sc = sb.bind(newSocketAddress()).sync().channel();
+            sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
                 sc.connect(cc.localAddress()).syncUninterruptibly();

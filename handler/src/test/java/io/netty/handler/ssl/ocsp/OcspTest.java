@@ -25,8 +25,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -47,13 +47,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.SSLHandshakeException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -399,29 +398,25 @@ public class OcspTest {
     }
 
     private static Channel newServer(EventLoopGroup group, SocketAddress address,
-            SslContext context, byte[] response, ChannelHandler handler) {
+            SslContext context, byte[] response, ChannelHandler handler) throws Exception {
 
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(group)
                 .childHandler(newServerHandler(context, response, handler));
 
-        return bootstrap.bind(address)
-                .syncUninterruptibly()
-                .channel();
+        return bootstrap.bind(address).get();
     }
 
     private static Channel newClient(EventLoopGroup group, SocketAddress address,
-            SslContext context, OcspClientCallback callback, ChannelHandler handler) {
+            SslContext context, OcspClientCallback callback, ChannelHandler handler) throws Exception {
 
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
                 .handler(newClientHandler(context, callback, handler));
 
-        return bootstrap.connect(address)
-                .syncUninterruptibly()
-                .channel();
+        return bootstrap.connect(address).get();
     }
 
     private static ChannelHandler newServerHandler(final SslContext context,

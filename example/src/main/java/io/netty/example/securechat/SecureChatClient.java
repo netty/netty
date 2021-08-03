@@ -51,7 +51,7 @@ public final class SecureChatClient {
              .handler(new SecureChatClientInitializer(sslCtx));
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             // Read commands from the stdin.
             ChannelFuture lastWriteFuture = null;
@@ -67,7 +67,7 @@ public final class SecureChatClient {
 
                 // If user typed the 'bye' command, wait until the server closes
                 // the connection.
-                if ("bye".equals(line.toLowerCase())) {
+                if ("bye".equalsIgnoreCase(line)) {
                     ch.closeFuture().sync();
                     break;
                 }

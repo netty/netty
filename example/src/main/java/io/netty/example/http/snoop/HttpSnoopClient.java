@@ -81,7 +81,7 @@ public final class HttpSnoopClient {
              .handler(new HttpSnoopClientInitializer(sslCtx));
 
             // Make the connection attempt.
-            Channel ch = b.connect(host, port).sync().channel();
+            Channel ch = b.connect(host, port).get();
 
             // Prepare the HTTP request.
             HttpRequest request = new DefaultFullHttpRequest(

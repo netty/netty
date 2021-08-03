@@ -37,13 +37,13 @@ public class EpollServerSocketChannelConfigTest {
     private static EpollServerSocketChannel ch;
 
     @BeforeAll
-    public static void before() {
+    public static void before() throws Exception {
         group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterAll

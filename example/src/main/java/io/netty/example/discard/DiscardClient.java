@@ -16,7 +16,7 @@
 package io.netty.example.discard;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -65,10 +65,10 @@ public final class DiscardClient {
              });
 
             // Make the connection attempt.
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            Channel channel = b.connect(HOST, PORT).get();
 
             // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
+            channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

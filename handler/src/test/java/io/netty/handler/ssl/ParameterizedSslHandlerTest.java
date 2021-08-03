@@ -104,7 +104,7 @@ public class ParameterizedSslHandlerTest {
     @Timeout(value = 48000, unit = TimeUnit.MILLISECONDS)
     public void testCompositeBufSizeEstimationGuaranteesSynchronousWrite(
             SslProvider clientProvider, SslProvider serverProvider)
-            throws CertificateException, SSLException, ExecutionException, InterruptedException {
+            throws Exception {
         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
                 true, true, true);
         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
@@ -206,7 +206,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -255,7 +255,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             donePromise.get();
         } finally {
@@ -337,7 +337,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -356,7 +356,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             promise.syncUninterruptibly();
         } finally {
@@ -396,8 +396,8 @@ public class ParameterizedSslHandlerTest {
         testCloseNotify(clientProvider, serverProvider, 0, false);
     }
 
-    private void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider,
-                                 final long closeNotifyReadTimeout, final boolean timeout) throws Exception {
+    private static void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider,
+                                        final long closeNotifyReadTimeout, final boolean timeout) throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -442,7 +442,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -480,7 +480,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverPromise.awaitUninterruptibly();
             clientPromise.awaitUninterruptibly();
@@ -554,11 +554,11 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    private void reentryOnHandshakeComplete(SslProvider clientProvider, SslProvider serverProvider,
-                                            EventLoopGroup group, SocketAddress bindAddress,
-                                            Class<? extends ServerChannel> serverClass,
-                                            Class<? extends Channel> clientClass, boolean serverAutoRead,
-                                            boolean clientAutoRead) throws Exception {
+    private static void reentryOnHandshakeComplete(SslProvider clientProvider, SslProvider serverProvider,
+                                                   EventLoopGroup group, SocketAddress bindAddress,
+                                                   Class<? extends ServerChannel> serverClass,
+                                                   Class<? extends Channel> clientClass, boolean serverAutoRead,
+                                                   boolean clientAutoRead) throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(serverProvider)
@@ -589,7 +589,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
-                    }).bind(bindAddress).syncUninterruptibly().channel();
+                    }).bind(bindAddress).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -602,7 +602,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverLatch.await();
             assertEquals(expectedContent, serverQueue.toString());

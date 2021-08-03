@@ -15,9 +15,6 @@
  */
 package io.netty.example.dns.udp;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -43,6 +40,9 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.NetUtil;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+
 public final class DnsClient {
 
     private static final String QUERY_DOMAIN = "www.example.com";
@@ -59,7 +59,7 @@ public final class DnsClient {
         for (int i = 0, count = msg.count(DnsSection.ANSWER); i < count; i++) {
             DnsRecord record = msg.recordAt(DnsSection.ANSWER, i);
             if (record.type() == DnsRecordType.A) {
-                //just print the IP after query
+                // Just print the IP after query
                 DnsRawRecord raw = (DnsRawRecord) record;
                 System.out.println(NetUtil.bytesToIpAddress(ByteBufUtil.getBytes(raw.content())));
             }
@@ -91,13 +91,13 @@ public final class DnsClient {
                     });
                  }
              });
-            final Channel ch = b.bind(0).sync().channel();
+            final Channel ch = b.bind(0).get();
             DnsQuery query = new DatagramDnsQuery(null, addr, 1).setRecord(
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
-            boolean succ = ch.closeFuture().await(10, TimeUnit.SECONDS);
-            if (!succ) {
+            boolean success = ch.closeFuture().await(10, TimeUnit.SECONDS);
+            if (!success) {
                 System.err.println("dns query timeout!");
                 ch.close().sync();
             }

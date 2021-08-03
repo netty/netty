@@ -16,7 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
@@ -73,7 +73,7 @@ public class EpollDatagramChannelTest {
     }
 
     @Test
-    public void testLocalAddressBeforeAndAfterBind() {
+    public void testLocalAddressBeforeAndAfterBind() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             TestHandler handler = new TestHandler();
@@ -85,16 +85,16 @@ public class EpollDatagramChannelTest {
                     .localAddress(localAddressBeforeBind)
                     .handler(handler);
 
-            ChannelFuture future = bootstrap.bind().syncUninterruptibly();
+            Channel channel = bootstrap.bind().get();
 
             assertNull(handler.localAddress);
 
-            SocketAddress localAddressAfterBind = future.channel().localAddress();
+            SocketAddress localAddressAfterBind = channel.localAddress();
             assertNotNull(localAddressAfterBind);
             assertTrue(localAddressAfterBind instanceof InetSocketAddress);
             assertTrue(((InetSocketAddress) localAddressAfterBind).getPort() != 0);
 
-            future.channel().close().syncUninterruptibly();
+            channel.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();
         }
@@ -112,7 +112,7 @@ public class EpollDatagramChannelTest {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-            this.localAddress = ctx.channel().localAddress();
+            localAddress = ctx.channel().localAddress();
             ctx.fireChannelRegistered();
         }
     }

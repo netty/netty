@@ -56,12 +56,12 @@ public class EpollSocketChannelConfigTest {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
                 .handler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterEach
@@ -76,9 +76,9 @@ public class EpollSocketChannelConfigTest {
     private static long nextLong(long n) {
         long bits, val;
         do {
-           bits = (rand.nextLong() << 1) >>> 1;
+           bits = rand.nextLong() << 1 >>> 1;
            val = bits % n;
-        } while (bits - val + (n - 1) < 0L);
+        } while (bits - val + n - 1 < 0L);
         return val;
      }
 

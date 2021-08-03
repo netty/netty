@@ -47,6 +47,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
         return EpollSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
     }
 
+    @Override
     public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {
         // Run this test with IP_RECVORIGDSTADDR option enabled
         sb.option(EpollChannelOption.IP_RECVORIGDSTADDR, true);
@@ -92,11 +93,11 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
 
     private void testSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite, boolean gro)
             throws Throwable {
-        if (!(cb.group() instanceof EpollEventLoopGroup)) {
+        if (!(cb.config().group() instanceof EpollEventLoopGroup)) {
             // Only supported for the native epoll transport.
             return;
         }
-        if (gro && !(sb.group() instanceof EpollEventLoopGroup)) {
+        if (gro && !(sb.config().group() instanceof EpollEventLoopGroup)) {
             // Only supported for the native epoll transport.
             return;
         }
@@ -112,7 +113,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 }
             });
 
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
 
             final int numBuffers = 16;
             final int segmentSize = 512;
@@ -132,7 +133,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                         latch.countDown();
                     }
                 }
-            }).bind(newSocketAddress()).sync().channel();
+            }).bind(newSocketAddress()).get();
 
             if (sc instanceof EpollDatagramChannel) {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));

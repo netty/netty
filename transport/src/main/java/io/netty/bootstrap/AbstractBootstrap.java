@@ -16,18 +16,20 @@
 
 package io.netty.bootstrap;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.FailedFuture;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -35,10 +37,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.netty.util.concurrent.PromiseNotifier.cascade;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -178,15 +182,28 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     /**
      * Create a new {@link Channel} and register it with an {@link EventLoop}.
      */
-    public ChannelFuture register() {
+    public Future<Channel> register() {
         validate();
-        return initAndRegister();
+        return initAndRegister(group.next());
+    }
+
+    /**
+     * Create a new unregistered channel.
+     * <p>
+     * The channel must then be {@linkplain Channel#register() registered} separately.
+     *
+     * @return A new unregistered channel.
+     * @throws Exception If the channel cannot be created.
+     */
+    public Channel createUnregistered() throws Exception {
+        validate();
+        return initWithoutRegister();
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind() {
+    public Future<Channel> bind() {
         validate();
         SocketAddress localAddress = this.localAddress;
         requireNonNull(localAddress, "localAddress");
@@ -196,75 +213,82 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(int inetPort) {
+    public Future<Channel> bind(int inetPort) {
         return bind(new InetSocketAddress(inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(String inetHost, int inetPort) {
+    public Future<Channel> bind(String inetHost, int inetPort) {
         return bind(SocketUtils.socketAddress(inetHost, inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(InetAddress inetHost, int inetPort) {
+    public Future<Channel> bind(InetAddress inetHost, int inetPort) {
         return bind(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Channel> bind(SocketAddress localAddress) {
         validate();
         requireNonNull(localAddress, "localAddress");
         return doBind(localAddress);
     }
 
-    private ChannelFuture doBind(final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
-        final Channel channel = regFuture.channel();
+    private Future<Channel> doBind(final SocketAddress localAddress) {
+        EventLoop loop = group.next();
+        final Future<Channel> regFuture = initAndRegister(loop);
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
+        Promise<Channel> bindPromise = new DefaultPromise<>(loop);
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
+            Channel channel = regFuture.getNow();
             ChannelPromise promise = channel.newPromise();
+            cascade(true, promise, bindPromise, channel);
             doBind0(regFuture, channel, localAddress, promise);
-            return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final ChannelPromise promise = channel.newPromise();
-            regFuture.addListener((ChannelFutureListener) future -> {
+            regFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
                 Throwable cause = future.cause();
                 if (cause != null) {
                     // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
-                    promise.setFailure(cause);
+                    bindPromise.setFailure(cause);
                 } else {
+                    Channel channel = future.getNow();
+                    ChannelPromise promise = channel.newPromise();
+                    cascade(true, promise, bindPromise, channel);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
-            return promise;
         }
+        return bindPromise;
     }
 
-    final ChannelFuture initAndRegister() {
-        EventLoop loop = group.next();
+    final Future<Channel> initAndRegister(EventLoop loop) {
         final Channel channel;
         try {
             channel = newChannel(loop);
         } catch (Throwable t) {
-            return new FailedChannel(loop).newFailedFuture(t);
+            return new FailedFuture<>(loop, t);
         }
 
-        final ChannelPromise promise = channel.newPromise();
-        loop.execute(() -> init(channel).addListener((ChannelFutureListener) future -> {
+        Promise<Channel> promise = new DefaultPromise<>(loop);
+        loop.execute(() -> init(channel).addListener(future -> {
             if (future.isSuccess()) {
-                channel.register(promise);
+                // TODO eventually I think we'd like to be able to either pass the generic promise down,
+                //  or return the future from register().
+                channel.register().addListener(f -> {
+                    promise.setSuccess(channel);
+                });
             } else {
                 channel.unsafe().closeForcibly();
                 promise.setFailure(future.cause());
@@ -274,14 +298,25 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         return promise;
     }
 
+    final Channel initWithoutRegister() throws Exception {
+        EventLoop loop = group.next();
+        Channel channel = newChannel(loop);
+
+        init(channel).addListener(future -> {
+            if (!future.isSuccess()) {
+                channel.unsafe().closeForcibly();
+            }
+        });
+        return channel;
+    }
+
     abstract C newChannel(EventLoop loop) throws Exception;
 
-    abstract ChannelFuture init(Channel channel);
+    abstract Future<Channel> init(Channel channel);
 
     private static void doBind0(
-            final ChannelFuture regFuture, final Channel channel,
+            final Future<Channel> regFuture, final Channel channel,
             final SocketAddress localAddress, final ChannelPromise promise) {
-
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
@@ -366,7 +401,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         if (map.isEmpty()) {
             return Collections.emptyMap();
         }
-        return Collections.unmodifiableMap(new HashMap<>(map));
+        return Map.copyOf(map);
     }
 
     static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {

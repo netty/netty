@@ -37,13 +37,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -109,13 +109,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -159,13 +159,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -216,13 +216,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testCloseInFlush");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -246,13 +246,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushFailure");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 

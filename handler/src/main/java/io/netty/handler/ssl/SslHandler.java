@@ -1476,7 +1476,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }
     }
 
-    private void executeChannelRead(final ChannelHandlerContext ctx, final ByteBuf decodedOut) {
+    private static void executeChannelRead(final ChannelHandlerContext ctx, final ByteBuf decodedOut) {
         try {
             ctx.executor().execute(() -> ctx.fireChannelRead(decodedOut));
         } catch (RejectedExecutionException e) {
@@ -1770,7 +1770,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     task.run();
                     runComplete();
                 }
-            } catch (final Throwable cause) {
+            } catch (Throwable cause) {
                 handleException(cause);
             }
         }
@@ -1805,8 +1805,8 @@ public class SslHandler extends ByteToMessageDecoder {
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
         // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
-        final boolean notified;
-        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
+        final boolean notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel());
+        if (notified) {
             if (logger.isDebugEnabled()) {
                 SSLSession session = engine.getSession();
                 logger.debug(

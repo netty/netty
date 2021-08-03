@@ -60,7 +60,7 @@ public final class HttpServer {
             }
         });
 
-        Channel ch = b.bind(PORT).sync().channel();
+        Channel ch = b.bind(PORT).get();
         return ch.closeFuture();
     }
 }

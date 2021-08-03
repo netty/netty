@@ -16,11 +16,12 @@
 package io.netty.example.mqtt.heartBeat;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.mqtt.MqttDecoder;
@@ -35,8 +36,8 @@ public final class MqttHeartBeatBroker {
     }
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
 
         try {
             ServerBootstrap b = new ServerBootstrap();
@@ -44,6 +45,7 @@ public final class MqttHeartBeatBroker {
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.channel(NioServerSocketChannel.class);
             b.childHandler(new ChannelInitializer<SocketChannel>() {
+                @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast("encoder", MqttEncoder.INSTANCE);
                     ch.pipeline().addLast("decoder", new MqttDecoder());
@@ -52,10 +54,10 @@ public final class MqttHeartBeatBroker {
                 }
             });
 
-            ChannelFuture f = b.bind(1883).sync();
+            Channel channel = b.bind(1883).get();
             System.out.println("Broker initiated...");
 
-            f.channel().closeFuture().sync();
+            channel.closeFuture().sync();
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();

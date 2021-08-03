@@ -16,33 +16,18 @@
 
 package io.netty.handler.ssl;
 
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-
-import io.netty.util.concurrent.Future;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -59,8 +44,8 @@ import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
 import org.hamcrest.CoreMatchers;
@@ -69,18 +54,28 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
@@ -456,11 +451,8 @@ public class SniHandlerTest {
                     }
                 });
 
-                serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
-
-                ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-                assertTrue(ccf.awaitUninterruptibly().isSuccess());
-                clientChannel = ccf.channel();
+                serverChannel = sb.bind(new InetSocketAddress(0)).get();
+                clientChannel = cb.connect(serverChannel.localAddress()).get();
 
                 assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
                 assertTrue(clientApnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -558,7 +550,7 @@ public class SniHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addFirst(handler);
                         }
-                    }).bind(address).syncUninterruptibly().channel();
+                    }).bind(address).get();
 
                     sslContext = SslContextBuilder.forClient().sslProvider(provider)
                             .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -566,7 +558,7 @@ public class SniHandlerTest {
                     Bootstrap cb = new Bootstrap();
                     cc = cb.group(group).channel(LocalChannel.class).handler(new SslHandler(
                             sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1)))
-                            .connect(address).syncUninterruptibly().channel();
+                            .connect(address).get();
 
                     cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
                             .syncUninterruptibly();
@@ -643,7 +635,7 @@ public class SniHandlerTest {
         testWithFragmentSize(provider, 50);
     }
 
-    private void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
+    private static void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())

@@ -158,7 +158,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         try {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                @SuppressWarnings("deprecation")
                 public void initChannel(Channel sch) throws Exception {
                     serverChannel = sch;
                     serverSslHandler = newSslHandler(serverCtx, sch.alloc(), executorService);
@@ -171,7 +170,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                @SuppressWarnings("deprecation")
                 public void initChannel(Channel sch) throws Exception {
                     clientChannel = sch;
                     clientSslHandler = newSslHandler(clientCtx, sch.alloc(), executorService);
@@ -182,7 +180,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 }
             });
 
-            Channel sc = sb.bind().sync().channel();
+            Channel sc = sb.bind().get();
             cb.connect(sc.localAddress()).sync();
 
             Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
@@ -228,7 +226,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     @Sharable
     private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-        protected final AtomicReference<Throwable> exception;
+        private final AtomicReference<Throwable> exception;
         private int handshakeCounter;
 
         TestHandler(AtomicReference<Throwable> exception) {

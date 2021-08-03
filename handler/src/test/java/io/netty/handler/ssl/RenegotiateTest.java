@@ -98,7 +98,7 @@ public abstract class RenegotiateTest {
                             });
                         }
                     });
-            Channel channel = sb.bind(new LocalAddress("test")).syncUninterruptibly().channel();
+            Channel channel = sb.bind(new LocalAddress("test")).get();
 
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -131,7 +131,7 @@ public abstract class RenegotiateTest {
                         }
                     });
 
-            Channel clientChannel = bootstrap.connect(channel.localAddress()).syncUninterruptibly().channel();
+            Channel clientChannel = bootstrap.connect(channel.localAddress()).get();
             latch.await();
             clientChannel.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();

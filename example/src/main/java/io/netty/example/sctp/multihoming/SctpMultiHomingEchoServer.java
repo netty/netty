@@ -16,6 +16,7 @@
 package io.netty.example.sctp.multihoming;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -28,6 +29,7 @@ import io.netty.channel.sctp.nio.NioSctpServerChannel;
 import io.netty.example.sctp.SctpEchoServerHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 
 import java.net.InetAddress;
@@ -66,10 +68,10 @@ public final class SctpMultiHomingEchoServer {
             InetAddress localSecondaryAddress = SocketUtils.addressByName(SERVER_SECONDARY_HOST);
 
             // Bind the server to primary address.
-            ChannelFuture bindFuture = b.bind(localAddress).sync();
+            Future<Channel> bindFuture = b.bind(localAddress);
 
             //Get the underlying sctp channel
-            SctpServerChannel channel = (SctpServerChannel) bindFuture.channel();
+            SctpServerChannel channel = (SctpServerChannel) bindFuture.get();
 
             //Bind the secondary address
             ChannelFuture connectFuture = channel.bindAddress(localSecondaryAddress).sync();

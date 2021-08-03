@@ -36,7 +36,13 @@ import io.netty.util.concurrent.Future;
 
 import java.util.Base64;
 
-import static io.netty.handler.codec.smtp.SmtpCommand.*;
+import static io.netty.handler.codec.smtp.SmtpCommand.AUTH;
+import static io.netty.handler.codec.smtp.SmtpCommand.DATA;
+import static io.netty.handler.codec.smtp.SmtpCommand.EHLO;
+import static io.netty.handler.codec.smtp.SmtpCommand.EMPTY;
+import static io.netty.handler.codec.smtp.SmtpCommand.MAIL;
+import static io.netty.handler.codec.smtp.SmtpCommand.QUIT;
+import static io.netty.handler.codec.smtp.SmtpCommand.RCPT;
 
 /**
  * A simple smtp client
@@ -92,7 +98,7 @@ public class SmtpClient {
                     .future();
 
             // Start connect.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
             f.await();
             ch.close();
         } finally {

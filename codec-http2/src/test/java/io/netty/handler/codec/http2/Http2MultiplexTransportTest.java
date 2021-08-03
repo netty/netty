@@ -25,7 +25,8 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -45,7 +46,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -61,7 +61,6 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -94,7 +93,7 @@ public class Http2MultiplexTransportTest {
 
     @BeforeEach
     public void setup() {
-        eventLoopGroup = new NioEventLoopGroup();
+        eventLoopGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @AfterEach
@@ -113,19 +112,19 @@ public class Http2MultiplexTransportTest {
 
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
-    public void asyncSettingsAckWithMultiplexCodec() throws InterruptedException {
+    public void asyncSettingsAckWithMultiplexCodec() throws Exception {
         asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, DISCARD_HANDLER).build(), null);
     }
 
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
-    public void asyncSettingsAckWithMultiplexHandler() throws InterruptedException {
+    public void asyncSettingsAckWithMultiplexHandler() throws Exception {
         asyncSettingsAck0(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(DISCARD_HANDLER));
     }
 
     private void asyncSettingsAck0(final Http2FrameCodec codec, final ChannelHandler multiplexer)
-            throws InterruptedException {
+            throws Exception {
         // The client expects 2 settings frames. One from the connection setup and one from this test.
         final CountDownLatch serverAckOneLatch = new CountDownLatch(1);
         final CountDownLatch serverAckAllLatch = new CountDownLatch(2);
@@ -160,7 +159,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).awaitUninterruptibly().channel();
+        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
         Bootstrap bs = new Bootstrap();
         bs.group(eventLoopGroup);
@@ -181,7 +180,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        clientChannel = bs.connect(serverChannel.localAddress()).awaitUninterruptibly().channel();
+        clientChannel = bs.connect(serverChannel.localAddress()).get();
         serverConnectedChannelLatch.await();
         serverConnectedChannel = serverConnectedChannelRef.get();
 
@@ -203,8 +202,7 @@ public class Http2MultiplexTransportTest {
 
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
-    public void testFlushNotDiscarded()
-            throws InterruptedException {
+    public void testFlushNotDiscarded() throws Exception {
         final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
         try {
@@ -228,14 +226,14 @@ public class Http2MultiplexTransportTest {
                                                                         CharsetUtil.US_ASCII), true));
                                                         ctx.channel().eventLoop().execute(ctx::flush);
                                             });
-                                }, 500, TimeUnit.MILLISECONDS);
+                                }, 500, MILLISECONDS);
                             }
                             ReferenceCountUtil.release(msg);
                         }
                     }));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
             final CountDownLatch latch = new CountDownLatch(1);
             Bootstrap bs = new Bootstrap();
@@ -248,7 +246,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
             Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             h2Bootstrap.handler(new ChannelHandler() {
                 @Override
@@ -347,7 +345,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
                     .keyManager(ssc.key(), ssc.cert())
@@ -430,7 +428,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
             latch.await();
             AssertionError error = errorRef.get();
             if (error != null) {
@@ -504,7 +502,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
                     .sslProvider(provider)
@@ -561,7 +559,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
 
             latch.await();
         } finally {

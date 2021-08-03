@@ -72,8 +72,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                 }
             })
             .bind(0)
-            .sync()
-            .channel();
+            .get();
     chan = new Bootstrap()
         .channel(EpollSocketChannel.class)
         .handler(new ChannelInitializer<Channel>() {
@@ -116,8 +115,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         })
         .group(group)
         .connect(serverChan.localAddress())
-        .sync()
-        .channel();
+        .get();
 
         abyte = chan.alloc().directBuffer(1);
         abyte.writeByte('a');

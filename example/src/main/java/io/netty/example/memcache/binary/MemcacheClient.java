@@ -72,7 +72,7 @@ public final class MemcacheClient {
                     });
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             // Read commands from the stdin.
             System.out.println("Enter commands (quit to end)");
@@ -85,7 +85,7 @@ public final class MemcacheClient {
                 if (line == null) {
                     break;
                 }
-                if ("quit".equals(line.toLowerCase())) {
+                if ("quit".equalsIgnoreCase(line)) {
                     ch.close().sync();
                     break;
                 }

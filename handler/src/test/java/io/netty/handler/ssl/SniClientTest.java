@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -29,7 +29,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
-
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -39,7 +38,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -131,7 +129,7 @@ public class SniClientTest {
                         return finalContext;
                     }));
                 }
-            }).bind(address).syncUninterruptibly().channel();
+            }).bind(address).get();
 
             TrustManagerFactory tmf = SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName);
             sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
@@ -140,8 +138,7 @@ public class SniClientTest {
 
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
-            cc = cb.group(group).channel(LocalChannel.class).handler(handler)
-                    .connect(address).syncUninterruptibly().channel();
+            cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).get();
             assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
 
             // After we are done with handshaking getHandshakeSession() should return null.

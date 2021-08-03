@@ -30,8 +30,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
@@ -51,27 +51,31 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.api.Disabled;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLProtocolException;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
-
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-
 import java.util.Collections;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
@@ -88,14 +92,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLProtocolException;
-import javax.net.ssl.X509ExtendedTrustManager;
-
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,7 +113,7 @@ public class SslHandlerTest {
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testNonApplicationDataFailureFailsQueuedWrites() throws NoSuchAlgorithmException, InterruptedException {
+    public void testNonApplicationDataFailureFailsQueuedWrites() throws Exception {
         final CountDownLatch writeLatch = new CountDownLatch(1);
         final Queue<ChannelPromise> writesToFail = new ConcurrentLinkedQueue<ChannelPromise>();
         SSLEngine engine = newClientModeSSLEngine();
@@ -139,7 +141,7 @@ public class SslHandlerTest {
         try {
             final CountDownLatch writeCauseLatch = new CountDownLatch(1);
             final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
-            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener((ChannelFutureListener) future -> {
+            ch.write(wrappedBuffer(new byte[]{1})).addListener((ChannelFutureListener) future -> {
                 failureRef.compareAndSet(null, future.cause());
                 writeCauseLatch.countDown();
             });
@@ -488,8 +490,8 @@ public class SslHandlerTest {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(newHandler(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build(),
                             serverPromise));
-            sc = serverBootstrap.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
-            cc = bootstrap.connect(sc.localAddress()).syncUninterruptibly().channel();
+            sc = serverBootstrap.bind(new InetSocketAddress(0)).get();
+            cc = bootstrap.connect(sc.localAddress()).get();
 
             serverPromise.syncUninterruptibly();
             clientPromise.syncUninterruptibly();
@@ -645,8 +647,8 @@ public class SslHandlerTest {
                     }
                 });
 
-            serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             latch.await();
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
@@ -712,7 +714,7 @@ public class SslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -722,7 +724,7 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             // We first write a ReadOnlyBuffer because SslHandler will attempt to take the first buffer and append to it
             // until there is no room, or the aggregation size threshold is exceeded. We want to verify that we don't
@@ -773,7 +775,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
                         }
                     });
-            sc = sb.bind(address).syncUninterruptibly().channel();
+            sc = sb.bind(address).get();
 
             final AtomicReference<SslHandler> sslHandlerRef = new AtomicReference<>();
             Bootstrap b = new Bootstrap()
@@ -791,7 +793,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(handler);
                         }
                     });
-            cc = b.connect(sc.localAddress()).syncUninterruptibly().channel();
+            cc = b.connect(sc.localAddress()).get();
             SslHandler handler = sslHandlerRef.get();
             handler.handshakeFuture().awaitUninterruptibly();
             assertFalse(handler.handshakeFuture().isSuccess());
@@ -844,7 +846,7 @@ public class SslHandlerTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -868,10 +870,10 @@ public class SslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).addListener((ChannelFutureListener) future -> {
+                    }).connect(sc.localAddress()).addListener((GenericFutureListener<Future<Channel>>) future -> {
                         // Write something to trigger the handshake before fireChannelActive is called.
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
-                    }).syncUninterruptibly().channel();
+                        future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                    }).get();
 
             // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
             // channelActive(...) was called. Let's first wait for the activeLatch countdown to happen and after this
@@ -881,8 +883,7 @@ public class SslHandlerTest {
             if (error != null) {
                 throw error;
             }
-            assertThat(sslHandler.handshakeFuture().await().cause(),
-                       CoreMatchers.instanceOf(SSLException.class));
+            assertThat(sslHandler.handshakeFuture().await().cause(), instanceOf(SSLException.class));
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -925,9 +926,9 @@ public class SslHandlerTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -945,15 +946,15 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress());
             if (!startTls) {
-                future.addListener((ChannelFutureListener) future1 -> {
+                future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
                     // Write something to trigger the handshake before fireChannelActive is called.
-                    future1.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                    future1.getNow().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                 });
             }
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             Throwable cause = sslHandler.handshakeFuture().await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(SSLException.class));
+            assertThat(cause, instanceOf(SSLException.class));
             assertThat(cause.getMessage(), containsString("timed out"));
         } finally {
             if (cc != null) {
@@ -1012,9 +1013,9 @@ public class SslHandlerTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(serverSslHandler)
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -1023,7 +1024,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(clientSslHandler);
                         }
                     }).connect(sc.localAddress());
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             assertTrue(clientSslHandler.handshakeFuture().await().isSuccess());
             assertTrue(serverSslHandler.handshakeFuture().await().isSuccess());
@@ -1084,9 +1085,9 @@ public class SslHandlerTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(serverSslHandler)
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -1095,7 +1096,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(clientSslHandler);
                         }
                     }).connect(sc.localAddress());
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             if (client) {
                 Throwable cause = clientSslHandler.handshakeFuture().await().cause();
@@ -1209,13 +1210,13 @@ public class SslHandlerTest {
                                             }
                                         }
 
-                                        ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+                                        ctx.writeAndFlush(wrappedBuffer(bytes));
                                     }
                                 }
                             });
                         }
                     })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
             InetSocketAddress serverAddr = (InetSocketAddress) sc.localAddress();
             testSessionTickets(serverAddr, group, sslClientCtx, bytes, false);
@@ -1242,7 +1243,7 @@ public class SslHandlerTest {
             final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT,
                     serverAddress.getAddress().getHostAddress(), serverAddress.getPort());
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -1265,7 +1266,7 @@ public class SslHandlerTest {
                             });
                         }
                     }).connect(serverAddress);
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             assertTrue(clientSslHandler.handshakeFuture().sync().isSuccess());
 
@@ -1279,7 +1280,7 @@ public class SslHandlerTest {
             Object obj = queue.take();
             if (obj instanceof ByteBuf) {
                 ByteBuf buffer = (ByteBuf) obj;
-                ByteBuf expected = Unpooled.wrappedBuffer(bytes);
+                ByteBuf expected = wrappedBuffer(bytes);
                 try {
                     assertEquals(expected, buffer);
                 } finally {
@@ -1380,8 +1381,8 @@ public class SslHandlerTest {
                             });
                         }
                     })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
-            final ChannelFuture future = new Bootstrap()
+                    .bind(new InetSocketAddress(0)).get();
+            Channel channel = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -1389,10 +1390,9 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
                         }
-                    }).connect(sc.localAddress());
-            future.syncUninterruptibly();
+                    }).connect(sc.localAddress()).get();
             clientSslHandler.handshakeFuture().addListener((FutureListener<Channel>) f -> {
-                future.channel().close();
+                channel.close();
             });
             assertFalse(clientSslHandler.handshakeFuture().await().isSuccess());
             assertFalse(serverSslHandler.handshakeFuture().await().isSuccess());
@@ -1465,8 +1465,8 @@ public class SslHandlerTest {
                 .sslProvider(provider).build();
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
-        Channel sc = null;
-        Channel cc = null;
+        Channel sc;
+        Channel cc;
         final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
         final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
 
@@ -1500,9 +1500,9 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(new SslEventHandler(serverEvent));
                         }
                     })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -1511,8 +1511,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(clientSslHandler);
                             ch.pipeline().addLast(new SslEventHandler(clientEvent));
                         }
-                    }).connect(sc.localAddress());
-            cc = future.syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
             assertThat(clientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
@@ -1562,7 +1561,7 @@ public class SslHandlerTest {
         testHandshakeEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3);
     }
 
-    private void testHandshakeEvents(SslProvider provider, String protocol) throws Exception {
+    private static void testHandshakeEvents(SslProvider provider, String protocol) throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .protocols(protocol)
@@ -1591,7 +1590,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(serverCompletionEvents));
                         }
                     })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
             Bootstrap bs = new Bootstrap()
                     .group(group)
@@ -1606,8 +1605,8 @@ public class SslHandlerTest {
                     })
                     .remoteAddress(sc.localAddress());
 
-            Channel cc1 = bs.connect().sync().channel();
-            Channel cc2 = bs.connect().sync().channel();
+            Channel cc1 = bs.connect().get();
+            Channel cc2 = bs.connect().get();
 
             // We expect 4 events as we have 2 connections and for each connection there should be one event
             // on the server-side and one on the client-side.
@@ -1645,5 +1644,5 @@ public class SslHandlerTest {
                 completionEvents.add((SslHandshakeCompletionEvent) evt);
             }
         }
-    };
+    }
 }

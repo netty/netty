@@ -37,7 +37,7 @@ public abstract class AbstractEventLoopTest {
                 .childHandler(new ChannelHandler() { });
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
-        b.bind(0).sync().channel();
+        b.bind(0).sync();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
         assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));

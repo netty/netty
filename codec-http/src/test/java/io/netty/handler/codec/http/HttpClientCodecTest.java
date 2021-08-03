@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -36,6 +35,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,10 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -125,7 +128,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testServerCloseSocketInputProvidesData() throws InterruptedException {
+    public void testServerCloseSocketInputProvidesData() throws Exception {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
@@ -186,12 +189,12 @@ public class HttpClientCodecTest {
                 }
             });
 
-            Channel serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+            Channel serverChannel = sb.bind(new InetSocketAddress(0)).get();
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-            ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+            Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
             assertTrue(ccf.awaitUninterruptibly().isSuccess());
-            Channel clientChannel = ccf.channel();
+            Channel clientChannel = ccf.get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
             assertTrue(responseReceivedLatch.await(5, SECONDS));

@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -98,8 +97,8 @@ public class FileRegionThrottleTest {
                 ch.pipeline().addLast(gtsh);
             }
         });
-        Channel sc = bs.bind(0).sync().channel();
-        Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch)).channel();
+        Channel sc = bs.bind(0).get();
+        Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch));
 
         long start = TrafficCounter.milliSecondFromNano();
         cc.writeAndFlush(Unpooled.copiedBuffer("send-file\n", CharsetUtil.US_ASCII)).sync();
@@ -110,7 +109,7 @@ public class FileRegionThrottleTest {
         cc.close().sync();
     }
 
-    private ChannelFuture clientConnect(final SocketAddress server, final ReadHandler readHandler) throws Exception {
+    private Channel clientConnect(final SocketAddress server, final ReadHandler readHandler) throws Exception {
         Bootstrap bc = new Bootstrap();
         bc.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -118,7 +117,7 @@ public class FileRegionThrottleTest {
                 ch.pipeline().addLast(readHandler);
             }
         });
-        return bc.connect(server).sync();
+        return bc.connect(server).get();
     }
 
     private static final class MessageDecoder implements ChannelHandler {
@@ -128,7 +127,7 @@ public class FileRegionThrottleTest {
                 ByteBuf buf = (ByteBuf) msg;
                 String message = buf.toString(Charset.defaultCharset());
                 buf.release();
-                if (message.equals("send-file")) {
+                if ("send-file".equals(message)) {
                     RandomAccessFile raf = new RandomAccessFile(tmp, "r");
                     ctx.channel().writeAndFlush(new DefaultFileRegion(raf.getChannel(), 0, tmp.length()));
                 }
@@ -138,7 +137,7 @@ public class FileRegionThrottleTest {
 
     private static final class ReadHandler implements ChannelHandler {
         private long bytesTransferred;
-        private CountDownLatch latch;
+        private final CountDownLatch latch;
 
         ReadHandler(CountDownLatch latch) {
             this.latch = latch;

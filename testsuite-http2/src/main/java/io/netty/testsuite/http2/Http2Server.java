@@ -49,7 +49,7 @@ public final class Http2Server {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new Http2ServerInitializer());
 
-            Channel ch = b.bind(port).sync().channel();
+            Channel ch = b.bind(port).get();
 
             ch.closeFuture().sync();
         } finally {

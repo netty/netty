@@ -57,7 +57,7 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
                             }
                         });
                 DatagramChannel datagramChannel = (DatagramChannel) udpBootstrap
-                        .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                        .bind(new InetSocketAddress(0)).get();
                 channelGroup.add(datagramChannel);
             }
             assertEquals(100, channelGroup.size());
