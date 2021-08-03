@@ -779,7 +779,7 @@ public final class Ciphers {
     public static final String TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256";
 
     /**
-     * TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256
+     * TLS_ECCPWD_WITH_AES_128_GCM_SHA256
      */
     public static final String TLS_ECCPWD_WITH_AES_128_GCM_SHA256 = "TLS_ECCPWD_WITH_AES_128_GCM_SHA256";
 
