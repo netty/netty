@@ -15,10 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
-
-import java.util.Arrays;
-
 /**
  * Cipher suites
  */
@@ -237,6 +233,11 @@ public final class Ciphers {
     public static final String TLS_DH_anon_WITH_CAMELLIA256_SHA256 = "TLS_DH_anon_WITH_CAMELLIA256_SHA256";
 
     /**
+     * TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
+     */
+    public static final String TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA = "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA";
+
+    /**
      * TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
      */
     public static final String TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 = "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256";
@@ -340,6 +341,11 @@ public final class Ciphers {
      * TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
      */
     public static final String TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA";
+
+    /**
+     * TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
+     */
+    public static final String TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA = "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA";
 
     /**
      * TLS_DHE_RSA_WITH_AES_128_CBC_SHA
@@ -751,6 +757,46 @@ public final class Ciphers {
      * TLS_PSK_WITH_CAMELLIA128_SHA256
      */
     public static final String TLS_PSK_WITH_CAMELLIA128_SHA256 = "TLS_PSK_WITH_CAMELLIA128_SHA256";
+
+    /**
+     * TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256
+     */
+    public static final String TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256";
+
+    /**
+     * TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384
+     */
+    public static final String TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384 = "TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384";
+
+    /**
+     * TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256
+     */
+    public static final String TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256";
+
+    /**
+     * TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256
+     */
+    public static final String TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256 = "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256";
+
+    /**
+     * TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256
+     */
+    public static final String TLS_ECCPWD_WITH_AES_128_GCM_SHA256 = "TLS_ECCPWD_WITH_AES_128_GCM_SHA256";
+
+    /**
+     * TLS_ECCPWD_WITH_AES_256_GCM_SHA384
+     */
+    public static final String TLS_ECCPWD_WITH_AES_256_GCM_SHA384 = "TLS_ECCPWD_WITH_AES_256_GCM_SHA384";
+
+    /**
+     * TLS_ECCPWD_WITH_AES_128_CCM_SHA256
+     */
+    public static final String TLS_ECCPWD_WITH_AES_128_CCM_SHA256 = "TLS_ECCPWD_WITH_AES_128_CCM_SHA256";
+
+    /**
+     * TLS_ECCPWD_WITH_AES_256_CCM_SHA384
+     */
+    public static final String TLS_ECCPWD_WITH_AES_256_CCM_SHA384 = "TLS_ECCPWD_WITH_AES_256_CCM_SHA384";
 
     private Ciphers() {
         // Prevent outside initialization
