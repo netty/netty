@@ -342,9 +342,9 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 headers.add(name, value.toString());
             } else if (validateHeaders) {
                 if (StringUtil.isNullOrEmpty(name)) {
-                    throw new IllegalArgumentException("received an invalid header line '" + value.toString() + '\'');
+                    throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
                 }
-                String line = name + ':' + value.toString();
+                String line = name + ':' + value;
                 throw new IllegalArgumentException("a header value or name contains a prohibited character ':'"
                                                    + ", " + line);
             }
