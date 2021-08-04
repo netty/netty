@@ -404,7 +404,7 @@ public abstract class ZlibTest {
     }
 
     private static final class TestByteBufAllocator extends AbstractByteBufAllocator {
-        private ByteBufAllocator wrapped;
+        private final ByteBufAllocator wrapped;
         private int maxAllocation;
 
         TestByteBufAllocator(ByteBufAllocator wrapped) {

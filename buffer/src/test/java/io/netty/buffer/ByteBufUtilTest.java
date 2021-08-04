@@ -667,7 +667,7 @@ public class ByteBufUtilTest {
                 ByteBufUtil.utf8Bytes(usAscii, 5, 18));
     }
 
-    private static int[][] INVALID_RANGES = new int[][] {
+    private static final int[][] INVALID_RANGES = new int[][] {
         { -1, 5 }, { 5, 30 }, { 10, 5 }
     };
 
