@@ -31,11 +31,9 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -51,7 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class HttpContentDecoderTest {
     private static final String HELLO_WORLD = "hello, world";

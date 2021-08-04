@@ -16,10 +16,8 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastIPv6Test;
-import io.netty.testsuite.transport.socket.DatagramUnicastTest;
 
 import java.util.List;
 

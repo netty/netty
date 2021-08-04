@@ -43,7 +43,6 @@ import java.util.Queue;
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;

@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SI
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class HpackEncoderTest {

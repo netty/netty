@@ -35,7 +35,6 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.AbstractAddressResolver;
