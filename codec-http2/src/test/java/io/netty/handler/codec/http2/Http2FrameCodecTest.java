@@ -121,10 +121,10 @@ public class Http2FrameCodecTest {
     }
 
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
-        /**
-         * Some tests call this method twice. Once with JUnit's @Before and once directly to pass special settings.
-         * This call ensures that in case of two consecutive calls to setUp(), the previous channel is shutdown and
-         * ByteBufs are released correctly.
+        /*
+          Some tests call this method twice. Once with JUnit's @Before and once directly to pass special settings.
+          This call ensures that in case of two consecutive calls to setUp(), the previous channel is shutdown and
+          ByteBufs are released correctly.
          */
         tearDown();
 

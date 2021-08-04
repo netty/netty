@@ -594,8 +594,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
     /**
      * Skip control Characters
-     *
-     * @throws NotEnoughDataDecoderException
      */
     private static void skipControlCharacters(ByteBuf undecodedChunk) {
         if (!undecodedChunk.hasArray()) {
@@ -637,7 +635,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @param closeDelimiterStatus
      *            the next getStatus if the delimiter is a close delimiter
      * @return the next InterfaceHttpData if any
-     * @throws ErrorDataDecoderException
+     * @throws ErrorDataDecoderException If no multipart delimiter is found, or an error occurs during decoding.
      */
     private InterfaceHttpData findMultipartDelimiter(String delimiter, MultiPartStatus dispositionStatus,
             MultiPartStatus closeDelimiterStatus) {
@@ -680,7 +678,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Find the next Disposition
      *
      * @return the next InterfaceHttpData if any
-     * @throws ErrorDataDecoderException
      */
     private InterfaceHttpData findMultipartDisposition() {
         int readerIndex = undecodedChunk.readerIndex();
@@ -839,7 +836,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @param delimiter
      *            the delimiter to use
      * @return the InterfaceHttpData if any
-     * @throws ErrorDataDecoderException
+     * @throws ErrorDataDecoderException If an error occurs when decoding the multipart data.
      */
     protected InterfaceHttpData getFileUpload(String delimiter) {
         // eventually restart from existing FileUpload
@@ -1146,7 +1143,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * Load the field value or file data from a Multipart request
      *
      * @return {@code true} if the last chunk is loaded (boundary delimiter found), {@code false} if need more chunks
-     * @throws ErrorDataDecoderException
      */
     private static boolean loadDataMultipartOptimized(ByteBuf undecodedChunk, String delimiter, HttpData httpData) {
         if (!undecodedChunk.isReadable()) {

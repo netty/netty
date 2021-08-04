@@ -156,8 +156,9 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
      * Decodes the fixed header. It's one byte for the flags and then variable
      * bytes for the remaining length.
      *
-     * @see
+     * See
      * https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180841
+     * for more information.
      *
      * @param buffer the buffer to decode from
      * @return the fixed header

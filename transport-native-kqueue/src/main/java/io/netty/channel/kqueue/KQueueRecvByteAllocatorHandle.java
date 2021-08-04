@@ -88,15 +88,15 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
     }
 
     boolean maybeMoreDataToRead() {
-        /**
-         * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
-         * (see <a href="https://www.freebsd.org/cgi/man.cgi?kqueue">kqueue man</a>). However in order to
-         * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to
-         * continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
-         * channel. It is expected that the {@link #KQueueSocketChannel} implementations will track if all data was not
-         * read, and will force a EVFILT_READ ready event.
-         *
-         * It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
+        /*
+          kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
+          (see kqueue man: https://www.freebsd.org/cgi/man.cgi?kqueue). However, in order to
+          respect auto read we support reading to stop if auto read is off. If auto read is on we force reading to
+          continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
+          channel. It is expected that the {@link #KQueueSocketChannel} implementations will track if all data was not
+          read, and will force a EVFILT_READ ready event.
+
+          It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
          */
         return numberBytesPending != 0;
     }
