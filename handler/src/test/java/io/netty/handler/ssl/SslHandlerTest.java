@@ -1675,5 +1675,5 @@ public class SslHandlerTest {
         public boolean isSharable() {
             return true;
         }
-    };
+    }
 }
