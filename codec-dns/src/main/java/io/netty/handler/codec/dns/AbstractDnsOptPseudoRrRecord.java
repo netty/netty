@@ -38,7 +38,7 @@ public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord imp
     // See https://tools.ietf.org/html/rfc6891#section-6.1.3
     private static long packIntoLong(int val, int val2) {
         // We are currently not support DO and Z fields, just use 0.
-        return ((long) (val & 0xff) << 24 | (val2 & 0xff) << 16 | (0) << 8) & 0xFFFFFFFFL;
+        return ((long) (val & 0xff) << 24 | (val2 & 0xff) << 16) & 0xFFFFFFFFL;
     }
 
     @Override
