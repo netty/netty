@@ -190,7 +190,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      * original InterfaceHttpData object.
      *
      * @param dest Destination file - must be not null.
-     * @return True if the write is successful.
+     * @return {@code true} if the write is successful.
      * @throws IOException If an IO error occurs while renaming the underlying file of this HttpData.
      */
     boolean renameTo(File dest) throws IOException;
