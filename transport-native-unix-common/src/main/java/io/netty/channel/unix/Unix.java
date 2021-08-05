@@ -49,6 +49,8 @@ public final class Unix {
 
     /**
      * Internal method... Should never be called from the user.
+     *
+     * @param registerTask The task to run if this thread caused registration.
      */
     @UnstableApi
     public static void registerInternal(Runnable registerTask) {
