@@ -242,6 +242,7 @@ final class HpackTestCase {
     }
 
     static class HeaderBlock {
+        @SuppressWarnings("FieldMayBeFinal")
         private int maxHeaderTableSize = -1;
         private byte[] encodedBytes;
         private List<String> encoded;
