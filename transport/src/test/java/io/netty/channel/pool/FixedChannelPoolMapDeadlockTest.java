@@ -260,5 +260,5 @@ public class FixedChannelPoolMapDeadlockTest {
         public void channelCreated(Channel ch) throws Exception {
             // noop
         }
-    };
+    }
 }

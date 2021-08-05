@@ -57,7 +57,7 @@ public class HttpContentDecoderTest {
             -41, 81, 40, -49, 47, -54, 73, 1, 0, 58, 114, -85, -1, 12, 0, 0, 0
     };
     private static final String SAMPLE_STRING = "Hello, I am Meow!. A small kitten. :)" +
-            "I sleep all day, and meow all night.";;
+            "I sleep all day, and meow all night.";
     private static final byte[] SAMPLE_BZ_BYTES = new byte[]{27, 72, 0, 0, -60, -102, 91, -86, 103, 20,
             -28, -23, 54, -101, 11, -106, -16, -32, -95, -61, -37, 94, -16, 97, -40, -93, -56, 18, 21, 86,
             -110, 82, -41, 102, -89, 20, 11, 10, -68, -31, 96, -116, -55, -80, -31, -91, 96, -64, 83, 51,
