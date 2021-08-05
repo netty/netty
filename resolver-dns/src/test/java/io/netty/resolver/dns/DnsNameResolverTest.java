@@ -43,6 +43,7 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.HostsFileEntriesProvider;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.TestDnsServer.TestResourceRecord;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -66,10 +67,11 @@ import org.apache.directory.server.dns.messages.ResponseCode;
 import org.apache.directory.server.dns.store.DnsAttribute;
 import org.apache.directory.server.dns.store.RecordStore;
 import org.apache.mina.core.buffer.IoBuffer;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,8 +98,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -107,8 +109,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -459,19 +459,17 @@ public class DnsNameResolverTest {
      * simultaneously.
      */
     @Test
-    public void testNameServerCache() throws IOException, InterruptedException {
+    public void testNameServerCache() throws Exception {
         final String overriddenIP = "12.34.12.34";
         final TestDnsServer dnsServer2 = new TestDnsServer(question -> {
-            switch (question.getRecordType()) {
-                case A:
-                    Map<String, Object> attr = new HashMap<>();
-                    attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), overriddenIP);
-                    return Collections.singleton(
-                            new TestDnsServer.TestResourceRecord(
-                                    question.getDomainName(), question.getRecordType(), attr));
-                default:
-                    return null;
+            if (question.getRecordType() == RecordType.A) {
+                Map<String, Object> attr = new HashMap<>();
+                attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), overriddenIP);
+                return Collections.singleton(
+                        new TestResourceRecord(
+                                question.getDomainName(), question.getRecordType(), attr));
             }
+            return null;
         });
         dnsServer2.start();
         try {
@@ -1148,8 +1146,8 @@ public class DnsNameResolverTest {
 
         final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A))
                 .syncUninterruptibly().getNow();
-        assertThat(records, Matchers.hasSize(1));
-        assertThat(records.get(0), Matchers.instanceOf(DnsRawRecord.class));
+        assertThat(records, hasSize(1));
+        assertThat(records.get(0), instanceOf(DnsRawRecord.class));
 
         final DnsRawRecord record = (DnsRawRecord) records.get(0);
         final ByteBuf content = record.content();
@@ -1953,7 +1951,7 @@ public class DnsNameResolverTest {
 
         try {
             final List<InetAddress> addresses = resolver.resolveAll(unresolved).sync().get();
-            assertThat(addresses, Matchers.<InetAddress>hasSize(greaterThan(0)));
+            assertThat(addresses, hasSize(greaterThan(0)));
             for (InetAddress address : addresses) {
                 assertThat(address.getHostName(), startsWith(unresolved));
                 assertThat(address.getHostAddress(), startsWith(ipAddrPrefix));
@@ -1964,13 +1962,14 @@ public class DnsNameResolverTest {
         }
     }
 
-    private void testNsLoopFailsResolve(AuthoritativeDnsServerCache authoritativeDnsServerCache) throws Exception {
+    private static void testNsLoopFailsResolve(AuthoritativeDnsServerCache authoritativeDnsServerCache)
+            throws Exception {
         final String domain = "netty.io";
         final String ns1Name = "ns1." + domain;
         final String ns2Name = "ns2." + domain;
 
         TestDnsServer testDnsServer = new TestDnsServer(new HashSet<String>(
-                Collections.singletonList(domain))) {
+                singletonList(domain))) {
 
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
@@ -1997,9 +1996,9 @@ public class DnsNameResolverTest {
 
         try {
             assertThat(resolver.resolve(domain).await().cause(),
-                    Matchers.<Throwable>instanceOf(UnknownHostException.class));
+                    instanceOf(UnknownHostException.class));
             assertThat(resolver.resolveAll(domain).await().cause(),
-                    Matchers.<Throwable>instanceOf(UnknownHostException.class));
+                    instanceOf(UnknownHostException.class));
         } finally {
             resolver.close();
             testDnsServer.stop();
@@ -2455,7 +2454,7 @@ public class DnsNameResolverTest {
             () -> testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_PREFERRED));
     }
 
-    private void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) throws Throwable {
+    private static void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) throws Throwable {
         DnsNameResolver resolver = newResolver()
                 .resolvedAddressTypes(types)
                 .ndots(1)
@@ -2562,7 +2561,7 @@ public class DnsNameResolverTest {
         TestDnsServer server = new TestDnsServer(Collections.singleton("test.netty.io"));
         server.start();
         DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
-                .searchDomains(Collections.singletonList("netty.io"))
+                .searchDomains(singletonList("netty.io"))
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(server.localAddress()))
                 .resolveCache(cache).build();
         try {
@@ -2807,16 +2806,12 @@ public class DnsNameResolverTest {
             if (qName.equals(name)) {
                 records.add(new TestDnsServer.TestResourceRecord(
                         qName, RecordType.CNAME,
-                        Collections.<String, Object>singletonMap(
+                        Collections.singletonMap(
                                 DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
-                records.add(new TestDnsServer.TestResourceRecord(qName,
-                        RecordType.A, Collections.<String, Object>singletonMap(
-                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
-            } else {
-                records.add(new TestDnsServer.TestResourceRecord(qName,
-                        RecordType.A, Collections.<String, Object>singletonMap(
-                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
             }
+            records.add(new TestDnsServer.TestResourceRecord(qName,
+                    RecordType.A, Collections.singletonMap(
+                    DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
             return records;
         });
         dnsServer2.start();
@@ -2830,8 +2825,8 @@ public class DnsNameResolverTest {
 
             resolver = builder.build();
             List<InetAddress> resolvedAddresses = resolver.resolveAll(name).syncUninterruptibly().getNow();
-            assertEquals(Collections.singletonList(InetAddress.getByAddress(name, new byte[] { 1, 2, 3, 4 })),
-                    resolvedAddresses);
+            assertEquals(singletonList(InetAddress.getByAddress(name, new byte[] { 1, 2, 3, 4 })),
+                         resolvedAddresses);
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
@@ -2848,10 +2843,10 @@ public class DnsNameResolverTest {
             Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
             String qName = question.getDomainName().toLowerCase();
             records.add(new TestDnsServer.TestResourceRecord(qName,
-                    RecordType.A, Collections.<String, Object>singletonMap(
+                    RecordType.A, Collections.singletonMap(
                     DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
             records.add(new TestDnsServer.TestResourceRecord(qName,
-                    RecordType.A, Collections.<String, Object>singletonMap(
+                    RecordType.A, Collections.singletonMap(
                     DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
             return records;
         });
@@ -2940,11 +2935,11 @@ public class DnsNameResolverTest {
             if (name.equals(host)) {
                 Set<ResourceRecord> records = new HashSet<ResourceRecord>(2);
                 records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
-                        Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
-                                "10.0.0.1")));
+                        Collections.singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                                 "10.0.0.1")));
                 records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
-                        Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
-                                "10.0.0.2")));
+                        Collections.singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                                 "10.0.0.2")));
                 return records;
             }
             return null;
@@ -3020,9 +3015,9 @@ public class DnsNameResolverTest {
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
             String name = question.getDomainName();
             if (name.equals(host)) {
-                return Collections.<ResourceRecord>singleton(
+                return Collections.singleton(
                         new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
-                                Collections.<String, Object>singletonMap(
+                                Collections.singletonMap(
                                         DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
             }
             return null;
@@ -3080,8 +3075,8 @@ public class DnsNameResolverTest {
                 Socket socket = serverSocket.accept();
 
                 InputStream in = socket.getInputStream();
-                assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
-                int txnId = in.read() << 8 | (in.read() & 0xff);
+                assertTrue((in.read() << 8 | in.read() & 0xff) > 2); // skip length field
+                int txnId = in.read() << 8 | in.read() & 0xff;
 
                 IoBuffer ioBuffer = IoBuffer.allocate(1024);
                 // Must replace the transactionId with the one from the TCP request
@@ -3141,7 +3136,7 @@ public class DnsNameResolverTest {
     public void testCancelPromise() throws Exception {
         final EventLoop eventLoop = group.next();
         final Promise<InetAddress> promise = eventLoop.newPromise();
-        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.<String>emptySet()) {
+        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.emptySet()) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
                 promise.cancel(true);
@@ -3150,7 +3145,7 @@ public class DnsNameResolverTest {
         };
         dnsServer1.start();
         final AtomicBoolean isQuerySentToSecondServer = new AtomicBoolean();
-        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.<String>emptySet()) {
+        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.emptySet()) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
                 isQuerySentToSecondServer.set(true);
