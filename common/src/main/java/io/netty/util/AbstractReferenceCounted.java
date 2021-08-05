@@ -41,8 +41,8 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     };
 
     // Value might not equal "real" reference count, all access should be via the updater
-    @SuppressWarnings("unused")
-    private final int refCnt = updater.initialValue();
+    @SuppressWarnings({"unused", "FieldMayBeFinal"})
+    private volatile int refCnt = updater.initialValue();
 
     @Override
     public int refCnt() {
