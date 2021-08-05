@@ -47,8 +47,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class ResolveAddressHandlerTest {
 
-    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID().toString());
-    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID().toString());
+    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID());
+    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID());
     private static final Exception ERROR = new UnknownHostException();
 
     private static EventLoopGroup group;
