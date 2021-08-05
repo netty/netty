@@ -315,8 +315,6 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override
@@ -467,14 +465,6 @@ public class DefaultPromise<V> implements Promise<V> {
         }
     }
 
-    private void removeListener0(GenericFutureListener<? extends Future<? super V>> listener) {
-        if (listeners instanceof DefaultFutureListeners) {
-            ((DefaultFutureListeners) listeners).remove(listener);
-        } else if (listeners == listener) {
-            listeners = null;
-        }
-    }
-
     private boolean setSuccess0(V result) {
         return setValue0(result == null ? SUCCESS : result);
     }
@@ -614,8 +604,6 @@ public class DefaultPromise<V> implements Promise<V> {
     private static final class StacklessCancellationException extends CancellationException {
 
         private static final long serialVersionUID = -2974906711413716191L;
-
-        private StacklessCancellationException() { }
 
         // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
         // Classloader.
