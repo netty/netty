@@ -23,8 +23,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-import java.util.List;
-
 /**
  * Decodes a received {@link ByteBuf} into an array of bytes.
  * A typical setup for TCP/IP would be:

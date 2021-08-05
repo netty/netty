@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.nano.MessageNano;
 
-import java.util.List;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;

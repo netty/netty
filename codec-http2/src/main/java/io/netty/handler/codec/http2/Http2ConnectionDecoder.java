@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.Closeable;
-import java.util.List;
 
 /**
  * Handler for inbound traffic on behalf of {@link Http2ConnectionHandler}. Performs basic protocol

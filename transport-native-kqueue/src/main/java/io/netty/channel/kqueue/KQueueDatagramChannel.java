@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
@@ -37,7 +35,6 @@ import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;

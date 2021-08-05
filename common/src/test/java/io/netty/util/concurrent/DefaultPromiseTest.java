@@ -30,12 +30,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
@@ -109,23 +107,21 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
+    public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
         final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
-    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
-            ExecutionException, TimeoutException {
+    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
         final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
-    ExecutionException, TimeoutException {
+    public void testCancellationExceptionIsReturnedAsCause() throws Exception {
         final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause(), instanceOf(CancellationException.class));

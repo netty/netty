@@ -34,7 +34,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import static java.util.Objects.requireNonNull;
 

@@ -18,7 +18,6 @@ package io.netty.buffer;
 
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;

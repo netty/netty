@@ -15,7 +15,6 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;

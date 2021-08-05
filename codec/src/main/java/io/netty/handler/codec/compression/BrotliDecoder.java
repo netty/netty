@@ -24,7 +24,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the brotli format.

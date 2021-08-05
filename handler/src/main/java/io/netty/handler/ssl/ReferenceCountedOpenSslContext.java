@@ -67,7 +67,6 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
-import static io.netty.handler.ssl.OpenSsl.ensureAvailability;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;

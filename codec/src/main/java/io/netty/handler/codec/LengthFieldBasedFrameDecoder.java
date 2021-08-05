@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.serialization.ObjectDecoder;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the

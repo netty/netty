@@ -16,7 +16,6 @@
 package io.netty.buffer.api;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * A life cycled buffer of memory, with separate reader and writer offsets.

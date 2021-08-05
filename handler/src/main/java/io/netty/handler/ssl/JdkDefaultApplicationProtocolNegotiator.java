@@ -18,8 +18,6 @@ package io.netty.handler.ssl;
 import java.util.Collections;
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
-
 /**
  * The {@link JdkApplicationProtocolNegotiator} to use if you do not care about NPN or ALPN and are using
  * {@link SslProvider#JDK}.

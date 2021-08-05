@@ -23,8 +23,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
 
-import java.util.List;
-
 /**
  * A decoder that decodes the content of the received {@link DatagramPacket} using
  * the specified {@link ByteBuf} decoder. E.g.,

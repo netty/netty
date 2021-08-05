@@ -26,8 +26,6 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-import java.util.List;
-
 /**
  * Decodes a Base64-encoded {@link ByteBuf} or US-ASCII {@link String}
  * into a {@link ByteBuf}.  Please note that this decoder must be used

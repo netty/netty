@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.List;
-
 /**
  * Decorator around another {@link Http2ConnectionDecoder} instance.
  */

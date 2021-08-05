@@ -18,7 +18,6 @@ package io.netty.resolver.dns;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.EmptyArrays;
 
 import java.net.InetSocketAddress;
 
