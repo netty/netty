@@ -16,7 +16,6 @@
 package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.channel.unix.Socket;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.File;
