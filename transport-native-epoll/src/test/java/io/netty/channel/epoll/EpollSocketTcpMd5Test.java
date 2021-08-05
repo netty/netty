@@ -34,7 +34,6 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollSocketTcpMd5Test {
     private static final byte[] SERVER_KEY = "abc".getBytes(CharsetUtil.US_ASCII);

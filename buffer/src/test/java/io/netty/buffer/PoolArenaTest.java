@@ -16,7 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;

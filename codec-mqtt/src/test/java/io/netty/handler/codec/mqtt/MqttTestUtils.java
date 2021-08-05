@@ -19,8 +19,6 @@ package io.netty.handler.codec.mqtt;
 import io.netty.buffer.ByteBufUtil;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
