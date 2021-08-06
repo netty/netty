@@ -115,7 +115,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     private static final class OldDefaultHttp2FrameWriter implements Http2DataWriter {
         private static final ByteBuf ZERO_BUFFER =
                 unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly();
-        private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+        private final int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
         @Override
         public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                                        int padding, boolean endStream, ChannelPromise promise) {

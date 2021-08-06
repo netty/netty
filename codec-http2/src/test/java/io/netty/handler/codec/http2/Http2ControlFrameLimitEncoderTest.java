@@ -74,7 +74,7 @@ public class Http2ControlFrameLimitEncoderTest {
 
     private int numWrites;
 
-    private Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
+    private final Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
 
     /**
      * Init fields and do mocking.
