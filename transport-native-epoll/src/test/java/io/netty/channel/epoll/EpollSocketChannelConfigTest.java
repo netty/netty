@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.github.artsok.RepeatedIfExceptionsTest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
@@ -137,7 +138,10 @@ public class EpollSocketChannelConfigTest {
         assertTrue(ch.config().isTcpQuickAck());
     }
 
-    @Test
+    // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
+    // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
+    // want to see a ClosedChannelException for the test to pass.
+    @RepeatedIfExceptionsTest(repeats = 4, exceptions = ChannelException.class)
     public void testSetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
         try {
@@ -148,7 +152,10 @@ public class EpollSocketChannelConfigTest {
         }
     }
 
-    @Test
+    // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
+    // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
+    // want to see a ClosedChannelException for the test to pass.
+    @RepeatedIfExceptionsTest(repeats = 4, exceptions = ChannelException.class)
     public void testGetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
         try {
