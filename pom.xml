@@ -868,6 +868,12 @@
         <version>1.2.3</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>io.github.artsok</groupId>
+        <artifactId>rerunner-jupiter</artifactId>
+        <version>2.1.6</version>
+        <scope>test</scope>
+      </dependency>
 
       <!-- Test dependencies for jboss marshalling encoder/decoder -->
       <dependency>
