@@ -20,7 +20,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -52,8 +51,6 @@ import static java.lang.Math.min;
  */
 @UnstableApi
 public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
-    private static final boolean VALIDATE_CONTENT_LENGTH =
-            SystemPropertyUtil.getBoolean("io.netty.http2.validateContentLength", true);
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
@@ -232,9 +229,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     // See https://tools.ietf.org/html/rfc7540#section-8.1.2.6
     private void verifyContentLength(Http2Stream stream, int data, boolean isEnd) throws Http2Exception {
-        if (!VALIDATE_CONTENT_LENGTH) {
-            return;
-        }
         ContentLength contentLength = stream.getProperty(contentLengthKey);
         if (contentLength != null) {
             try {
