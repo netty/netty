@@ -22,7 +22,7 @@ public class CustomChannelId implements ChannelId {
 
     private static final long serialVersionUID = 1L;
 
-    private int id;
+    private final int id;
 
     CustomChannelId(int id) {
         this.id = id;

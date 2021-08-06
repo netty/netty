@@ -25,7 +25,7 @@ import io.netty.util.internal.ObjectUtil;
 
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
     private ByteBuf cumulation;
-    private ByteToMessageDecoder.Cumulator cumulator;
+    private final ByteToMessageDecoder.Cumulator cumulator;
 
     protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
                                                           ByteToMessageDecoder.Cumulator writeCumulator) {

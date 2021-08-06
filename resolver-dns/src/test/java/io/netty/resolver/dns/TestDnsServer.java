@@ -191,7 +191,7 @@ class TestDnsServer extends DnsServer {
         @Override
         public ProtocolDecoder getDecoder(IoSession session) {
             return new ProtocolDecoderAdapter() {
-                private DnsMessageDecoder decoder = new DnsMessageDecoder();
+                private final DnsMessageDecoder decoder = new DnsMessageDecoder();
 
                 @Override
                 public void decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws IOException {

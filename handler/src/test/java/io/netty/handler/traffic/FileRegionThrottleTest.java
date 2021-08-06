@@ -147,7 +147,7 @@ public class FileRegionThrottleTest {
 
     private static final class ReadHandler extends ChannelInboundHandlerAdapter {
         private long bytesTransferred;
-        private CountDownLatch latch;
+        private final CountDownLatch latch;
 
         ReadHandler(CountDownLatch latch) {
             this.latch = latch;
