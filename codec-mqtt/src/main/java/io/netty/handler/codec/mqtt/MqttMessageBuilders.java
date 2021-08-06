@@ -356,7 +356,7 @@ public final class MqttMessageBuilders {
         private Long maximumPacketSize;
         private int topicAliasMaximum;
         private String reasonString;
-        private MqttProperties.UserProperties userProperties = new MqttProperties.UserProperties();
+        private final MqttProperties.UserProperties userProperties = new MqttProperties.UserProperties();
         private Boolean wildcardSubscriptionAvailable;
         private Boolean subscriptionIdentifiersAvailable;
         private Boolean sharedSubscriptionAvailable;

@@ -102,7 +102,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * If multipart, this is the boundary for the global multipart
      */
-    private String multipartDataBoundary;
+    private final String multipartDataBoundary;
 
     /**
      * If multipart, there could be internal multiparts (mixed) to the global

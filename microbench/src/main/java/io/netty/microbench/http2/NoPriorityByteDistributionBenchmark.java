@@ -98,7 +98,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
         }
     }
 
-    private Http2StreamVisitor invocationVisitor = stream -> {
+    private final Http2StreamVisitor invocationVisitor = stream -> {
         // Restore the connection window.
         resetWindow(stream);
 
