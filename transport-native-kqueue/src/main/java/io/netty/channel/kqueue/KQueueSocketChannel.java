@@ -15,13 +15,17 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 @UnstableApi
@@ -61,6 +65,33 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (config.isTcpFastOpenConnect()) {
+            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            outbound.addFlush();
+            Object curr;
+            if ((curr = outbound.current()) instanceof ByteBuf) {
+                ByteBuf initialData = (ByteBuf) curr;
+                if (initialData.isReadable()) {
+                    IovArray iov = new IovArray(config.getAllocator().directBuffer());
+                    try {
+                        iov.add(initialData, initialData.readerIndex(), initialData.readableBytes());
+                        int bytesSent = socket.connectx(
+                                (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
+                        if (bytesSent > 0) {
+                            outbound.removeBytes(bytesSent);
+                            return true;
+                        }
+                    } finally {
+                        iov.release();
+                    }
+                }
+            }
+        }
+        return super.doConnect(remoteAddress, localAddress);
     }
 
     @Override
