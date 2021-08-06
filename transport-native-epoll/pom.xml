@@ -401,6 +401,11 @@
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.github.artsok</groupId>
+      <artifactId>rerunner-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 
