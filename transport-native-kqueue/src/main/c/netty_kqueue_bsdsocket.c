@@ -83,6 +83,57 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
     return res < 0 ? -err : 0;
 }
 
+static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env,
+        jint socketFd,
+        jint socketInterface,
+        jboolean sourceIPv6, jbyteArray sourceAddress, jint sourceScopeId, jint sourcePort,
+        jboolean destinationIPv6, jbyteArray destinationAddress, jint destinationScopeId, jint destinationPort,
+        jint flags,
+        jlong iovAddress, jint iovCount, jint iovDataLength) {
+#ifdef __APPLE__ // connectx(2) is only defined on Darwin.
+    sa_endpoints_t endpoints;
+    endpoints.sae_srcif = (unsigned int) socketInterface;
+    endpoints.sae_srcaddr = NULL;
+    endpoints.sae_srcaddrlen = 0;
+    endpoints.sae_dstaddr = NULL;
+    endpoints.sae_dstaddrlen = 0;
+
+    struct sockaddr_storage srcaddr;
+    socklen_t srcaddrlen;
+    struct sockaddr_storage dstaddr;
+    socklen_t dstaddrlen;
+
+    if (NULL != sourceAddress) {
+        if (-1 == netty_unix_socket_initSockaddr(env,
+                sourceIPv6, sourceAddress, sourceScopeId, sourcePort, &srcaddr, &srcaddrlen)) {
+            return -1;
+        }
+        endpoints.sae_srcaddr = (const struct sockaddr*) &srcaddr;
+        endpoints.sae_srcaddrlen = srcaddrlen;
+    }
+    if (NULL != destinationAddress) {
+        if (-1 == netty_unix_socket_initSockaddr(env,
+                destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
+            return -1;
+        }
+        endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
+        endpoints.sae_dstaddrlen = dstaddrlen;
+    }
+
+    int socket = (int) socketFd;
+    const struct iovec* iov = (const struct iovec*) iovAddress;
+    unsigned int iovcnt = (unsigned int) iovCount;
+    size_t len = (size_t) iovDataLength;
+    int result = connectx(socket, &endpoints, SAE_ASSOCID_ANY, flags, iov, iovcnt, &len, NULL);
+    if (result == -1) {
+        return -errno;
+    }
+    return (jint) len;
+#else
+    return -ENOSYS;
+#endif
+}
+
 static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
 #ifdef SO_ACCEPTFILTER
     struct accept_filter_arg af;
@@ -187,6 +238,22 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 
     return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
 }
+
+static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env) {
+#ifdef CONNECT_RESUME_ON_READ_WRITE
+    return CONNECT_RESUME_ON_READ_WRITE;
+#else
+    return 0;
+#endif
+}
+
+static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env) {
+#ifdef CONNECT_DATA_IDEMPOTENT
+    return CONNECT_DATA_IDEMPOTENT;
+#else
+    return 0;
+#endif
+}
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -196,7 +263,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
-  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt }
+  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx },
+  { "connectResumeOnReadWrite", "()I", (void *) netty_kqueue_bsdsocket_connectResumeOnReadWrite },
+  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

@@ -16,13 +16,18 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
 import static io.netty.channel.unix.Errors.ioResult;
+import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 
 /**
  * A socket which provides access BSD native methods.
@@ -51,7 +56,7 @@ final class BsdSocket extends Socket {
         setSndLowAt(intValue(), lowAt);
     }
 
-    boolean isTcpNoPush() throws IOException  {
+    boolean isTcpNoPush() throws IOException {
         return getTcpNoPush(intValue()) != 0;
     }
 
@@ -80,6 +85,70 @@ final class BsdSocket extends Socket {
         return ioResult("sendfile", (int) res);
     }
 
+    int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, boolean tcpFastOpen)
+            throws IOException {
+        int flags = tcpFastOpen ? connectResumeOnReadWrite() | connectDataIdempotent() : 0;
+        return connectx(source, destination, data, flags);
+    }
+
+    int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags) throws IOException {
+        int sourceInterface = 0;
+
+        InetAddress sourceInetAddress = source.getAddress();
+        boolean sourceIPv6 = sourceInetAddress instanceof Inet6Address;
+        byte[] sourceAddress;
+        int sourceScopeId;
+        if (sourceIPv6) {
+            sourceAddress = sourceInetAddress.getAddress();
+            sourceScopeId = ((Inet6Address) sourceInetAddress).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            sourceScopeId = 0;
+            sourceAddress = ipv4MappedIpv6Address(sourceInetAddress.getAddress());
+        }
+        int sourcePort = source.getPort();
+
+        InetAddress destinationInetAddress = destination.getAddress();
+        boolean destinationIPv6 = destinationInetAddress instanceof Inet6Address;
+        byte[] destinationAddress;
+        int destinationScopeId;
+        if (destinationIPv6) {
+            destinationAddress = destinationInetAddress.getAddress();
+            destinationScopeId = ((Inet6Address) destinationInetAddress).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            destinationScopeId = 0;
+            destinationAddress = ipv4MappedIpv6Address(destinationInetAddress.getAddress());
+        }
+        int destinationPort = source.getPort();
+
+        long iovAddress;
+        int iovCount;
+        int iovDataLength;
+        if (data == null || data.count() == 0) {
+            iovAddress = 0;
+            iovCount = 0;
+            iovDataLength = 0;
+        } else {
+            iovAddress = data.memoryAddress(0);
+            iovCount = data.count();
+            long size = data.size();
+            if (size > Integer.MAX_VALUE) {
+                throw new IOException("IovArray.size() too big: " + size + " bytes.");
+            }
+            iovDataLength = (int) size;
+        }
+
+        int result = connectx(intValue(),
+                sourceInterface, sourceIPv6, sourceAddress, sourceScopeId, sourcePort,
+                destinationIPv6, destinationAddress, destinationScopeId, destinationPort,
+                flags, iovAddress, iovCount, iovDataLength);
+        if (result < 0) {
+            return ioResult("connectx", -result);
+        }
+        return result;
+    }
+
     public static BsdSocket newSocketStream() {
         return new BsdSocket(newSocketStream0());
     }
@@ -99,6 +168,21 @@ final class BsdSocket extends Socket {
     private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,
                                         long offset, long length) throws IOException;
 
+    /**
+     * @return If successful, zero or positive number of bytes transfered, otherwise negative errno.
+     */
+    private static native int connectx(
+            int socketFd,
+            // sa_endpoints_t *endpoints:
+            int sourceInterface,
+            boolean sourceIPv6, byte[] sourceAddress, int sourceScopeId, int sourcePort,
+            boolean destinationIPv6, byte[] destinationAddress, int destinationScopeId, int destinationPort,
+            // sae_associd_t associd is reserved
+            int flags,
+            long iovAddress, int iovCount, int iovDataLength
+            // sae_connid_t *connid is reserved
+    );
+
     private static native String[] getAcceptFilter(int fd) throws IOException;
     private static native int getTcpNoPush(int fd) throws IOException;
     private static native int getSndLowAt(int fd) throws IOException;
@@ -107,4 +191,6 @@ final class BsdSocket extends Socket {
     private static native void setAcceptFilter(int fd, String filterName, String filterArgs) throws IOException;
     private static native void setTcpNoPush(int fd, int tcpNoPush) throws IOException;
     private static native void setSndLowAt(int fd, int lowAt) throws IOException;
+    private static native int connectResumeOnReadWrite();
+    private static native int connectDataIdempotent();
 }
