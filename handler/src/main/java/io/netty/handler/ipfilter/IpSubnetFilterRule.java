@@ -167,7 +167,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
              *
              * Also see https://github.com/netty/netty/issues/2767
              */
-            return (int) ((-1L << 32 - cidrPrefix) & 0xffffffff);
+            return (int) (-1L << 32 - cidrPrefix);
         }
     }
 
