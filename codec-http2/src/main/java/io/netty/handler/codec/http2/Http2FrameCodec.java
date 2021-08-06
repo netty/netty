@@ -89,7 +89,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  * {@link Http2ChannelDuplexHandler#newStream()}, and then writing a {@link Http2HeadersFrame} object with the stream
  * attached.
  *
- * <pre>
+ * <pre>{@code
  *     final Http2Stream2 stream = handler.newStream();
  *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListener() {
  *
@@ -110,7 +110,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *             }
  *         }
  *     }
- * </pre>
+ * }</pre>
  *
  * <p>If a new stream cannot be created due to stream id exhaustion of the endpoint, the {@link ChannelPromise} of the
  * HEADERS frame will fail with a {@link Http2NoMoreStreamIdsException}.

@@ -586,7 +586,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
          *
          * @param numBytes the number of bytes to be returned to the flow control window.
          * @return true if {@code WINDOW_UPDATE} was written, false otherwise.
-         * @throws Http2Exception
+         * @throws Http2Exception If the number of bytes is too great for the current window,
+         * or an internal error occurs.
          */
         boolean consumeBytes(int numBytes) throws Http2Exception;
 

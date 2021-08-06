@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -60,7 +61,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * failed.
      *
      * @throws CancellationException if the computation was cancelled
-     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
+     * @throws CompletionException if the computation threw an exception.
      * @throws InterruptedException if the current thread was interrupted while waiting
      *
      */
@@ -71,7 +72,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * failed.
      *
      * @throws CancellationException if the computation was cancelled
-     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
+     * @throws CompletionException if the computation threw an exception.
      */
     Future<V> syncUninterruptibly();
 

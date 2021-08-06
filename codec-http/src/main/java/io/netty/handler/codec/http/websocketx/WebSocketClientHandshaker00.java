@@ -223,7 +223,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *
      * @param response
      *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
-     * @throws WebSocketHandshakeException
+     * @throws WebSocketHandshakeException If the handshake or challenge is invalid.
      */
     @Override
     protected void verify(FullHttpResponse response) {

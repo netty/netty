@@ -148,10 +148,10 @@ public class HttpClientCodecTest {
                             // This is just a simple demo...don't block in IO
                             assertTrue(ctx.channel() instanceof SocketChannel);
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
-                            /**
-                             * The point of this test is to not add any content-length or content-encoding headers
-                             * and the client should still handle this.
-                             * See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a>.
+                            /*
+                              The point of this test is to not add any content-length or content-encoding headers
+                              and the client should still handle this.
+                              See RFC 7230, 3.3.3: https://tools.ietf.org/html/rfc7230#section-3.3.3.
                              */
                             sChannel.writeAndFlush(Unpooled.wrappedBuffer(("HTTP/1.0 200 OK\r\n" +
                             "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +

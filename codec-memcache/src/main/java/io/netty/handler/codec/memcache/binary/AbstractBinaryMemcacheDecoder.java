@@ -194,7 +194,6 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
      * When the channel goes inactive, release all frames to prevent data leaks.
      *
      * @param ctx handler context
-     * @throws Exception
      */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {

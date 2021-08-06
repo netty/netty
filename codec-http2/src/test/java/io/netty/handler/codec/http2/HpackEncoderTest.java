@@ -67,7 +67,6 @@ public class HpackEncoderTest {
     /**
      * The encoder should not impose an arbitrary limit on the header size if
      * the server has not specified any limit.
-     * @throws Http2Exception
      */
     @Test
     public void testWillEncode16MBHeaderByDefault() throws Http2Exception {

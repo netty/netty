@@ -64,16 +64,16 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         final int num = 266;
         assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
         final byte[] buf = new byte[size + num];
-        /**
-         * 8    A    0    2
-         * 1000 1010 0000 0010
-         * 0000 1010 0000 0010
-         * 0000 0010 0000 1010
-         *  000 0010  000 1010
-         *
-         *  0000 0001 0000 1010
-         *  0    1    0    A
-         * 266
+        /*
+          8    A    0    2
+          1000 1010 0000 0010
+          0000 1010 0000 0010
+          0000 0010 0000 1010
+           000 0010  000 1010
+
+           0000 0001 0000 1010
+           0    1    0    A
+          266
          */
 
         buf[0] = (byte) (0x8A & 0xFF);
@@ -99,16 +99,16 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         final int num = 0x4000;
         assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
         final byte[] buf = new byte[size + num];
-        /**
-         * 8    0    8    0    0    1
-         * 1000 0000 1000 0000 0000 0001
-         * 0000 0000 0000 0000 0000 0001
-         * 0000 0001 0000 0000 0000 0000
-         *  000 0001  000 0000  000 0000
-         *
-         *    0 0000 0100 0000 0000 0000
-         *    0    0    4    0    0    0
-         *
+        /*
+          8    0    8    0    0    1
+          1000 0000 1000 0000 0000 0001
+          0000 0000 0000 0000 0000 0001
+          0000 0001 0000 0000 0000 0000
+           000 0001  000 0000  000 0000
+
+             0 0000 0100 0000 0000 0000
+             0    0    4    0    0    0
+
          */
 
         buf[0] = (byte) (0x80 & 0xFF);
@@ -135,16 +135,16 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         final int num = 0x200000;
         assertThat(ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num), is(size));
         final byte[] buf = new byte[size + num];
-        /**
-         * 8    0    8    0    8    0    0    1
-         * 1000 0000 1000 0000 1000 0000 0000 0001
-         * 0000 0000 0000 0000 0000 0000 0000 0001
-         * 0000 0001 0000 0000 0000 0000 0000 0000
-         *  000 0001  000 0000  000 0000  000 0000
-         *
-         *    0000 0010 0000 0000 0000 0000 0000
-         *    0    2    0    0    0    0    0
-         *
+        /*
+          8    0    8    0    8    0    0    1
+          1000 0000 1000 0000 1000 0000 0000 0001
+          0000 0000 0000 0000 0000 0000 0000 0001
+          0000 0001 0000 0000 0000 0000 0000 0000
+           000 0001  000 0000  000 0000  000 0000
+
+             0000 0010 0000 0000 0000 0000 0000
+             0    2    0    0    0    0    0
+
          */
 
         buf[0] = (byte) (0x80 & 0xFF);
