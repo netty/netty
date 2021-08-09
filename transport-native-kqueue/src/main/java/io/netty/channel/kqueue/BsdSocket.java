@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
+import static io.netty.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 
@@ -87,7 +88,7 @@ final class BsdSocket extends Socket {
 
     int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, boolean tcpFastOpen)
             throws IOException {
-        int flags = tcpFastOpen ? connectResumeOnReadWrite() | connectDataIdempotent() : 0;
+        int flags = tcpFastOpen ? CONNECT_TCP_FASTOPEN : 0;
         return connectx(source, destination, data, flags);
     }
 
@@ -192,6 +193,4 @@ final class BsdSocket extends Socket {
     private static native void setAcceptFilter(int fd, String filterName, String filterArgs) throws IOException;
     private static native void setTcpNoPush(int fd, int tcpNoPush) throws IOException;
     private static native void setSndLowAt(int fd, int lowAt) throws IOException;
-    private static native int connectResumeOnReadWrite();
-    private static native int connectDataIdempotent();
 }

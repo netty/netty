@@ -238,22 +238,6 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 
     return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
 }
-
-static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env) {
-#ifdef CONNECT_RESUME_ON_READ_WRITE
-    return CONNECT_RESUME_ON_READ_WRITE;
-#else
-    return 0;
-#endif
-}
-
-static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env) {
-#ifdef CONNECT_DATA_IDEMPOTENT
-    return CONNECT_DATA_IDEMPOTENT;
-#else
-    return 0;
-#endif
-}
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -264,9 +248,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
   { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
-  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx },
-  { "connectResumeOnReadWrite", "()I", (void *) netty_kqueue_bsdsocket_connectResumeOnReadWrite },
-  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent }
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
