@@ -131,6 +131,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      * Client-side TCP FastOpen. Sending data with the initial TCP handshake.
      */
     public static final ChannelOption<Boolean> TCP_FASTOPEN_CONNECT = valueOf("TCP_FASTOPEN_CONNECT");
+
     /**
      * Server-side TCP FastOpen. Configures the maximum number of outstanding (waiting to be accepted) TFO connections.
      */
