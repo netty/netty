@@ -29,6 +29,7 @@ import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
 import static io.netty.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A socket which provides access BSD native methods.
@@ -100,19 +101,30 @@ final class BsdSocket extends Socket {
 
     private int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags)
             throws IOException {
-        InetAddress sourceInetAddress = source.getAddress();
-        boolean sourceIPv6 = sourceInetAddress instanceof Inet6Address;
+        requireNonNull(destination, "Destination InetSocketAddress cannot be null.");
+
+        boolean sourceIPv6;
         byte[] sourceAddress;
         int sourceScopeId;
-        if (sourceIPv6) {
-            sourceAddress = sourceInetAddress.getAddress();
-            sourceScopeId = ((Inet6Address) sourceInetAddress).getScopeId();
-        } else {
-            // convert to ipv4 mapped ipv6 address;
+        int sourcePort;
+        if (source == null) {
+            sourceIPv6 = false;
+            sourceAddress = null;
             sourceScopeId = 0;
-            sourceAddress = ipv4MappedIpv6Address(sourceInetAddress.getAddress());
+            sourcePort = 0;
+        } else {
+            InetAddress sourceInetAddress = source.getAddress();
+            sourceIPv6 = sourceInetAddress instanceof Inet6Address;
+            if (sourceIPv6) {
+                sourceAddress = sourceInetAddress.getAddress();
+                sourceScopeId = ((Inet6Address) sourceInetAddress).getScopeId();
+            } else {
+                // convert to ipv4 mapped ipv6 address;
+                sourceScopeId = 0;
+                sourceAddress = ipv4MappedIpv6Address(sourceInetAddress.getAddress());
+            }
+            sourcePort = source.getPort();
         }
-        int sourcePort = source.getPort();
 
         InetAddress destinationInetAddress = destination.getAddress();
         boolean destinationIPv6 = destinationInetAddress instanceof Inet6Address;

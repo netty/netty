@@ -111,14 +111,14 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env,
         endpoints.sae_srcaddr = (const struct sockaddr*) &srcaddr;
         endpoints.sae_srcaddrlen = srcaddrlen;
     }
-    if (NULL != destinationAddress) {
-        if (-1 == netty_unix_socket_initSockaddr(env,
-                destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
-            return -1;
-        }
-        endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
-        endpoints.sae_dstaddrlen = dstaddrlen;
+
+    assert destinationAddress != NULL; // Java side will ensure destination is never null.
+    if (-1 == netty_unix_socket_initSockaddr(env,
+            destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
+        return -1;
     }
+    endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
+    endpoints.sae_dstaddrlen = dstaddrlen;
 
     int socket = (int) socketFd;
     const struct iovec* iov = (const struct iovec*) iovAddress;
