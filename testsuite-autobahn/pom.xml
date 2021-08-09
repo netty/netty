@@ -29,7 +29,7 @@
   <name>Netty/Testsuite/Autobahn</name>
 
   <properties>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
   </properties>

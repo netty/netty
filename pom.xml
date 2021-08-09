@@ -488,7 +488,7 @@
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
     <brotli4j.version>1.5.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
@@ -982,7 +982,6 @@
               <exclude>io.netty.handler.codec.dns.TcpDnsResponseEncoder</exclude>
             </excludes>
           </parameter>
-          <skip>${skipJapicmp}</skip>
         </configuration>
         <executions>
           <execution>

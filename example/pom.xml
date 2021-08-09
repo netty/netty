@@ -30,7 +30,7 @@
   <name>Netty/Example</name>
 
   <properties>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
   <dependencies>
     <dependency>

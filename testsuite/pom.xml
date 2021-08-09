@@ -132,7 +132,7 @@
   </dependencies>
 
   <properties>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <build>
