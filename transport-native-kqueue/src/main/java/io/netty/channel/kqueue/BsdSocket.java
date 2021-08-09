@@ -91,7 +91,8 @@ final class BsdSocket extends Socket {
         return connectx(source, destination, data, flags);
     }
 
-    int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags) throws IOException {
+    private int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags)
+            throws IOException {
         int sourceInterface = 0;
 
         InetAddress sourceInetAddress = source.getAddress();
