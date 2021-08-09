@@ -51,6 +51,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509TrustManager;
@@ -455,6 +457,7 @@ public class Http2MultiplexTransportTest {
     }
 
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "See: https://github.com/netty/netty/issues/11542")
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFireChannelReadAfterHandshakeSuccess_JDK() throws Exception {
         assumeTrue(SslProvider.isAlpnSupported(SslProvider.JDK));
@@ -462,6 +465,7 @@ public class Http2MultiplexTransportTest {
     }
 
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "See: https://github.com/netty/netty/issues/11542")
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFireChannelReadAfterHandshakeSuccess_OPENSSL() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
