@@ -40,6 +40,12 @@ final class BsdSocket extends Socket {
     private static final int APPLE_SND_LOW_AT_MAX = 1 << 17;
     private static final int FREEBSD_SND_LOW_AT_MAX = 1 << 15;
     static final int BSD_SND_LOW_AT_MAX = Math.min(APPLE_SND_LOW_AT_MAX, FREEBSD_SND_LOW_AT_MAX);
+    /**
+     * The `endpoints` structure passed to `connectx(2)` has an optional "source interface" field,
+     * which is the index of the network interface to use.
+     * According to `if_nametoindex(3)`, the value 0 is used when no interface is specified.
+     */
+    private static final int UNSPECIFIED_SOURCE_INTERFACE = 0;
 
     BsdSocket(int fd) {
         super(fd);
@@ -94,8 +100,6 @@ final class BsdSocket extends Socket {
 
     private int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags)
             throws IOException {
-        int sourceInterface = 0;
-
         InetAddress sourceInetAddress = source.getAddress();
         boolean sourceIPv6 = sourceInetAddress instanceof Inet6Address;
         byte[] sourceAddress;
@@ -142,7 +146,7 @@ final class BsdSocket extends Socket {
         }
 
         int result = connectx(intValue(),
-                sourceInterface, sourceIPv6, sourceAddress, sourceScopeId, sourcePort,
+                UNSPECIFIED_SOURCE_INTERFACE, sourceIPv6, sourceAddress, sourceScopeId, sourcePort,
                 destinationIPv6, destinationAddress, destinationScopeId, destinationPort,
                 flags, iovAddress, iovCount, iovDataLength);
         if (result < 0) {
