@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 
 import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
 import static io.netty.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
+import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -161,6 +162,12 @@ final class BsdSocket extends Socket {
                 UNSPECIFIED_SOURCE_INTERFACE, sourceIPv6, sourceAddress, sourceScopeId, sourcePort,
                 destinationIPv6, destinationAddress, destinationScopeId, destinationPort,
                 flags, iovAddress, iovCount, iovDataLength);
+        if (result == ERRNO_EINPROGRESS_NEGATIVE) {
+            // This is normal for non-blocking sockets.
+            // We'll know the connection has been established when the socket is selectable for writing.
+            // Tell the channel the data was written, so the outbound buffer can update its position.
+            return iovDataLength;
+        }
         if (result < 0) {
             return ioResult("connectx", result);
         }
