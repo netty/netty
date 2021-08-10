@@ -243,8 +243,7 @@ public final class StringUtil {
         assert HEX2B.length == (Character.MAX_VALUE + 1);
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        final int index = c;
-        return HEX2B[index];
+        return HEX2B[c];
     }
 
     /**
