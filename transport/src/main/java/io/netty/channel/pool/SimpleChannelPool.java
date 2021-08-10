@@ -185,18 +185,18 @@ public class SimpleChannelPool implements ChannelPool {
                         }
                     });
                 }
-                return promise;
-            }
-            EventLoop loop = ch.eventLoop();
-            if (loop.inEventLoop()) {
-                doHealthCheck(ch, promise);
             } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        doHealthCheck(ch, promise);
-                    }
-                });
+                EventLoop loop = ch.eventLoop();
+                if (loop.inEventLoop()) {
+                    doHealthCheck(ch, promise);
+                } else {
+                    loop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            doHealthCheck(ch, promise);
+                        }
+                    });
+                }
             }
         } catch (Throwable cause) {
             promise.tryFailure(cause);
@@ -204,54 +204,56 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) throws Exception {
-        if (future.isSuccess()) {
-            Channel channel = future.channel();
-            handler.channelAcquired(channel);
-            if (!promise.trySuccess(channel)) {
-                // Promise was completed in the meantime (like cancelled), just release the channel again
-                release(channel);
-            }
-        } else {
-            promise.tryFailure(future.cause());
-        }
-    }
-
-    private void doHealthCheck(final Channel ch, final Promise<Channel> promise) {
-        assert ch.eventLoop().inEventLoop();
-
-        Future<Boolean> f = healthCheck.isHealthy(ch);
-        if (f.isDone()) {
-            notifyHealthCheck(f, ch, promise);
-        } else {
-            f.addListener(new FutureListener<Boolean>() {
-                @Override
-                public void operationComplete(Future<Boolean> future) throws Exception {
-                    notifyHealthCheck(future, ch, promise);
-                }
-            });
-        }
-    }
-
-    private void notifyHealthCheck(Future<Boolean> future, Channel ch, Promise<Channel> promise) {
-        assert ch.eventLoop().inEventLoop();
-
-        if (future.isSuccess()) {
-            if (future.getNow()) {
-                try {
-                    ch.attr(POOL_KEY).set(this);
-                    handler.channelAcquired(ch);
-                    promise.setSuccess(ch);
-                } catch (Throwable cause) {
-                    closeAndFail(ch, cause, promise);
+    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+        Channel channel = null;
+        try {
+            if (future.isSuccess()) {
+                channel = future.channel();
+                handler.channelAcquired(channel);
+                if (!promise.trySuccess(channel)) {
+                    // Promise was completed in the meantime (like cancelled), just release the channel again
+                    release(channel);
                 }
             } else {
-                closeChannel(ch);
+                promise.tryFailure(future.cause());
+            }
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
+        }
+    }
+
+    private void doHealthCheck(final Channel channel, final Promise<Channel> promise) {
+        try {
+            assert channel.eventLoop().inEventLoop();
+            Future<Boolean> f = healthCheck.isHealthy(channel);
+            if (f.isDone()) {
+                notifyHealthCheck(f, channel, promise);
+            } else {
+                f.addListener(new FutureListener<Boolean>() {
+                    @Override
+                    public void operationComplete(Future<Boolean> future) {
+                        notifyHealthCheck(future, channel, promise);
+                    }
+                });
+            }
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
+        }
+    }
+
+    private void notifyHealthCheck(Future<Boolean> future, Channel channel, Promise<Channel> promise) {
+        try {
+            assert channel.eventLoop().inEventLoop();
+            if (future.isSuccess() && future.getNow()) {
+                channel.attr(POOL_KEY).set(this);
+                handler.channelAcquired(channel);
+                promise.setSuccess(channel);
+            } else {
+                closeChannel(channel);
                 acquireHealthyFromPoolOrNew(promise);
             }
-        } else {
-            closeChannel(ch);
-            acquireHealthyFromPoolOrNew(promise);
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
         }
     }
 
@@ -272,9 +274,9 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public Future<Void> release(final Channel channel, final Promise<Void> promise) {
-        checkNotNull(channel, "channel");
-        checkNotNull(promise, "promise");
         try {
+            checkNotNull(channel, "channel");
+            checkNotNull(promise, "promise");
             EventLoop loop = channel.eventLoop();
             if (loop.inEventLoop()) {
                 doReleaseChannel(channel, promise);
@@ -293,24 +295,24 @@ public class SimpleChannelPool implements ChannelPool {
     }
 
     private void doReleaseChannel(Channel channel, Promise<Void> promise) {
-        assert channel.eventLoop().inEventLoop();
-        // Remove the POOL_KEY attribute from the Channel and check if it was acquired from this pool, if not fail.
-        if (channel.attr(POOL_KEY).getAndSet(null) != this) {
-            closeAndFail(channel,
-                         // Better include a stacktrace here as this is an user error.
-                         new IllegalArgumentException(
-                                 "Channel " + channel + " was not acquired from this ChannelPool"),
-                         promise);
-        } else {
-            try {
+        try {
+            assert channel.eventLoop().inEventLoop();
+            // Remove the POOL_KEY attribute from the Channel and check if it was acquired from this pool, if not fail.
+            if (channel.attr(POOL_KEY).getAndSet(null) != this) {
+                closeAndFail(channel,
+                             // Better include a stacktrace here as this is an user error.
+                             new IllegalArgumentException(
+                                     "Channel " + channel + " was not acquired from this ChannelPool"),
+                             promise);
+            } else {
                 if (releaseHealthCheck) {
                     doHealthCheckOnRelease(channel, promise);
                 } else {
                     releaseAndOffer(channel, promise);
                 }
-            } catch (Throwable cause) {
-                closeAndFail(channel, cause, promise);
             }
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
         }
     }
 
@@ -335,13 +337,16 @@ public class SimpleChannelPool implements ChannelPool {
      * @param future the future that contains information fif channel is healthy or not.
      * @throws Exception in case when failed to notify handler about release operation.
      */
-    private void releaseAndOfferIfHealthy(Channel channel, Promise<Void> promise, Future<Boolean> future)
-            throws Exception {
-        if (future.getNow()) { //channel turns out to be healthy, offering and releasing it.
-            releaseAndOffer(channel, promise);
-        } else { //channel not healthy, just releasing it.
-            handler.channelReleased(channel);
-            promise.setSuccess(null);
+    private void releaseAndOfferIfHealthy(Channel channel, Promise<Void> promise, Future<Boolean> future) {
+        try {
+            if (future.getNow()) { //channel turns out to be healthy, offering and releasing it.
+                releaseAndOffer(channel, promise);
+            } else { //channel not healthy, just releasing it.
+                handler.channelReleased(channel);
+                promise.setSuccess(null);
+            }
+        } catch (Throwable cause) {
+            closeAndFail(channel, cause, promise);
         }
     }
 
@@ -354,13 +359,19 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private void closeChannel(Channel channel) {
+    private void closeChannel(Channel channel) throws Exception {
         channel.attr(POOL_KEY).getAndSet(null);
         channel.close();
     }
 
     private void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
-        closeChannel(channel);
+        if (channel != null) {
+            try {
+                closeChannel(channel);
+            } catch (Throwable t) {
+                promise.tryFailure(t);
+            }
+        }
         promise.tryFailure(cause);
     }
 

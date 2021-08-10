@@ -26,11 +26,14 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -352,5 +355,50 @@ public class SimpleChannelPoolTest {
         sc.close().sync();
         pool.close();
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testChannelAcquiredException() throws InterruptedException {
+        final LocalAddress addr = new LocalAddress(getLocalAddrId());
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+
+        // Start server
+        final ServerBootstrap sb = new ServerBootstrap()
+              .group(group)
+              .channel(LocalServerChannel.class)
+              .childHandler(new ChannelInitializer<LocalChannel>() {
+                  @Override
+                  protected void initChannel(LocalChannel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  }
+              });
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Create pool, acquire and return channels
+        final Bootstrap bootstrap = new Bootstrap()
+              .channel(LocalChannel.class).group(group).remoteAddress(addr);
+        final NullPointerException exception = new NullPointerException();
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new ChannelPoolHandler() {
+            @Override
+            public void channelReleased(Channel ch) throws Exception {
+            }
+            @Override
+            public void channelAcquired(Channel ch) throws Exception {
+                throw exception;
+            }
+            @Override
+            public void channelCreated(Channel ch) throws Exception {
+            }
+        });
+
+        Future<Channel> futureChannel = pool.acquire();
+        futureChannel.addListener(new GenericFutureListener<Future<Channel>>() {
+            @Override
+            public void operationComplete(Future<Channel> future) throws Exception {
+                assertTrue(future.cause() == exception);
+            }
+        });
+        futureChannel.getNow();
+        sc.close().sync();
     }
 }
