@@ -30,6 +30,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public class EpollServerChannelConfig extends EpollChannelConfig implements ServerSocketChannelConfig {
@@ -42,7 +43,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, EpollChannelOption.TCP_FASTOPEN);
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, TCP_FASTOPEN);
     }
 
     @SuppressWarnings("unchecked")
@@ -57,7 +58,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         if (option == SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
-        if (option == EpollChannelOption.TCP_FASTOPEN) {
+        if (option == TCP_FASTOPEN) {
             return (T) Integer.valueOf(getTcpFastopen());
         }
         return super.getOption(option);
@@ -73,7 +74,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
             setReuseAddress((Boolean) value);
         } else if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
-        } else if (option == EpollChannelOption.TCP_FASTOPEN) {
+        } else if (option == TCP_FASTOPEN) {
             setTcpFastopen((Integer) value);
         } else {
             return super.setOption(option, value);
