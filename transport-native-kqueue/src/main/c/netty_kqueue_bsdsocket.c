@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -83,7 +84,7 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
     return res < 0 ? -err : 0;
 }
 
-static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env,
+static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
         jint socketFd,
         jint socketInterface,
         jboolean sourceIPv6, jbyteArray sourceAddress, jint sourceScopeId, jint sourcePort,
@@ -114,7 +115,7 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env,
         endpoints.sae_srcaddrlen = srcaddrlen;
     }
 
-    assert destinationAddress != NULL; // Java side will ensure destination is never null.
+    assert(destinationAddress != NULL); // Java side will ensure destination is never null.
     if (-1 == netty_unix_socket_initSockaddr(env,
             destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
         netty_unix_errors_throwIOException(env, "Destination address could not be converted to sockaddr.");

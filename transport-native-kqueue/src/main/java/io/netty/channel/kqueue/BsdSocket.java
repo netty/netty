@@ -138,7 +138,7 @@ final class BsdSocket extends Socket {
             destinationScopeId = 0;
             destinationAddress = ipv4MappedIpv6Address(destinationInetAddress.getAddress());
         }
-        int destinationPort = source.getPort();
+        int destinationPort = destination.getPort();
 
         long iovAddress;
         int iovCount;
@@ -162,7 +162,7 @@ final class BsdSocket extends Socket {
                 destinationIPv6, destinationAddress, destinationScopeId, destinationPort,
                 flags, iovAddress, iovCount, iovDataLength);
         if (result < 0) {
-            return ioResult("connectx", -result);
+            return ioResult("connectx", result);
         }
         return result;
     }

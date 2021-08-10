@@ -107,8 +107,8 @@ final class Native {
     static final short EVFILT_SOCK = evfiltSock();
 
     // Flags for connectx(2)
-    static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
-    static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
+    private static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
+    private static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
     static final int CONNECT_TCP_FASTOPEN = CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT;
 
     static FileDescriptor newKQueue() {
