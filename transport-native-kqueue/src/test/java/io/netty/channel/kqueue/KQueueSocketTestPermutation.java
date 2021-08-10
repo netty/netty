@@ -135,7 +135,6 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
-
         return combo(serverDomainSocket(), clientDomainSocket());
     }
 
