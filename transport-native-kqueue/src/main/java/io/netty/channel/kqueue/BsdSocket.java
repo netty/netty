@@ -29,7 +29,7 @@ import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
 import static io.netty.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A socket which provides access BSD native methods.
@@ -101,7 +101,7 @@ final class BsdSocket extends Socket {
 
     private int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags)
             throws IOException {
-        requireNonNull(destination, "Destination InetSocketAddress cannot be null.");
+        checkNotNull(destination, "Destination InetSocketAddress cannot be null.");
 
         boolean sourceIPv6;
         byte[] sourceAddress;
