@@ -79,7 +79,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             toReturn.add(() -> {
                 ServerBootstrap serverBootstrap = new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
                                                                        .channel(EpollServerSocketChannel.class);
-                serverBootstrap.option(EpollChannelOption.TCP_FASTOPEN, 5);
+                serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 5);
                 return serverBootstrap;
             });
         }
