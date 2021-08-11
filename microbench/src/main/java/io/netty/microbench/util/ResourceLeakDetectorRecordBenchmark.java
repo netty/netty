@@ -32,8 +32,7 @@ public class ResourceLeakDetectorRecordBenchmark extends AbstractMicrobenchmark 
     private int recordTimes;
     private ResourceLeakDetector.Level level;
 
-    ResourceLeakDetector<Object> detector = new ResourceLeakDetector<Object>(
-            Object.class, 1, Integer.MAX_VALUE) {
+    ResourceLeakDetector<Object> detector = new ResourceLeakDetector<Object>(Object.class, 1) {
         @Override
         protected void reportTracedLeak(String resourceType, String records) {
             // noop

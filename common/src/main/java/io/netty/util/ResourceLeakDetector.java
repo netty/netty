@@ -115,14 +115,6 @@ public class ResourceLeakDetector<T> {
     }
 
     /**
-     * @deprecated Use {@link #setLevel(Level)} instead.
-     */
-    @Deprecated
-    public static void setEnabled(boolean enabled) {
-        setLevel(enabled? Level.SIMPLE : Level.DISABLED);
-    }
-
-    /**
      * Returns {@code true} if resource leak detection is enabled.
      */
     public static boolean isEnabled() {
@@ -154,68 +146,13 @@ public class ResourceLeakDetector<T> {
     private final int samplingInterval;
 
     /**
-     * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
-     */
-    @Deprecated
-    public ResourceLeakDetector(Class<?> resourceType) {
-        this(simpleClassName(resourceType));
-    }
-
-    /**
-     * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
-     */
-    @Deprecated
-    public ResourceLeakDetector(String resourceType) {
-        this(resourceType, DEFAULT_SAMPLING_INTERVAL, Long.MAX_VALUE);
-    }
-
-    /**
-     * @deprecated Use {@link ResourceLeakDetector#ResourceLeakDetector(Class, int)}.
-     * <p>
      * This should not be used directly by users of {@link ResourceLeakDetector}.
      * Please use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class)}
-     * or {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}
-     *
-     * @param maxActive This is deprecated and will be ignored.
+     * or {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int)}
      */
-    @Deprecated
-    public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-        this(resourceType, samplingInterval);
-    }
-
-    /**
-     * This should not be used directly by users of {@link ResourceLeakDetector}.
-     * Please use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class)}
-     * or {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}
-     */
-    @SuppressWarnings("deprecation")
     public ResourceLeakDetector(Class<?> resourceType, int samplingInterval) {
-        this(simpleClassName(resourceType), samplingInterval, Long.MAX_VALUE);
-    }
-
-    /**
-     * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
-     * <p>
-     * @param maxActive This is deprecated and will be ignored.
-     */
-    @Deprecated
-    public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
-        requireNonNull(resourceType, "resourceType");
-
-        this.resourceType = resourceType;
+        this.resourceType = simpleClassName(resourceType);
         this.samplingInterval = samplingInterval;
-    }
-
-    /**
-     * Creates a new {@link ResourceLeak} which is expected to be closed via {@link ResourceLeak#close()} when the
-     * related resource is deallocated.
-     *
-     * @return the {@link ResourceLeak} or {@code null}
-     * @deprecated use {@link #track(Object)}
-     */
-    @Deprecated
-    public final ResourceLeak open(T obj) {
-        return track0(obj);
     }
 
     /**
@@ -326,9 +263,8 @@ public class ResourceLeakDetector<T> {
     protected void reportInstancesLeak(String resourceType) {
     }
 
-    @SuppressWarnings("deprecation")
     private static final class DefaultResourceLeak<T>
-            extends WeakReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
+            extends WeakReference<Object> implements ResourceLeakTracker<T> {
 
         @SuppressWarnings("unchecked") // generics and updaters do not mix.
         private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, TraceRecord> headUpdater =
@@ -438,23 +374,18 @@ public class ResourceLeakDetector<T> {
         }
 
         @Override
-        public boolean close() {
-            if (allLeaks.remove(this)) {
-                // Call clear so the reference is not even enqueued.
-                clear();
-                headUpdater.set(this, null);
-                return true;
-            }
-            return false;
-        }
-
-        @Override
         public boolean close(T trackedObject) {
             // Ensure that the object that was tracked is the same as the one that was passed to close(...).
             assert trackedHash == System.identityHashCode(trackedObject);
 
             try {
-                return close();
+                if (allLeaks.remove(this)) {
+                    // Call clear so the reference is not even enqueued.
+                    clear();
+                    headUpdater.set(this, null);
+                    return true;
+                }
+                return false;
             } finally {
                 // Ensure the tracked object remain live and strongly referenced, until close() has finished.
                 Reference.reachabilityFence(trackedObject);
@@ -518,7 +449,7 @@ public class ResourceLeakDetector<T> {
     private static final AtomicReference<String[]> excludedMethods =
             new AtomicReference<>(EmptyArrays.EMPTY_STRINGS);
 
-    public static void addExclusions(Class clz, String ... methodNames) {
+    public static void addExclusions(Class<?> clz, String ... methodNames) {
         Set<String> nameSet = new HashSet<>(Arrays.asList(methodNames));
         // Use loop rather than lookup. This avoids knowing the parameters, and doesn't have to handle
         // NoSuchMethodException.
