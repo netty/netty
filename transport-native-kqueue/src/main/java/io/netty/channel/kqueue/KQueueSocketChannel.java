@@ -68,7 +68,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (config.isTcpFastOpenConnect()) {
             ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
             outbound.addFlush();
@@ -81,17 +81,16 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                         iov.add(initialData, initialData.readerIndex(), initialData.readableBytes());
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
-                        if (bytesSent > 0) {
-                            outbound.removeBytes(bytesSent);
-                            return true;
-                        }
+                        writeFilter(true);
+                        outbound.removeBytes(bytesSent);
+                        return false; // 'false' because we assume connecting to be in-progress.
                     } finally {
                         iov.release();
                     }
                 }
             }
         }
-        return super.doConnect(remoteAddress, localAddress);
+        return super.doConnect0(remoteAddress, localAddress);
     }
 
     @Override

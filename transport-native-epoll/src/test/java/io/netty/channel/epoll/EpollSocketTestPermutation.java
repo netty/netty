@@ -68,7 +68,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return list;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<BootstrapFactory<ServerBootstrap>>();
@@ -207,10 +206,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
-
-        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverDomainSocket(), clientDomainSocket());
-        return list;
+        return combo(serverDomainSocket(), clientDomainSocket());
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {

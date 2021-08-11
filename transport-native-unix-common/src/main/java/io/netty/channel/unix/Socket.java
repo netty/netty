@@ -52,7 +52,7 @@ public class Socket extends FileDescriptor {
 
     public Socket(int fd) {
         super(fd);
-        this.ipv6 = isIPv6(fd);
+        ipv6 = isIPv6(fd);
     }
 
     /**
@@ -72,7 +72,7 @@ public class Socket extends FileDescriptor {
             // shutdown anything. This is because if the underlying FD is reused and we still have an object which
             // represents the previous incarnation of the FD we need to be sure we don't inadvertently shutdown the
             // "new" FD without explicitly having a change.
-            final int oldState = this.state;
+            final int oldState = state;
             if (isClosed(oldState)) {
                 throw new ClosedChannelException();
             }
