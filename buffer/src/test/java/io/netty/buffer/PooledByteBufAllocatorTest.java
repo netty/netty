@@ -392,7 +392,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             thread.join();
         }
 
-        // Wait for the ThreadDeathWatcher to have destroyed all thread caches
+        // Wait for all thread caches to be destroyed.
         while (allocator.metric().numThreadLocalCaches() > 0) {
             // Signal we want to have a GC run to ensure we can process our ThreadCleanerReference
             System.gc();
