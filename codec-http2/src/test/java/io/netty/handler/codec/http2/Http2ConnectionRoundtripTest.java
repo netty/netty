@@ -1278,8 +1278,7 @@ public class Http2ConnectionRoundtripTest {
             public Integer answer(InvocationOnMock invocation) throws Throwable {
                 ByteBuf buf = (ByteBuf) invocation.getArguments()[2];
                 int padding = (Integer) invocation.getArguments()[3];
-                int processedBytes = buf.readableBytes() + padding;
-                return processedBytes;
+                return buf.readableBytes() + padding;
             }
 
         }).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),

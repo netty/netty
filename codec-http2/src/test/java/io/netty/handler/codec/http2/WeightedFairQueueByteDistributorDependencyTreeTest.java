@@ -301,17 +301,16 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         // Stream 3 (hasn't been opened) should result in stream 5 being dropped.
         // dropping stream 5 will distribute its weight to children (only 9)
         setPriority(3, 9, weight3, false);
-        short newWeight9 = weight5;
-        verifyLowestPrecedenceStateShouldBeDropped3(weight3, weight7, newWeight9);
+        verifyLowestPrecedenceStateShouldBeDropped3(weight3, weight7, weight5);
 
         // Stream 5's state has been discarded so we should be able to re-insert this state.
         setPriority(5, 0, weight5, false);
-        verifyLowestPrecedenceStateShouldBeDropped4(weight5, weight7, newWeight9);
+        verifyLowestPrecedenceStateShouldBeDropped4(weight5, weight7, weight5);
 
         // All streams are at the same level, so stream ID should be used to drop the numeric lowest valued stream.
         short weight11 = (short) (weight9 - 1);
         setPriority(11, 0, weight11, false);
-        verifyLowestPrecedenceStateShouldBeDropped5(weight7, newWeight9, weight11);
+        verifyLowestPrecedenceStateShouldBeDropped5(weight7, weight5, weight11);
     }
 
     private void verifyLowestPrecedenceStateShouldBeDropped1(short weight3, short weight5, short weight7) {
