@@ -81,7 +81,6 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         if (!controlStreamCreationInProgress && Http3.getLocalControlStream(ctx.channel()) == null) {
             controlStreamCreationInProgress = true;
             QuicChannel channel = (QuicChannel) ctx.channel();
-            Http3.setQpackAttributes(channel, new QpackAttributes(channel, disableQpackDynamicTable));
             // Once the channel became active we need to create an unidirectional stream and write the
             // Http3SettingsFrame to it. This needs to be the first frame on this stream.
             // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
@@ -141,6 +140,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
+        QuicChannel channel = (QuicChannel) ctx.channel();
+        Http3.setQpackAttributes(channel, new QpackAttributes(channel, disableQpackDynamicTable));
         if (ctx.channel().isActive()) {
             createControlStreamIfNeeded(ctx);
         }
