@@ -165,14 +165,13 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     private static int decodeHexNibbleWithCheck(final char c) {
-        final int index = c;
-        if (index >= HEX2B.length) {
+        if ((int) c >= HEX2B.length) {
             return -1;
         }
         if (PlatformDependent.hasUnsafe()) {
-            return PlatformDependent.getByte(HEX2B, index);
+            return PlatformDependent.getByte(HEX2B, c);
         }
-        return HEX2B[index];
+        return HEX2B[c];
     }
 
 }

@@ -341,7 +341,6 @@ final class Bzip2HuffmanStageEncoder {
         final Bzip2BitWriter writer = this.writer;
         final int[][] huffmanMergedCodeSymbols = this.huffmanMergedCodeSymbols;
         final byte[] selectors = this.selectors;
-        final char[] mtf = mtfBlock;
         final int mtfLength = this.mtfLength;
 
         int selectorIndex = 0;
@@ -350,7 +349,7 @@ final class Bzip2HuffmanStageEncoder {
             final int[] tableMergedCodeSymbols = huffmanMergedCodeSymbols[selectors[selectorIndex++]];
 
             while (mtfIndex <= groupEnd) {
-                final int mergedCodeSymbol = tableMergedCodeSymbols[mtf[mtfIndex++]];
+                final int mergedCodeSymbol = tableMergedCodeSymbols[mtfBlock[mtfIndex++]];
                 writer.writeBits(out, mergedCodeSymbol >>> 24, mergedCodeSymbol);
             }
         }
