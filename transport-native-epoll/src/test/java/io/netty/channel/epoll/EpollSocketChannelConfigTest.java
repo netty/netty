@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
@@ -33,8 +34,10 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Random;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -140,34 +143,31 @@ public class EpollSocketChannelConfigTest {
     // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
     // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
     // want to see a ClosedChannelException for the test to pass.
-    @RepeatedIfExceptionsTest(repeats = 4, exceptions = ChannelException.class)
+    @RepeatedIfExceptionsTest(repeats = 4)
     public void testSetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-            ch.config().setSoLinger(0);
-            fail();
-        } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
-        }
+        ChannelException e = assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.config().setSoLinger(0);
+            }
+        });
+        assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
     }
 
     // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
     // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
     // want to see a ClosedChannelException for the test to pass.
-    @RepeatedIfExceptionsTest(repeats = 4, exceptions = ChannelException.class)
+    @RepeatedIfExceptionsTest(repeats = 4)
     public void testGetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-            ch.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            if (!(e.getCause() instanceof ClosedChannelException)) {
-                AssertionError error = new AssertionError(
-                        "Expected the suppressed exception to be an instance of ClosedChannelException.");
-                error.addSuppressed(e);
-                throw error;
+        ChannelException e = assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.config().getSoLinger();
             }
-        }
+        });
+        assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
     }
 
     @Test
