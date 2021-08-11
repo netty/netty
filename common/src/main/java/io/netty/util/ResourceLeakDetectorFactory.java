@@ -66,39 +66,20 @@ public abstract class ResourceLeakDetectorFactory {
     }
 
     /**
-     * @deprecated Use {@link #newResourceLeakDetector(Class, int)} instead.
-     * <p>
      * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
      *
      * @param resource the resource class used to initialize the {@link ResourceLeakDetector}
      * @param samplingInterval the interval on which sampling takes place
-     * @param maxActive This is deprecated and will be ignored.
      * @param <T> the type of the resource class
      * @return a new instance of {@link ResourceLeakDetector}
      */
-    @Deprecated
     public abstract <T> ResourceLeakDetector<T> newResourceLeakDetector(
-            Class<T> resource, int samplingInterval, long maxActive);
-
-    /**
-     * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
-     *
-     * @param resource the resource class used to initialize the {@link ResourceLeakDetector}
-     * @param samplingInterval the interval on which sampling takes place
-     * @param <T> the type of the resource class
-     * @return a new instance of {@link ResourceLeakDetector}
-     */
-    @SuppressWarnings("deprecation")
-    public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval) {
-        ObjectUtil.checkPositive(samplingInterval, "samplingInterval");
-        return newResourceLeakDetector(resource, samplingInterval, Long.MAX_VALUE);
-    }
+            Class<T> resource, int samplingInterval);
 
     /**
      * Default implementation that loads custom leak detector via system property
      */
     private static final class DefaultResourceLeakDetectorFactory extends ResourceLeakDetectorFactory {
-        private final Constructor<?> obsoleteCustomClassConstructor;
         private final Constructor<?> customClassConstructor;
 
         DefaultResourceLeakDetectorFactory() {
@@ -110,28 +91,10 @@ public abstract class ResourceLeakDetectorFactory {
                 customLeakDetector = null;
             }
             if (customLeakDetector == null) {
-                obsoleteCustomClassConstructor = customClassConstructor = null;
+                customClassConstructor = null;
             } else {
-                obsoleteCustomClassConstructor = obsoleteCustomClassConstructor(customLeakDetector);
                 customClassConstructor = customClassConstructor(customLeakDetector);
             }
-        }
-
-        private static Constructor<?> obsoleteCustomClassConstructor(String customLeakDetector) {
-            try {
-                final Class<?> detectorClass = Class.forName(customLeakDetector, true,
-                        PlatformDependent.getSystemClassLoader());
-
-                if (ResourceLeakDetector.class.isAssignableFrom(detectorClass)) {
-                    return detectorClass.getConstructor(Class.class, int.class, long.class);
-                } else {
-                    logger.error("Class {} does not inherit from ResourceLeakDetector.", customLeakDetector);
-                }
-            } catch (Throwable t) {
-                logger.error("Could not load custom resource leak detector class provided: {}",
-                        customLeakDetector, t);
-            }
-            return null;
         }
 
         private static Constructor<?> customClassConstructor(String customLeakDetector) {
@@ -151,34 +114,9 @@ public abstract class ResourceLeakDetectorFactory {
             return null;
         }
 
-        @SuppressWarnings("deprecation")
-        @Override
-        public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval,
-                                                                   long maxActive) {
-            if (obsoleteCustomClassConstructor != null) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    ResourceLeakDetector<T> leakDetector =
-                            (ResourceLeakDetector<T>) obsoleteCustomClassConstructor.newInstance(
-                                    resource, samplingInterval, maxActive);
-                    logger.debug("Loaded custom ResourceLeakDetector: {}",
-                            obsoleteCustomClassConstructor.getDeclaringClass().getName());
-                    return leakDetector;
-                } catch (Throwable t) {
-                    logger.error(
-                            "Could not load custom resource leak detector provided: {} with the given resource: {}",
-                            obsoleteCustomClassConstructor.getDeclaringClass().getName(), resource, t);
-                }
-            }
-
-            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<>(resource, samplingInterval,
-                    maxActive);
-            logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
-            return resourceLeakDetector;
-        }
-
         @Override
         public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval) {
+            ObjectUtil.checkPositive(samplingInterval, "samplingInterval");
             if (customClassConstructor != null) {
                 try {
                     @SuppressWarnings("unchecked")

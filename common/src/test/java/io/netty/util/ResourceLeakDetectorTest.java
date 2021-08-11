@@ -76,8 +76,8 @@ public class ResourceLeakDetectorTest {
                         }
                         boolean closed = r.close();
                         if (checkClosed && !closed) {
-                            error.compareAndSet(null,
-                                    new AssertionError("ResourceLeak.close() returned 'false' but expected 'true'"));
+                            error.compareAndSet(null, new AssertionError(
+                                    "ResourceLeakTracker.close() returned 'false' but expected 'true'"));
                             return true;
                         }
                     }
@@ -121,8 +121,7 @@ public class ResourceLeakDetectorTest {
 
     private static final class DefaultResource implements Resource {
         // Sample every allocation
-        static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<>(
-                Resource.class, 1, Integer.MAX_VALUE);
+        static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<>(Resource.class, 1);
 
         @Override
         public boolean close() {
@@ -145,8 +144,8 @@ public class ResourceLeakDetectorTest {
 
         private final AtomicReference<Throwable> error = new AtomicReference<>();
 
-        TestResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-            super(resourceType, samplingInterval, maxActive);
+        TestResourceLeakDetector(Class<?> resourceType, int samplingInterval) {
+            super(resourceType, samplingInterval);
         }
 
         @Override

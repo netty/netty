@@ -26,11 +26,11 @@ public class ResourceLeakDetectorBenchmark extends AbstractMicrobenchmark {
 
     @Setup
     public void setup() {
-        detector = new ResourceLeakDetector<>(getClass(), 128, Long.MAX_VALUE);
+        detector = new ResourceLeakDetector<>(getClass(), 128);
     }
 
     @Benchmark
     public Object open() {
-        return detector.open(DUMMY);
+        return detector.track(DUMMY);
     }
 }
