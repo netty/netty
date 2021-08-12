@@ -29,8 +29,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
-final class RunnableScheduledFutureAdapter<V> implements RunnableScheduledFuture<V>,
-        AbstractScheduledEventExecutor.RunnableScheduledFutureNode<V> {
+final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventExecutor.RunnableScheduledFutureNode<V> {
     private static final AtomicLong NEXT_TASK_ID = new AtomicLong();
 
     private final long id = NEXT_TASK_ID.getAndIncrement();
@@ -130,8 +129,6 @@ final class RunnableScheduledFutureAdapter<V> implements RunnableScheduledFuture
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override
@@ -159,8 +156,14 @@ final class RunnableScheduledFutureAdapter<V> implements RunnableScheduledFuture
     }
 
     @Override
-    public RunnableScheduledFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public RunnableScheduledFuture<V> addListener(FutureListener<? super V> listener) {
         promise.addListener(listener);
+        return this;
+    }
+
+    @Override
+    public <C> RunnableScheduledFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+        promise.addListener(context, listener);
         return this;
     }
 

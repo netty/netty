@@ -26,6 +26,19 @@ import java.util.concurrent.TimeoutException;
  */
 @SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
+    /**
+     * Create a new Future that is already in a completed state.
+     */
+    static <T> Future<T> newCompletedFuture(EventExecutor executor, T result) {
+        return new DefaultPromise<>(executor, result);
+    }
+
+    /**
+     * Create a new Future that is already in a failed state.
+     */
+    static <T> Future<T> newFailedFuture(EventExecutor executor, Throwable cause) {
+        return new DefaultPromise<>(cause, executor);
+    }
 
     /**
      * Returns {@code true} if and only if the I/O operation was completed
@@ -49,12 +62,27 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     Throwable cause();
 
     /**
-     * Adds the specified listener to this future.  The
-     * specified listener is notified when this future is
-     * {@linkplain #isDone() done}.  If this future is already
-     * completed, the specified listener is notified immediately.
+     * Adds the specified listener to this future.
+     * The specified listener is notified when this future is {@linkplain #isDone() done}.
+     * If this future is already completed, the specified listener is notified immediately.
+     *
+     * @param listener The listener to be called when this future completes.
+     *                 The listener will be passed this future as an argument.
+     * @return this future object.
      */
-    Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
+    Future<V> addListener(FutureListener<? super V> listener);
+
+    /**
+     * Adds the specified listener to this future.
+     * The specified listener is notified when this future is {@linkplain #isDone() done}.
+     * If this future is already completed, the specified listener is notified immediately.
+     *
+     * @param context The context object that will be passed to the listener when this future completes.
+     * @param listener The listener to be called when this future completes.
+     *                 The listener will be passed the given context, and this future.
+     * @return this future object.
+     */
+    <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future

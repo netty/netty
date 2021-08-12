@@ -38,7 +38,7 @@ public final class PromiseCombiner {
     private int doneCount;
     private Promise<Void> aggregatePromise;
     private Throwable cause;
-    private final GenericFutureListener<Future<?>> listener = new GenericFutureListener<Future<?>>() {
+    private final FutureListener<Object> listener = new FutureListener<>() {
         @Override
         public void operationComplete(final Future<?> future) {
             if (executor.inEventLoop()) {
@@ -63,14 +63,6 @@ public final class PromiseCombiner {
     private final EventExecutor executor;
 
     /**
-     * Deprecated use {@link PromiseCombiner#PromiseCombiner(EventExecutor)}.
-     */
-    @Deprecated
-    public PromiseCombiner() {
-        this(ImmediateEventExecutor.INSTANCE);
-    }
-
-    /**
      * The {@link EventExecutor} to use for notifications. You must call {@link #add(Future)}, {@link #addAll(Future[])}
      * and {@link #finish(Promise)} from within the {@link EventExecutor} thread.
      *
@@ -81,43 +73,16 @@ public final class PromiseCombiner {
     }
 
     /**
-     * Adds a new promise to be combined. New promises may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
-     *
-     * @param promise the promise to add to this promise combiner
-     *
-     * @deprecated Replaced by {@link PromiseCombiner#add(Future)}.
-     */
-    @Deprecated
-    public void add(Promise promise) {
-        add((Future) promise);
-    }
-
-    /**
      * Adds a new future to be combined. New futures may be added until an aggregate promise is added via the
      * {@link PromiseCombiner#finish(Promise)} method.
      *
      * @param future the future to add to this promise combiner
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void add(Future future) {
+    public void add(Future<?> future) {
         checkAddAllowed();
         checkInEventLoop();
         ++expectedCount;
         future.addListener(listener);
-    }
-
-    /**
-     * Adds new promises to be combined. New promises may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
-     *
-     * @param promises the promises to add to this promise combiner
-     *
-     * @deprecated Replaced by {@link PromiseCombiner#addAll(Future[])}
-     */
-    @Deprecated
-    public void addAll(Promise... promises) {
-        addAll((Future[]) promises);
     }
 
     /**
@@ -126,10 +91,9 @@ public final class PromiseCombiner {
      *
      * @param futures the futures to add to this promise combiner
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void addAll(Future... futures) {
-        for (Future future : futures) {
-            this.add(future);
+    public void addAll(Future<?>... futures) {
+        for (Future<?> future : futures) {
+            add(future);
         }
     }
 
@@ -163,7 +127,7 @@ public final class PromiseCombiner {
     }
 
     private boolean tryPromise() {
-        return (cause == null) ? aggregatePromise.trySuccess(null) : aggregatePromise.tryFailure(cause);
+        return cause == null? aggregatePromise.trySuccess(null) : aggregatePromise.tryFailure(cause);
     }
 
     private void checkAddAllowed() {

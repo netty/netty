@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util.concurrent;
 
 import java.util.EventListener;
 
 /**
  * Listens to the result of a {@link Future}.  The result of the asynchronous operation is notified once this listener
- * is added by calling {@link Future#addListener(FutureListener)}.
+ * is added by calling {@link Future#addListener(Object, FutureContextListener)}.
  * <pre>
  * Future f = new DefaultPromise(..);
- * f.addListener(future -> { .. });
+ * f.addListener(context, (context, future) -> { .. });
  * </pre>
  */
-public interface FutureListener<V> extends EventListener {
+public interface FutureContextListener<C, V> extends EventListener {
     /**
      * Invoked when the operation associated with the {@link Future} has been completed.
      *
      * @param future  the source {@link Future} which called this callback
      */
-    void operationComplete(Future<? extends V> future) throws Exception;
+    void operationComplete(C context, Future<? extends V> future) throws Exception;
 }

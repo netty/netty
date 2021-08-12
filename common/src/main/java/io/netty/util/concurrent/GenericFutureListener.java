@@ -19,8 +19,12 @@ import java.util.EventListener;
 
 /**
  * Listens to the result of a {@link Future}.  The result of the asynchronous operation is notified once this listener
- * is added by calling {@link Future#addListener(GenericFutureListener)}.
+ * is added by calling {@link Future#addListener(FutureListener)}.
+ *
+ * @deprecated This interface will be removed in this PR.
+ * We will instead have {@link FutureListener} and {@link FutureContextListener}.
  */
+@Deprecated(forRemoval = true)
 public interface GenericFutureListener<F extends Future<?>> extends EventListener {
 
     /**

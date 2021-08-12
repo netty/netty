@@ -20,6 +20,7 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.EventListener;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -51,9 +52,12 @@ public class DefaultPromise<V> implements Promise<V> {
     private DefaultFutureCompletionStage<V> stage;
 
     /**
-     * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
+     * One or more listeners. Can be a {@link FutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
-     *
+     * <p>
+     * Note that if a {@link FutureContextListener} is added, we immediately upgrade to a {@link DefaultFutureListeners}
+     * as we otherwise wouldn't have room to store the associated context object.
+     * <p>
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
     private Object listeners;
@@ -68,14 +72,31 @@ public class DefaultPromise<V> implements Promise<V> {
      * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
      *
      * @param executor
-     *        the {@link EventExecutor} which is used to notify the promise once it is complete.
+     *        The {@link EventExecutor} which is used to notify the promise once it is complete.
      *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
      *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
      *        depth exceeds a threshold.
-     *
      */
     public DefaultPromise(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
+        stage = new DefaultFutureCompletionStage<>(this);
+    }
+
+    /**
+     * Creates a completed promise.
+     */
+    DefaultPromise(EventExecutor executor, Object result) {
+        this.executor = requireNonNull(executor, "executor");
+        this.result = result == null? SUCCESS : result;
+        stage = new DefaultFutureCompletionStage<>(this);
+    }
+
+    /**
+     * Creates a failed promise.
+     */
+    DefaultPromise(Throwable cause, EventExecutor executor) {
+        this.executor = requireNonNull(executor, "executor");
+        result = new CauseHolder(requireNonNull(cause, "cause"));
         stage = new DefaultFutureCompletionStage<>(this);
     }
 
@@ -161,13 +182,22 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public Promise<V> addListener(FutureListener<? super V> listener) {
         requireNonNull(listener, "listener");
 
-        synchronized (this) {
-            addListener0(listener);
+        addListener0(listener, null);
+        if (isDone()) {
+            notifyListeners();
         }
 
+        return this;
+    }
+
+    @Override
+    public <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+        requireNonNull(listener, "listener");
+
+        addListener0(listener, context);
         if (isDone()) {
             notifyListeners();
         }
@@ -410,6 +440,7 @@ public class DefaultPromise<V> implements Promise<V> {
         safeExecute(executor(), this::notifyListenersNow);
     }
 
+    @SuppressWarnings("unchecked")
     private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
@@ -424,7 +455,7 @@ public class DefaultPromise<V> implements Promise<V> {
             if (listeners instanceof DefaultFutureListeners) {
                 notifyListeners0((DefaultFutureListeners) listeners);
             } else {
-                notifyListener0(this, (GenericFutureListener<?>) listeners);
+                notifyListener0(this, (FutureListener<V>) listeners);
             }
             synchronized (this) {
                 if (this.listeners == null) {
@@ -437,15 +468,10 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     private void notifyListeners0(DefaultFutureListeners listeners) {
-        GenericFutureListener<?>[] a = listeners.listeners();
-        int size = listeners.size();
-        for (int i = 0; i < size; i ++) {
-            notifyListener0(this, a[i]);
-        }
+        listeners.notifyListeners(this, logger);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    static void notifyListener0(Future future, GenericFutureListener l) {
+    static <V> void notifyListener0(Future<V> future, FutureListener<? super V> l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
@@ -455,13 +481,27 @@ public class DefaultPromise<V> implements Promise<V> {
         }
     }
 
-    private void addListener0(GenericFutureListener<? extends Future<? super V>> listener) {
-        if (listeners == null) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    static void notifyListener0(Future future, Object context, FutureContextListener l) {
+        try {
+            l.operationComplete(context, future);
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
+            }
+        }
+    }
+
+    private synchronized void addListener0(EventListener listener, Object context) {
+        if (listeners == null && context == null) {
             listeners = listener;
         } else if (listeners instanceof DefaultFutureListeners) {
-            ((DefaultFutureListeners) listeners).add(listener);
+            ((DefaultFutureListeners) listeners).add(listener, context);
         } else {
-            listeners = new DefaultFutureListeners((GenericFutureListener<?>) listeners, listener);
+            DefaultFutureListeners listeners = new DefaultFutureListeners();
+            listeners.add((EventListener) this.listeners, null);
+            listeners.add(listener, context);
+            this.listeners = listeners;
         }
     }
 

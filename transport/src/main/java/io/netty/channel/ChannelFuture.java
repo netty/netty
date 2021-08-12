@@ -171,9 +171,6 @@ public interface ChannelFuture extends Future<Void> {
     Channel channel();
 
     @Override
-    ChannelFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
-
-    @Override
     ChannelFuture sync() throws InterruptedException;
 
     @Override

@@ -25,9 +25,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
@@ -256,7 +254,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            regFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
+            regFuture.addListener(future -> {
                 Throwable cause = future.cause();
                 if (cause != null) {
                     // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
@@ -278,7 +276,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         try {
             channel = newChannel(loop);
         } catch (Throwable t) {
-            return new FailedFuture<>(loop, t);
+            return Future.newFailedFuture(loop, t);
         }
 
         Promise<Channel> promise = new DefaultPromise<>(loop);
@@ -321,7 +319,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
             if (regFuture.isSuccess()) {
-                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                channel.bind(localAddress, promise).addListener(channel, ChannelFutureListener.CLOSE_ON_FAILURE);
             } else {
                 promise.setFailure(regFuture.cause());
             }

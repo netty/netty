@@ -55,8 +55,14 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public RunnableFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public RunnableFuture<V> addListener(FutureListener<? super V> listener) {
         promise.addListener(listener);
+        return this;
+    }
+
+    @Override
+    public <C> RunnableFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+        promise.addListener(context, listener);
         return this;
     }
 

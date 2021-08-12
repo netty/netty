@@ -49,9 +49,16 @@ public abstract class CompleteFuture<V> implements Future<V> {
     }
 
     @Override
-    public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public Future<V> addListener(FutureListener<? super V> listener) {
         requireNonNull(listener, "listener");
         DefaultPromise.safeExecute(executor(), () -> DefaultPromise.notifyListener0(this, listener));
+        return this;
+    }
+
+    @Override
+    public <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+        requireNonNull(listener, "listener");
+        DefaultPromise.safeExecute(executor(), () -> DefaultPromise.notifyListener0(this, context, listener));
         return this;
     }
 
@@ -120,8 +127,6 @@ public abstract class CompleteFuture<V> implements Future<V> {
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override
