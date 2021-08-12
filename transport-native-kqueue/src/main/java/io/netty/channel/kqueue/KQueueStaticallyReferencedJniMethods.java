@@ -46,4 +46,8 @@ final class KQueueStaticallyReferencedJniMethods {
     static native short evfiltWrite();
     static native short evfiltUser();
     static native short evfiltSock();
+
+    // Flags for connectx(2)
+    static native int connectResumeOnReadWrite();
+    static native int connectDataIdempotent();
 }

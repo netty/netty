@@ -15,13 +15,17 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 @UnstableApi
@@ -61,6 +65,35 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
+    }
+
+    @Override
+    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (config.isTcpFastOpenConnect()) {
+            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            outbound.addFlush();
+            Object curr;
+            if ((curr = outbound.current()) instanceof ByteBuf) {
+                ByteBuf initialData = (ByteBuf) curr;
+                // Don't bother with TCP FastOpen if we don't have any initial data to send anyway.
+                if (initialData.isReadable()) {
+                    IovArray iov = new IovArray(config.getAllocator().directBuffer());
+                    try {
+                        iov.add(initialData, initialData.readerIndex(), initialData.readableBytes());
+                        int bytesSent = socket.connectx(
+                                (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
+                        writeFilter(true);
+                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The `connectx` method returns a negative number if connection is in-progress.
+                        // So we should return `true` to indicate that connection was established, if it's positive.
+                        return bytesSent > 0;
+                    } finally {
+                        iov.release();
+                    }
+                }
+            }
+        }
+        return super.doConnect0(remoteAddress, localAddress);
     }
 
     @Override
