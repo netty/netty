@@ -31,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -219,6 +220,7 @@ public class HttpServerUpgradeHandlerTest {
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "h2c", false));
         assertFalse(req.headers().contains(HttpHeaderNames.CONNECTION));
+        ReferenceCountUtil.release(req);
         assertNull(channel.readInbound());
 
         // No response should be written because we're just passing through.
