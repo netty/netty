@@ -212,7 +212,7 @@ public class HttpServerUpgradeHandlerTest {
 
         assertTrue(channel.writeInbound(upgrade));
         assertNotNull(channel.pipeline().get(HttpServerCodec.class));
-        assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed since upgrade failed.
+        assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
         assertNull(channel.pipeline().get("marker"));
 
         HttpRequest req = channel.readInbound();
