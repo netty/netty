@@ -29,6 +29,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.connectDataIdempotent;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.connectResumeOnReadWrite;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evAdd;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evClear;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evDelete;
@@ -103,6 +105,11 @@ final class Native {
     static final short EVFILT_WRITE = evfiltWrite();
     static final short EVFILT_USER = evfiltUser();
     static final short EVFILT_SOCK = evfiltSock();
+
+    // Flags for connectx(2)
+    private static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
+    private static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
+    static final int CONNECT_TCP_FASTOPEN = CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT;
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());

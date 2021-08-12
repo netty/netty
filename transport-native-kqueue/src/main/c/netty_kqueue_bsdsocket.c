@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -81,6 +82,60 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
         return sbytes;
     }
     return res < 0 ? -err : 0;
+}
+
+static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
+        jint socketFd,
+        jint socketInterface,
+        jboolean sourceIPv6, jbyteArray sourceAddress, jint sourceScopeId, jint sourcePort,
+        jboolean destinationIPv6, jbyteArray destinationAddress, jint destinationScopeId, jint destinationPort,
+        jint flags,
+        jlong iovAddress, jint iovCount, jint iovDataLength) {
+#ifdef __APPLE__ // connectx(2) is only defined on Darwin.
+    sa_endpoints_t endpoints;
+    endpoints.sae_srcif = (unsigned int) socketInterface;
+    endpoints.sae_srcaddr = NULL;
+    endpoints.sae_srcaddrlen = 0;
+    endpoints.sae_dstaddr = NULL;
+    endpoints.sae_dstaddrlen = 0;
+
+    struct sockaddr_storage srcaddr;
+    socklen_t srcaddrlen;
+    struct sockaddr_storage dstaddr;
+    socklen_t dstaddrlen;
+
+    if (NULL != sourceAddress) {
+        if (-1 == netty_unix_socket_initSockaddr(env,
+                sourceIPv6, sourceAddress, sourceScopeId, sourcePort, &srcaddr, &srcaddrlen)) {
+            netty_unix_errors_throwIOException(env,
+                "Source address specified, but could not be converted to sockaddr.");
+            return -EINVAL;
+        }
+        endpoints.sae_srcaddr = (const struct sockaddr*) &srcaddr;
+        endpoints.sae_srcaddrlen = srcaddrlen;
+    }
+
+    assert(destinationAddress != NULL); // Java side will ensure destination is never null.
+    if (-1 == netty_unix_socket_initSockaddr(env,
+            destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
+        netty_unix_errors_throwIOException(env, "Destination address could not be converted to sockaddr.");
+        return -EINVAL;
+    }
+    endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
+    endpoints.sae_dstaddrlen = dstaddrlen;
+
+    int socket = (int) socketFd;
+    const struct iovec* iov = (const struct iovec*) iovAddress;
+    unsigned int iovcnt = (unsigned int) iovCount;
+    size_t len = (size_t) iovDataLength;
+    int result = connectx(socket, &endpoints, SAE_ASSOCID_ANY, flags, iov, iovcnt, &len, NULL);
+    if (result == -1) {
+        return -errno;
+    }
+    return (jint) len;
+#else
+    return -ENOSYS;
+#endif
 }
 
 static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
@@ -196,7 +251,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
-  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt }
+  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
