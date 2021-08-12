@@ -94,15 +94,25 @@ final class BsdSocket extends Socket {
         return ioResult("sendfile", (int) res);
     }
 
+    /**
+     * Establish a connection to the given destination address, and send the given data to it.
+     *
+     * <strong>Note:</strong> This method relies on the {@code connectx(2)} system call, which is MacOS specific.
+     *
+     * @param source      the source address we are connecting from.
+     * @param destination the destination address we are connecting to.
+     * @param data        the data to copy to the kernel-side socket buffer.
+     * @param tcpFastOpen if {@code true}, set the flags needed to enable TCP FastOpen connecting.
+     * @return The number of bytes copied to the kernel-side socket buffer, or the number of bytes sent to the
+     * destination. This number is <em>negative</em> if connecting is left in an in-progress state,
+     * or <em>positive</em> if the connection was immediately established.
+     * @throws IOException if an IO error occurs, if the {@code data} is too big to send in one go,
+     * or if the system call is not supported on your platform.
+     */
     int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, boolean tcpFastOpen)
             throws IOException {
-        int flags = tcpFastOpen ? CONNECT_TCP_FASTOPEN : 0;
-        return connectx(source, destination, data, flags);
-    }
-
-    private int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, int flags)
-            throws IOException {
         checkNotNull(destination, "Destination InetSocketAddress cannot be null.");
+        int flags = tcpFastOpen ? CONNECT_TCP_FASTOPEN : 0;
 
         boolean sourceIPv6;
         byte[] sourceAddress;
@@ -166,7 +176,7 @@ final class BsdSocket extends Socket {
             // This is normal for non-blocking sockets.
             // We'll know the connection has been established when the socket is selectable for writing.
             // Tell the channel the data was written, so the outbound buffer can update its position.
-            return iovDataLength;
+            return -iovDataLength;
         }
         if (result < 0) {
             return ioResult("connectx", result);
@@ -209,11 +219,16 @@ final class BsdSocket extends Socket {
     );
 
     private static native String[] getAcceptFilter(int fd) throws IOException;
+
     private static native int getTcpNoPush(int fd) throws IOException;
+
     private static native int getSndLowAt(int fd) throws IOException;
+
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
 
     private static native void setAcceptFilter(int fd, String filterName, String filterArgs) throws IOException;
+
     private static native void setTcpNoPush(int fd, int tcpNoPush) throws IOException;
+
     private static native void setSndLowAt(int fd, int lowAt) throws IOException;
 }

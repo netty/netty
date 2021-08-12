@@ -75,6 +75,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
             Object curr;
             if ((curr = outbound.current()) instanceof ByteBuf) {
                 ByteBuf initialData = (ByteBuf) curr;
+                // Don't bother with TCP FastOpen if we don't have any initial data to send anyway.
                 if (initialData.isReadable()) {
                     IovArray iov = new IovArray(config.getAllocator().directBuffer());
                     try {
@@ -82,8 +83,10 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
-                        outbound.removeBytes(bytesSent);
-                        return false; // 'false' because we assume connecting to be in-progress.
+                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The `connectx` method returns a negative number if connection is in-progress.
+                        // So we should return `true` to indicate that connection was established, if it's positive.
+                        return bytesSent > 0;
                     } finally {
                         iov.release();
                     }
