@@ -387,7 +387,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
-            if (allocHandle.isReadEOF() || (readPending && maybeMoreDataToRead)) {
+            if (allocHandle.isReadEOF() || readPending && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -691,7 +691,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             socket.bind(localAddress);
         }
 
-        boolean connected = doConnect0(remoteAddress);
+        boolean connected = doConnect0(remoteAddress, localAddress);
         if (connected) {
             remote = remoteSocketAddr == null?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
@@ -703,10 +703,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return connected;
     }
 
-    private boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         boolean success = false;
         try {
-            boolean connected = socket.connect(remote);
+            boolean connected = socket.connect(remoteAddress);
             if (!connected) {
                 writeFilter(true);
             }

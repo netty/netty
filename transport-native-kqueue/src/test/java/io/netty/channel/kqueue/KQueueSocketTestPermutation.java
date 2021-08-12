@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -60,7 +61,6 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         return list;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
@@ -73,20 +73,32 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
-                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class),
-                () -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class)
-        );
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
+
+        toReturn.add(() -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class));
+        toReturn.add(() -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class));
+
+        return toReturn;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
+        List<BootstrapFactory<Bootstrap>> factories = clientSocket();
+
+        int insertIndex = factories.size() - 1; // Keep NIO fixture last.
+        factories.add(insertIndex,
+                      () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
+                                           .option(ChannelOption.TCP_FASTOPEN_CONNECT, true));
+
+        return factories;
     }
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
             final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
-        @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override

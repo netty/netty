@@ -60,6 +60,12 @@
 #ifndef NOTE_DISCONNECTED
 #define NOTE_DISCONNECTED 0x00001000
 #endif /* NOTE_DISCONNECTED */
+#ifndef CONNECT_RESUME_ON_READ_WRITE
+#define CONNECT_RESUME_ON_READ_WRITE 0x1
+#endif /* CONNECT_RESUME_ON_READ_WRITE */
+#ifndef CONNECT_DATA_IDEMPOTENT
+#define CONNECT_DATA_IDEMPOTENT 0x2
+#endif /* CONNECT_DATA_IDEMPOTENT */
 #else
 #ifndef EVFILT_SOCK
 #define EVFILT_SOCK 0 // Disabled
@@ -73,6 +79,12 @@
 #ifndef NOTE_DISCONNECTED
 #define NOTE_DISCONNECTED 0
 #endif /* NOTE_DISCONNECTED */
+#ifndef CONNECT_RESUME_ON_READ_WRITE
+#define CONNECT_RESUME_ON_READ_WRITE 0
+#endif /* CONNECT_RESUME_ON_READ_WRITE */
+#ifndef CONNECT_DATA_IDEMPOTENT
+#define CONNECT_DATA_IDEMPOTENT 0
+#endif /* CONNECT_DATA_IDEMPOTENT */
 #endif /* __APPLE__ */
 
 static clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
@@ -247,6 +259,14 @@ static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
    return NOTE_DISCONNECTED;
 }
 
+static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env) {
+    return CONNECT_RESUME_ON_READ_WRITE;
+}
+
+static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env) {
+    return CONNECT_DATA_IDEMPOTENT;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evfiltRead", "()S", (void *) netty_kqueue_native_evfiltRead },
@@ -262,7 +282,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evError", "()S", (void *) netty_kqueue_native_evError },
   { "noteReadClosed", "()S", (void *) netty_kqueue_native_noteReadClosed },
   { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
-  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected }
+  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected },
+  { "connectResumeOnReadWrite", "()I", (void *) netty_kqueue_bsdsocket_connectResumeOnReadWrite },
+  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {

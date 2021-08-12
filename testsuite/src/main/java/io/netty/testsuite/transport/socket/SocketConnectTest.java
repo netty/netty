@@ -30,11 +30,9 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
-import org.opentest4j.TestAbortedException;
 
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
@@ -177,8 +175,9 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
-        throw new TestAbortedException(
-                "Support for testing TCP_FASTOPEN not enabled for " + StringUtil.simpleClassName(this));
+        // TFO is an almost-pure optimisation and should not change any observable behaviour in our tests.
+        sb.option(ChannelOption.TCP_FASTOPEN, 5);
+        cb.option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
     }
 
     private static void assertLocalAddress(InetSocketAddress address) {

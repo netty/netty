@@ -25,6 +25,6 @@ public class KqueueWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.clientSocket();
+        return KQueueSocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
     }
 }
