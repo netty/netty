@@ -31,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -182,6 +183,44 @@ public class HttpServerUpgradeHandlerTest {
         assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
         assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
         assertTrue(channel.readInbound() instanceof LastHttpContent);
+        assertNull(channel.readInbound());
+
+        // No response should be written because we're just passing through.
+        channel.flushOutbound();
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void upgradeFail() {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new TestUpgradeCodec();
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        // Build a h2c upgrade request, but without connection header.
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                               "Host: example.com\r\n" +
+                               "Upgrade: h2c\r\n\r\n";
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+
+        assertTrue(channel.writeInbound(upgrade));
+        assertNotNull(channel.pipeline().get(HttpServerCodec.class));
+        assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
+        assertNull(channel.pipeline().get("marker"));
+
+        HttpRequest req = channel.readInbound();
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "h2c", false));
+        assertFalse(req.headers().contains(HttpHeaderNames.CONNECTION));
+        ReferenceCountUtil.release(req);
         assertNull(channel.readInbound());
 
         // No response should be written because we're just passing through.
