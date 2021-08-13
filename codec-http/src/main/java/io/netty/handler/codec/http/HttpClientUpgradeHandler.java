@@ -15,8 +15,8 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -121,33 +121,33 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) {
+                        Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
@@ -157,7 +157,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (!(msg instanceof HttpRequest)) {
             ctx.write(msg, promise);
             return;

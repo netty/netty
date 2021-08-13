@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.channel.ChannelHandlerMask.Skip;
+import io.netty.util.concurrent.Promise;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -277,10 +278,10 @@ public interface ChannelHandler {
      *
      * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
      * @param localAddress  the {@link SocketAddress} to which it should bound
-     * @param promise       the {@link ChannelPromise} to notify once the operation completes
+     * @param promise       the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
@@ -290,12 +291,12 @@ public interface ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the connect operation is made
      * @param remoteAddress     the {@link SocketAddress} to which it should connect
      * @param localAddress      the {@link SocketAddress} which is used as source on connect
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
     default void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) {
+            SocketAddress localAddress, Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
@@ -303,10 +304,10 @@ public interface ChannelHandler {
      * Called once a disconnect operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    default void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
@@ -314,10 +315,10 @@ public interface ChannelHandler {
      * Called once a close operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    default void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.close(promise);
     }
 
@@ -325,10 +326,10 @@ public interface ChannelHandler {
      * Called once a register operation is made to register for IO on the {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the register operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    default void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
@@ -336,10 +337,10 @@ public interface ChannelHandler {
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    default void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
@@ -358,10 +359,10 @@ public interface ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
      * @param msg               the message to write
-     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @param promise           the {@link Promise} to notify once the operation completes
      */
     @Skip
-    default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    default void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         ctx.write(msg, promise);
     }
 

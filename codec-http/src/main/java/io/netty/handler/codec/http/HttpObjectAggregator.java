@@ -17,14 +17,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -250,15 +249,15 @@ public class HttpObjectAggregator
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
-                ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
-                future.addListener((ChannelFutureListener) future1 -> {
+                Future<Void> future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
+                future.addListener(future1 -> {
                     if (!future1.isSuccess()) {
                         logger.debug("Failed to send a 413 Request Entity Too Large.", future1.cause());
                     }
                     ctx.close();
                 });
             } else {
-                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener((ChannelFutureListener) future -> {
+                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {
                     if (!future.isSuccess()) {
                         logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                         ctx.close();

@@ -144,7 +144,7 @@ public class DefaultPromiseTest {
     public void testCancelDoesNotScheduleWhenNoListeners() {
         EventExecutor executor = new RejectingEventExecutor();
 
-        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
         assertTrue(promise.cancel(false));
         assertTrue(promise.isCancelled());
     }
@@ -154,7 +154,7 @@ public class DefaultPromiseTest {
         EventExecutor executor = new RejectingEventExecutor();
 
         Object value = new Object();
-        Promise<Object> promise = new DefaultPromise<Object>(executor);
+        DefaultPromise<Object> promise = new DefaultPromise<Object>(executor);
         promise.setSuccess(value);
         assertSame(value, promise.getNow());
     }
@@ -164,28 +164,28 @@ public class DefaultPromiseTest {
         EventExecutor executor = new RejectingEventExecutor();
 
         Exception cause = new Exception();
-        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
         promise.setFailure(cause);
         assertSame(cause, promise.cause());
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
-        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
-        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testCancellationExceptionIsReturnedAsCause() throws Exception {
-        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
     }
@@ -242,7 +242,7 @@ public class DefaultPromiseTest {
             int runs = 100000;
 
             for (int i = 0; i < runs; i++) {
-                final Promise<Void> promise = new DefaultPromise<>(executor);
+                DefaultPromise<Void> promise = new DefaultPromise<>(executor);
                 final FutureListener<Void> listener1 = new FutureListener<Void>() {
                     @Override
                     public void operationComplete(Future<? extends Void> future) throws Exception {
@@ -352,7 +352,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalUncancellableCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -360,7 +360,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalSuccessCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -368,7 +368,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void setUncancellableGetNow() {
-        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertNull(promise.getNow());
         assertTrue(promise.setUncancellable());
         assertNull(promise.getNow());
@@ -385,7 +385,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSync() throws InterruptedException {
         Exception exception = new Exception();
-        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setFailure(exception);
 
         try {
@@ -398,7 +398,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSyncUninterruptibly() {
         Exception exception = new Exception();
-        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setFailure(exception);
 
         try {
@@ -410,14 +410,14 @@ public class DefaultPromiseTest {
 
     @Test
     public void throwCancelled() throws InterruptedException {
-        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.cancel(true);
         assertThrows(CancellationException.class, promise::sync);
     }
 
     @Test
     public void mustPassContextToContextListener() {
-        Promise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         Object context = new Object();
         Object result = new Object();
         promise.addListener(context, (ctx, future) -> {
@@ -430,7 +430,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void mustPassNullContextToContextListener() {
-        Promise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         Object result = new Object();
         promise.addListener(null, (ctx, future) -> {
             assertNull(ctx);
@@ -443,7 +443,7 @@ public class DefaultPromiseTest {
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
                                                          boolean runTestInExecutorThread)
             throws InterruptedException {
-        final List<Promise<Void>> ps = new ArrayList<>(promiseChainLength);
+        final List<DefaultPromise<Void>> ps = new ArrayList<>(promiseChainLength);
         for (int i = 0; i < promiseChainLength; i++) {
             ps.add(null);
         }
@@ -461,11 +461,11 @@ public class DefaultPromiseTest {
         }
     }
 
-    private static void testStackOverFlowChainedFuturesA(EventExecutor executor, final List<Promise<Void>> ps,
+    private static void testStackOverFlowChainedFuturesA(EventExecutor executor, final List<DefaultPromise<Void>> ps,
                                                          final CountDownLatch latch) {
         for (int i = 0; i < ps.size(); i ++) {
             final int finalI = i;
-            Promise<Void> p = new DefaultPromise<>(executor);
+            DefaultPromise<Void> p = new DefaultPromise<>(executor);
             ps.set(i, p);
             p.addListener(future -> {
                 if (finalI + 1 < ps.size()) {
@@ -481,7 +481,7 @@ public class DefaultPromiseTest {
     private static void testStackOverFlowChainedFuturesB(int promiseChainLength, final EventExecutor executor,
                                                          boolean runTestInExecutorThread)
             throws InterruptedException {
-        final List<Promise<Void>> ps = new ArrayList<>(promiseChainLength);
+        final List<DefaultPromise<Void>> ps = new ArrayList<>(promiseChainLength);
         for (int i = 0; i < promiseChainLength; i++) {
             ps.add(null);
         }
@@ -499,11 +499,11 @@ public class DefaultPromiseTest {
         }
     }
 
-    private static void testStackOverFlowChainedFuturesB(EventExecutor executor, final List<Promise<Void>> ps,
+    private static void testStackOverFlowChainedFuturesB(EventExecutor executor, final List<DefaultPromise<Void>> ps,
                                                          final CountDownLatch latch) {
         for (int i = 0; i < ps.size(); i ++) {
             final int finalI = i;
-            Promise<Void> p = new DefaultPromise<>(executor);
+            DefaultPromise<Void> p = new DefaultPromise<>(executor);
             ps.set(i, p);
             p.addListener(future -> future.addListener(future1 -> {
                 if (finalI + 1 < ps.size()) {
@@ -534,7 +534,7 @@ public class DefaultPromiseTest {
             final CountDownLatch latch2 = new CountDownLatch(1);
             final CountDownLatch latch3 = new CountDownLatch(1);
 
-            final Promise<Void> promise = new DefaultPromise<>(executor);
+            DefaultPromise<Void> promise = new DefaultPromise<>(executor);
 
             // Add a listener before completion so "lateListener" is used next time we add a listener.
             promise.addListener(future -> assertTrue(state.compareAndSet(0, 1)));
@@ -579,7 +579,7 @@ public class DefaultPromiseTest {
 
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.addListener(future ->
                 promise.addListener(future1 -> latch.countDown()));
         if (cause == null) {
@@ -594,7 +594,7 @@ public class DefaultPromiseTest {
         int expectedCount = numListenersBefore + 2;
         final CountDownLatch latch = new CountDownLatch(expectedCount);
         final FutureListener<Void> listener = future -> latch.countDown();
-        final Promise<Void> promise = new DefaultPromise<>(executor);
+        DefaultPromise<Void> promise = new DefaultPromise<>(executor);
         executor.execute(() -> {
             for (int i = 0; i < numListenersBefore; i++) {
                 promise.addListener(listener);

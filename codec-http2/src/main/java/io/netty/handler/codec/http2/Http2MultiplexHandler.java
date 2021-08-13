@@ -18,8 +18,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -27,6 +25,8 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureContextListener;
 import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.SSLException;
@@ -86,7 +86,8 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 @UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
-    static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = Http2MultiplexHandler::registerDone;
+    static final FutureContextListener<Channel, Void> CHILD_CHANNEL_REGISTRATION_LISTENER =
+            Http2MultiplexHandler::registerDone;
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
@@ -124,12 +125,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
 
-    static void registerDone(ChannelFuture future) {
+    static void registerDone(Channel childChannel, Future<?> future) {
         // Handle any errors that occurred on the local thread while registering. Even though
         // failures can happen after this point, they will be handled by the channel by closing the
         // childChannel.
         if (!future.isSuccess()) {
-            Channel childChannel = future.channel();
             if (childChannel.isRegistered()) {
                 childChannel.close();
             } else {
@@ -231,11 +231,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
                         }
-                        ChannelFuture future = ch.register();
+                        Future<Void> future = ch.register();
                         if (future.isDone()) {
-                            registerDone(future);
+                            registerDone(ch, future);
                         } else {
-                            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
+                            future.addListener(ch, CHILD_CHANNEL_REGISTRATION_LISTENER);
                         }
                         break;
                     case CLOSED:

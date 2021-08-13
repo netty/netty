@@ -15,9 +15,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -29,19 +29,19 @@ public interface Http2LifecycleManager {
 
     /**
      * Closes the local side of the {@code stream}. Depending on the {@code stream} state this may result in
-     * {@code stream} being closed. See {@link #closeStream(Http2Stream, ChannelFuture)}.
+     * {@code stream} being closed. See {@link #closeStream(Http2Stream, io.netty.util.concurrent.Future)}.
      * @param stream the stream to be half closed.
-     * @param future See {@link #closeStream(Http2Stream, ChannelFuture)}.
+     * @param future See {@link #closeStream(Http2Stream, io.netty.util.concurrent.Future)}.
      */
-    void closeStreamLocal(Http2Stream stream, ChannelFuture future);
+    void closeStreamLocal(Http2Stream stream, Future<Void> future);
 
     /**
      * Closes the remote side of the {@code stream}. Depending on the {@code stream} state this may result in
-     * {@code stream} being closed. See {@link #closeStream(Http2Stream, ChannelFuture)}.
+     * {@code stream} being closed. See {@link #closeStream(Http2Stream, Future)}.
      * @param stream the stream to be half closed.
-     * @param future See {@link #closeStream(Http2Stream, ChannelFuture)}.
+     * @param future See {@link #closeStream(Http2Stream, Future)}.
      */
-    void closeStreamRemote(Http2Stream stream, ChannelFuture future);
+    void closeStreamRemote(Http2Stream stream, Future<Void> future);
 
     /**
      * Closes and deactivates the given {@code stream}. A listener is also attached to {@code future} and upon
@@ -50,7 +50,7 @@ public interface Http2LifecycleManager {
      * @param future when completed if {@link Http2Connection#numActiveStreams()} is 0 then the underlying channel
      * will be closed.
      */
-    void closeStream(Http2Stream stream, ChannelFuture future);
+    void closeStream(Http2Stream stream, Future<Void> future);
 
     /**
      * Ensure the stream identified by {@code streamId} is reset. If our local state does not indicate the stream has
@@ -64,8 +64,8 @@ public interface Http2LifecycleManager {
      * {@code RST_STREAM} frame has been sent to the peer. If the stream state has already been updated and a
      * {@code RST_STREAM} frame has been sent then the return status may indicate success immediately.
      */
-    ChannelFuture resetStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            ChannelPromise promise);
+    Future<Void> resetStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            Promise<Void> promise);
 
     /**
      * Prevents the peer from creating streams and close the connection if {@code errorCode} is not
@@ -83,15 +83,15 @@ public interface Http2LifecycleManager {
      * {@code GO_AWAY} frame has been sent to the peer. If the stream state has already been updated and a
      * {@code GO_AWAY} frame has been sent then the return status may indicate success immediately.
      */
-    ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData, ChannelPromise promise);
+    Future<Void> goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, Promise<Void> promise);
 
     /**
      * Processes the given error.
      *
      * @param ctx The context used for communication and buffer allocation if necessary.
      * @param outbound {@code true} if the error was caused by an outbound operation and so the corresponding
-     * {@link ChannelPromise} was failed as well.
+     * {@link Promise} was failed as well.
      * @param cause the error.
      */
     void onError(ChannelHandlerContext ctx, boolean outbound, Throwable cause);

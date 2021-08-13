@@ -110,7 +110,7 @@ public class PromiseNotifier<V> implements FutureListener<V> {
         future.addListener(new FutureListener<Void>() {
             @Override
             public void operationComplete(Future<? extends Void> f) throws Exception {
-                if (promise.isCancelled() && f.isCancelled()) {
+                if (promise.asFuture().isCancelled() && f.isCancelled()) {
                     // Just return if we propagate a cancel from the promise to the future and both are notified already
                     return;
                 }
@@ -140,7 +140,7 @@ public class PromiseNotifier<V> implements FutureListener<V> {
     static <V> void propagateComplete(PromiseNotifier<V> target, Future<? extends V> source) throws Exception {
         boolean allCancelled = target.promises.length > 0;
         for (Promise<? super V> promise : target.promises) {
-            allCancelled &= promise.isCancelled();
+            allCancelled &= promise.asFuture().isCancelled();
         }
         if (allCancelled && source.isCancelled()) {
             // Just return if we propagate a cancel from the promise to the future and both are notified already

@@ -16,10 +16,10 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
 
@@ -63,9 +63,9 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
                 channelAccepted(ctx, remoteAddress);
                 remove = true;
             } else {
-                ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
+                Future<Void> rejectedFuture = channelRejected(ctx, remoteAddress);
                 if (rejectedFuture != null && !rejectedFuture.isDone()) {
-                    rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+                    rejectedFuture.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
                 } else {
                     ctx.close();
                 }
@@ -107,11 +107,11 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
      * {@link #accept(ChannelHandlerContext, SocketAddress)}.  You should override it if you would like to handle
      * (e.g. respond to) rejected addresses.
      *
-     * @return A {@link ChannelFuture} if you perform I/O operations, so that
+     * @return A {@link Future} if you perform I/O operations, so that
      *         the {@link Channel} can be closed once it completes. Null otherwise.
      */
     @SuppressWarnings("UnusedParameters")
-    protected ChannelFuture channelRejected(ChannelHandlerContext ctx, T remoteAddress) {
+    protected Future<Void> channelRejected(ChannelHandlerContext ctx, T remoteAddress) {
         return null;
     }
 }

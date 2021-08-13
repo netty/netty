@@ -33,6 +33,7 @@ import io.netty.util.concurrent.GenericFutureListener;
  * to perform a blocking operation on I/O completion, try to execute the
  * operation in a different thread using a thread pool.
  */
+@Deprecated(forRemoval = true)
 public interface ChannelFutureListener extends GenericFutureListener<ChannelFuture> {
 
     /**

@@ -18,6 +18,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -54,7 +56,7 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     }
 
     @Override
-    public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
         ChannelPromise newPromise = handleOutstandingControlFrames(ctx, promise);
         if (newPromise == null) {
             return promise;
@@ -63,7 +65,7 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
+    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
         // Only apply the limit to ping acks.
         if (ack) {
             ChannelPromise newPromise = handleOutstandingControlFrames(ctx, promise);
@@ -76,8 +78,8 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     }
 
     @Override
-    public ChannelFuture writeRstStream(
-            ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {
+    public Future<Void> writeRstStream(
+            ChannelHandlerContext ctx, int streamId, long errorCode, Promise<Void> promise) {
         ChannelPromise newPromise = handleOutstandingControlFrames(ctx, promise);
         if (newPromise == null) {
             return promise;

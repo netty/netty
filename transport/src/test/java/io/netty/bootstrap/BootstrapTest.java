@@ -19,14 +19,11 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -41,7 +38,6 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -199,11 +195,11 @@ public class BootstrapTest {
             bootstrap.localAddress(new LocalAddress("1"));
             Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
-            registerHandler.registerPromise().setSuccess();
+            registerHandler.registerPromise().setSuccess(null);
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
-                queue.add(future1.getNow().eventLoop().inEventLoop(Thread.currentThread()));
-                queue.add(future1.isSuccess());
+            future.addListener(fut -> {
+                queue.add(fut.getNow().eventLoop().inEventLoop(Thread.currentThread()));
+                queue.add(fut.isSuccess());
             });
             assertTrue(queue.take());
             assertTrue(queue.take());
@@ -223,7 +219,7 @@ public class BootstrapTest {
             bootstrap.channelFactory((eventLoop, childEventLoopGroup) ->
                     new LocalServerChannel(eventLoop, childEventLoopGroup) {
                         @Override
-                        public ChannelFuture bind(SocketAddress localAddress) {
+                        public Future<Void> bind(SocketAddress localAddress) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
@@ -231,11 +227,11 @@ public class BootstrapTest {
                         }
 
                         @Override
-                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
-                            return promise.setFailure(new SocketException());
+                            return promise.setFailure(new SocketException()).asFuture();
                         }
                     });
             bootstrap.childHandler(new DummyHandler());
@@ -243,11 +239,11 @@ public class BootstrapTest {
             bootstrap.localAddress(new LocalAddress("1"));
             Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
-            registerHandler.registerPromise().setSuccess();
+            registerHandler.registerPromise().setSuccess(null);
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
-                queue.add(future1.executor().inEventLoop(Thread.currentThread()));
-                queue.add(future1.isSuccess());
+            future.addListener(fut -> {
+                queue.add(fut.executor().inEventLoop(Thread.currentThread()));
+                queue.add(fut.isSuccess());
             });
             assertTrue(queue.take());
             assertFalse(queue.take());
@@ -269,7 +265,7 @@ public class BootstrapTest {
             bootstrapA.handler(registerHandler);
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
-            registerHandler.registerPromise().setSuccess();
+            registerHandler.registerPromise().setSuccess(null);
             CompletionException exception =
                     assertThrows(CompletionException.class, future::syncUninterruptibly);
             assertThat(exception.getCause()).isInstanceOf(ConnectException.class);
@@ -289,10 +285,10 @@ public class BootstrapTest {
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(registerHandler);
             Channel channel = bootstrapA.createUnregistered();
-            ChannelFuture registerFuture = channel.register();
-            ChannelFuture connectFuture = channel.connect(LocalAddress.ANY);
+            Future<Void> registerFuture = channel.register();
+            Future<Void> connectFuture = channel.connect(LocalAddress.ANY);
             assertFalse(connectFuture.isDone());
-            registerHandler.registerPromise().setSuccess();
+            registerHandler.registerPromise().setSuccess(null);
             registerFuture.sync();
             CompletionException exception =
                     assertThrows(CompletionException.class, connectFuture::syncUninterruptibly);
@@ -413,14 +409,14 @@ public class BootstrapTest {
     private static final class LateRegisterHandler implements ChannelHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
-        private ChannelPromise registerPromise;
+        private Promise<Void> registerPromise;
 
         @Override
-        public void register(ChannelHandlerContext ctx, final ChannelPromise promise) {
+        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
             registerPromise = promise;
             latch.countDown();
-            ChannelPromise newPromise = ctx.newPromise();
-            newPromise.addListener((ChannelFutureListener) future -> {
+            Promise<Void> newPromise = ctx.newPromise();
+            newPromise.addListener(future -> {
                 if (!future.isSuccess()) {
                     registerPromise.tryFailure(future.cause());
                 }
@@ -428,7 +424,7 @@ public class BootstrapTest {
             ctx.register(newPromise);
         }
 
-        ChannelPromise registerPromise() throws InterruptedException {
+        Promise<Void> registerPromise() throws InterruptedException {
             latch.await();
             return registerPromise;
         }

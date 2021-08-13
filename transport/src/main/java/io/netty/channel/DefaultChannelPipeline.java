@@ -19,8 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -67,7 +70,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final DefaultChannelHandlerContext tail;
 
     private final Channel channel;
-    private final ChannelFuture succeededFuture;
+    private final Future<Void> succeededFuture;
     private final boolean touch = ResourceLeakDetector.isEnabled();
     private final List<DefaultChannelHandlerContext> handlers = new ArrayList<>(4);
 
@@ -75,7 +78,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     public DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
-        succeededFuture = new SucceededChannelFuture(channel, channel.eventLoop());
+        succeededFuture = new DefaultPromise<>(channel.eventLoop(), null);
 
         tail = new DefaultChannelHandlerContext(this, TAIL_NAME, TAIL_HANDLER);
         head = new DefaultChannelHandlerContext(this, HEAD_NAME, HEAD_HANDLER);
@@ -115,7 +118,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private int checkNoSuchElement(int idx, String name) {
+    private static int checkNoSuchElement(int idx, String name) {
         if (idx == -1) {
             throw new NoSuchElementException(name);
         }
@@ -829,37 +832,37 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress) {
+    public final Future<Void> bind(SocketAddress localAddress) {
         return tail.bind(localAddress);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress) {
+    public final Future<Void> connect(SocketAddress remoteAddress) {
         return tail.connect(remoteAddress);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public final Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return tail.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public final ChannelFuture disconnect() {
+    public final Future<Void> disconnect() {
         return tail.disconnect();
     }
 
     @Override
-    public final ChannelFuture close() {
+    public final Future<Void> close() {
         return tail.close();
     }
 
     @Override
-    public final ChannelFuture register() {
+    public final Future<Void> register() {
         return tail.register();
     }
 
     @Override
-    public final ChannelFuture deregister() {
+    public final Future<Void> deregister() {
         return tail.deregister();
     }
 
@@ -870,38 +873,38 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    public final Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
         return tail.bind(localAddress, promise);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public final Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return tail.connect(remoteAddress, promise);
     }
 
     @Override
-    public final ChannelFuture connect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    public final Future<Void> connect(
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         return tail.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
+    public final Future<Void> disconnect(Promise<Void> promise) {
         return tail.disconnect(promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise promise) {
+    public Future<Void> close(Promise<Void> promise) {
         return tail.close(promise);
     }
 
     @Override
-    public final ChannelFuture register(final ChannelPromise promise) {
+    public final Future<Void> register(final Promise<Void> promise) {
         return tail.register(promise);
     }
 
     @Override
-    public final ChannelFuture deregister(final ChannelPromise promise) {
+    public final Future<Void> deregister(final Promise<Void> promise) {
         return tail.deregister(promise);
     }
 
@@ -912,38 +915,38 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelFuture write(Object msg) {
+    public final Future<Void> write(Object msg) {
         return tail.write(msg);
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
+    public final Future<Void> write(Object msg, Promise<Void> promise) {
         return tail.write(msg, promise);
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         return tail.writeAndFlush(msg, promise);
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg) {
+    public final Future<Void> writeAndFlush(Object msg) {
         return tail.writeAndFlush(msg);
     }
 
     @Override
-    public final ChannelPromise newPromise() {
+    public final Promise<Void> newPromise() {
         return new DefaultChannelPromise(channel(), executor());
     }
 
     @Override
-    public final ChannelFuture newSucceededFuture() {
+    public final Future<Void> newSucceededFuture() {
         return succeededFuture;
     }
 
     @Override
-    public final ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel(), executor(), cause);
+    public final Future<Void> newFailedFuture(Throwable cause) {
+        return new DefaultPromise<>(cause, executor());
     }
 
     /**
@@ -1085,7 +1088,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void bind(
-                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
             ctx.channel().unsafe().bind(localAddress, promise);
         }
 
@@ -1093,27 +1096,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                ChannelPromise promise) {
+                Promise<Void> promise) {
             ctx.channel().unsafe().connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
             ctx.channel().unsafe().disconnect(promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
             ctx.channel().unsafe().close(promise);
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
             ctx.channel().unsafe().register(promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
             ctx.channel().unsafe().deregister(promise);
         }
 
@@ -1123,7 +1126,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             ctx.channel().unsafe().write(msg, promise);
         }
 

@@ -18,14 +18,13 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
@@ -49,7 +48,6 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -306,10 +304,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         ctx.flush();
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            promise.setSuccess(null);
+            return promise.asFuture();
         }
         finished = true;
 
@@ -340,35 +338,35 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Close this {@link Lz4FrameEncoder} and so finish the encoding.
      *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
+     * The returned {@link java.util.concurrent.Future} will be notified once the operation completes.
      */
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return close(ctx().newPromise());
     }
 
     /**
      * Close this {@link Lz4FrameEncoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
+     * The given {@link java.util.concurrent.Future} will be notified once the operation
      * completes and will also be returned.
      */
-    public ChannelFuture close(final ChannelPromise promise) {
+    public Future<Void> close(Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             return finishEncode(ctx, promise);
         } else {
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), promise);
+                Future<Void> f = finishEncode(ctx(), promise);
                 PromiseNotifier.cascade(f, promise);
             });
-            return promise;
+            return promise.asFuture();
         }
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
+    public void close(final ChannelHandlerContext ctx, Promise<Void> promise) {
+        Future<Void> f = finishEncode(ctx, ctx.newPromise());
+        f.addListener(f1 -> ctx.close(promise));
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.

@@ -172,11 +172,13 @@ public final class BinaryMemcacheClientCodec extends
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext read() {
                     ctx.read();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext flush() {
                     ctx.flush();
                     return this;
@@ -200,26 +202,32 @@ public final class BinaryMemcacheClientCodec extends
                     return ctx.hasAttr(key);
                 }
 
+                @Override
                 public ChannelFuture bind(SocketAddress localAddress) {
                     return ctx.bind(localAddress);
                 }
 
+                @Override
                 public ChannelFuture connect(SocketAddress remoteAddress) {
                     return ctx.connect(remoteAddress);
                 }
 
+                @Override
                 public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
                     return ctx.connect(remoteAddress, localAddress);
                 }
 
+                @Override
                 public ChannelFuture disconnect() {
                     return ctx.disconnect();
                 }
 
+                @Override
                 public ChannelFuture close() {
                     return ctx.close();
                 }
 
+                @Override
                 public ChannelFuture deregister() {
                     return ctx.deregister();
                 }
@@ -259,6 +267,7 @@ public final class BinaryMemcacheClientCodec extends
                     return ctx.deregister(promise);
                 }
 
+                @Override
                 public ChannelFuture write(Object msg) {
                     return ctx.write(msg);
                 }
@@ -271,18 +280,22 @@ public final class BinaryMemcacheClientCodec extends
                     return ctx.writeAndFlush(msg, promise);
                 }
 
+                @Override
                 public ChannelFuture writeAndFlush(Object msg) {
                     return ctx.writeAndFlush(msg);
                 }
 
+                @Override
                 public ChannelPromise newPromise() {
                     return ctx.newPromise();
                 }
 
+                @Override
                 public ChannelFuture newSucceededFuture() {
                     return ctx.newSucceededFuture();
                 }
 
+                @Override
                 public ChannelFuture newFailedFuture(Throwable cause) {
                     return ctx.newFailedFuture(cause);
                 }

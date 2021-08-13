@@ -18,6 +18,10 @@ import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -28,6 +32,7 @@ import static io.netty.util.ReferenceCountUtil.safeRelease;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
+@SuppressWarnings("unchecked")
 @UnstableApi
 public abstract class AbstractCoalescingBufferQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractCoalescingBufferQueue.class);
@@ -53,11 +58,11 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the head of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void addFirst(ByteBuf buf, ChannelPromise promise) {
-        addFirst(buf, (ChannelFutureListener) new DelegatingChannelPromiseNotifier(promise));
+    public final void addFirst(ByteBuf buf, Promise<Void> promise) {
+        addFirst(buf, new PromiseNotifier<Void>(promise));
     }
 
-    private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+    private void addFirst(ByteBuf buf, FutureListener<Void> listener) {
         if (listener != null) {
             bufAndListenerPairs.addFirst(listener);
         }
@@ -69,7 +74,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * Add a buffer to the end of the queue.
      */
     public final void add(ByteBuf buf) {
-        add(buf, (ChannelFutureListener) null);
+        add(buf, (FutureListener<Void>) null);
     }
 
     /**
@@ -78,10 +83,10 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void add(ByteBuf buf, ChannelPromise promise) {
+    public final void add(ByteBuf buf, Promise<Void> promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
-        add(buf, (ChannelFutureListener) new DelegatingChannelPromiseNotifier(promise));
+        add(buf, new PromiseNotifier<Void>(promise));
     }
 
     /**
@@ -90,7 +95,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
-    public final void add(ByteBuf buf, ChannelFutureListener listener) {
+    public final void add(ByteBuf buf, FutureListener<Void> listener) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         bufAndListenerPairs.add(buf);
@@ -105,7 +110,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param aggregatePromise used to aggregate the promises and listeners for the returned buffer.
      * @return the first {@link ByteBuf} from the queue.
      */
-    public final ByteBuf removeFirst(ChannelPromise aggregatePromise) {
+    public final ByteBuf removeFirst(Promise<Void> aggregatePromise) {
         Object entry = bufAndListenerPairs.poll();
         if (entry == null) {
             return null;
@@ -116,8 +121,8 @@ public abstract class AbstractCoalescingBufferQueue {
         decrementReadableBytes(result.readableBytes());
 
         entry = bufAndListenerPairs.peek();
-        if (entry instanceof ChannelFutureListener) {
-            aggregatePromise.addListener((ChannelFutureListener) entry);
+        if (entry instanceof FutureListener) {
+            aggregatePromise.addListener((FutureListener<Void>) entry);
             bufAndListenerPairs.poll();
         }
         return result;
@@ -125,7 +130,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
     /**
      * Remove a {@link ByteBuf} from the queue with the specified number of bytes. Any added buffer who's bytes are
-     * fully consumed during removal will have it's promise completed when the passed aggregate {@link ChannelPromise}
+     * fully consumed during removal will have it's promise completed when the passed aggregate {@link Promise}
      * completes.
      *
      * @param alloc The allocator used if a new {@link ByteBuf} is generated during the aggregation process.
@@ -134,7 +139,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param aggregatePromise used to aggregate the promises and listeners for the constituent buffers.
      * @return a {@link ByteBuf} composed of the enqueued buffers.
      */
-    public final ByteBuf remove(ByteBufAllocator alloc, int bytes, ChannelPromise aggregatePromise) {
+    public final ByteBuf remove(ByteBufAllocator alloc, int bytes, Promise<Void> aggregatePromise) {
         checkPositiveOrZero(bytes, "bytes");
         requireNonNull(aggregatePromise, "aggregatePromise");
 
@@ -154,8 +159,8 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     break;
                 }
-                if (entry instanceof ChannelFutureListener) {
-                    aggregatePromise.addListener((ChannelFutureListener) entry);
+                if (entry instanceof FutureListener) {
+                    aggregatePromise.addListener((FutureListener<Void>) entry);
                     continue;
                 }
                 entryBuffer = (ByteBuf) entry;
@@ -232,7 +237,7 @@ public abstract class AbstractCoalescingBufferQueue {
                         decrementReadableBytes(previousBuf.readableBytes());
                         // If the write fails we want to at least propagate the exception through the ChannelPipeline
                         // as otherwise the user will not be made aware of the failure at all.
-                        ctx.write(previousBuf).addListener(
+                        ctx.write(previousBuf).addListener(ctx.channel(),
                                 ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     break;
@@ -243,17 +248,17 @@ public abstract class AbstractCoalescingBufferQueue {
                         decrementReadableBytes(previousBuf.readableBytes());
                         // If the write fails we want to at least propagate the exception through the ChannelPipeline
                         // as otherwise the user will not be made aware of the failure at all.
-                        ctx.write(previousBuf).addListener(
+                        ctx.write(previousBuf).addListener(ctx.channel(),
                                 ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
-                } else if (entry instanceof ChannelPromise) {
+                } else if (entry instanceof Promise) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (ChannelPromise) entry);
+                    ctx.write(previousBuf, (Promise<Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf).addListener((ChannelFutureListener) entry);
+                    ctx.write(previousBuf).addListener((FutureListener<Void>) entry);
                     previousBuf = null;
                 }
             } catch (Throwable t) {
@@ -327,7 +332,7 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * The value to return when {@link #remove(ByteBufAllocator, int, ChannelPromise)} is called but the queue is empty.
+     * The value to return when {@link #remove(ByteBufAllocator, int, Promise)} is called but the queue is empty.
      * @return the {@link ByteBuf} which represents an empty queue.
      */
     protected abstract ByteBuf removeEmptyValue();
@@ -340,7 +345,7 @@ public abstract class AbstractCoalescingBufferQueue {
         return bufAndListenerPairs.size();
     }
 
-    private void releaseAndCompleteAll(ChannelFuture future) {
+    private void releaseAndCompleteAll(Future<Void> future) {
         Throwable pending = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
@@ -353,7 +358,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     decrementReadableBytes(buffer.readableBytes());
                     safeRelease(buffer);
                 } else {
-                    ((ChannelFutureListener) entry).operationComplete(future);
+                    ((FutureListener<Void>) entry).operationComplete(future);
                 }
             } catch (Throwable t) {
                 if (pending == null) {

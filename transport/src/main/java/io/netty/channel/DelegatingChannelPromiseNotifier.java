@@ -29,6 +29,7 @@ import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
+@Deprecated(forRemoval = true)
 @UnstableApi
 public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
     private static final InternalLogger logger =

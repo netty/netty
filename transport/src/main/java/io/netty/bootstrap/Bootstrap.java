@@ -263,7 +263,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
             ChannelPromise connectPromise = channel.newPromise();
-            connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            connectPromise.addListener(channel, ChannelFutureListener.CLOSE_ON_FAILURE);
             cascade(true, connectPromise, promise, channel);
             if (localAddress == null) {
                 channel.connect(remoteAddress, connectPromise);

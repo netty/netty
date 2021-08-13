@@ -15,20 +15,19 @@
  */
 package io.netty.handler.codec.compression;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
@@ -156,23 +155,23 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return close(ctx().newPromise());
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public Future<Void> close(Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             return finishEncode(ctx, promise);
         } else {
-            final ChannelPromise p = ctx.newPromise();
+            Promise<Void> p = ctx.newPromise();
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), p);
+                Future<Void> f = finishEncode(ctx(), p);
                 PromiseNotifier.cascade(f, promise);
             });
-            return p;
+            return p.asFuture();
         }
     }
 
@@ -262,9 +261,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
+    public void close(final ChannelHandlerContext ctx, Promise<Void> promise) {
+        Future<Void> f = finishEncode(ctx, ctx.newPromise());
+        f.addListener(f1 -> ctx.close(promise));
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
@@ -274,10 +273,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            promise.setSuccess(null);
+            return promise.asFuture();
         }
 
         finished = true;

@@ -16,8 +16,8 @@
 package io.netty.example.objectecho;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Future;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,8 +46,8 @@ public class ObjectEchoClientHandler implements ChannelHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         // Send the first message if this handler is a client-side handler.
-        ChannelFuture future = ctx.writeAndFlush(firstMessage);
-        future.addListener(FIRE_EXCEPTION_ON_FAILURE); // Let object serialisation exceptions propagate.
+        Future<Void> future = ctx.writeAndFlush(firstMessage);
+        future.addListener(ctx.channel(), FIRE_EXCEPTION_ON_FAILURE); // Let object serialisation exceptions propagate.
     }
 
     @Override

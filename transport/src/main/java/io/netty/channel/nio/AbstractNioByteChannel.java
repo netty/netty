@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -31,6 +30,7 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -69,7 +69,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     /**
      * Shutdown the input side of the channel.
      */
-    protected abstract ChannelFuture shutdownInput();
+    protected abstract Future<Void> shutdownInput();
 
     protected boolean isInputShutdown0() {
         return false;

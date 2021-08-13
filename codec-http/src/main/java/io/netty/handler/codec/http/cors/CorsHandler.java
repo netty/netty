@@ -15,11 +15,9 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -27,6 +25,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -69,7 +69,7 @@ public class CorsHandler implements ChannelHandler {
      * config matches a certain origin, the first in the List will be used.
      *
      * @param configList     List of {@link CorsConfig}
-     * @param isShortCircuit Same as {@link CorsConfig#shortCircuit} but applicable to all supplied configs.
+     * @param isShortCircuit Same as {@link CorsConfig#isShortCurcuit()} but applicable to all supplied configs.
      */
     public CorsHandler(final List<CorsConfig> configList, boolean isShortCircuit) {
         checkNonEmpty(configList, "configList");
@@ -215,7 +215,7 @@ public class CorsHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, Promise<Void> promise) {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
@@ -243,9 +243,9 @@ public class CorsHandler implements ChannelHandler {
 
         HttpUtil.setKeepAlive(response, keepAlive);
 
-        final ChannelFuture future = ctx.writeAndFlush(response);
+        Future<Void> future = ctx.writeAndFlush(response);
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
         }
     }
 }

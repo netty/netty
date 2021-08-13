@@ -15,10 +15,12 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.CancellationException;
+
 /**
  * Special {@link Future} which is writable.
  */
-public interface Promise<V> extends Future<V> {
+public interface Promise<V> {
     /**
      * Marks this future as a success and notifies all listeners.
      * <p>
@@ -57,9 +59,55 @@ public interface Promise<V> extends Future<V> {
      */
     boolean setUncancellable();
 
-    @Override
-    Promise<V> addListener(FutureListener<? super V> listener);
+    /**
+     * Cancel the promise and mark the associated future as cancelled.
+     * <p>
+     * If the cancellation was successful it will fail the future with a {@link CancellationException}.
+     *
+     * @param mayInterruptIfRunning set to {@code true} if any thread that might be working on fulfilling the promise
+     *                             is allowed to be interrupted. Otherwise, set to {@code false}.
+     */
+    boolean cancel(boolean mayInterruptIfRunning);
 
-    @Override
-    <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
+    /**
+     * Get a {@link Future} representation of this promise.
+     *
+     * When this promise succeeds or fails, the future will be completed in a corresponding way.
+     *
+     * The returned future is bound to this specific promise instance, and repeated calls to this method will return
+     * the same future instance.
+     *
+     * @return A {@link Future} representation of this promise.
+     */
+    Future<V> asFuture();
+
+    /**
+     * Returns {@code true} if this promise has already either failed, or been fulfilled successfully.
+     *
+     * @return {@code true} if this promise has been completed, otherwise {@code false}.
+     */
+    boolean isDone();
+
+    /**
+     * Adds the specified listener to this future.
+     * The specified listener is notified when this future is {@linkplain #isDone() done}.
+     * If this future is already completed, the specified listener is notified immediately.
+     *
+     * @param listener The listener to be called when this future completes.
+     *                 The listener will be passed this future as an argument.
+     * @return this future object.
+     */
+    Future<V> addListener(FutureListener<? super V> listener);
+
+    /**
+     * Adds the specified listener to this future.
+     * The specified listener is notified when this future is {@linkplain #isDone() done}.
+     * If this future is already completed, the specified listener is notified immediately.
+     *
+     * @param context The context object that will be passed to the listener when this future completes.
+     * @param listener The listener to be called when this future completes.
+     *                 The listener will be passed the given context, and this future.
+     * @return this future object.
+     */
+    <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
 }

@@ -18,13 +18,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -255,18 +254,18 @@ public final class Http2CodecUtil {
     }
 
     /**
-     * Provides the ability to associate the outcome of multiple {@link ChannelPromise}
-     * objects into a single {@link ChannelPromise} object.
+     * Provides the ability to associate the outcome of multiple {@link Promise}
+     * objects into a single {@link Promise} object.
      */
-    static final class SimpleChannelPromiseAggregator extends DefaultChannelPromise {
-        private final ChannelPromise promise;
+    static final class SimpleChannelPromiseAggregator extends DefaultPromise<Void> {
+        private final Promise<Void> promise;
         private int expectedCount;
         private int doneCount;
         private Throwable aggregateFailure;
         private boolean doneAllocating;
 
-        SimpleChannelPromiseAggregator(ChannelPromise promise, Channel c, EventExecutor e) {
-            super(c, e);
+        SimpleChannelPromiseAggregator(Promise<Void> promise, EventExecutor e) {
+            super(e);
             assert promise != null && !promise.isDone();
             this.promise = promise;
         }
@@ -276,7 +275,7 @@ public final class Http2CodecUtil {
          * @return A new promise which will be aggregated.
          * {@code null} if {@link #doneAllocatingPromises()} was previously called.
          */
-        public ChannelPromise newPromise() {
+        public Promise<Void> newPromise() {
             assert !doneAllocating : "Done allocating. No more promises can be allocated.";
             ++expectedCount;
             return this;
@@ -287,7 +286,7 @@ public final class Http2CodecUtil {
          * The aggregation can not be successful until this method is called.
          * @return The promise that is the aggregation of all promises allocated with {@link #newPromise()}.
          */
-        public ChannelPromise doneAllocatingPromises() {
+        public Promise<Void> doneAllocatingPromises() {
             if (!doneAllocating) {
                 doneAllocating = true;
                 if (doneCount == expectedCount || expectedCount == 0) {
@@ -319,7 +318,7 @@ public final class Http2CodecUtil {
          * because that may be expected.
          */
         @Override
-        public ChannelPromise setFailure(Throwable cause) {
+        public Promise<Void> setFailure(Throwable cause) {
             if (allowFailure()) {
                 ++doneCount;
                 setAggregateFailure(cause);
@@ -331,7 +330,7 @@ public final class Http2CodecUtil {
         }
 
         @Override
-        public ChannelPromise setSuccess(Void result) {
+        public Promise<Void> setSuccess(Void result) {
             if (awaitingPromises()) {
                 ++doneCount;
                 if (allPromisesDone()) {
@@ -367,9 +366,9 @@ public final class Http2CodecUtil {
             return doneCount == expectedCount && doneAllocating;
         }
 
-        private ChannelPromise setPromise() {
+        private Promise<Void> setPromise() {
             if (aggregateFailure == null) {
-                promise.setSuccess();
+                promise.setSuccess(null);
                 return super.setSuccess(null);
             } else {
                 promise.setFailure(aggregateFailure);
@@ -379,7 +378,7 @@ public final class Http2CodecUtil {
 
         private boolean tryPromise() {
             if (aggregateFailure == null) {
-                promise.trySuccess();
+                promise.trySuccess(null);
                 return super.trySuccess(null);
             } else {
                 promise.tryFailure(aggregateFailure);

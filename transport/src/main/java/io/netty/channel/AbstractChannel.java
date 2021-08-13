@@ -22,7 +22,12 @@ import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureContextListener;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -51,8 +56,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelId id;
     private final Unsafe unsafe;
     private final ChannelPipeline pipeline;
-    private final ChannelFuture succeedFuture;
-    private final CloseFuture closeFuture;
+    private final Future<Void> succeedFuture;
+    private final ClosePromise closePromise;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -75,8 +80,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, EventLoop eventLoop) {
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
-        closeFuture = new CloseFuture(this, eventLoop);
-        succeedFuture = new SucceededChannelFuture(this, eventLoop);
+        closePromise = new ClosePromise(eventLoop);
+        succeedFuture = new DefaultPromise<>(eventLoop, null);
         id = newId();
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -91,8 +96,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, EventLoop eventLoop, ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
-        closeFuture = new CloseFuture(this, eventLoop);
-        succeedFuture = new SucceededChannelFuture(this, eventLoop);
+        closePromise = new ClosePromise(eventLoop);
+        succeedFuture = new DefaultPromise<>(eventLoop, null);
         this.id = id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -230,37 +235,37 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Void> bind(SocketAddress localAddress) {
         return pipeline.bind(localAddress);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress) {
         return pipeline.connect(remoteAddress);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return pipeline.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public ChannelFuture disconnect() {
+    public Future<Void> disconnect() {
         return pipeline.disconnect();
     }
 
     @Override
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return pipeline.close();
     }
 
     @Override
-    public ChannelFuture register() {
+    public Future<Void> register() {
         return pipeline.register();
     }
 
     @Override
-    public ChannelFuture deregister() {
+    public Future<Void> deregister() {
         return pipeline.deregister();
     }
 
@@ -271,37 +276,37 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
         return pipeline.bind(localAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return pipeline.connect(remoteAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         return pipeline.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
+    public Future<Void> disconnect(Promise<Void> promise) {
         return pipeline.disconnect(promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise promise) {
+    public Future<Void> close(Promise<Void> promise) {
         return pipeline.close(promise);
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
+    public Future<Void> register(Promise<Void> promise) {
         return pipeline.register(promise);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
+    public Future<Void> deregister(Promise<Void> promise) {
         return pipeline.deregister(promise);
     }
 
@@ -312,43 +317,43 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
+    public Future<Void> write(Object msg) {
         return pipeline.write(msg);
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
+    public Future<Void> write(Object msg, Promise<Void> promise) {
         return pipeline.write(msg, promise);
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg) {
+    public Future<Void> writeAndFlush(Object msg) {
         return pipeline.writeAndFlush(msg);
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         return pipeline.writeAndFlush(msg, promise);
     }
 
     @Override
-    public ChannelPromise newPromise() {
+    public Promise<Void> newPromise() {
         return new DefaultChannelPromise(this, eventLoop);
     }
 
     @Override
-    public ChannelFuture newSucceededFuture() {
+    public Future<Void> newSucceededFuture() {
         return succeedFuture;
     }
 
     @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(this, eventLoop, cause);
+    public Future<Void> newFailedFuture(Throwable cause) {
+        return new DefaultPromise<>(cause, eventLoop);
     }
 
     @Override
-    public ChannelFuture closeFuture() {
-        return closeFuture;
+    public Future<Void> closeFuture() {
+        return closePromise.asFuture();
     }
 
     @Override
@@ -481,7 +486,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(final ChannelPromise promise) {
+        public final void register(final Promise<Void> promise) {
             assertEventLoop();
 
             if (isRegistered()) {
@@ -513,13 +518,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
-                closeFuture.setClosed();
+                closePromise.setClosed();
                 safeSetFailure(promise, t);
             }
         }
 
         @Override
-        public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+        public final void bind(final SocketAddress localAddress, final Promise<Void> promise) {
             assertEventLoop();
 
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
@@ -559,7 +564,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void disconnect(final ChannelPromise promise) {
+        public final void disconnect(final Promise<Void> promise) {
             assertEventLoop();
 
             if (!promise.setUncancellable()) {
@@ -587,7 +592,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void close(final ChannelPromise promise) {
+        public void close(final Promise<Void> promise) {
             assertEventLoop();
 
             ClosedChannelException closedChannelException =
@@ -600,7 +605,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          */
         @UnstableApi
-        public final void shutdownOutput(final ChannelPromise promise) {
+        public final void shutdownOutput(final Promise<Void> promise) {
             assertEventLoop();
             shutdownOutput(promise, null);
         }
@@ -610,7 +615,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          * @param cause The cause which may provide rational for the shutdown.
          */
-        private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
+        private void shutdownOutput(final Promise<Void> promise, Throwable cause) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -631,7 +636,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     try {
                         // Execute the shutdown.
                         doShutdownOutput();
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } catch (Throwable err) {
                         promise.setFailure(err);
                     } finally {
@@ -644,7 +649,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 try {
                     // Execute the shutdown.
                     doShutdownOutput();
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 } catch (Throwable err) {
                     promise.setFailure(err);
                 } finally {
@@ -660,19 +665,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
 
-        private void close(final ChannelPromise promise, final Throwable cause,
+        private void close(final Promise<Void> promise, final Throwable cause,
                            final ClosedChannelException closeCause, final boolean notify) {
             if (!promise.setUncancellable()) {
                 return;
             }
 
             if (closeInitiated) {
-                if (closeFuture.isDone()) {
+                if (closePromise.isDone()) {
                     // Closed already.
                     safeSetSuccess(promise);
                 } else {
-                    // This means close() was called before so we just register a listener and return
-                    closeFuture.addListener((ChannelFutureListener) future -> promise.setSuccess());
+                    // This means close() was called before, so we just register a listener and return
+                    closePromise.addListener(promise, (p, future) -> p.setSuccess(null));
                 }
                 return;
             }
@@ -719,13 +724,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private void doClose0(ChannelPromise promise) {
+        private void doClose0(Promise<Void> promise) {
             try {
                 doClose();
-                closeFuture.setClosed();
+                closePromise.setSuccess(null);
                 safeSetSuccess(promise);
             } catch (Throwable t) {
-                closeFuture.setClosed();
+                closePromise.setSuccess(null);
                 safeSetFailure(promise, t);
             }
         }
@@ -744,13 +749,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void deregister(final ChannelPromise promise) {
+        public final void deregister(final Promise<Void> promise) {
             assertEventLoop();
 
             deregister(promise, false);
         }
 
-        private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
+        private void deregister(final Promise<Void> promise, final boolean fireChannelInactive) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -822,7 +827,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void write(Object msg, ChannelPromise promise) {
+        public final void write(Object msg, Promise<Void> promise) {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
@@ -876,7 +881,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             flush0();
         }
 
-        @SuppressWarnings("deprecation")
         protected void flush0() {
             if (inFlush0) {
                 // Avoid re-entrance
@@ -920,7 +924,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         protected final void handleWriteError(Throwable t) {
             if (t instanceof IOException && config().isAutoClose()) {
                 /**
-                 * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
+                 * Just call {@link #close(Promise, Throwable, boolean)} here which will take care of
                  * failing all flushed messages and also ensure the actual close of the underlying transport
                  * will happen before the promises are notified.
                  *
@@ -941,14 +945,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private ClosedChannelException newClosedChannelException(Throwable cause, String method) {
             ClosedChannelException exception =
-                    StacklessClosedChannelException.newInstance(AbstractChannel.AbstractUnsafe.class, method);
+                    StacklessClosedChannelException.newInstance(AbstractUnsafe.class, method);
             if (cause != null) {
                 exception.initCause(cause);
             }
             return exception;
         }
 
-        protected final boolean ensureOpen(ChannelPromise promise) {
+        protected final boolean ensureOpen(Promise<Void> promise) {
             if (isOpen()) {
                 return true;
             }
@@ -960,8 +964,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
          */
-        protected final void safeSetSuccess(ChannelPromise promise) {
-            if (!promise.trySuccess()) {
+        protected final void safeSetSuccess(Promise<Void> promise) {
+            if (!promise.trySuccess(null)) {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
             }
         }
@@ -969,7 +973,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
          */
-        protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
+        protected final void safeSetFailure(Promise<Void> promise, Throwable cause) {
             if (!promise.tryFailure(cause)) {
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
             }
@@ -1103,24 +1107,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         DefaultFileRegion.validate(region, position);
     }
 
-    static final class CloseFuture extends DefaultChannelPromise {
+    static final class ClosePromise implements Promise<Void> {
+        private final Promise<Void> promise;
 
-        CloseFuture(AbstractChannel ch, EventExecutor eventExecutor) {
-            super(ch, eventExecutor);
+        ClosePromise(EventExecutor eventExecutor) {
+            promise = new DefaultPromise<>(eventExecutor);
         }
 
         @Override
-        public ChannelPromise setSuccess() {
+        public Promise<Void> setSuccess(Void result) {
             throw new IllegalStateException();
         }
 
         @Override
-        public ChannelPromise setFailure(Throwable cause) {
+        public Promise<Void> setFailure(Throwable cause) {
             throw new IllegalStateException();
         }
 
         @Override
-        public boolean trySuccess() {
+        public boolean trySuccess(Void result) {
             throw new IllegalStateException();
         }
 
@@ -1129,8 +1134,33 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             throw new IllegalStateException();
         }
 
+        @Override
+        public boolean setUncancellable() {
+            return false;
+        }
+
+        @Override
+        public Future<Void> asFuture() {
+            return promise.asFuture();
+        }
+
+        @Override
+        public boolean isDone() {
+            return promise.isDone();
+        }
+
+        @Override
+        public Future<Void> addListener(FutureListener<? super Void> listener) {
+            return promise.addListener(listener);
+        }
+
+        @Override
+        public <C> Future<Void> addListener(C context, FutureContextListener<? super C, ? super Void> listener) {
+            return promise.addListener(context, listener);
+        }
+
         boolean setClosed() {
-            return super.trySuccess();
+            return promise.trySuccess(null);
         }
     }
 
