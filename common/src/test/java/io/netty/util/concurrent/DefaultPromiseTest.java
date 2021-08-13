@@ -288,11 +288,14 @@ public class DefaultPromiseTest {
 
     @Test
     public void testListenerNotifyLater() throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
         // Testing first execution path in DefaultPromise
-        testListenerNotifyLater(1);
+        testListenerNotifyLater(1, executor);
 
         // Testing second execution path in DefaultPromise
-        testListenerNotifyLater(2);
+        testListenerNotifyLater(2, executor);
+
+        executor.shutdownGracefully().sync();
     }
 
     @Test
@@ -410,6 +413,31 @@ public class DefaultPromiseTest {
         final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.cancel(true);
         assertThrows(CancellationException.class, promise::sync);
+    }
+
+    @Test
+    public void mustPassContextToContextListener() {
+        Promise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        Object context = new Object();
+        Object result = new Object();
+        promise.addListener(context, (ctx, future) -> {
+            assertSame(context, ctx);
+            assertSame(future, promise);
+            assertSame(future.getNow(), result);
+        });
+        promise.setSuccess(result);
+    }
+
+    @Test
+    public void mustPassNullContextToContextListener() {
+        Promise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        Object result = new Object();
+        promise.addListener(null, (ctx, future) -> {
+            assertNull(ctx);
+            assertSame(future, promise);
+            assertSame(future.getNow(), result);
+        });
+        promise.setSuccess(result);
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
@@ -562,8 +590,7 @@ public class DefaultPromiseTest {
         latch.await();
     }
 
-    private static void testListenerNotifyLater(final int numListenersBefore) throws Exception {
-        EventExecutor executor = new TestEventExecutor();
+    private static void testListenerNotifyLater(int numListenersBefore, TestEventExecutor executor) throws Exception {
         int expectedCount = numListenersBefore + 2;
         final CountDownLatch latch = new CountDownLatch(expectedCount);
         final FutureListener<Void> listener = future -> latch.countDown();
@@ -580,7 +607,6 @@ public class DefaultPromiseTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS),
             "Should have notified " + expectedCount + " listeners");
-        executor.shutdownGracefully().sync();
     }
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
