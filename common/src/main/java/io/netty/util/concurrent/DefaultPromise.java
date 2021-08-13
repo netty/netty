@@ -43,6 +43,7 @@ public class DefaultPromise<V> implements Promise<V> {
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(
             StacklessCancellationException.newInstance(DefaultPromise.class, "cancel(...)"));
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
+    static final Object NULL_CONTEXT = new Object();
 
     private volatile Object result;
     private final EventExecutor executor;
@@ -209,7 +210,7 @@ public class DefaultPromise<V> implements Promise<V> {
     public <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
         requireNonNull(listener, "listener");
 
-        addListener0(listener, context);
+        addListener0(listener, context == null ? NULL_CONTEXT : context);
         if (isDone()) {
             notifyListeners();
         }
@@ -511,7 +512,9 @@ public class DefaultPromise<V> implements Promise<V> {
             ((DefaultFutureListeners) listeners).add(listener, context);
         } else {
             DefaultFutureListeners listeners = new DefaultFutureListeners();
-            listeners.add((EventListener) this.listeners, null);
+            if (this.listeners != null) {
+                listeners.add((EventListener) this.listeners, null);
+            }
             listeners.add(listener, context);
             this.listeners = listeners;
         }

@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.from;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -272,7 +271,9 @@ public class DefaultPromiseTest {
 
                 GlobalEventExecutor.INSTANCE.execute(() -> promise.setSuccess(null));
 
-                promise.addListener(listener1).addListener(listener2).addListener(listener3);
+                promise.addListener(listener1)
+                       .addListener(listener2)
+                       .addListener(listener3);
 
                 assertSame(listener1, listeners.take(), "Fail 1 during run " + i + " / " + runs);
                 assertSame(listener2, listeners.take(), "Fail 2 during run " + i + " / " + runs);
