@@ -27,20 +27,6 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
-     * Create a new Future that is already in a completed state.
-     */
-    static <T> Future<T> newCompletedFuture(EventExecutor executor, T result) {
-        return new DefaultPromise<>(executor, result);
-    }
-
-    /**
-     * Create a new Future that is already in a failed state.
-     */
-    static <T> Future<T> newFailedFuture(EventExecutor executor, Throwable cause) {
-        return new DefaultPromise<>(cause, executor);
-    }
-
-    /**
      * Returns {@code true} if and only if the I/O operation was completed
      * successfully.
      */

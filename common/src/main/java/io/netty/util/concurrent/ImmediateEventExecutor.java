@@ -54,8 +54,8 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final Future<?> terminationFuture = Future.newFailedFuture(
-            GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
+    private final Future<?> terminationFuture = new DefaultPromise<>(
+            new UnsupportedOperationException(), GlobalEventExecutor.INSTANCE);
 
     private ImmediateEventExecutor() { }
 

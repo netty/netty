@@ -20,20 +20,6 @@ package io.netty.util.concurrent;
  */
 public interface Promise<V> extends Future<V> {
     /**
-     * Create a new unfulfilled promise.
-     *
-     * @param executor The {@link EventExecutor} the promise should be bound to. Completion callbacks will run on this
-     *                 event executor. It is assumed this executor will protect against {@link StackOverflowError}
-     *                 exceptions. The executor may be used to avoid {@link StackOverflowError} by executing a {@link
-     *                 Runnable} if the stack depth exceeds a threshold.
-     * @param <T>      The result type of the promise.
-     * @return The new promise.
-     */
-    static <T> Promise<T> newPromise(EventExecutor executor) {
-        return new DefaultPromise<>(executor);
-    }
-
-    /**
      * Marks this future as a success and notifies all listeners.
      * <p>
      * If it is success or failed already it will throw an {@link IllegalStateException}.

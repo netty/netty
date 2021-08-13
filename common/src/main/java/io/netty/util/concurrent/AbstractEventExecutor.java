@@ -82,12 +82,12 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return Future.newCompletedFuture(this, result);
+        return new DefaultPromise<>(this, result);
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return Future.newFailedFuture(this, cause);
+        return new DefaultPromise<>(cause, this);
     }
 
     @Override

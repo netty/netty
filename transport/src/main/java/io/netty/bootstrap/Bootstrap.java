@@ -282,7 +282,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         p.addLast(config.handler());
 
-        return Future.newCompletedFuture(channel.eventLoop(), channel);
+        return new DefaultPromise<>(channel.eventLoop(), channel);
     }
 
     @Override

@@ -67,7 +67,7 @@ public class DefaultPromise<V> implements Promise<V> {
     private short waiters;
 
     /**
-     * Creates a new instance.
+     * Creates a new unfulfilled promise.
      *
      * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
      *
@@ -83,18 +83,30 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     /**
-     * Creates a completed promise.
+     * Creates a new promise that has already been completed successfully.
+     *
+     * @param executor
+     *        The {@link EventExecutor} which is used to notify the promise once it is complete.
+     *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
+     *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
+     *        depth exceeds a threshold.
      */
-    DefaultPromise(EventExecutor executor, Object result) {
+    public DefaultPromise(EventExecutor executor, Object result) {
         this.executor = requireNonNull(executor, "executor");
         this.result = result == null? SUCCESS : result;
         stage = new DefaultFutureCompletionStage<>(this);
     }
 
     /**
-     * Creates a failed promise.
+     * Creates a new promise that has already failed.
+     *
+     * @param executor
+     *        The {@link EventExecutor} which is used to notify the promise once it is complete.
+     *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
+     *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
+     *        depth exceeds a threshold.
      */
-    DefaultPromise(Throwable cause, EventExecutor executor) {
+    public DefaultPromise(Throwable cause, EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
         result = new CauseHolder(requireNonNull(cause, "cause"));
         stage = new DefaultFutureCompletionStage<>(this);
