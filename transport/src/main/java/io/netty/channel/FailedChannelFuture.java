@@ -25,6 +25,7 @@ import io.netty.util.internal.PlatformDependent;
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
+@Deprecated(forRemoval = true)
 final class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;

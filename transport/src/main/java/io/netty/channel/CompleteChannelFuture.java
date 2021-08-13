@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
  */
+@Deprecated(forRemoval = true)
 abstract class CompleteChannelFuture extends CompleteFuture<Void> implements ChannelFuture {
 
     private final Channel channel;

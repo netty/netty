@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A skeletal {@link Future} implementation which represents a {@link Future} which has been completed already.
  */
+@Deprecated(forRemoval = true)
 public abstract class CompleteFuture<V> implements Future<V> {
 
     private final EventExecutor executor;

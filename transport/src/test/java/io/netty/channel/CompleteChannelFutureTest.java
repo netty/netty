@@ -47,6 +47,7 @@ public class CompleteChannelFutureTest {
         Mockito.verifyZeroInteractions(channel);
     }
 
+    @Deprecated(forRemoval = true)
     private static class CompleteChannelFutureImpl extends CompleteChannelFuture {
 
         CompleteChannelFutureImpl(Channel channel) {

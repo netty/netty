@@ -162,6 +162,7 @@ import java.util.concurrent.TimeUnit;
  * }
  * </pre>
  */
+@Deprecated(forRemoval = true)
 public interface ChannelFuture extends Future<Void> {
 
     /**

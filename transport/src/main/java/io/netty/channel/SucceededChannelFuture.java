@@ -22,6 +22,7 @@ import io.netty.util.concurrent.EventExecutor;
  * recommended to use {@link Channel#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
+@Deprecated(forRemoval = true)
 final class SucceededChannelFuture extends CompleteChannelFuture {
 
     /**
