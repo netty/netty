@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
+
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -30,7 +32,12 @@ class HttpContentCompressorOptionsTest {
 
     @Test
     void testGetBrTargetContentEncoding() {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+        HttpContentCompressor compressor = new HttpContentCompressor(
+            StandardCompressionOptions.gzip(),
+            StandardCompressionOptions.deflate(),
+            StandardCompressionOptions.brotli(),
+            StandardCompressionOptions.zstd()
+        );
 
         String[] tests = {
                 // Accept-Encoding -> Content-Encoding
@@ -52,7 +59,12 @@ class HttpContentCompressorOptionsTest {
 
     @Test
     void testGetZstdTargetContentEncoding() {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+        HttpContentCompressor compressor = new HttpContentCompressor(
+            StandardCompressionOptions.gzip(),
+            StandardCompressionOptions.deflate(),
+            StandardCompressionOptions.brotli(),
+            StandardCompressionOptions.zstd()
+        );
 
         String[] tests = {
                 // Accept-Encoding -> Content-Encoding
