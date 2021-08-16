@@ -19,7 +19,6 @@ package io.netty.resolver.dns;
 import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
@@ -81,7 +80,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
             if (earlyPromise.isDone()) {
                 transferResult(earlyPromise, promise);
             } else {
-                earlyPromise.addListener((FutureListener<U>) f -> transferResult(f, promise));
+                earlyPromise.addListener(f -> transferResult(f, promise));
             }
         } else {
             try {
@@ -98,7 +97,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 if (promise.isDone()) {
                     resolveMap.remove(inetHost);
                 } else {
-                    promise.addListener((FutureListener<U>) f -> resolveMap.remove(inetHost));
+                    promise.addListener(f -> resolveMap.remove(inetHost));
                 }
             }
         }
@@ -106,7 +105,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
         return promise;
     }
 
-    private static <T> void transferResult(Future<T> src, Promise<T> dst) {
+    private static <T> void transferResult(Future<? extends T> src, Promise<T> dst) {
         if (src.isSuccess()) {
             dst.trySuccess(src.getNow());
         } else {

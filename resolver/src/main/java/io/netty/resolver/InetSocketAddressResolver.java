@@ -53,7 +53,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolve(unresolvedAddress.getHostName())
-                .addListener((FutureListener<InetAddress>) future -> {
+                .addListener(future -> {
                     if (future.isSuccess()) {
                         promise.setSuccess(new InetSocketAddress(future.getNow(), unresolvedAddress.getPort()));
                     } else {
@@ -68,7 +68,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolveAll(unresolvedAddress.getHostName())
-                .addListener((FutureListener<List<InetAddress>>) future -> {
+                .addListener(future -> {
                     if (future.isSuccess()) {
                         List<InetAddress> inetAddresses = future.getNow();
                         List<InetSocketAddress> socketAddresses =

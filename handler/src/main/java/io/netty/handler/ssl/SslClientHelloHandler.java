@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -186,7 +185,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
             } else {
                 suppressRead = true;
                 final ByteBuf finalClientHello = clientHello;
-                future.addListener((FutureListener<T>) f -> {
+                future.addListener(f -> {
                     releaseIfNotNull(finalClientHello);
                     try {
                         suppressRead = false;
@@ -255,7 +254,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
      *
      * @see #lookup(ChannelHandlerContext, ByteBuf)
      */
-    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception;
+    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception;
 
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {

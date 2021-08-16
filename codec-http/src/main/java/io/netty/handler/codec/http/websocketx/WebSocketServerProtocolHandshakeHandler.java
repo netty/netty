@@ -158,6 +158,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener((FutureListener<Void>) f -> timeoutFuture.cancel(false));
+        localHandshakePromise.addListener(f -> timeoutFuture.cancel(false));
     }
 }

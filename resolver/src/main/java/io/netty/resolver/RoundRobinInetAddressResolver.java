@@ -52,7 +52,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
         // hijack the doResolve request, but do a doResolveAll request under the hood.
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
-        nameResolver.resolveAll(inetHost).addListener((FutureListener<List<InetAddress>>) future -> {
+        nameResolver.resolveAll(inetHost).addListener(future -> {
             if (future.isSuccess()) {
                 List<InetAddress> inetAddresses = future.getNow();
                 int numAddresses = inetAddresses.size();
@@ -71,7 +71,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
 
     @Override
     protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) throws Exception {
-        nameResolver.resolveAll(inetHost).addListener((FutureListener<List<InetAddress>>) future -> {
+        nameResolver.resolveAll(inetHost).addListener(future -> {
             if (future.isSuccess()) {
                 List<InetAddress> inetAddresses = future.getNow();
                 if (!inetAddresses.isEmpty()) {
