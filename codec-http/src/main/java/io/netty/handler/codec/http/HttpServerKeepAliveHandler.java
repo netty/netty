@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -85,7 +85,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            promise.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
         ctx.write(msg, promise);
     }

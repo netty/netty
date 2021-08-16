@@ -16,7 +16,6 @@
 package io.netty.example.proxy;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -35,11 +34,11 @@ public class HexDumpProxyBackendHandler implements ChannelHandler {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        inboundChannel.writeAndFlush(msg).addListener((ChannelFutureListener) future -> {
+        inboundChannel.writeAndFlush(msg).addListener(inboundChannel, (inbound, future) -> {
             if (future.isSuccess()) {
                 ctx.channel().read();
             } else {
-                future.channel().close();
+                inbound.close();
             }
         });
     }

@@ -16,7 +16,7 @@
 package io.netty.example.http.cors;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -34,6 +34,6 @@ public class OkResponseHandler extends SimpleChannelInboundHandler<Object> {
         final FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         response.headers().set("custom-response-header", "Some value");
-        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
     }
 }

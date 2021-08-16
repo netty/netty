@@ -17,7 +17,7 @@ package io.netty.testsuite.autobahn;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -132,7 +132,7 @@ public class AutobahnServerHandler implements ChannelHandler {
         // Send the response and close the connection if necessary.
         Future<Void> f = ctx.channel().writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            f.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 

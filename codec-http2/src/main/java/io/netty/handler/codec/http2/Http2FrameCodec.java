@@ -90,7 +90,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *
  * <pre>{@code
  *     final Http2Stream2 stream = handler.newStream();
- *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListener() {
+ *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListeners() {
  *
  *         @Override
  *         public void operationComplete(ChannelFuture f) {

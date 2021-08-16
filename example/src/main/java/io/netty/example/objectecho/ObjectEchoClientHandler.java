@@ -22,7 +22,7 @@ import io.netty.util.concurrent.Future;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.channel.ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE;
+import static io.netty.channel.ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE;
 
 /**
  * Handler implementation for the object echo client.  It initiates the

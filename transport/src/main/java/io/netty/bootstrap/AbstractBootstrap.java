@@ -17,7 +17,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -318,7 +318,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
             if (regFuture.isSuccess()) {
-                channel.bind(localAddress, promise).addListener(channel, ChannelFutureListener.CLOSE_ON_FAILURE);
+                channel.bind(localAddress, promise).addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
             } else {
                 promise.setFailure(regFuture.cause());
             }

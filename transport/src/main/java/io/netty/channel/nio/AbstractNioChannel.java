@@ -269,7 +269,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 return;
             }
 
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
             boolean active = isActive();
 

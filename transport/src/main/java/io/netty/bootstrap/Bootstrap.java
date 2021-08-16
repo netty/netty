@@ -17,7 +17,7 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -262,7 +262,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
             Promise<Void> connectPromise = channel.newPromise();
-            connectPromise.addListener(channel, ChannelFutureListener.CLOSE_ON_FAILURE);
+            connectPromise.addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
             cascade(true, connectPromise, promise, channel);
             if (localAddress == null) {
                 channel.connect(remoteAddress, connectPromise);

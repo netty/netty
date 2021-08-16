@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -80,7 +80,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576))
-                                   .addListener(ctx.channel(), ChannelFutureListener.CLOSE));
+                                   .addListener(ctx.channel(), ChannelFutureListeners.CLOSE));
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));
                     ctx.flush();
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));

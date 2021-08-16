@@ -60,7 +60,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Various methods are provided to let you check if the I/O operation has been
  * completed, wait for the completion, and retrieve the result of the I/O
- * operation. It also allows you to add {@link ChannelFutureListener}s so you
+ * operation. It also allows you to add {@link ChannelFutureListeners}s so you
  * can get notified when the I/O operation is completed.
  *
  * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
@@ -70,9 +70,9 @@ import java.util.concurrent.TimeUnit;
  * done and to do any follow-up tasks.
  * <p>
  * {@link #addListener(FutureListener)} is non-blocking.  It simply adds
- * the specified {@link ChannelFutureListener} to the {@link ChannelFuture}, and
+ * the specified {@link ChannelFutureListeners} to the {@link ChannelFuture}, and
  * I/O thread will notify the listeners when the I/O operation associated with
- * the future is done.  {@link ChannelFutureListener} yields the best
+ * the future is done.  {@link ChannelFutureListeners} yields the best
  * performance and resource utilization because it does not block at all, but
  * it could be tricky to implement a sequential logic if you are not used to
  * event-driven programming.
@@ -105,7 +105,7 @@ import java.util.concurrent.TimeUnit;
  * {@code @Override}
  * public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
- *     future.addListener(new {@link ChannelFutureListener}() {
+ *     future.addListener(new {@link ChannelFutureListeners}() {
  *         public void operationComplete({@link ChannelFuture} future) {
  *             // Perform post-closure operation
  *             // ...

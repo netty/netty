@@ -99,7 +99,7 @@ import static java.util.Objects.requireNonNull;
 public class IdleStateHandler implements ChannelHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
+    // Not create a new ChannelFutureListeners per write operation to reduce GC pressure.
     private final FutureListener<Void> writeListener = future -> {
         lastWriteTime = ticksInNanos();
         firstWriterIdleEvent = firstAllIdleEvent = true;

@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -238,7 +238,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 Future<Void> future = ctx.writeAndFlush(continueResponse).addListener(ctx, listener);
 
                 if (closeAfterWrite) {
-                    future.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+                    future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                     return;
                 }
                 if (handlingOversizedMessage) {

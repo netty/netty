@@ -108,7 +108,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:
         //
-        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListeners.CLOSE);
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
         if (msg instanceof ByteBufConvertible) {

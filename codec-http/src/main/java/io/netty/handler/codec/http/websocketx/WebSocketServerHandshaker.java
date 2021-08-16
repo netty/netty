@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -391,7 +391,7 @@ public abstract class WebSocketServerHandshaker {
     }
 
     private static Future<Void> close0(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return channel.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListener.CLOSE);
+        return channel.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListeners.CLOSE);
     }
 
     /**

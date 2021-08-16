@@ -16,7 +16,7 @@
 package io.netty.example.http.helloworld;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -66,7 +66,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
             Future<Void> f = ctx.write(response);
 
             if (!keepAlive) {
-                f.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+                f.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
             }
         }
     }

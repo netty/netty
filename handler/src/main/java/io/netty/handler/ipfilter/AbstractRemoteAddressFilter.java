@@ -16,7 +16,7 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
@@ -65,7 +65,7 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
             } else {
                 Future<Void> rejectedFuture = channelRejected(ctx, remoteAddress);
                 if (rejectedFuture != null && !rejectedFuture.isDone()) {
-                    rejectedFuture.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+                    rejectedFuture.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                 } else {
                     ctx.close();
                 }

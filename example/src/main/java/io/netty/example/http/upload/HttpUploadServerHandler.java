@@ -17,7 +17,7 @@ package io.netty.example.http.upload;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -345,7 +345,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         Future<Void> future = channel.writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (!keepAlive) {
-            future.addListener(channel, ChannelFutureListener.CLOSE);
+            future.addListener(channel, ChannelFutureListeners.CLOSE);
         }
     }
 
@@ -441,7 +441,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         Future<Void> future = ctx.channel().writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (!keepAlive) {
-            future.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 

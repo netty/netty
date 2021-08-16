@@ -15,7 +15,7 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -59,7 +59,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
         if (close) {
-            future.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 

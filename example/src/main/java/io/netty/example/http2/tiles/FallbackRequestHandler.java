@@ -26,7 +26,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -58,7 +58,7 @@ public final class FallbackRequestHandler extends SimpleChannelInboundHandler<Ht
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
-        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
     }
 
     @Override

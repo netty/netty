@@ -237,8 +237,8 @@ public abstract class AbstractCoalescingBufferQueue {
                         decrementReadableBytes(previousBuf.readableBytes());
                         // If the write fails we want to at least propagate the exception through the ChannelPipeline
                         // as otherwise the user will not be made aware of the failure at all.
-                        ctx.write(previousBuf).addListener(ctx.channel(),
-                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+                        ctx.write(previousBuf)
+                           .addListener(ctx.channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     break;
                 }
@@ -248,8 +248,8 @@ public abstract class AbstractCoalescingBufferQueue {
                         decrementReadableBytes(previousBuf.readableBytes());
                         // If the write fails we want to at least propagate the exception through the ChannelPipeline
                         // as otherwise the user will not be made aware of the failure at all.
-                        ctx.write(previousBuf).addListener(ctx.channel(),
-                                ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+                        ctx.write(previousBuf)
+                           .addListener(ctx.channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
                     }
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof Promise) {

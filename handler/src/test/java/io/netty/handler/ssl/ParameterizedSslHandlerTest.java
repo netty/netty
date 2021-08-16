@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -41,7 +40,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
@@ -180,7 +178,7 @@ public class ParameterizedSslHandlerTest {
                                                 buf.writerIndex(buf.writerIndex() + singleComponentSize);
                                                 content.addComponent(true, buf);
                                             }
-                                            ctx.writeAndFlush(content).addListener((ChannelFutureListener) future -> {
+                                            ctx.writeAndFlush(content).addListener(future -> {
                                                 writeCause = future.cause();
                                                 if (writeCause == null) {
                                                     sentData = true;
@@ -434,7 +432,7 @@ public class ParameterizedSslHandlerTest {
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
 
-                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                            handler.handshakeFuture().addListener(future -> {
                                 if (!future.isSuccess()) {
                                     // Something bad happened during handshake fail the promise!
                                     serverPromise.tryFailure(future.cause());
@@ -469,7 +467,7 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
-                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                            handler.handshakeFuture().addListener(future -> {
                                 if (future.isSuccess()) {
                                     closeSent.compareAndSet(false, true);
                                     future.getNow().close();

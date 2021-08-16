@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -245,7 +245,7 @@ public class CorsHandler implements ChannelHandler {
 
         Future<Void> future = ctx.writeAndFlush(response);
         if (!keepAlive) {
-            future.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 }

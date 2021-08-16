@@ -19,7 +19,7 @@ package io.netty.example.ocsp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -167,7 +167,7 @@ public class OcspClientExample {
             request.headers().set(HttpHeaderNames.HOST, host);
             request.headers().set(HttpHeaderNames.USER_AGENT, "netty-ocsp-example/1.0");
 
-            ctx.writeAndFlush(request).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+            ctx.writeAndFlush(request).addListener(ctx.channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
 
             ctx.fireChannelActive();
         }

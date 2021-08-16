@@ -18,7 +18,7 @@ package io.netty.example.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -69,12 +69,12 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
         if (outboundChannel.isActive()) {
-            outboundChannel.writeAndFlush(msg).addListener((ChannelFutureListener) future -> {
+            outboundChannel.writeAndFlush(msg).addListener(outboundChannel, (outbound, future) -> {
                 if (future.isSuccess()) {
                     // was able to flush out data, start to read the next chunk
                     ctx.channel().read();
                 } else {
-                    future.channel().close();
+                    outbound.close();
                 }
             });
         }
@@ -98,7 +98,7 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
      */
     static void closeOnFlush(Channel ch) {
         if (ch.isActive()) {
-            ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ch, ChannelFutureListeners.CLOSE);
         }
     }
 }

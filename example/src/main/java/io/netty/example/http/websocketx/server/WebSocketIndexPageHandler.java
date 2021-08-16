@@ -17,7 +17,7 @@ package io.netty.example.http.websocketx.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -101,7 +101,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
         if (!HttpUtil.isKeepAlive(req) || res.status().code() != 200) {
             // Tell the client we're going to close the connection.
             res.headers().set(CONNECTION, CLOSE);
-            ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(res).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         } else {
             if (req.protocolVersion().equals(HTTP_1_0)) {
                 res.headers().set(CONNECTION, KEEP_ALIVE);

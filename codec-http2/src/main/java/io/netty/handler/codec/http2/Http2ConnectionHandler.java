@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -353,12 +353,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             final boolean isClient = !connection().isServer();
             if (isClient) {
                 // Clients must send the preface string as the first bytes on the connection.
-                ctx.write(connectionPrefaceBuf()).addListener(ctx.channel(), ChannelFutureListener.CLOSE_ON_FAILURE);
+                ctx.write(connectionPrefaceBuf()).addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
             }
 
             // Both client and server must send their initial settings.
-            encoder.writeSettings(ctx, initialSettings, ctx.newPromise()).addListener(ctx.channel(),
-                    ChannelFutureListener.CLOSE_ON_FAILURE);
+            encoder.writeSettings(ctx, initialSettings, ctx.newPromise())
+                   .addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
 
             if (isClient) {
                 // If this handler is extended by the user and we directly fire the userEvent from this context then

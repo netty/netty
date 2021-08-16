@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -62,7 +62,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
-                                    .addListener(ChannelFutureListener.CLOSE);
+                                    .addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                         }
                     });
                 }
@@ -196,7 +196,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             // Write the remainder of the content
                             ctx.writeAndFlush(expectedContent.retainedSlice(expectedContent.readerIndex() + offset,
                                     expectedContent.readableBytes() - expectedContent.readerIndex() - offset))
-                                    .addListener(ChannelFutureListener.CLOSE);
+                                    .addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                         }
 
                         @Override

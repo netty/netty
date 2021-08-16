@@ -15,7 +15,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -375,7 +375,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             // Add the listener last to avoid firing upgrade logic after
             // the channel is already closed since the listener may fire
             // immediately if the write failed eagerly.
-            writeComplete.addListener(ctx.channel(), ChannelFutureListener.CLOSE_ON_FAILURE);
+            writeComplete.addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
         } finally {
             // Release the event if the upgrade event wasn't fired.
             event.release();

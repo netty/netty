@@ -17,7 +17,7 @@ package io.netty.example.http.file;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -219,7 +219,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Decide whether to close the connection or not.
         if (!keepAlive) {
             // Close the connection when the whole content is written out.
-            lastContentFuture.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            lastContentFuture.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 
@@ -353,7 +353,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         if (!keepAlive) {
             // Close the connection as soon as the response is sent.
-            flushPromise.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            flushPromise.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 

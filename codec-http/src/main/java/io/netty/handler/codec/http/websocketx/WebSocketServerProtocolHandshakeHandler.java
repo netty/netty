@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -127,7 +127,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         Future<Void> f = ctx.channel().writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
+            f.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 
