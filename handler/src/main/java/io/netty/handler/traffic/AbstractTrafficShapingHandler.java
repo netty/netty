@@ -390,7 +390,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
      * use one of the way provided by Netty to handle the capacity:</p>
      * <p>- the {@code Channel.isWritable()} property and the corresponding
      * {@code channelWritabilityChanged()}</p>
-     * <p>- the {@code ChannelFuture.addListener(future -> ...)}</p>
+     * <p>- the {@code Future.addListener(future -> ...)}</p>
      *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
      *            per channel before write suspended is set,

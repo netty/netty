@@ -90,10 +90,10 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *
  * <pre>{@code
  *     final Http2Stream2 stream = handler.newStream();
- *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListeners() {
+ *     ctx.write(headersFrame.stream(stream)).addListener(new FutureListener() {
  *
  *         @Override
- *         public void operationComplete(ChannelFuture f) {
+ *         public void operationComplete(Future f) {
  *             if (f.isSuccess()) {
  *                 // Stream is active and stream.id() returns a valid stream identifier.
  *                 System.out.println("New stream with id " + stream.id() + " created.");

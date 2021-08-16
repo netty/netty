@@ -36,7 +36,7 @@ import io.netty.handler.stream.ChunkedInput;
  *
  *     HttpContentChunkedInput httpChunkWriter = new HttpChunkedInput(
  *         new ChunkedFile(&quot;/tmp/myfile.txt&quot;));
- *     ChannelFuture sendFileFuture = ctx.write(httpChunkWriter);
+ *     Future sendFileFuture = ctx.write(httpChunkWriter);
  * }
  * </pre>
  */
