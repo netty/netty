@@ -102,7 +102,8 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public Future<Void> writePushPromise(ChannelHandlerContext ctx, int streamId,
-                                         int promisedStreamId, Http2Headers headers, int padding, Promise<Void> promise) {
+                                         int promisedStreamId, Http2Headers headers, int padding,
+                                         Promise<Void> promise) {
         logger.logPushPromise(OUTBOUND, ctx, streamId, promisedStreamId, headers, padding);
         return writer.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }

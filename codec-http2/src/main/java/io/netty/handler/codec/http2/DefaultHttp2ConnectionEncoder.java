@@ -163,7 +163,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public Future<Void> writeHeaders(final ChannelHandlerContext ctx, final int streamId,
                                      final Http2Headers headers, final int streamDependency, final short weight,
-                                     final boolean exclusive, final int padding, final boolean endOfStream, Promise<Void> promise) {
+                                     final boolean exclusive, final int padding, final boolean endOfStream,
+                                     Promise<Void> promise) {
         return writeHeaders0(ctx, streamId, headers, true, streamDependency,
                 weight, exclusive, padding, endOfStream, promise);
     }
