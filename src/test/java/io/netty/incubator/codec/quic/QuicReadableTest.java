@@ -82,6 +82,7 @@ public class QuicReadableTest extends AbstractQuicTest {
                 });
         Channel channel = QuicTestUtils.newClient();
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
+        ByteBuf data = Unpooled.directBuffer().writeLong(8);
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientHandler)
@@ -90,7 +91,6 @@ public class QuicReadableTest extends AbstractQuicTest {
                     .connect()
                     .get();
 
-            ByteBuf data = Unpooled.directBuffer().writeLong(8);
             List<Channel> streams = new ArrayList<>();
             for (int i = 0; i < numOfStreams; i++) {
                 QuicStreamChannel stream = quicChannel.createStream(
@@ -102,7 +102,6 @@ public class QuicReadableTest extends AbstractQuicTest {
                         }).get();
                 streams.add(stream.writeAndFlush(data.retainedSlice()).sync().channel());
             }
-            data.release();
             latch.await();
             while (bytesRead.get() < expectedDataRead) {
                 Thread.sleep(50);
@@ -118,6 +117,7 @@ public class QuicReadableTest extends AbstractQuicTest {
             serverHandler.assertState();
             clientHandler.assertState();
         } finally {
+            data.release();
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
