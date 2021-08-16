@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> implements Promise<V>, Future<V> {
+public class DefaultPromise<V> implements Promise<V> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
