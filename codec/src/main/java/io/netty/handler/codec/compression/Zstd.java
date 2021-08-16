@@ -16,7 +16,6 @@
 
 package io.netty.handler.codec.compression;
 
-import com.aayushatharva.brotli4j.Brotli4jLoader;
 import com.github.luben.zstd.util.Native;
 
 import io.netty.util.internal.PlatformDependent;
@@ -60,7 +59,7 @@ public final class Zstd {
      * and native library is available on this platform and could be loaded
      */
     public static boolean isAvailable() {
-        return CNFE == null && Brotli4jLoader.isAvailable();
+        return CNFE == null && cause == null;
     }
 
     /**
@@ -72,7 +71,9 @@ public final class Zstd {
         if (CNFE != null) {
             throw CNFE;
         }
-        Brotli4jLoader.ensureAvailability();
+        if(cause != null) {
+        	throw cause;
+        }
     }
 
     /**
