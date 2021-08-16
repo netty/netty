@@ -20,9 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -57,11 +57,11 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
 
-        ChannelFuture f = cc.write(a);
+        Future<Void> f = cc.write(a);
         assertTrue(f.cancel(false));
         cc.writeAndFlush(b);
         cc.write(c);
-        ChannelFuture f2 = cc.write(d);
+        Future<Void> f2 = cc.write(d);
         assertTrue(f2.cancel(false));
         cc.writeAndFlush(e);
 

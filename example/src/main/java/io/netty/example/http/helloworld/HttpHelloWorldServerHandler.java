@@ -16,7 +16,6 @@
 package io.netty.example.http.helloworld;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -25,6 +24,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.util.concurrent.Future;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -63,10 +63,10 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
                 response.headers().set(CONNECTION, CLOSE);
             }
 
-            ChannelFuture f = ctx.write(response);
+            Future<Void> f = ctx.write(response);
 
             if (!keepAlive) {
-                f.addListener(ChannelFutureListener.CLOSE);
+                f.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
             }
         }
     }

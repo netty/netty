@@ -23,6 +23,7 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -857,7 +858,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
-        if (promise.getClass() == DefaultChannelPromise.class) {
+        if (promise.getClass() == DefaultPromise.class) {
             return false;
         }
 

@@ -19,13 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -157,7 +157,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             s = ss.accept();
 
             byte[] expectedBytes = { 1, 2, 3, 4, 5, 6 };
-            ChannelFuture writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
+            Future<Void> writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
             h.assertWritability(false);
             ch.flush();
             writeFuture.sync();

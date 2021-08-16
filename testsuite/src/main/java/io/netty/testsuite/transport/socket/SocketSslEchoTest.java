@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -38,7 +37,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -329,7 +327,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
 
-            ChannelFuture future = clientChannel.writeAndFlush(buf);
+            Future<Void> future = clientChannel.writeAndFlush(buf);
             clientSendCounter.set(clientSendCounterVal += length);
             future.sync();
 
@@ -514,13 +512,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public void handlerAdded(final ChannelHandlerContext ctx) {
             if (!autoRead) {
-                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
-                        new GenericFutureListener<Future<? super Channel>>() {
-                            @Override
-                            public void operationComplete(Future<? super Channel> future) {
-                                ctx.read();
-                            }
-                        });
+                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(ctx, (c, f) -> c.read());
             }
         }
 

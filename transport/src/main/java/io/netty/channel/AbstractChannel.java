@@ -336,7 +336,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Promise<Void> newPromise() {
-        return new DefaultChannelPromise(this, eventLoop);
+        return new DefaultPromise<>(eventLoop);
     }
 
     @Override

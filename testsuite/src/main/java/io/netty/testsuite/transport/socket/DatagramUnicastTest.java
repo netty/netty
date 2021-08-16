@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -183,14 +183,14 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
                     sendToAddress((InetSocketAddress) localAddr) : localAddr;
-            List<ChannelFuture> futures = new ArrayList<>(count);
+            List<Future<Void>> futures = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 futures.add(write(cc, buf, addr, wrapType));
             }
             // release as we used buf.retain() before
             cc.flush();
 
-            for (ChannelFuture future: futures) {
+            for (Future<Void> future: futures) {
                 future.sync();
             }
             if (!latch.await(10, TimeUnit.SECONDS)) {
@@ -237,13 +237,13 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                     sendToAddress((InetSocketAddress) localAddr) : localAddr;
             cc.connect(addr).syncUninterruptibly();
 
-            List<ChannelFuture> futures = new ArrayList<>();
+            List<Future<Void>> futures = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 futures.add(write(cc, buf, wrapType));
             }
             cc.flush();
 
-            for (ChannelFuture future: futures) {
+            for (Future<Void> future: futures) {
                 future.sync();
             }
 
@@ -273,7 +273,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
 
-                ChannelFuture future = cc.writeAndFlush(
+                Future<Void> future = cc.writeAndFlush(
                         buf.retain().duplicate()).awaitUninterruptibly();
                 assertTrue(future.cause() instanceof NotYetConnectedException,
                         "NotYetConnectedException expected, got: " + future.cause());
@@ -287,7 +287,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         }
     }
 
-    private static ChannelFuture write(Channel cc, ByteBuf buf, WrapType wrapType) {
+    private static Future<Void> write(Channel cc, ByteBuf buf, WrapType wrapType) {
         switch (wrapType) {
             case DUP:
                 return cc.write(buf.retainedDuplicate());
@@ -313,7 +313,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     protected abstract boolean supportDisconnect();
 
-    protected abstract ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType);
+    protected abstract Future<Void> write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType);
 
     protected static void closeChannel(Channel channel) throws Exception {
         if (channel != null) {

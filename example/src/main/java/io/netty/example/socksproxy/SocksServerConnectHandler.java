@@ -17,8 +17,6 @@ package io.netty.example.socksproxy;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -32,8 +30,6 @@ import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
 import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 @ChannelHandler.Sharable
@@ -46,14 +42,13 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         if (message instanceof Socks4CommandRequest) {
             final Socks4CommandRequest request = (Socks4CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
-            promise.addListener(
-                    (FutureListener<Channel>) future -> {
+            promise.addListener(future -> {
                         final Channel outboundChannel = future.getNow();
                         if (future.isSuccess()) {
-                            ChannelFuture responseFuture = ctx.channel().writeAndFlush(
+                            Future<Void> responseFuture = ctx.channel().writeAndFlush(
                                     new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
 
-                            responseFuture.addListener((ChannelFutureListener) channelFuture -> {
+                            responseFuture.addListener(fut -> {
                                 ctx.pipeline().remove(this);
                                 outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
                                 ctx.pipeline().addLast(new RelayHandler(outboundChannel));
@@ -72,8 +67,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new DirectClientHandler(promise));
 
-            b.connect(request.dstAddr(), request.dstPort()).addListener(
-                    (GenericFutureListener<Future<Channel>>) future -> {
+            b.connect(request.dstAddr(), request.dstPort()).addListener(future -> {
                 if (future.isSuccess()) {
                     // Connection established use handler provided results
                 } else {
@@ -87,18 +81,17 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         } else if (message instanceof Socks5CommandRequest) {
             final Socks5CommandRequest request = (Socks5CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
-            promise.addListener(
-                    (FutureListener<Channel>) future -> {
+            promise.addListener(future -> {
                         final Channel outboundChannel = future.getNow();
                         if (future.isSuccess()) {
-                            ChannelFuture responseFuture =
+                            Future<Void> responseFuture =
                                     ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
                                             Socks5CommandStatus.SUCCESS,
                                             request.dstAddrType(),
                                             request.dstAddr(),
                                             request.dstPort()));
 
-                            responseFuture.addListener((ChannelFutureListener) channelFuture -> {
+                            responseFuture.addListener(fut -> {
                                 ctx.pipeline().remove(this);
                                 outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
                                 ctx.pipeline().addLast(new RelayHandler(outboundChannel));
@@ -117,8 +110,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new DirectClientHandler(promise));
 
-            b.connect(request.dstAddr(), request.dstPort()).addListener(
-                    (GenericFutureListener<Future<Channel>>) future -> {
+            b.connect(request.dstAddr(), request.dstPort()).addListener(future -> {
                 if (future.isSuccess()) {
                     // Connection established use handler provided results
                 } else {

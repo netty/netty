@@ -15,7 +15,6 @@
  */
 package io.netty.example.stomp.websocket;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,7 +33,19 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.handler.codec.stomp.StompHeaders.*;
+import static io.netty.handler.codec.stomp.StompHeaders.ACCEPT_VERSION;
+import static io.netty.handler.codec.stomp.StompHeaders.CONTENT_LENGTH;
+import static io.netty.handler.codec.stomp.StompHeaders.CONTENT_TYPE;
+import static io.netty.handler.codec.stomp.StompHeaders.DESTINATION;
+import static io.netty.handler.codec.stomp.StompHeaders.HEART_BEAT;
+import static io.netty.handler.codec.stomp.StompHeaders.ID;
+import static io.netty.handler.codec.stomp.StompHeaders.MESSAGE;
+import static io.netty.handler.codec.stomp.StompHeaders.MESSAGE_ID;
+import static io.netty.handler.codec.stomp.StompHeaders.RECEIPT;
+import static io.netty.handler.codec.stomp.StompHeaders.RECEIPT_ID;
+import static io.netty.handler.codec.stomp.StompHeaders.SERVER;
+import static io.netty.handler.codec.stomp.StompHeaders.SUBSCRIPTION;
+import static io.netty.handler.codec.stomp.StompHeaders.VERSION;
 
 @Sharable
 public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
@@ -99,11 +110,8 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
         }
 
         subscriptions.add(subscription);
-        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                chatDestinations.get(subscription.destination()).remove(subscription);
-            }
+        ctx.channel().closeFuture().addListener(future -> {
+            chatDestinations.get(subscription.destination()).remove(subscription);
         });
 
         String receiptId = inboundFrame.headers().getAsString(RECEIPT);
@@ -167,7 +175,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
 
         StompFrame receiptFrame = new DefaultStompFrame(StompCommand.RECEIPT);
         receiptFrame.headers().set(RECEIPT_ID, receiptId);
-        ctx.writeAndFlush(receiptFrame).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(receiptFrame).addListener(ctx.channel(), ChannelFutureListener.CLOSE);
     }
 
     private static void sendErrorFrame(String message, String description, ChannelHandlerContext ctx) {
@@ -178,7 +186,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
             errorFrame.content().writeCharSequence(description, CharsetUtil.UTF_8);
         }
 
-        ctx.writeAndFlush(errorFrame).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(errorFrame).addListener(ctx.channel(), ChannelFutureListener.CLOSE);
     }
 
     private static StompFrame transformToMessage(StompFrame sendFrame, StompSubscription subscription) {

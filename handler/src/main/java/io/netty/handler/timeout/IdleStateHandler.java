@@ -15,21 +15,20 @@
  */
 package io.netty.handler.timeout;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.Channel.Unsafe;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Triggers an {@link IdleStateEvent} when a {@link Channel} has not performed
@@ -101,12 +100,9 @@ public class IdleStateHandler implements ChannelHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            lastWriteTime = ticksInNanos();
-            firstWriterIdleEvent = firstAllIdleEvent = true;
-        }
+    private final FutureListener<Void> writeListener = future -> {
+        lastWriteTime = ticksInNanos();
+        firstWriterIdleEvent = firstAllIdleEvent = true;
     };
 
     private final boolean observeOutput;
@@ -297,7 +293,7 @@ public class IdleStateHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             ctx.write(msg, promise).addListener(writeListener);

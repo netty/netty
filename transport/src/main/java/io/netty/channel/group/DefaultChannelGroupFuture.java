@@ -15,25 +15,20 @@
  */
 package io.netty.channel.group;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.util.concurrent.BlockingOperationException;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 
 /**
@@ -42,13 +37,13 @@ import java.util.Map;
 final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements ChannelGroupFuture {
 
     private final ChannelGroup group;
-    private final Map<Channel, ChannelFuture> futures;
+    private final Map<Channel, Future<Void>> futures;
     private int successCount;
     private int failureCount;
 
-    private final ChannelFutureListener childListener = new ChannelFutureListener() {
+    private final FutureListener<Void> childListener = new FutureListener<>() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(Future<? extends Void> future) throws Exception {
             boolean success = future.isSuccess();
             boolean callSetDone;
             synchronized (DefaultChannelGroupFuture.this) {
@@ -66,9 +61,9 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
                 if (failureCount > 0) {
                     List<Map.Entry<Channel, Throwable>> failed =
                             new ArrayList<>(failureCount);
-                    for (ChannelFuture f: futures.values()) {
-                        if (!f.isSuccess()) {
-                            failed.add(new DefaultEntry<>(f.channel(), f.cause()));
+                    for (Entry<Channel, Future<Void>> entry: futures.entrySet()) {
+                        if (!entry.getValue().isSuccess()) {
+                            failed.add(new DefaultEntry<>(entry.getKey(), entry.getValue().cause()));
                         }
                     }
                     setFailure0(new ChannelGroupException(failed));
@@ -79,38 +74,11 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
         }
     };
 
-    /**
-     * Creates a new instance.
-     */
-    DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
-        super(executor);
-        requireNonNull(group, "group");
-        requireNonNull(futures, "futures");
-
-        this.group = group;
-
-        Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<>();
-        for (ChannelFuture f: futures) {
-            futureMap.put(f.channel(), f);
-        }
-
-        this.futures = Collections.unmodifiableMap(futureMap);
-
-        for (ChannelFuture f: this.futures.values()) {
-            f.addListener(childListener);
-        }
-
-        // Done on arrival?
-        if (this.futures.isEmpty()) {
-            setSuccess0();
-        }
-    }
-
-    DefaultChannelGroupFuture(ChannelGroup group, Map<Channel, ChannelFuture> futures, EventExecutor executor) {
+    DefaultChannelGroupFuture(ChannelGroup group, Map<Channel, Future<Void>> futures, EventExecutor executor) {
         super(executor);
         this.group = group;
         this.futures = Collections.unmodifiableMap(futures);
-        for (ChannelFuture f: this.futures.values()) {
+        for (Future<Void> f: this.futures.values()) {
             f.addListener(childListener);
         }
 
@@ -126,12 +94,12 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public ChannelFuture find(Channel channel) {
+    public Future<Void> find(Channel channel) {
         return futures.get(channel);
     }
 
     @Override
-    public Iterator<ChannelFuture> iterator() {
+    public Iterator<Future<Void>> iterator() {
         return futures.values().iterator();
     }
 
@@ -146,7 +114,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+    public DefaultChannelGroupFuture addListener(FutureListener<? super Void> listener) {
         super.addListener(listener);
         return this;
     }

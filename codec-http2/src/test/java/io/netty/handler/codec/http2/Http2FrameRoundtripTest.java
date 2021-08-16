@@ -22,11 +22,11 @@ import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.LinkedList;
@@ -55,10 +54,10 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,6 +65,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests encoding/decoding each HTTP2 frame type.
  */
+@SuppressWarnings("unchecked")
 public class Http2FrameRoundtripTest {
     private static final byte[] MESSAGE = "hello world".getBytes(UTF_8);
     private static final int STREAM_ID = 0x7FFFFFFF;
@@ -100,8 +100,8 @@ public class Http2FrameRoundtripTest {
         when(ctx.channel()).thenReturn(channel);
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
-        doAnswer((Answer<ChannelPromise>) invocation ->
-                new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
+        doAnswer((Answer<Promise<Void>>) invocation ->
+                new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
@@ -433,7 +433,7 @@ public class Http2FrameRoundtripTest {
 
     private ByteBuf captureWrites() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx, atLeastOnce()).write(captor.capture(), isA(ChannelPromise.class));
+        verify(ctx, atLeastOnce()).write(captor.capture(), isA(Promise.class));
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());

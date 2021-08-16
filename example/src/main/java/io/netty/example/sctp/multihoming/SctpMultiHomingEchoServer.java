@@ -74,10 +74,10 @@ public final class SctpMultiHomingEchoServer {
             SctpServerChannel channel = (SctpServerChannel) bindFuture.get();
 
             //Bind the secondary address
-            ChannelFuture connectFuture = channel.bindAddress(localSecondaryAddress).sync();
+            Future<Void> connectFuture = channel.bindAddress(localSecondaryAddress).sync();
 
             // Wait until the connection is closed.
-            connectFuture.channel().closeFuture().sync();
+            channel.closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();

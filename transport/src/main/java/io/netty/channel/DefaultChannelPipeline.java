@@ -936,7 +936,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Promise<Void> newPromise() {
-        return new DefaultChannelPromise(channel(), executor());
+        return new DefaultPromise<>(executor());
     }
 
     @Override
