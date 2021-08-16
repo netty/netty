@@ -250,7 +250,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             }
             return promiseAggregator;
         }
-        return promiseAggregator.doneAllocatingPromises().asFuture();
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -283,7 +283,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             buf.writeByte(weight - 1);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
-            return promise.setFailure(t).asFuture();
+            return promise.setFailure(t);
         }
     }
 
@@ -299,7 +299,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             buf.writeInt((int) errorCode);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
-            return promise.setFailure(t).asFuture();
+            return promise.setFailure(t);
         }
     }
 
@@ -317,7 +317,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             }
             return ctx.write(buf, promise);
         } catch (Throwable t) {
-            return promise.setFailure(t).asFuture();
+            return promise.setFailure(t);
         }
     }
 
@@ -328,7 +328,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             writeFrameHeaderInternal(buf, 0, SETTINGS, new Http2Flags().ack(true), 0);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
-            return promise.setFailure(t).asFuture();
+            return promise.setFailure(t);
         }
     }
 
@@ -397,7 +397,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 headerBlock.release();
             }
         }
-        return promiseAggregator.doneAllocatingPromises().asFuture();
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -431,7 +431,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises().asFuture();
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -446,7 +446,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             buf.writeInt(windowSizeIncrement);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
-            return promise.setFailure(t).asFuture();
+            return promise.setFailure(t);
         }
     }
 
@@ -475,7 +475,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises().asFuture();
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     private Future<Void> writeHeadersInternal(ChannelHandlerContext ctx,
@@ -541,7 +541,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 headerBlock.release();
             }
         }
-        return promiseAggregator.doneAllocatingPromises().asFuture();
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     /**

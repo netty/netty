@@ -149,11 +149,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     @Override
-    public Future<V> asFuture() {
-        return this;
-    }
-
-    @Override
     public boolean isSuccess() {
         Object result = this.result;
         return result != null && result != UNCANCELLABLE && !(result instanceof CauseHolder);

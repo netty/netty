@@ -192,7 +192,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                 Future<Void> f = finishEncode(ctx(), promise);
                 PromiseNotifier.cascade(f, promise);
             });
-            return promise.asFuture();
+            return promise;
         }
     }
 
@@ -212,7 +212,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
             promise.setSuccess(null);
-            return promise.asFuture();
+            return promise;
         }
         finished = true;
 

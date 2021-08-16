@@ -25,8 +25,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureContextListener;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
@@ -353,7 +351,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Future<Void> closeFuture() {
-        return closePromise.asFuture();
+        return closePromise;
     }
 
     @Override
@@ -1107,11 +1105,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         DefaultFileRegion.validate(region, position);
     }
 
-    static final class ClosePromise implements Promise<Void> {
-        private final Promise<Void> promise;
+    static final class ClosePromise extends DefaultPromise<Void> {
 
         ClosePromise(EventExecutor eventExecutor) {
-            promise = new DefaultPromise<>(eventExecutor);
+            super(eventExecutor);
         }
 
         @Override
@@ -1139,28 +1136,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return false;
         }
 
-        @Override
-        public Future<Void> asFuture() {
-            return promise.asFuture();
-        }
-
-        @Override
-        public boolean isDone() {
-            return promise.isDone();
-        }
-
-        @Override
-        public Future<Void> addListener(FutureListener<? super Void> listener) {
-            return promise.addListener(listener);
-        }
-
-        @Override
-        public <C> Future<Void> addListener(C context, FutureContextListener<? super C, ? super Void> listener) {
-            return promise.addListener(context, listener);
-        }
-
         boolean setClosed() {
-            return promise.trySuccess(null);
+            return trySuccess(null);
         }
     }
 

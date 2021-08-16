@@ -173,7 +173,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                 }
                 return promiseAggregator;
             }
-            return promiseAggregator.doneAllocatingPromises().asFuture();
+            return promiseAggregator.doneAllocatingPromises();
         }
 
         private static int paddingBytes(int padding) {

@@ -335,7 +335,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public Future<Void> closeFuture() {
-        return closePromise.asFuture();
+        return closePromise;
     }
 
     @Override
@@ -1066,7 +1066,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
         Promise<Void> promise = ctx.newPromise();
         ctx.write(msg, promise);
-        return promise.asFuture();
+        return promise;
     }
 
     protected abstract boolean isParentReadInProgress();

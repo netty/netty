@@ -770,7 +770,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                       long errorCode, Promise<Void> promise) {
         if (stream.isResetSent()) {
             // Don't write a RST_STREAM frame if we have already written one.
-            return promise.setSuccess(null).asFuture();
+            return promise.setSuccess(null);
         }
         // Synchronously set the resetSent flag to prevent any subsequent calls
         // from resulting in multiple reset frames being sent.
@@ -784,7 +784,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // https://tools.ietf.org/html/rfc7540#section-6.4.
         if (stream.state() == IDLE ||
             connection().local().created(stream) && !stream.isHeadersSent() && !stream.isPushPromiseSent()) {
-            future = promise.setSuccess(null).asFuture();
+            future = promise.setSuccess(null);
         } else {
             future = frameWriter().writeRstStream(ctx, stream.id(), errorCode, promise);
         }
@@ -805,12 +805,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (!connection.goAwaySent(lastStreamId, errorCode, debugData)) {
                 debugData.release();
                 promise.trySuccess(null);
-                return promise.asFuture();
+                return promise;
             }
         } catch (Throwable cause) {
             debugData.release();
             promise.tryFailure(cause);
-            return promise.asFuture();
+            return promise;
         }
 
         // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and

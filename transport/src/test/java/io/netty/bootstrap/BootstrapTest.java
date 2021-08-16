@@ -231,7 +231,7 @@ public class BootstrapTest {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
-                            return promise.setFailure(new SocketException()).asFuture();
+                            return promise.setFailure(new SocketException());
                         }
                     });
             bootstrap.childHandler(new DummyHandler());

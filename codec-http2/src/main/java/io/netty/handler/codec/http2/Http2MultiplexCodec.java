@@ -314,7 +314,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
             Promise<Void> promise = ctx.newPromise();
             Http2MultiplexCodec.this.write(ctx, msg, promise);
-            return promise.asFuture();
+            return promise;
         }
 
         @Override

@@ -136,13 +136,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             }
         } catch (Throwable e) {
             data.release();
-            return promise.setFailure(e).asFuture();
+            return promise.setFailure(e);
         }
 
         // Hand control of the frame to the flow controller.
         flowController().addFlowControlled(stream,
                 new FlowControlledData(stream, data, padding, endOfStream, promise, ctx.channel()));
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -202,7 +202,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 } catch (Http2Exception cause) {
                     if (connection.remote().mayHaveCreatedStream(streamId)) {
                         promise.tryFailure(new IllegalStateException("Stream no longer exists: " + streamId, cause));
-                        return promise.asFuture();
+                        return promise;
                     }
                     throw cause;
                 }
@@ -263,12 +263,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, hasPriority, streamDependency,
                                 weight, exclusive, padding, true, promise));
-                return promise.asFuture();
+                return promise;
             }
         } catch (Throwable t) {
             lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
-            return promise.asFuture();
+            return promise;
         }
     }
 
@@ -295,7 +295,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
             }
         } catch (Throwable e) {
-            return promise.setFailure(e).asFuture();
+            return promise.setFailure(e);
         }
 
         return frameWriter.writeSettings(ctx, settings, promise);
@@ -309,7 +309,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         Http2Settings settings = outstandingRemoteSettingsQueue.poll();
         if (settings == null) {
             return promise.setFailure(new Http2Exception(INTERNAL_ERROR, "attempted to write a SETTINGS ACK with no " +
-                    " pending SETTINGS")).asFuture();
+                                                                         " pending SETTINGS"));
         }
         SimpleChannelPromiseAggregator aggregator = new SimpleChannelPromiseAggregator(promise, ctx.executor());
         // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
@@ -327,7 +327,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             applySettingsPromise.setFailure(e);
             lifecycleManager.onError(ctx, true, e);
         }
-        return aggregator.doneAllocatingPromises().asFuture();
+        return aggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -367,7 +367,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         } catch (Throwable t) {
             lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
-            return promise.asFuture();
+            return promise;
         }
     }
 
@@ -381,7 +381,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     public Future<Void> writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
                                           Promise<Void> promise) {
         return promise.setFailure(new UnsupportedOperationException("Use the Http2[Inbound|Outbound]FlowController" +
-                " objects to control window sizes")).asFuture();
+                                                                    " objects to control window sizes"));
     }
 
     @Override
@@ -615,7 +615,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         @Override
         public void writeComplete() {
             if (endOfStream) {
-                lifecycleManager.closeStreamLocal(stream, promise.asFuture());
+                lifecycleManager.closeStreamLocal(stream, promise);
             }
         }
 

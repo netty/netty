@@ -437,7 +437,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
 
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -458,7 +458,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 loop.execute(() -> shutdownInput0(promise));
             }
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -474,7 +474,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } else {
             shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {

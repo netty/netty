@@ -52,7 +52,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -68,7 +68,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override

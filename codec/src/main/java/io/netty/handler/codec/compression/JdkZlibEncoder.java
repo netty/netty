@@ -171,7 +171,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 Future<Void> f = finishEncode(ctx(), p);
                 PromiseNotifier.cascade(f, promise);
             });
-            return p.asFuture();
+            return p;
         }
     }
 
@@ -276,7 +276,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
             promise.setSuccess(null);
-            return promise.asFuture();
+            return promise;
         }
 
         finished = true;

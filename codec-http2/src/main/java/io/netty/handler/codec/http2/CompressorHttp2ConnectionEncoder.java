@@ -165,7 +165,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 }
                 // END_STREAM is not set and the assumption is data is still forthcoming.
                 promise.setSuccess(null);
-                return promise.asFuture();
+                return promise;
             }
 
             PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
@@ -178,7 +178,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 }
 
                 Promise<Void> bufPromise = ctx.newPromise();
-                combiner.add(bufPromise.asFuture());
+                combiner.add(bufPromise);
                 super.writeData(ctx, streamId, buf, padding, compressedEndOfStream, bufPromise);
                 if (nextBuf == null) {
                     break;
@@ -195,7 +195,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 cleanup(stream, channel);
             }
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -215,7 +215,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         } catch (Throwable e) {
             promise.tryFailure(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -237,7 +237,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         } catch (Throwable e) {
             promise.tryFailure(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     /**

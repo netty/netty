@@ -170,7 +170,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         } else {
             loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -191,7 +191,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         } else {
             loop.execute(() -> shutdownInput0(promise));
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -207,7 +207,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         } else {
             shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {

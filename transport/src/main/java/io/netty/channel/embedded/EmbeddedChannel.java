@@ -367,7 +367,7 @@ public class EmbeddedChannel extends AbstractChannel {
             pipeline().fireChannelRead(msg);
         }
         checkException(promise);
-        return promise.asFuture();
+        return promise;
     }
 
     /**
@@ -388,7 +388,7 @@ public class EmbeddedChannel extends AbstractChannel {
       }
 
       checkException(promise);
-      return promise.asFuture();
+        return promise;
     }
 
     /**
@@ -453,7 +453,7 @@ public class EmbeddedChannel extends AbstractChannel {
             return write(msg, promise);
         }
         checkException(promise);
-        return promise.asFuture();
+        return promise;
     }
 
     /**

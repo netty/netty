@@ -460,7 +460,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(localAddress, "localAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -469,7 +469,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeBind(localAddress, promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeBind(SocketAddress localAddress, Promise<Void> promise) {
@@ -500,7 +500,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(remoteAddress, "remoteAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -509,7 +509,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeConnect(remoteAddress, localAddress, promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
@@ -539,7 +539,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -548,7 +548,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeDisconnect(promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeDisconnect(Promise<Void> promise) {
@@ -572,7 +572,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> close(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -581,7 +581,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeClose(promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeClose(Promise<Void> promise) {
@@ -605,7 +605,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> register(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -614,7 +614,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeRegister(promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeRegister(Promise<Void> promise) {
@@ -638,7 +638,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> deregister(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise.asFuture();
+            return promise;
         }
 
         EventExecutor executor = executor();
@@ -647,7 +647,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeDeregister(promise), promise, null);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     private void findAndInvokeDeregister(Promise<Void> promise) {
@@ -703,7 +703,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> write(final Object msg, final Promise<Void> promise) {
         write(msg, false, promise);
 
-        return promise.asFuture();
+        return promise;
     }
 
     private void invokeWrite(Object msg, Promise<Void> promise) {
@@ -751,7 +751,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         write(msg, true, promise);
-        return promise.asFuture();
+        return promise;
     }
 
     private void invokeWriteAndFlush(Object msg, Promise<Void> promise) {
@@ -851,7 +851,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             // should not be performed.
             //
             // See https://github.com/netty/netty/issues/2349
-            if (promise.asFuture().isCancelled()) {
+            if (promise.isCancelled()) {
                 return true;
             }
             throw new IllegalArgumentException("promise already done: " + promise);

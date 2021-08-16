@@ -174,7 +174,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -191,7 +191,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -202,7 +202,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -214,7 +214,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -225,7 +225,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -236,7 +236,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
@@ -247,7 +247,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise.asFuture();
+        return promise;
     }
 
     @Override
