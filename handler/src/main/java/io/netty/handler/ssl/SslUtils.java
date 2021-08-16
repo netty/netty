@@ -33,7 +33,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Provider;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -120,7 +119,7 @@ final class SslUtils {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
         }
 
-        List<String> defaultCiphers = new ArrayList<String>();
+        Set<String> defaultCiphers = new LinkedHashSet<String>();
         // GCM (Galois/Counter Mode) requires JDK 8.
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");

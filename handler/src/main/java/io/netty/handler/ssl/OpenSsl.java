@@ -331,6 +331,8 @@ public final class OpenSsl {
 
             addIfSupported(availableJavaCipherSuites, defaultCiphers, DEFAULT_CIPHER_SUITES);
             addIfSupported(availableJavaCipherSuites, defaultCiphers, TLSV13_CIPHER_SUITES);
+            // Also handle the extra supported ciphers as these will contain some more stuff on BoringSSL.
+            addIfSupported(availableJavaCipherSuites, defaultCiphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
 
             useFallbackCiphersIfDefaultIsEmpty(defaultCiphers, availableJavaCipherSuites);
             DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers);
