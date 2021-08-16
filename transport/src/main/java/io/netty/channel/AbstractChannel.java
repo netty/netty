@@ -79,7 +79,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
         closePromise = new ClosePromise(eventLoop);
-        succeedFuture = new DefaultPromise<>(eventLoop, null);
+        succeedFuture = DefaultPromise.newSuccessfulPromise(eventLoop, null);
         id = newId();
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -95,7 +95,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
         closePromise = new ClosePromise(eventLoop);
-        succeedFuture = new DefaultPromise<>(eventLoop, null);
+        succeedFuture = DefaultPromise.newSuccessfulPromise(eventLoop, null);
         this.id = id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -346,7 +346,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Future<Void> newFailedFuture(Throwable cause) {
-        return new DefaultPromise<>(cause, eventLoop);
+        return DefaultPromise.newFailedPromise(eventLoop, cause);
     }
 
     @Override

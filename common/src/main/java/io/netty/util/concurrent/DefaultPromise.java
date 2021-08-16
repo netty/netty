@@ -91,11 +91,10 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
      *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
      *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
      *        depth exceeds a threshold.
+     * @param result The result of the successful promise.
      */
-    public DefaultPromise(EventExecutor executor, Object result) {
-        this.executor = requireNonNull(executor, "executor");
-        this.result = result == null? SUCCESS : result;
-        stage = new DefaultFutureCompletionStage<>(this);
+    public static <V> Promise<V> newSuccessfulPromise(EventExecutor executor, V result) {
+        return new DefaultPromise<>(executor, result);
     }
 
     /**
@@ -106,8 +105,19 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
      *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
      *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
      *        depth exceeds a threshold.
+     * @param cause The {@link Throwable} that caused the failure of the returned promise.
      */
-    public DefaultPromise(Throwable cause, EventExecutor executor) {
+    public static <V> Promise<V> newFailedPromise(EventExecutor executor, Throwable cause) {
+        return new DefaultPromise<>(cause, executor);
+    }
+
+    private DefaultPromise(EventExecutor executor, Object result) {
+        this.executor = requireNonNull(executor, "executor");
+        this.result = result == null? SUCCESS : result;
+        stage = new DefaultFutureCompletionStage<>(this);
+    }
+
+    private DefaultPromise(Throwable cause, EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
         result = new CauseHolder(requireNonNull(cause, "cause"));
         stage = new DefaultFutureCompletionStage<>(this);

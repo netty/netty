@@ -78,7 +78,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     public DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
-        succeededFuture = new DefaultPromise<>(channel.eventLoop(), null);
+        succeededFuture = DefaultPromise.newSuccessfulPromise(channel.eventLoop(), null);
 
         tail = new DefaultChannelHandlerContext(this, TAIL_NAME, TAIL_HANDLER);
         head = new DefaultChannelHandlerContext(this, HEAD_NAME, HEAD_HANDLER);
@@ -946,7 +946,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Future<Void> newFailedFuture(Throwable cause) {
-        return new DefaultPromise<>(cause, executor());
+        return DefaultPromise.newFailedPromise(executor(), cause);
     }
 
     /**

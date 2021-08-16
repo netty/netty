@@ -276,7 +276,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         try {
             channel = newChannel(loop);
         } catch (Throwable t) {
-            return new DefaultPromise<>(t, loop);
+            return DefaultPromise.newFailedPromise(loop, t);
         }
 
         Promise<Channel> promise = new DefaultPromise<>(loop);
