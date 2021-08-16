@@ -17,33 +17,30 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureContextListener;
-import io.netty.util.concurrent.GenericFutureListener;
-
 
 /**
- * Listens to the result of a {@link ChannelFuture}.
+ * Listens to the result of a {@link Future}.
  * The result of the asynchronous {@link Channel} I/O operation is notified once this listener
  * is added by calling {@link Future#addListener(Object, FutureContextListener)} with the {@link Channel} as context.
  *
  * <h3>Return the control to the caller quickly</h3>
  *
- * The {@link #operationComplete(Future)} method is directly called by an I/O
+ * The {@link FutureContextListener#operationComplete(Object, Future)} method is directly called by an I/O
  * thread.  Therefore, performing a time consuming task or a blocking operation
  * in the handler method can cause an unexpected pause during I/O.  If you need
  * to perform a blocking operation on I/O completion, try to execute the
  * operation in a different thread using a thread pool.
  */
-@Deprecated(forRemoval = true)
-public interface ChannelFutureListener extends GenericFutureListener<ChannelFuture> {
+public interface ChannelFutureListener {
 
     /**
-     * A {@link ChannelFutureListener} that closes the {@link Channel} which is
-     * associated with the specified {@link ChannelFuture}.
+     * A {@link FutureContextListener} that closes the {@link Channel} which is
+     * associated with the specified {@link Future}.
      */
     FutureContextListener<Channel, Object> CLOSE = (channel, future) -> channel.close();
 
     /**
-     * A {@link ChannelFutureListener} that closes the {@link Channel} when the
+     * A {@link FutureContextListener} that closes the {@link Channel} when the
      * operation ended up with a failure or cancellation rather than a success.
      */
     FutureContextListener<Channel, Object> CLOSE_ON_FAILURE = (channel, future) -> {
@@ -53,7 +50,7 @@ public interface ChannelFutureListener extends GenericFutureListener<ChannelFutu
     };
 
     /**
-     * A {@link ChannelFutureListener} that forwards the {@link Throwable} of the {@link ChannelFuture} into the
+     * A {@link FutureContextListener} that forwards the {@link Throwable} of the {@link Future} into the
      * {@link ChannelPipeline}. This mimics the old behavior of Netty 3.
      */
     FutureContextListener<Channel, Object> FIRE_EXCEPTION_ON_FAILURE = (channel, future) -> {

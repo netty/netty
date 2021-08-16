@@ -36,7 +36,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -169,7 +168,7 @@ abstract class ProxyServer {
             if (finished) {
                 this.finished = true;
                 Future<Channel> f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
-                f.addListener((GenericFutureListener<Future<Channel>>) future -> {
+                f.addListener(future -> {
                     if (!future.isSuccess()) {
                         recordException(future.cause());
                         ctx.close();
@@ -274,7 +273,7 @@ abstract class ProxyServer {
                     ctx.write(Unpooled.copiedBuffer("2\n", CharsetUtil.US_ASCII));
                 } else if ("C\n".equals(str)) {
                     ctx.write(Unpooled.copiedBuffer("3\n", CharsetUtil.US_ASCII))
-                       .addListener(ChannelFutureListener.CLOSE);
+                       .addListener(ctx.channel(), ChannelFutureListener.CLOSE);
                 } else {
                     throw new IllegalStateException("unexpected message: " + str);
                 }

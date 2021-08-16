@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.util.concurrent.BlockingOperationException;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.TimeUnit;
 
@@ -64,13 +63,13 @@ import java.util.concurrent.TimeUnit;
  * operation. It also allows you to add {@link ChannelFutureListener}s so you
  * can get notified when the I/O operation is completed.
  *
- * <h3>Prefer {@link #addListener(GenericFutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
  *
- * It is recommended to prefer {@link #addListener(GenericFutureListener)} to
+ * It is recommended to prefer {@link #addListener(FutureListener)} to
  * {@link #await()} wherever possible to get notified when an I/O operation is
  * done and to do any follow-up tasks.
  * <p>
- * {@link #addListener(GenericFutureListener)} is non-blocking.  It simply adds
+ * {@link #addListener(FutureListener)} is non-blocking.  It simply adds
  * the specified {@link ChannelFutureListener} to the {@link ChannelFuture}, and
  * I/O thread will notify the listeners when the I/O operation associated with
  * the future is done.  {@link ChannelFutureListener} yields the best
