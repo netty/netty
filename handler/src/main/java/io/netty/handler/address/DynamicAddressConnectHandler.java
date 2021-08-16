@@ -17,7 +17,7 @@ package io.netty.handler.address;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
@@ -33,7 +33,7 @@ public abstract class DynamicAddressConnectHandler implements ChannelHandler {
 
     @Override
     public final void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                              SocketAddress localAddress, ChannelPromise promise) {
+                              SocketAddress localAddress, Promise<Void> promise) {
         final SocketAddress remote;
         final SocketAddress local;
         try {
@@ -47,7 +47,7 @@ public abstract class DynamicAddressConnectHandler implements ChannelHandler {
             if (future.isSuccess()) {
                 // We only remove this handler from the pipeline once the connect was successful as otherwise
                 // the user may try to connect again.
-                ctx.pipeline().remove(DynamicAddressConnectHandler.this);
+                ctx.pipeline().remove(this);
             }
         });
     }

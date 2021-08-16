@@ -15,22 +15,21 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
-
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * This handler negotiates and initializes the WebSocket Extensions.
@@ -99,7 +98,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (msg instanceof HttpResponse) {
             HttpResponse httpResponse = (HttpResponse) msg;
             //checking the status is faster than looking at headers
@@ -113,7 +112,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        ChannelPromise promise, HttpResponse httpResponse) {
+                                        Promise<Void> promise, HttpResponse httpResponse) {
         HttpHeaders headers = httpResponse.headers();
         if (WebSocketExtensionUtil.isWebsocketUpgrade(headers)) {
             if (validExtensions != null) {
@@ -125,7 +124,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                         .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener((ChannelFutureListener) future -> {
+                promise.addListener(future -> {
                     if (future.isSuccess()) {
                         for (WebSocketServerExtension extension : validExtensions) {
                             WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
@@ -143,9 +142,9 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
                     headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
                 }
             }
-            promise.addListener((ChannelFutureListener) future -> {
+            promise.addListener(future -> {
                 if (future.isSuccess()) {
-                    ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
+                    ctx.pipeline().remove(this);
                 }
             });
         }

@@ -15,25 +15,34 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.concurrent.Promise;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.Dummy2Decoder;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.Dummy2Encoder;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.DummyDecoder;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.DummyEncoder;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeRequest;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeResponse;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.webSocketExtensionDataMatcher;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class WebSocketServerExtensionHandlerTest {
 
@@ -209,7 +218,7 @@ public class WebSocketServerExtensionHandlerTest {
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
                 .thenReturn(mainExtensionMock);
         when(mainExtensionMock.newResponseData()).thenReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData("main", Collections.emptyMap()));
 
         // execute
         WebSocketServerExtensionHandler extensionHandler =
@@ -220,7 +229,7 @@ public class WebSocketServerExtensionHandlerTest {
         ch.writeInbound(req);
 
         HttpResponse res = newUpgradeResponse(null);
-        ChannelPromise failurePromise = ch.newPromise();
+        Promise<Void> failurePromise = ch.newPromise();
         ch.writeOneOutbound(res, failurePromise);
         failurePromise.setFailure(new IOException("Cannot write response"));
 

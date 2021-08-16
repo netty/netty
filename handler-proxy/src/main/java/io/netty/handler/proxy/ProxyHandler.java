@@ -16,17 +16,14 @@
 
 package io.netty.handler.proxy;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -36,6 +33,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 public abstract class ProxyHandler implements ChannelHandler {
 
@@ -62,7 +61,7 @@ public abstract class ProxyHandler implements ChannelHandler {
     private boolean flushedPrematurely;
     private final Promise<Channel> connectPromise = new LazyPromise();
     private ScheduledFuture<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = future -> {
+    private final FutureListener<Void> writeListener = future -> {
         if (!future.isSuccess()) {
             setConnectFailure(future.cause());
         }
@@ -167,7 +166,7 @@ public abstract class ProxyHandler implements ChannelHandler {
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+            Promise<Void> promise) {
 
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
@@ -394,7 +393,7 @@ public abstract class ProxyHandler implements ChannelHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (finished) {
             writePendingWrites();
             ctx.write(msg, promise);
@@ -433,7 +432,7 @@ public abstract class ProxyHandler implements ChannelHandler {
         }
     }
 
-    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         PendingWriteQueue pendingWrites = this.pendingWrites;
         if (pendingWrites == null) {
             this.pendingWrites = pendingWrites = new PendingWriteQueue(ctx);

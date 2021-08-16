@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -102,7 +102,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         encoder.write(ctx, msg, promise);
     }
 

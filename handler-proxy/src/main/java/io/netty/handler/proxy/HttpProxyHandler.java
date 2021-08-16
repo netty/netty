@@ -16,13 +16,10 @@
 
 package io.netty.handler.proxy;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -35,12 +32,15 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+
+import static java.util.Objects.requireNonNull;
 
 public final class HttpProxyHandler extends ProxyHandler {
 
@@ -78,7 +78,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         username = null;
         password = null;
         authorization = null;
-        this.outboundHeaders = headers;
+        outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
@@ -109,7 +109,7 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         authorization = new AsciiString(authzHeader, /*copy=*/ false);
 
-        this.outboundHeaders = headers;
+        outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
@@ -154,7 +154,7 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         String hostString = HttpUtil.formatHostnameForHttp(raddr);
         int port = raddr.getPort();
-        String url = hostString + ":" + port;
+        String url = hostString + ':' + port;
         String hostHeader = (ignoreDefaultPortsInConnectHostHeader && (port == 80 || port == 443)) ?
                 hostString :
                 url;
@@ -286,28 +286,28 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         @Override
         public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                         ChannelPromise promise) {
+                         Promise<Void> promise) {
             codec.bind(ctx, localAddress, promise);
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                            ChannelPromise promise) {
+                            Promise<Void> promise) {
             codec.connect(ctx, remoteAddress, localAddress, promise);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.disconnect(ctx, promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.close(ctx, promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.deregister(ctx, promise);
         }
 
@@ -317,7 +317,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             codec.write(ctx, msg, promise);
         }
 

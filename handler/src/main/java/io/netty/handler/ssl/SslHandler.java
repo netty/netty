@@ -1902,10 +1902,10 @@ public class SslHandler extends ByteToMessageDecoder {
         } finally {
             if (!isStateSet(STATE_CLOSE_NOTIFY)) {
                 setState(STATE_CLOSE_NOTIFY);
-                // It's important that we do not pass the original ChannelPromise to safeClose(...) as when flush(....)
+                // It's important that we do not pass the original Promise to safeClose(...) as when flush(....)
                 // throws an Exception it will be propagated to the AbstractChannelHandlerContext which will try
                 // to fail the promise because of this. This will then fail as it was already completed by
-                // safeClose(...). We create a new ChannelPromise and try to notify the original ChannelPromise
+                // safeClose(...). We create a new Promise and try to notify the original Promise
                 // once it is complete. If we fail to do so we just ignore it as in this case it was failed already
                 // because of a propagated Exception.
                 //
@@ -2169,7 +2169,7 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     private static void addCloseListener(Future<Void> future, Promise<Void> promise) {
-        // We notify the promise in the ChannelPromiseNotifier as there is a "race" where the close(...) call
+        // We notify the promise in the PromiseNotifier as there is a "race" where the close(...) call
         // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
         // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
         // IllegalStateException.

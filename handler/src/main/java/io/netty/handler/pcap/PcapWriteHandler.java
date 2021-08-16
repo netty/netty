@@ -15,20 +15,19 @@
  */
 package io.netty.handler.pcap;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,6 +37,7 @@ import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 /**
  * <p> {@link PcapWriteHandler} captures {@link ByteBuf} from {@link SocketChannel} / {@link ServerChannel}
@@ -147,7 +147,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                              {@link NullPointerException}
      */
     public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
-        this.outputStream = ObjectUtil.checkNotNull(outputStream, "OutputStream");
+        this.outputStream = Objects.requireNonNull(outputStream, "OutputStream");
         this.captureZeroByte = captureZeroByte;
         this.writePcapGlobalHeader = writePcapGlobalHeader;
     }
@@ -239,7 +239,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (!isClosed) {
             if (ctx.channel() instanceof SocketChannel) {
                 handleTCP(ctx, msg, true);

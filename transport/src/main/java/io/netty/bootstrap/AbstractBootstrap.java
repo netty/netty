@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
@@ -249,7 +248,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
-            ChannelPromise promise = channel.newPromise();
+            Promise<Void> promise = channel.newPromise();
             cascade(true, promise, bindPromise, channel);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
@@ -257,12 +256,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             regFuture.addListener(future -> {
                 Throwable cause = future.cause();
                 if (cause != null) {
-                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                    // Registration on the EventLoop failed so fail the Promise directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
                     bindPromise.setFailure(cause);
                 } else {
                     Channel channel = future.getNow();
-                    ChannelPromise promise = channel.newPromise();
+                    Promise<Void> promise = channel.newPromise();
                     cascade(true, promise, bindPromise, channel);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
@@ -314,7 +313,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
 
     private static void doBind0(
             final Future<Channel> regFuture, final Channel channel,
-            final SocketAddress localAddress, final ChannelPromise promise) {
+            final SocketAddress localAddress, final Promise<Void> promise) {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {

@@ -18,30 +18,30 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -354,7 +354,7 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
-        CloseWebSocketFrame closeMessage = decode(server.<ByteBuf>readOutbound(), CloseWebSocketFrame.class);
+        CloseWebSocketFrame closeMessage = decode(server.readOutbound(), CloseWebSocketFrame.class);
         assertEquals(closeMessage.statusCode(), closeStatus.code());
         closeMessage.release();
 
@@ -378,7 +378,7 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
-        CloseWebSocketFrame closeMessage = decode(server.<ByteBuf>readOutbound(), CloseWebSocketFrame.class);
+        CloseWebSocketFrame closeMessage = decode(server.readOutbound(), CloseWebSocketFrame.class);
         assertEquals(closeMessage, new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
         closeMessage.release();
 
@@ -459,9 +459,9 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler implements ChannelHandler {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             responses.add((FullHttpResponse) msg);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override

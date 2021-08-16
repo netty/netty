@@ -399,7 +399,7 @@ public class EpollHandler implements IoHandler {
                     // past.
                     AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
-                    // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+                    // First check for EPOLLOUT as we may need to fail the connect Promise before try
                     // to read from the file descriptor.
                     // See https://github.com/netty/netty/issues/3785
                     //

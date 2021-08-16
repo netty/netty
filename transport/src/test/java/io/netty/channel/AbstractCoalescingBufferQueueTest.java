@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -45,9 +46,9 @@ public class AbstractCoalescingBufferQueueTest {
     private static void testDecrementAll(boolean write) {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 ReferenceCountUtil.release(msg);
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         }, new ChannelHandlerAdapter() { });
         final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {

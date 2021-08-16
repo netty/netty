@@ -19,9 +19,12 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
-import static io.netty.handler.codec.http.HttpUtil.*;
+import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 
 /**
  * HttpServerKeepAliveHandler helps close persistent connections when appropriate.
@@ -65,7 +68,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // modify message on way out to add headers if needed
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
@@ -82,7 +85,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise.addListener(ChannelFutureListener.CLOSE);
+            promise.addListener(ctx.channel(), ChannelFutureListener.CLOSE);
         }
         ctx.write(msg, promise);
     }

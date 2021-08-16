@@ -594,7 +594,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             ClosedChannelException closedChannelException =
-                    StacklessClosedChannelException.newInstance(AbstractChannel.class, "close(ChannelPromise)");
+                    StacklessClosedChannelException.newInstance(AbstractChannel.class, "close(Promise)");
             close(promise, closedChannelException, closedChannelException, false);
         }
 
@@ -839,7 +839,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // will be done in flush0()
                     // See https://github.com/netty/netty/issues/2362
                     safeSetFailure(promise,
-                            newClosedChannelException(initialCloseCause, "write(Object, ChannelPromise)"));
+                            newClosedChannelException(initialCloseCause, "write(Object, Promise)"));
                 }
                 return;
             }
@@ -955,7 +955,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            safeSetFailure(promise, newClosedChannelException(initialCloseCause, "ensureOpen(ChannelPromise)"));
+            safeSetFailure(promise, newClosedChannelException(initialCloseCause, "ensureOpen(Promise)"));
             return false;
         }
 

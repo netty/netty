@@ -21,13 +21,13 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -69,7 +69,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelPromise connectPromise;
+    private volatile Promise<Void> connectPromise;
     private volatile boolean readInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
@@ -173,7 +173,7 @@ public class LocalChannel extends AbstractChannel {
                     finishPeerRead(peer);
                 }
 
-                ChannelPromise promise = connectPromise;
+                Promise<Void> promise = connectPromise;
                 if (promise != null) {
                     // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                     promise.tryFailure(new ClosedChannelException());
@@ -221,7 +221,7 @@ public class LocalChannel extends AbstractChannel {
         } else {
             releaseInboundBuffers();
 
-            ChannelPromise promise = connectPromise;
+            Promise<Void> promise = connectPromise;
             if (promise != null) {
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                 promise.tryFailure(new ClosedChannelException());
@@ -389,7 +389,7 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelPromise promise) {
+                SocketAddress localAddress, final Promise<Void> promise) {
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -457,11 +457,11 @@ public class LocalChannel extends AbstractChannel {
                 // event is triggered *after* this channel's channelRegistered event, so that this channel's
                 // pipeline is fully initialized by ChannelInitializer before any channelRead events.
                 peer.eventLoop().execute(() -> {
-                    ChannelPromise promise = peer.connectPromise;
+                    Promise<Void> promise = peer.connectPromise;
 
                     // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
                     // connectPromise may be set to null if doClose() was called in the meantime.
-                    if (promise != null && promise.trySuccess()) {
+                    if (promise != null && promise.trySuccess(null)) {
                         peer.pipeline().fireChannelActive();
                         peer.readIfIsAutoRead();
                     }
@@ -474,7 +474,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         @Override
-        public ChannelPromise newPromise() {
+        public Promise<Void> newPromise() {
             return LocalChannel.this.newPromise();
         }
     }

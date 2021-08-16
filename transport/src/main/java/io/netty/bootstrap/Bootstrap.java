@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
@@ -203,7 +202,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 // failure.
                 Throwable cause = future.cause();
                 if (cause != null) {
-                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                    // Registration on the EventLoop failed so fail the Promise directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
                     resolveAndConnectPromise.setFailure(cause);
                 } else {
@@ -262,7 +261,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
-            ChannelPromise connectPromise = channel.newPromise();
+            Promise<Void> connectPromise = channel.newPromise();
             connectPromise.addListener(channel, ChannelFutureListener.CLOSE_ON_FAILURE);
             cascade(true, connectPromise, promise, channel);
             if (localAddress == null) {

@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -86,7 +87,7 @@ public class CombinedChannelDuplexHandlerTest {
             () -> new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
                   new ChannelHandler() {
                       @Override
-                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                      public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                           promise.setFailure(new UnsupportedOperationException());
                       }
                   }, new ChannelHandler() { }));
@@ -263,7 +264,7 @@ public class CombinedChannelDuplexHandlerTest {
                         }, new ChannelHandler() { }));
         ChannelPipeline pipeline = ch.pipeline();
 
-        ChannelPromise promise = ch.newPromise();
+        Promise<Void> promise = ch.newPromise();
         pipeline.bind(LOCAL_ADDRESS, promise);
         promise.syncUninterruptibly();
 
@@ -381,11 +382,11 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
             try {
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.BIND);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (AssertionError e) {
                 promise.setFailure(e);
             }
@@ -393,33 +394,33 @@ public class CombinedChannelDuplexHandlerTest {
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                            SocketAddress localAddress, ChannelPromise promise) {
+                            SocketAddress localAddress, Promise<Void> promise) {
             try {
                 assertSame(REMOTE_ADDRESS, remoteAddress);
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.CONNECT);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (AssertionError e) {
                 promise.setFailure(e);
             }
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
             queue.add(Event.DISCONNECT);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
             queue.add(Event.CLOSE);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
             queue.add(Event.DEREGISTER);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override
@@ -428,11 +429,11 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             try {
                 assertSame(MSG, msg);
                 queue.add(Event.WRITE);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (AssertionError e) {
                 promise.setFailure(e);
             }

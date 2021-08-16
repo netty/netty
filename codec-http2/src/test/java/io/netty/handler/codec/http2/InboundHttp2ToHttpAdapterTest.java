@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
@@ -44,6 +43,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -732,7 +732,7 @@ public class InboundHttp2ToHttpAdapterTest {
         return clientChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseClient() {
+    private Promise<Void> newPromiseClient() {
         return ctxClient().newPromise();
     }
 
@@ -740,7 +740,7 @@ public class InboundHttp2ToHttpAdapterTest {
         return serverConnectedChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseServer() {
+    private Promise<Void> newPromiseServer() {
         return ctxServer().newPromise();
     }
 

@@ -18,14 +18,13 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.opentest4j.AssertionFailedError;
 
@@ -80,7 +79,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private ChannelPromise promise;
+    private Promise<Void> promise;
 
     @Mock
     private Http2RemoteFlowController.Listener listener;
