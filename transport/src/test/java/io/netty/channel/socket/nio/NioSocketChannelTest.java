@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,6 +34,7 @@ import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -70,7 +70,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     public void testFlushCloseReentrance() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         try {
-            final Queue<ChannelFuture> futures = new LinkedBlockingQueue<>();
+            final Queue<Future<Void>> futures = new LinkedBlockingQueue<>();
 
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
@@ -79,8 +79,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
-                    futures.add(ctx.write(
-                            ctx.alloc().buffer().writeZero(1048576)).addListener(ChannelFutureListener.CLOSE));
+                    futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576))
+                                   .addListener(ctx.channel(), ChannelFutureListener.CLOSE));
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));
                     ctx.flush();
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));
@@ -105,9 +105,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             s.close();
 
             assertThat(futures.size(), is(3));
-            ChannelFuture f1 = futures.poll();
-            ChannelFuture f2 = futures.poll();
-            ChannelFuture f3 = futures.poll();
+            Future<Void> f1 = futures.poll();
+            Future<Void> f2 = futures.poll();
+            Future<Void> f3 = futures.poll();
             assertThat(f1.isSuccess(), is(true));
             assertThat(f2.isDone(), is(true));
             assertThat(f2.isSuccess(), is(false));
@@ -134,8 +134,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                     // Trigger a gathering write by writing two buffers.
                     ctx.write(Unpooled.wrappedBuffer(new byte[] { 'a' }));
-                    ChannelFuture f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
-                    f.addListener((ChannelFutureListener) future -> {
+                    Future<Void> f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
+                    f.addListener(future -> {
                         // This message must be flushed
                         ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
                     });
@@ -198,10 +198,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                              // As soon as the channel becomes active re-register it to another
                              // EventLoop. After this is done we should still receive the data that
                              // was written to the channel.
-                             ctx.deregister().addListener((ChannelFutureListener) cf -> {
-                                 Channel channel = cf.channel();
-                                 channel.register();
-                             });
+                             ctx.deregister().addListener(ctx.channel(), (c, f) -> c.register());
                          }
                      });
                  }

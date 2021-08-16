@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,7 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureContextListener;
-import io.netty.util.concurrent.FutureListener;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;

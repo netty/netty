@@ -15,9 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
@@ -89,8 +87,8 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
-                                     ChannelPromise promise) {
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+                                     Promise<Void> promise) {
         return delegate.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 

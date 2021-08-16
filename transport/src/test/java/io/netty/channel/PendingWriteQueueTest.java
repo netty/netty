@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +31,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,8 +49,8 @@ public class PendingWriteQueueTest {
             public void flush(ChannelHandlerContext ctx) {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
-                ChannelFuture future = queue.removeAndWrite();
-                future.addListener((ChannelFutureListener) future1 -> assertQueueEmpty(queue));
+                Future<Void> future = queue.removeAndWrite();
+                future.addListener(future1 -> assertQueueEmpty(queue));
                 super.flush(ctx);
             }
         }, 1);
@@ -61,8 +63,8 @@ public class PendingWriteQueueTest {
             public void flush(ChannelHandlerContext ctx) {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
-                ChannelFuture future = queue.removeAndWriteAll();
-                future.addListener((ChannelFutureListener) future1 -> assertQueueEmpty(queue));
+                Future<Void> future = queue.removeAndWriteAll();
+                future.addListener(future1 -> assertQueueEmpty(queue));
                 super.flush(ctx);
             }
         }, 3);
@@ -93,14 +95,12 @@ public class PendingWriteQueueTest {
 
     @Test
     public void shouldFireChannelWritabilityChangedAfterRemoval() {
-        final AtomicReference<ChannelHandlerContext> ctxRef = new AtomicReference<>();
         final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<>();
         final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
 
         final EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                ctxRef.set(ctx);
                 queueRef.set(new PendingWriteQueue(ctx));
             }
 
@@ -208,9 +208,9 @@ public class PendingWriteQueueTest {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
-        ChannelPromise promise = channel.newPromise();
-        promise.addListener((ChannelFutureListener) future -> queue.removeAndFailAll(new IllegalStateException()));
-        ChannelPromise promise2 = channel.newPromise();
+        Promise<Void> promise = channel.newPromise();
+        promise.addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
+        Promise<Void> promise2 = channel.newPromise();
 
         channel.eventLoop().execute(() -> {
             queue.add(1L, promise);
@@ -229,7 +229,7 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWriteAllReentrantWrite() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
                 ctx.writeAndFlush(msg, promise);
             }
@@ -237,12 +237,12 @@ public class PendingWriteQueueTest {
 
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().lastContext());
 
-        ChannelPromise promise = channel.newPromise();
-        final ChannelPromise promise3 = channel.newPromise();
-        promise.addListener((ChannelFutureListener) future -> {
+        Promise<Void> promise = channel.newPromise();
+        final Promise<Void> promise3 = channel.newPromise();
+        promise.addListener(future -> {
             queue.add(3L, promise3);
         });
-        ChannelPromise promise2 = channel.newPromise();
+        Promise<Void> promise2 = channel.newPromise();
 
         channel.eventLoop().execute(() -> {
             queue.add(1L, promise);
@@ -275,15 +275,15 @@ public class PendingWriteQueueTest {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
-        ChannelPromise promise = channel.newPromise();
-        final ChannelPromise promise3 = channel.newPromise();
-        promise3.addListener((ChannelFutureListener) future -> failOrder.add(3));
-        promise.addListener((ChannelFutureListener) future -> {
+        Promise<Void> promise = channel.newPromise();
+        final Promise<Void> promise3 = channel.newPromise();
+        promise3.addListener(future -> failOrder.add(3));
+        promise.addListener(future -> {
             failOrder.add(1);
             queue.add(3L, promise3);
         });
-        ChannelPromise promise2 = channel.newPromise();
-        promise2.addListener((ChannelFutureListener) future -> failOrder.add(2));
+        Promise<Void> promise2 = channel.newPromise();
+        promise2.addListener(future -> failOrder.add(2));
         channel.eventLoop().execute(() -> {
             queue.add(1L, promise);
             queue.add(2L, promise2);
@@ -307,9 +307,9 @@ public class PendingWriteQueueTest {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
-        ChannelPromise promise = channel.newPromise();
-        promise.addListener((ChannelFutureListener) future -> queue.removeAndWriteAll());
-        ChannelPromise promise2 = channel.newPromise();
+        Promise<Void> promise = channel.newPromise();
+        promise.addListener(future -> queue.removeAndWriteAll());
+        Promise<Void> promise2 = channel.newPromise();
 
         channel.eventLoop().execute(() -> {
             queue.add(1L, promise);
@@ -339,7 +339,7 @@ public class PendingWriteQueueTest {
         final PendingWriteQueue queue = new PendingWriteQueue(context);
 
         IllegalStateException ex = new IllegalStateException();
-        ChannelPromise promise = channel.newPromise();
+        Promise<Void> promise = channel.newPromise();
         channel.eventLoop().execute(() -> {
             queue.add(1L, promise);
             queue.removeAndFailAll(ex);
@@ -359,7 +359,7 @@ public class PendingWriteQueueTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             queue.add(msg, promise);
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());

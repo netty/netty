@@ -18,7 +18,6 @@ package io.netty.example.http2.tiles;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -33,6 +32,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.concurrent.Future;
 
 import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
@@ -54,7 +54,7 @@ public class Http2Server {
         group = eventLoopGroup;
     }
 
-    public ChannelFuture start() throws Exception {
+    public Future<Void> start() throws Exception {
         final SslContext sslCtx = configureTLS();
         ServerBootstrap b = new ServerBootstrap();
         b.option(ChannelOption.SO_BACKLOG, 1024);

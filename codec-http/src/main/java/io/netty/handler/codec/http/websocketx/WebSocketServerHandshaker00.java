@@ -18,9 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -28,6 +26,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.util.regex.Pattern;
 
@@ -204,10 +204,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * @param frame
      *            Web Socket frame that was received.
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     *            the {@link Promise} to be notified when the closing handshake is done.
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
         return channel.writeAndFlush(frame, promise);
     }
 
@@ -219,11 +219,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received.
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     *            the {@link Promise} to be notified when the closing handshake is done.
      */
     @Override
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame,
-                               ChannelPromise promise) {
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
         return ctx.writeAndFlush(frame, promise);
     }
 

@@ -15,16 +15,14 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2FrameLogger.Direction.OUTBOUND;
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
+
+import static io.netty.handler.codec.http2.Http2FrameLogger.Direction.OUTBOUND;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decorator around a {@link Http2FrameWriter} that logs all outbound frames before calling the
@@ -110,8 +108,8 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData, ChannelPromise promise) {
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, Promise<Void> promise) {
         logger.logGoAway(OUTBOUND, ctx, lastStreamId, errorCode, debugData);
         return writer.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
     }

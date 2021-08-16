@@ -23,7 +23,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -41,10 +40,10 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ResourcesUtil;
@@ -64,12 +63,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.opentest4j.AssertionFailedError;
 
-
 import javax.crypto.SecretKey;
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLContext;
@@ -123,14 +121,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
-
-import static io.netty.handler.ssl.SslUtils.*;
+import static io.netty.handler.ssl.SslUtils.isValidHostNameForSNI;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -465,9 +462,9 @@ public abstract class SSLEngineTest {
 
     @AfterEach
     public void tearDown() throws InterruptedException {
-        ChannelFuture clientCloseFuture = null;
-        ChannelFuture serverConnectedCloseFuture = null;
-        ChannelFuture serverCloseFuture = null;
+        Future<Void> clientCloseFuture = null;
+        Future<Void> serverConnectedCloseFuture = null;
+        Future<Void> serverCloseFuture = null;
         if (clientChannel != null) {
             clientCloseFuture = clientChannel.close();
             clientChannel = null;
@@ -559,7 +556,7 @@ public abstract class SSLEngineTest {
         final SSLEngine clientEngine =
             wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
-        final String[] enabledCiphers = new String[]{ param.ciphers().get(0) };
+        final String[] enabledCiphers = { param.ciphers().get(0) };
 
         try {
             clientEngine.setEnabledCipherSuites(enabledCiphers);

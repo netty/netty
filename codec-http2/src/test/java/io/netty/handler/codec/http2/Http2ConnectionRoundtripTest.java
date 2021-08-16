@@ -21,13 +21,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -38,6 +35,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -261,10 +259,10 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
-                    .addListener((ChannelFutureListener) future -> clientHeadersWriteException.set(future.cause()));
+                    .addListener(future -> clientHeadersWriteException.set(future.cause()));
             // It is expected that this write should fail locally and the remote peer will never see this.
             http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
-                .addListener((ChannelFutureListener) future -> {
+                .addListener(future -> {
                     clientDataWriteException.set(future.cause());
                     clientDataWrite.countDown();
                 });
@@ -289,7 +287,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
-                    newPromise()).addListener((ChannelFutureListener) future -> {
+                    newPromise()).addListener(future -> {
                 clientHeadersWriteException2.set(future.cause());
                 clientHeadersLatch.countDown();
             });
@@ -481,7 +479,7 @@ public class Http2ConnectionRoundtripTest {
         // Now have the server attempt to send a headers frame simulating some asynchronous work.
         runInChannel(serverConnectedChannel, () -> {
             http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
-                    .addListener((ChannelFutureListener) future -> {
+                    .addListener(future -> {
                         serverWriteHeadersCauseRef.set(future.cause());
                         serverWriteHeadersLatch.countDown();
                     });
@@ -507,7 +505,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener((ChannelFutureListener) future -> closeLatch.countDown());
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -545,7 +543,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener((ChannelFutureListener) future -> closeLatch.countDown());
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         runInChannel(clientChannel, () -> {
@@ -594,7 +592,7 @@ public class Http2ConnectionRoundtripTest {
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
-        final ChannelPromise emptyDataPromise = newPromise();
+        final Promise<Void> emptyDataPromise = newPromise();
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
                     newPromise());
@@ -639,15 +637,15 @@ public class Http2ConnectionRoundtripTest {
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
-        final ChannelPromise dataPromise = newPromise();
-        final ChannelPromise assertPromise = newPromise();
+        final Promise<Void> dataPromise = newPromise();
+        final Promise<Void> assertPromise = newPromise();
 
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
                     newPromise());
             clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     ReferenceCountUtil.release(msg);
 
                     try {
@@ -673,7 +671,7 @@ public class Http2ConnectionRoundtripTest {
                 // The Frame should have been removed after the write failed.
                 assertFalse(http2Client.encoder().flowController()
                         .hasFlowControlled(http2Client.connection().stream(3)));
-                assertPromise.setSuccess();
+                assertPromise.setSuccess(null);
             } catch (Throwable error) {
                 assertPromise.setFailure(error);
             }
@@ -695,7 +693,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener((ChannelFutureListener) future -> closeLatch.countDown());
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -790,20 +788,20 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(3), eq(NO_ERROR.code()),
                 any(ByteBuf.class));
 
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         runInChannel(clientChannel, () -> {
-            ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
+            Future<Void> f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
                     true, newPromise());
             clientWriteAfterGoAwayFutureRef.set(f);
             http2Client.flush(ctx());
-            f.addListener((ChannelFutureListener) future -> clientWriteAfterGoAwayLatch.countDown());
+            f.addListener(future -> clientWriteAfterGoAwayLatch.countDown());
         });
 
         // Wait for the client's write operation to complete.
         assertTrue(clientWriteAfterGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
-        ChannelFuture clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
+        Future<Void> clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
         assertNotNull(clientWriteAfterGoAwayFuture);
         Throwable clientCause = clientWriteAfterGoAwayFuture.cause();
         assertThat(clientCause, is(instanceOf(Http2Exception.StreamException.class)));
@@ -1106,11 +1104,11 @@ public class Http2ConnectionRoundtripTest {
         return serverConnectedChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromise() {
+    private Promise<Void> newPromise() {
         return ctx().newPromise();
     }
 
-    private ChannelPromise serverNewPromise() {
+    private Promise<Void> serverNewPromise() {
         return serverCtx().newPromise();
     }
 

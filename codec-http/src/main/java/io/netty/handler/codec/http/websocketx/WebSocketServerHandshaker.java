@@ -15,16 +15,11 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -36,6 +31,8 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -45,6 +42,8 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -167,9 +166,9 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *              HTTP Request
      * @return future
-     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     *              The {@link Future} which is notified once the opening handshake completes
      */
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
+    public Future<Void> handshake(Channel channel, FullHttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
     }
 
@@ -185,12 +184,12 @@ public abstract class WebSocketServerHandshaker {
      * @param responseHeaders
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     *            the {@link Promise} to be notified when the opening handshake is done
      * @return future
-     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     *            the {@link Future} which is notified when the opening handshake is done
      */
-    public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
-                                            HttpHeaders responseHeaders, final ChannelPromise promise) {
+    public final Future<Void> handshake(Channel channel, FullHttpRequest req,
+                                            HttpHeaders responseHeaders, final Promise<Void> promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
@@ -222,11 +221,11 @@ public abstract class WebSocketServerHandshaker {
             encoderName = p.context(HttpResponseEncoder.class).name();
             p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
-        channel.writeAndFlush(response).addListener((ChannelFutureListener) future -> {
+        channel.writeAndFlush(response).addListener(channel, (ch, future) -> {
             if (future.isSuccess()) {
-                ChannelPipeline p1 = future.channel().pipeline();
+                ChannelPipeline p1 = ch.pipeline();
                 p1.remove(encoderName);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(future.cause());
             }
@@ -243,9 +242,9 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *              HTTP Request
      * @return future
-     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     *              The {@link Future} which is notified once the opening handshake completes
      */
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public Future<Void> handshake(Channel channel, HttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
     }
 
@@ -261,12 +260,12 @@ public abstract class WebSocketServerHandshaker {
      * @param responseHeaders
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     *            the {@link Promise} to be notified when the opening handshake is done
      * @return future
-     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     *            the {@link Future} which is notified when the opening handshake is done
      */
-    public final ChannelFuture handshake(final Channel channel, HttpRequest req,
-                                         final HttpHeaders responseHeaders, final ChannelPromise promise) {
+    public final Future<Void> handshake(final Channel channel, HttpRequest req,
+                                         final HttpHeaders responseHeaders, final Promise<Void> promise) {
 
         if (req instanceof FullHttpRequest) {
             return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
@@ -340,7 +339,7 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received.
      */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
         return close(channel, frame, channel.newPromise());
     }
@@ -349,16 +348,16 @@ public abstract class WebSocketServerHandshaker {
      * Performs the closing handshake.
      *
      * When called from within a {@link ChannelHandler} you most likely want to use
-     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, Promise)}.
      *
      * @param channel
      *            the {@link Channel} to use.
      * @param frame
      *            Closing Frame that was received.
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     *            the {@link Promise} to be notified when the closing handshake is done
      */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
         requireNonNull(channel, "channel");
         return close0(channel, frame, promise);
     }
@@ -371,7 +370,7 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received.
      */
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         requireNonNull(ctx, "ctx");
         return close(ctx, frame, ctx.newPromise());
     }
@@ -384,15 +383,15 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received.
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done.
+     *            the {@link Promise} to be notified when the closing handshake is done.
      */
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
         requireNonNull(ctx, "ctx");
-        return close0(ctx, frame, promise).addListener(ChannelFutureListener.CLOSE);
+        return close0(ctx.channel(), frame, promise);
     }
 
-    private ChannelFuture close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame, ChannelPromise promise) {
-        return invoker.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
+    private static Future<Void> close0(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
+        return channel.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListener.CLOSE);
     }
 
     /**

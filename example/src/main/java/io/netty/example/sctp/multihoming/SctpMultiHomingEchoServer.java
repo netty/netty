@@ -17,7 +17,6 @@ package io.netty.example.sctp.multihoming;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -74,7 +73,7 @@ public final class SctpMultiHomingEchoServer {
             SctpServerChannel channel = (SctpServerChannel) bindFuture.get();
 
             //Bind the secondary address
-            Future<Void> connectFuture = channel.bindAddress(localSecondaryAddress).sync();
+            channel.bindAddress(localSecondaryAddress).sync();
 
             // Wait until the connection is closed.
             channel.closeFuture().sync();

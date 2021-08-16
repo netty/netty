@@ -15,14 +15,16 @@
  */
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A queue of write operations which are pending for later execution. It also updates the
@@ -89,9 +91,9 @@ public final class PendingWriteQueue {
     }
 
     /**
-     * Add the given {@code msg} and {@link ChannelPromise}.
+     * Add the given {@code msg} and {@link Promise}.
      */
-    public void add(Object msg, ChannelPromise promise) {
+    public void add(Object msg, Promise<Void> promise) {
         assert ctx.executor().inEventLoop();
         requireNonNull(msg, "msg");
         requireNonNull(promise, "promise");
@@ -114,19 +116,19 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and performs them via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelHandlerContext#write(Object, Promise)}.
      *
-     * @return  {@link ChannelFuture} if something was written and {@code null}
+     * @return  {@link Future} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
      */
-    public ChannelFuture removeAndWriteAll() {
+    public Future<Void> removeAndWriteAll() {
         assert ctx.executor().inEventLoop();
 
         if (isEmpty()) {
             return null;
         }
 
-        ChannelPromise p = ctx.newPromise();
+        Promise<Void> p = ctx.newPromise();
         PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         try {
             // It is possible for some of the written promises to trigger more writes. The new writes
@@ -139,7 +141,7 @@ public final class PendingWriteQueue {
                 while (write != null) {
                     PendingWrite next = write.next;
                     Object msg = write.msg;
-                    ChannelPromise promise = write.promise;
+                    Promise<Void> promise = write.promise;
                     recycle(write, false);
                     combiner.add(promise);
                     ctx.write(msg, promise);
@@ -170,7 +172,7 @@ public final class PendingWriteQueue {
             while (write != null) {
                 PendingWrite next = write.next;
                 ReferenceCountUtil.safeRelease(write.msg);
-                ChannelPromise promise = write.promise;
+                Promise<Void> promise = write.promise;
                 recycle(write, false);
                 safeFail(promise, cause);
                 write = next;
@@ -192,7 +194,7 @@ public final class PendingWriteQueue {
             return;
         }
         ReferenceCountUtil.safeRelease(write.msg);
-        ChannelPromise promise = write.promise;
+        Promise<Void> promise = write.promise;
         safeFail(promise, cause);
         recycle(write, true);
     }
@@ -203,19 +205,19 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link ChannelHandlerContext#write(Object, Promise)}.
      *
-     * @return  {@link ChannelFuture} if something was written and {@code null}
+     * @return  {@link Future} if something was written and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
      */
-    public ChannelFuture removeAndWrite() {
+    public Future<Void> removeAndWrite() {
         assert ctx.executor().inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
         }
         Object msg = write.msg;
-        ChannelPromise promise = write.promise;
+        Promise<Void> promise = write.promise;
         recycle(write, true);
         return ctx.write(msg, promise);
     }
@@ -223,16 +225,16 @@ public final class PendingWriteQueue {
     /**
      * Removes a pending write operation and release it's message via {@link ReferenceCountUtil#safeRelease(Object)}.
      *
-     * @return  {@link ChannelPromise} of the pending write or {@code null} if the queue is empty.
+     * @return  {@link Promise} of the pending write or {@code null} if the queue is empty.
      *
      */
-    public ChannelPromise remove() {
+    public Promise<Void> remove() {
         assert ctx.executor().inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
         }
-        ChannelPromise promise = write.promise;
+        Promise<Void> promise = write.promise;
         ReferenceCountUtil.safeRelease(write.msg);
         recycle(write, true);
         return promise;
@@ -273,7 +275,7 @@ public final class PendingWriteQueue {
         tracker.decrementPendingOutboundBytes(writeSize);
     }
 
-    private static void safeFail(ChannelPromise promise, Throwable cause) {
+    private static void safeFail(Promise<Void> promise, Throwable cause) {
         if (!promise.tryFailure(cause)) {
             logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
@@ -288,14 +290,14 @@ public final class PendingWriteQueue {
         private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
-        private ChannelPromise promise;
+        private Promise<Void> promise;
         private Object msg;
 
         private PendingWrite(ObjectPool.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 
-        static PendingWrite newInstance(Object msg, int size, ChannelPromise promise) {
+        static PendingWrite newInstance(Object msg, int size, Promise<Void> promise) {
             PendingWrite write = RECYCLER.get();
             write.size = size;
             write.msg = msg;
