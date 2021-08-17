@@ -731,7 +731,8 @@ public class DefaultChannelPipelineTest {
 
         try {
             Promise<Void> promise2 = pipeline2.channel().newPromise();
-            assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise2));
+            // Promises can complete across pipelines.
+            pipeline.close(promise2);
         } finally {
             pipeline.close();
             pipeline2.close();
@@ -1642,10 +1643,12 @@ public class DefaultChannelPipelineTest {
         channel2.register().syncUninterruptibly();
 
         try {
+            Promise<Void> promise = channel2.newPromise();
+            promise.setSuccess(null);
             if (flush) {
-                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+                channel.writeAndFlush(referenceCounted, promise);
             } else {
-                channel.write(referenceCounted, channel2.newPromise());
+                channel.write(referenceCounted, promise);
             }
             fail();
         } catch (IllegalArgumentException expected) {
