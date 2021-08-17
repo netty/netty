@@ -325,10 +325,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
         if (starQ > 0.0f) {
-            if (brQ == -1.0f && Brotli.isAvailable()) {
+            if (brQ == -1.0f && this.brotliOptions != null) {
                 return "br";
             }
-            if (zstdQ == -1.0f && Zstd.isAvailable()) {
+            if (zstdQ == -1.0f && this.zstdOptions != null) {
                 return "zstd";
             }
             if (gzipQ == -1.0f) {
