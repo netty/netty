@@ -71,7 +71,10 @@ public class Http2ClientUpgradeCodecTest {
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
-        codec.upgradeTo(ctx, null);
+        channel.eventLoop().submit(() -> {
+            codec.upgradeTo(ctx, null);
+            return null;
+        }).sync();
         assertNotNull(channel.pipeline().get("connectionHandler"));
 
         if (multiplexer != null) {

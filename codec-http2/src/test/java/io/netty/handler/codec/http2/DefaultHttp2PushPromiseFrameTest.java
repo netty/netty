@@ -166,7 +166,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     private static final class ClientHandler extends Http2ChannelDuplexHandler {
 
-        private ChannelHandlerContext ctx;
+        private volatile ChannelHandlerContext ctx;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws InterruptedException {

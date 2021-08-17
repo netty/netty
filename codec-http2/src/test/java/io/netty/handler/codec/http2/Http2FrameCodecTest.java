@@ -732,10 +732,13 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void streamIdentifiersExhausted() throws Http2Exception {
+    public void streamIdentifiersExhausted() throws Exception {
         int maxServerStreamId = Integer.MAX_VALUE - 1;
 
-        assertNotNull(frameCodec.connection().local().createStream(maxServerStreamId, false));
+        channel.eventLoop().submit(() -> {
+            assertNotNull(frameCodec.connection().local().createStream(maxServerStreamId, false));
+            return null;
+        }).sync();
 
         Http2FrameStream stream = frameCodec.newStream();
         assertNotNull(stream);
