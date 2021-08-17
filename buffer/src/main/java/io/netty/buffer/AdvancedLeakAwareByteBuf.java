@@ -35,6 +35,7 @@ import java.nio.charset.Charset;
 
 final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
 
+    // If set to true we will only record stacktraces for touch(...), release(...) and retain(...) calls.
     private static final String PROP_ACQUIRE_AND_RELEASE_ONLY = "io.netty.leakDetection.acquireAndReleaseOnly";
     private static final boolean ACQUIRE_AND_RELEASE_ONLY;
 
