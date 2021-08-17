@@ -71,7 +71,7 @@ public final class Zstd {
         if (CNFE != null) {
             throw CNFE;
         }
-        if(cause != null) {
+        if (cause != null) {
         	throw cause;
         }
     }
