@@ -16,8 +16,6 @@
 
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.util.Native;
-
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -25,32 +23,27 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public final class Zstd {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Zstd.class);
-    private static final ClassNotFoundException CNFE;
-    private static Throwable cause;
+    private static final Throwable cause;
 
     static {
-        ClassNotFoundException cnfe = null;
+        Throwable t = null;
 
         try {
             Class.forName("com.github.luben.zstd.Zstd", false,
                 PlatformDependent.getClassLoader(Zstd.class));
-        } catch (ClassNotFoundException t) {
-            cnfe = t;
+        } catch (ClassNotFoundException e) {
+            t = e;
             logger.debug(
                 "zstd-jni not in the classpath; Zstd support will be unavailable.");
+        } catch (ExceptionInInitializerError e) {
+            t = e.getCause();
+            logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
+        } catch (Throwable e) {
+            t = e;
+            logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
         }
 
-        CNFE = cnfe;
-
-        // If in the classpath, try to load the native library
-        if (cnfe == null) {
-            try {
-                Native.load();
-            } catch (Throwable t) {
-                cause = t;
-                logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", cause);
-            }
-        }
+        cause = t;
     }
 
     /**
@@ -59,7 +52,7 @@ public final class Zstd {
      * and native library is available on this platform and could be loaded
      */
     public static boolean isAvailable() {
-        return CNFE == null && cause == null;
+        return cause == null;
     }
 
     /**
@@ -68,9 +61,6 @@ public final class Zstd {
      * or a UnsatisfiedLinkError if zstd native lib can't be loaded
      */
     public static void ensureAvailability() throws Throwable {
-        if (CNFE != null) {
-            throw CNFE;
-        }
         if (cause != null) {
             throw cause;
         }
