@@ -267,9 +267,9 @@ public class PendingWriteQueueTest {
         assertTrue(promise3.isDone());
         assertTrue(promise3.isSuccess());
         assertTrue(channel.finish());
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
-        assertEquals(3L, (long) channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
+        assertEquals(3L, (Long) channel.readOutbound());
     }
 
     @Test
@@ -292,8 +292,8 @@ public class PendingWriteQueueTest {
         assertTrue(channel.finish());
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
     }
 
     @Test
@@ -362,8 +362,8 @@ public class PendingWriteQueueTest {
         assertTrue(promise2.isSuccess());
         assertTrue(channel.finish());
 
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertNull(channel.readInbound());
     }

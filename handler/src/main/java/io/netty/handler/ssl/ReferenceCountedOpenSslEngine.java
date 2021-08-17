@@ -369,7 +369,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         SSL.clearOptions(ssl, SSL.SSL_OP_NO_TICKET);
                     }
                 }
-                //SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
+
                 // setMode may impact the overhead.
                 calculateMaxWrapOverhead();
             } catch (Throwable cause) {
@@ -1303,7 +1303,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             } finally {
                 SSL.bioClearByteBuffer(networkBIO);
-                //rejectRemoteInitiatedRenegotiation();
+                rejectRemoteInitiatedRenegotiation();
             }
 
             // Check to see if we received a close_notify message from the peer.
