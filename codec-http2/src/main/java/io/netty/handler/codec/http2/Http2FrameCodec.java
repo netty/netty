@@ -93,7 +93,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *     ctx.write(headersFrame.stream(stream)).addListener(new FutureListener() {
  *
  *         @Override
- *         public void operationComplete(Future f) {
+ *         public void operationComplete(Future<Void> f) {
  *             if (f.isSuccess()) {
  *                 // Stream is active and stream.id() returns a valid stream identifier.
  *                 System.out.println("New stream with id " + stream.id() + " created.");
