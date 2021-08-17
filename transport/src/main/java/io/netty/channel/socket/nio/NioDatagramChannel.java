@@ -369,10 +369,12 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
+            NetworkInterface iface = config.getNetworkInterface();
+            if (iface == null) {
+                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+            }
             return joinGroup(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    null, promise);
+                    multicastAddress, iface, null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
