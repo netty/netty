@@ -725,10 +725,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private void doClose0(Promise<Void> promise) {
             try {
                 doClose();
-                closePromise.setSuccess(null);
+                closePromise.setClosed();
                 safeSetSuccess(promise);
             } catch (Throwable t) {
-                closePromise.setSuccess(null);
+                closePromise.setClosed();
                 safeSetFailure(promise, t);
             }
         }
@@ -1137,7 +1137,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
-            return trySuccess(null);
+            return super.trySuccess(null);
         }
     }
 
