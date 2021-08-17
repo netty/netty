@@ -35,9 +35,6 @@ public final class Zstd {
             t = e;
             logger.debug(
                 "zstd-jni not in the classpath; Zstd support will be unavailable.");
-        } catch (ExceptionInInitializerError e) {
-            t = e.getCause();
-            logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
         } catch (Throwable e) {
             t = e;
             logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
@@ -58,7 +55,7 @@ public final class Zstd {
     /**
      * Throws when zstd support is missing from the classpath or is unavailable on this platform
      * @throws Throwable a ClassNotFoundException if zstd-jni is missing
-     * or a UnsatisfiedLinkError if zstd native lib can't be loaded
+     * or a ExceptionInInitializerError if zstd native lib can't be loaded
      */
     public static void ensureAvailability() throws Throwable {
         if (cause != null) {
