@@ -492,6 +492,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
+    @Test
     public void headersReadForUnknownStreamShouldThrow() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         assertThrows(Http2Exception.class, new Executable() {
@@ -636,7 +637,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test()
+    @Test
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);

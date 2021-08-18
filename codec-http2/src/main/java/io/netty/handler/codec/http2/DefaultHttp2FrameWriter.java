@@ -204,7 +204,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
                 do {
                     int frameDataBytes = min(remainingData, maxFrameSize);
-                    int framePaddingBytes = min(padding, max(0, (maxFrameSize - 1) - frameDataBytes));
+                    int framePaddingBytes = min(padding, max(0, maxFrameSize - 1 - frameDataBytes));
 
                     // Decrement the remaining counters.
                     padding -= framePaddingBytes;
@@ -623,11 +623,5 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     private static void verifyWindowSizeIncrement(int windowSizeIncrement) {
         checkPositiveOrZero(windowSizeIncrement, "windowSizeIncrement");
-    }
-
-    private static void verifyPingPayload(ByteBuf data) {
-        if (data == null || data.readableBytes() != PING_FRAME_PAYLOAD_LENGTH) {
-            throw new IllegalArgumentException("Opaque data must be " + PING_FRAME_PAYLOAD_LENGTH + " bytes");
-        }
     }
 }

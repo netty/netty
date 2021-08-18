@@ -111,19 +111,19 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
-    public void removeAllStreamsWithJustOneLocalStream() throws InterruptedException, Http2Exception {
+    public void removeAllStreamsWithJustOneLocalStream() throws Exception {
         client.local().createStream(3, false);
         testRemoveAllStreams();
     }
 
     @Test
-    public void removeAllStreamsWithJustOneRemoveStream() throws InterruptedException, Http2Exception {
+    public void removeAllStreamsWithJustOneRemoveStream() throws Exception {
         client.remote().createStream(2, false);
         testRemoveAllStreams();
     }
 
     @Test
-    public void removeAllStreamsWithManyActiveStreams() throws InterruptedException, Http2Exception {
+    public void removeAllStreamsWithManyActiveStreams() throws Exception {
         Endpoint<Http2RemoteFlowController> remote = client.remote();
         Endpoint<Http2LocalFlowController> local = client.local();
         for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {
@@ -134,7 +134,7 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
-    public void removeIndividualStreamsWhileCloseDoesNotNPE() throws InterruptedException, Http2Exception {
+    public void removeIndividualStreamsWhileCloseDoesNotNPE() throws Exception {
         final Http2Stream streamA = client.local().createStream(3, false);
         final Http2Stream streamB = client.remote().createStream(2, false);
         doAnswer(new Answer<Void>() {
@@ -154,7 +154,7 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
-    public void removeAllStreamsWhileIteratingActiveStreams() throws InterruptedException, Http2Exception {
+    public void removeAllStreamsWhileIteratingActiveStreams() throws Exception {
         final Endpoint<Http2RemoteFlowController> remote = client.remote();
         final Endpoint<Http2LocalFlowController> local = client.local();
         for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {
@@ -181,7 +181,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void removeAllStreamsWhileIteratingActiveStreamsAndExceptionOccurs()
-            throws InterruptedException, Http2Exception {
+            throws Exception {
         final Endpoint<Http2RemoteFlowController> remote = client.remote();
         final Endpoint<Http2LocalFlowController> local = client.local();
         for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntObjectHashMap;
@@ -124,7 +125,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         if (closePromise != null) {
             if (closePromise == promise) {
                 // Do nothing
-            } else if ((promise instanceof ChannelPromise) && ((ChannelPromise) closePromise).isVoid()) {
+            } else if (promise instanceof ChannelPromise && ((ChannelFuture) closePromise).isVoid()) {
                 closePromise = promise;
             } else {
                 closePromise.addListener(new UnaryPromiseNotifier<Void>(promise));
@@ -681,7 +682,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         private int nextReservationStreamId;
         private int lastStreamKnownByPeer = -1;
-        private boolean pushToAllowed = true;
+        private boolean pushToAllowed;
         private F flowController;
         private int maxStreams;
         private int maxActiveStreams;
@@ -846,7 +847,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void lastStreamKnownByPeer(int lastKnownStream) {
-            this.lastStreamKnownByPeer = lastKnownStream;
+            lastStreamKnownByPeer = lastKnownStream;
         }
 
         @Override

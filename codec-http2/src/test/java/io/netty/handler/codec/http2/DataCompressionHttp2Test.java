@@ -442,6 +442,7 @@ public class DataCompressionHttp2Test {
                         .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
                 p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();

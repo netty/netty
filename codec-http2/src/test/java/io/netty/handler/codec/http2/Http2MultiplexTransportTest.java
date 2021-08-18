@@ -63,7 +63,6 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -241,7 +240,7 @@ public class Http2MultiplexTransportTest {
                                             }
                                         });
                                     }
-                                }, 500, TimeUnit.MILLISECONDS);
+                                }, 500, MILLISECONDS);
                             }
                             ReferenceCountUtil.release(msg);
                         }
