@@ -58,8 +58,16 @@ public class Socket extends FileDescriptor {
     /**
      * Returns {@code true} if we should use IPv6 internally, {@code false} otherwise.
      */
-    protected final boolean useIpv6(InetAddress address) {
-        return ipv6 || address instanceof Inet6Address;
+    private boolean useIpv6(InetAddress address) {
+        return useIpv6(this, address);
+    }
+
+    /**
+     * Returns {@code true} if the given socket and address combination should use IPv6 internally,
+     * {@code false} otherwise.
+     */
+    protected static boolean useIpv6(Socket socket, InetAddress address) {
+        return socket.ipv6 || address instanceof Inet6Address;
     }
 
     public final void shutdown() throws IOException {
