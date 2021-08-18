@@ -185,7 +185,7 @@ public class DefaultHttp2HeadersTest {
             if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {
-                fail("All pseudo headers must be fist in iteration. Pseudo header " + entry.getKey() +
+                fail("All pseudo headers must be first in iteration. Pseudo header " + entry.getKey() +
                         " is after a non pseudo header " + lastNonPseudoName);
             }
         }

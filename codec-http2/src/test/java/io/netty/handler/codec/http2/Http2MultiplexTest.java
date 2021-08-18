@@ -616,7 +616,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(inboundHandler.isChannelActive());
 
         // A RST_STREAM frame should NOT be emitted, as we received a RST_STREAM.
-        verify(frameWriter, Mockito.never()).writeRstStream(eqCodecCtx(), eqStreamId(channel),
+        verify(frameWriter, never()).writeRstStream(eqCodecCtx(), eqStreamId(channel),
                 anyLong(), anyChannelPromise());
     }
 

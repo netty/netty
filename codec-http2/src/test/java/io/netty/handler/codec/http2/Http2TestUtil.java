@@ -24,7 +24,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -35,7 +34,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -147,170 +145,6 @@ public final class Http2TestUtil {
     private Http2TestUtil() {
     }
 
-    static class FrameAdapter extends ByteToMessageDecoder {
-        private final Http2Connection connection;
-        private final Http2FrameListener listener;
-        private final DefaultHttp2FrameReader reader;
-        private final CountDownLatch latch;
-
-        FrameAdapter(Http2FrameListener listener, CountDownLatch latch) {
-            this(null, listener, latch);
-        }
-
-        FrameAdapter(Http2Connection connection, Http2FrameListener listener, CountDownLatch latch) {
-            this(connection, new DefaultHttp2FrameReader(false), listener, latch);
-        }
-
-        FrameAdapter(Http2Connection connection, DefaultHttp2FrameReader reader, Http2FrameListener listener,
-                CountDownLatch latch) {
-            this.connection = connection;
-            this.listener = listener;
-            this.reader = reader;
-            this.latch = latch;
-        }
-
-        private Http2Stream getOrCreateStream(int streamId, boolean halfClosed) throws Http2Exception {
-            return getOrCreateStream(connection, streamId, halfClosed);
-        }
-
-        public static Http2Stream getOrCreateStream(Http2Connection connection, int streamId, boolean halfClosed)
-                throws Http2Exception {
-            if (connection != null) {
-                Http2Stream stream = connection.stream(streamId);
-                if (stream == null) {
-                    if (connection.isServer() && streamId % 2 == 0 || !connection.isServer() && streamId % 2 != 0) {
-                        stream = connection.local().createStream(streamId, halfClosed);
-                    } else {
-                        stream = connection.remote().createStream(streamId, halfClosed);
-                    }
-                }
-                return stream;
-            }
-            return null;
-        }
-
-        private void closeStream(Http2Stream stream) {
-            closeStream(stream, false);
-        }
-
-        protected void closeStream(Http2Stream stream, boolean dataRead) {
-            if (stream != null) {
-                stream.close();
-            }
-        }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            reader.readFrame(ctx, in, new Http2FrameListener() {
-                @Override
-                public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                        boolean endOfStream) throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, endOfStream);
-                    int processed = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
-                    if (endOfStream) {
-                        closeStream(stream, true);
-                    }
-                    latch.countDown();
-                    return processed;
-                }
-
-                @Override
-                public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                        boolean endStream) throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, endStream);
-                    listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
-                    if (endStream) {
-                        closeStream(stream);
-                    }
-                    latch.countDown();
-                }
-
-                @Override
-                public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                        int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
-                        throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, endStream);
-                    listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
-                            endStream);
-                    if (endStream) {
-                        closeStream(stream);
-                    }
-                    latch.countDown();
-                }
-
-                @Override
-                public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
-                        boolean exclusive) throws Http2Exception {
-                    listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode)
-                        throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, false);
-                    listener.onRstStreamRead(ctx, streamId, errorCode);
-                    closeStream(stream);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
-                    listener.onSettingsAckRead(ctx);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-                    listener.onSettingsRead(ctx, settings);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
-                    listener.onPingRead(ctx, data);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
-                    listener.onPingAckRead(ctx, data);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                        Http2Headers headers, int padding) throws Http2Exception {
-                    getOrCreateStream(promisedStreamId, false);
-                    listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
-                        throws Http2Exception {
-                    listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
-                        throws Http2Exception {
-                    getOrCreateStream(streamId, false);
-                    listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
-                    latch.countDown();
-                }
-
-                @Override
-                public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                        ByteBuf payload) throws Http2Exception {
-                    listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-                    latch.countDown();
-                }
-            });
-        }
-    }
-
     /**
      * A decorator around a {@link Http2FrameListener} that counts down the latch so that we can await the completion of
      * the request.
@@ -322,10 +156,6 @@ public final class Http2TestUtil {
         private final CountDownLatch dataLatch;
         private final CountDownLatch trailersLatch;
         private final CountDownLatch goAwayLatch;
-
-        FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch) {
-            this(listener, settingsAckLatch, messageLatch, null, null);
-        }
 
         FrameCountDown(Http2FrameListener listener, CountDownLatch settingsAckLatch, CountDownLatch messageLatch,
                 CountDownLatch dataLatch, CountDownLatch trailersLatch) {
@@ -575,7 +405,7 @@ public final class Http2TestUtil {
         final ConcurrentLinkedQueue<ByteBuf> buffers = new ConcurrentLinkedQueue<ByteBuf>();
 
         Http2FrameWriter frameWriter = Mockito.mock(Http2FrameWriter.class);
-        doAnswer(new Answer() {
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) {
                 for (;;) {

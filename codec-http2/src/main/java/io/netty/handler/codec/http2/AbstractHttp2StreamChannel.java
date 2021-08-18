@@ -110,7 +110,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         if (cause != null) {
             Throwable unwrappedCause;
             // Unwrap if needed
-            if (cause instanceof Http2FrameStreamException && ((unwrappedCause = cause.getCause()) != null)) {
+            if (cause instanceof Http2FrameStreamException && (unwrappedCause = cause.getCause()) != null) {
                 cause = unwrappedCause;
             }
 
@@ -677,7 +677,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && !readEOS && Http2CodecUtil.isStreamIdValid(stream.id())) {
+            if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
                 Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();

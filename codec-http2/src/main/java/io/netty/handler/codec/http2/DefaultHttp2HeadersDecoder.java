@@ -80,7 +80,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     DefaultHttp2HeadersDecoder(boolean validateHeaders, HpackDecoder hpackDecoder) {
         this.hpackDecoder = ObjectUtil.checkNotNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;
-        this.maxHeaderListSizeGoAway =
+        maxHeaderListSizeGoAway =
                 Http2CodecUtil.calculateMaxHeaderListSizeGoAway(hpackDecoder.getMaxHeaderListSize());
     }
 
@@ -101,7 +101,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
                     goAwayMax, max);
         }
         hpackDecoder.setMaxHeaderListSize(max);
-        this.maxHeaderListSizeGoAway = goAwayMax;
+        maxHeaderListSizeGoAway = goAwayMax;
     }
 
     @Override

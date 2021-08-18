@@ -210,7 +210,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.voidPromise()).thenReturn(voidPromise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
-        doAnswer(new Answer() {
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock in) throws Throwable {
                 Object msg = in.getArgument(0);
@@ -268,10 +268,10 @@ public class Http2ConnectionHandlerTest {
                 Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE;
 
         final AtomicBoolean verified = new AtomicBoolean(false);
-        final Answer verifier = new Answer() {
+        final Answer<Object> verifier = new Answer<Object>() {
             @Override
             public Object answer(final InvocationOnMock in) throws Throwable {
-                assertTrue(in.getArgument(0).equals(evt));  // sanity check...
+                assertEquals(in.getArgument(0), evt);  // sanity check...
                 verify(ctx).write(eq(connectionPrefaceBuf()));
                 verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
                 verified.set(true);
@@ -514,7 +514,7 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(remote).createStream(STREAM_ID, true);

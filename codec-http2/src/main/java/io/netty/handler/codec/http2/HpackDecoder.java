@@ -189,7 +189,7 @@ final class HpackDecoder {
                         }
                     } else {
                         // Literal Header Field without Indexing / never Indexed
-                        indexType = ((b & 0x10) == 0x10) ? IndexType.NEVER : IndexType.NONE;
+                        indexType = (b & 0x10) == 0x10 ? IndexType.NEVER : IndexType.NONE;
                         index = b & 0x0F;
                         switch (index) {
                             case 0:
@@ -560,7 +560,7 @@ final class HpackDecoder {
 
             if (validate) {
                 try {
-                    previousType = HpackDecoder.validate(streamId, name, previousType);
+                    previousType = validate(streamId, name, previousType);
                 } catch (Http2Exception ex) {
                     validationException = ex;
                     return;
