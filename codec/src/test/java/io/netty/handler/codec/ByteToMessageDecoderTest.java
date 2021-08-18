@@ -502,10 +502,10 @@ public class ByteToMessageDecoderTest {
         };
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4, 5})));
-        assertEquals((byte) 1,  channel.readInbound());
-        assertEquals((byte) 2,  channel.readInbound());
-        assertEquals((byte) 3,  channel.readInbound());
-        assertEquals((byte) 4,  channel.readInbound());
+        assertEquals((byte) 1, (Byte) channel.readInbound());
+        assertEquals((byte) 2, (Byte) channel.readInbound());
+        assertEquals((byte) 3, (Byte) channel.readInbound());
+        assertEquals((byte) 4, (Byte) channel.readInbound());
         ByteBuf buffer5 = channel.readInbound();
         assertEquals((byte) 5, buffer5.readByte());
         assertFalse(buffer5.isReadable());

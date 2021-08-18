@@ -92,8 +92,8 @@ public class FlushConsolidationHandlerTest {
         channel.flush();
         channel.runPendingTasks();
         assertEquals(3, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(2L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -108,7 +108,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.close();
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -123,7 +123,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.disconnect();
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -138,7 +138,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.pipeline().fireExceptionCaught(new IllegalStateException());
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
@@ -158,7 +158,7 @@ public class FlushConsolidationHandlerTest {
         assertNull(channel.readOutbound());
         channel.pipeline().remove(FlushConsolidationHandler.class);
         assertEquals(1, flushCount.get());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
@@ -177,8 +177,8 @@ public class FlushConsolidationHandlerTest {
             }
         });
         channel.flushOutbound();
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
