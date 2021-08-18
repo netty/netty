@@ -262,9 +262,10 @@ public class PendingWriteQueueTest {
         assertTrue(promise3.isSuccess());
         channel.runPendingTasks();
         assertTrue(channel.finish());
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
-        assertEquals(3L, (long) channel.readOutbound());
+
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
+        assertEquals(3L, (Long) channel.readOutbound());
     }
 
     @Disabled("Need to verify and think about if the assumptions made by this test are valid at all.")
@@ -322,8 +323,8 @@ public class PendingWriteQueueTest {
         assertTrue(promise2.isSuccess());
         assertTrue(channel.finish());
 
-        assertEquals(1L, (long) channel.readOutbound());
-        assertEquals(2L, (long) channel.readOutbound());
+        assertEquals(1L, (Long) channel.readOutbound());
+        assertEquals(2L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertNull(channel.readInbound());
     }
