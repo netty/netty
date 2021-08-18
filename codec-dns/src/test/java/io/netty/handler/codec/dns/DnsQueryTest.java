@@ -27,15 +27,19 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
 
     @Test
-    public void writeQueryTest() throws Exception {
+    public void testEncodeAndDecodeQuery() {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
-        EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+        EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
+
         List<DnsQuery> queries = new ArrayList<DnsQuery>(5);
         queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
@@ -59,12 +63,17 @@ public class DnsQueryTest {
             assertThat(query.count(DnsSection.AUTHORITY), is(0));
             assertThat(query.count(DnsSection.ADDITIONAL), is(0));
 
-            embedder.writeOutbound(query);
+            assertTrue(writeChannel.writeOutbound(query));
 
-            DatagramPacket packet = embedder.readOutbound();
+            DatagramPacket packet = writeChannel.readOutbound();
             assertTrue(packet.content().isReadable());
-            packet.release();
-            assertNull(embedder.readOutbound());
+            assertTrue(readChannel.writeInbound(packet));
+            assertEquals(query, readChannel.readInbound());
+            assertNull(writeChannel.readOutbound());
+            assertNull(readChannel.readInbound());
         }
+
+        assertFalse(writeChannel.finish());
+        assertFalse(readChannel.finish());
     }
 }
