@@ -74,7 +74,7 @@ public final class UnixTestUtils {
         try {
             Method method = InetAddress.class.getMethod("getLoopbackAddress");
             return method.invoke(null);
-        } catch (Exception e) {
+        } catch (Exception ignore) {
             return INET_LOOPBACK_UNAVAILABLE;
         }
     }
