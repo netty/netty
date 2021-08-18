@@ -31,6 +31,14 @@ public final class UnixTestUtils {
     private static final Object INET_LOOPBACK_UNAVAILABLE = new Object();
     private static volatile Object inetLoopbackCache;
 
+    /**
+     * @deprecated Use {@link #newDomainSocketAddress()} instead.
+     */
+    @Deprecated
+    public static DomainSocketAddress newSocketAddress() {
+        return newDomainSocketAddress();
+    }
+
     public static DomainSocketAddress newDomainSocketAddress() {
         try {
             File file;
