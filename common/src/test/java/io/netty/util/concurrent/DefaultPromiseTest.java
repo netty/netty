@@ -369,9 +369,10 @@ public class DefaultPromiseTest {
     @Test
     public void setUncancellableGetNow() {
         DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        assertNull(promise.getNow());
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
+        assertFalse(promise.isDone());
         assertTrue(promise.setUncancellable());
-        assertNull(promise.getNow());
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
         assertFalse(promise.isDone());
         assertFalse(promise.isSuccess());
 
@@ -438,6 +439,19 @@ public class DefaultPromiseTest {
             assertSame(future.getNow(), result);
         });
         promise.setSuccess(result);
+    }
+
+    @Test
+    public void getNowOnUnfinishedPromiseMustThrow() {
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
+    }
+
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void causeOnUnfinishedPromiseMustThrow() {
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        assertThrows(IllegalStateException.class, () -> promise.cause());
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,

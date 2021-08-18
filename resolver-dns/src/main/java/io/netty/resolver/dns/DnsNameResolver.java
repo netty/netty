@@ -487,7 +487,7 @@ public class DnsNameResolver extends InetNameResolver {
         try {
             ch = b.createUnregistered();
             Future<Void> future = localAddress == null ? ch.register() : ch.bind(localAddress);
-            if (future.cause() != null) {
+            if (future.isDone() && future.cause() != null) {
                 throw future.cause();
             }
         } catch (Error | RuntimeException e) {

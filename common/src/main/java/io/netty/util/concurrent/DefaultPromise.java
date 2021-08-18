@@ -190,6 +190,9 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     private Throwable cause0(Object result) {
+        if (!isDone0(result)) {
+            throw new IllegalStateException("Cannot call cause() on a future that has not completed.");
+        }
         if (!(result instanceof CauseHolder)) {
             return null;
         }
@@ -316,7 +319,10 @@ public class DefaultPromise<V> implements Promise<V> {
     @Override
     public V getNow() {
         Object result = this.result;
-        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE) {
+        if (!isDone0(result)) {
+            throw new IllegalStateException("Cannot call getNow() on a future that has not completed.");
+        }
+        if (result instanceof CauseHolder || result == SUCCESS) {
             return null;
         }
         return (V) result;

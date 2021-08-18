@@ -240,7 +240,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     private Future<Channel> doBind(final SocketAddress localAddress) {
         EventLoop loop = group.next();
         final Future<Channel> regFuture = initAndRegister(loop);
-        if (regFuture.cause() != null) {
+        if (regFuture.isDone() && regFuture.cause() != null) {
             return regFuture;
         }
 

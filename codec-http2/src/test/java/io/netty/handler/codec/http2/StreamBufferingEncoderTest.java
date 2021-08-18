@@ -256,7 +256,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(0, encoder.numBufferedStreams());
         int failCount = 0;
         for (Future<Void> f : futures) {
-            if (f.cause() != null) {
+            if (f.isDone() && !f.isSuccess()) {
                 assertTrue(f.cause() instanceof Http2GoAwayException);
                 failCount++;
             }
@@ -272,7 +272,7 @@ public class StreamBufferingEncoderTest {
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         Future<Void> f = encoderWriteHeaders(5, newPromise());
 
-        assertTrue(f.cause() instanceof Http2GoAwayException);
+        assertTrue(f.awaitUninterruptibly().cause() instanceof Http2GoAwayException);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
@@ -461,7 +461,7 @@ public class StreamBufferingEncoderTest {
         Future<Void> f = encoderWriteHeaders(-1, newPromise());
 
         // Verify that the write fails.
-        assertNotNull(f.cause());
+        assertNotNull(f.awaitUninterruptibly().cause());
     }
 
     @Test
@@ -493,9 +493,9 @@ public class StreamBufferingEncoderTest {
         Future<Void> f3 = encoderWriteHeaders(7, newPromise());
 
         encoder.close();
-        assertNotNull(f1.cause());
-        assertNotNull(f2.cause());
-        assertNotNull(f3.cause());
+        assertNotNull(f1.awaitUninterruptibly().cause());
+        assertNotNull(f2.awaitUninterruptibly().cause());
+        assertNotNull(f3.awaitUninterruptibly().cause());
     }
 
     @Test

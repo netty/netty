@@ -1052,7 +1052,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.addedHandler.get());
         assertTrue(handler.removedHandler.get());
         assertTrue(handler2.addedHandler.get());
-        assertNull(handler2.removedHandler.getNow());
+        assertFalse(handler2.removedHandler.isDone());
 
         pipeline.channel().register().syncUninterruptibly();
         Throwable cause = handler.error.get();
@@ -1065,7 +1065,7 @@ public class DefaultChannelPipelineTest {
             throw cause2;
         }
 
-        assertNull(handler2.removedHandler.getNow());
+        assertFalse(handler2.removedHandler.isDone());
         pipeline.remove(handler2);
         assertTrue(handler2.removedHandler.get());
         pipeline.channel().close().syncUninterruptibly();
@@ -1740,7 +1740,7 @@ public class DefaultChannelPipelineTest {
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
             if (!addedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerAdded(...) called multiple times: " + ctx.name()));
-            } else if (removedHandler.getNow() == Boolean.TRUE) {
+            } else if (removedHandler.isDone() && removedHandler.getNow() == Boolean.TRUE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
             }
         }
@@ -1749,7 +1749,7 @@ public class DefaultChannelPipelineTest {
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
             if (!removedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerRemoved(...) called multiple times: " + ctx.name()));
-            } else if (addedHandler.getNow() == Boolean.FALSE) {
+            } else if (addedHandler.isDone() && addedHandler.getNow() == Boolean.FALSE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
             }
         }

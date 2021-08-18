@@ -829,9 +829,9 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (result.getStatus() == Status.CLOSED) {
                     // Make a best effort to preserve any exception that way previously encountered from the handshake
                     // or the transport, else fallback to a general error.
-                    Throwable exception = handshakePromise.cause();
+                    Throwable exception = handshakePromise.isDone() ? handshakePromise.cause() : null;
                     if (exception == null) {
-                        exception = sslClosePromise.cause();
+                        exception = sslClosePromise.isDone() ? sslClosePromise.cause() : null;
                         if (exception == null) {
                             exception = new SslClosedEngineException("SSLEngine closed already");
                         }
@@ -1033,7 +1033,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        boolean handshakeFailed = handshakePromise.cause() != null;
+        boolean handshakeFailed = handshakePromise.isDone() && handshakePromise.cause() != null;
 
         ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,
