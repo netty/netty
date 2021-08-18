@@ -202,6 +202,6 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public static DomainSocketAddress newSocketAddress() {
-        return UnixTestUtils.newSocketAddress();
+        return UnixTestUtils.newDomainSocketAddress();
     }
 }

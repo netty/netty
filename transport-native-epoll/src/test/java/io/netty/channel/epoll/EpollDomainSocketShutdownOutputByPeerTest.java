@@ -35,7 +35,7 @@ public class EpollDomainSocketShutdownOutputByPeerTest extends AbstractSocketShu
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override
