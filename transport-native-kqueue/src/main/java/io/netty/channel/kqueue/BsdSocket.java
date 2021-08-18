@@ -125,8 +125,8 @@ final class BsdSocket extends Socket {
             sourcePort = 0;
         } else {
             InetAddress sourceInetAddress = source.getAddress();
-            sourceIPv6 = sourceInetAddress instanceof Inet6Address;
-            if (sourceIPv6) {
+            sourceIPv6 = useIpv6(this, sourceInetAddress);
+            if (sourceInetAddress instanceof Inet6Address) {
                 sourceAddress = sourceInetAddress.getAddress();
                 sourceScopeId = ((Inet6Address) sourceInetAddress).getScopeId();
             } else {
@@ -138,10 +138,10 @@ final class BsdSocket extends Socket {
         }
 
         InetAddress destinationInetAddress = destination.getAddress();
-        boolean destinationIPv6 = destinationInetAddress instanceof Inet6Address;
+        boolean destinationIPv6 = useIpv6(this, destinationInetAddress);
         byte[] destinationAddress;
         int destinationScopeId;
-        if (destinationIPv6) {
+        if (destinationInetAddress instanceof Inet6Address) {
             destinationAddress = destinationInetAddress.getAddress();
             destinationScopeId = ((Inet6Address) destinationInetAddress).getScopeId();
         } else {

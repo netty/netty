@@ -259,7 +259,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
-    public static DomainSocketAddress newSocketAddress() {
-        return UnixTestUtils.newSocketAddress();
+    public static DomainSocketAddress newDomainSocketAddress() {
+        return UnixTestUtils.newDomainSocketAddress();
     }
 }
