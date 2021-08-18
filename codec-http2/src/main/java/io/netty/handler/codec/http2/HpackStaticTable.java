@@ -199,7 +199,7 @@ final class HpackStaticTable {
     /**
      * Returns the last position in the array that contains multiple
      * fields with the same name. Starting from this position, all
-     * names are unique. Similary to {@link getIndexInsensitive} method
+     * names are unique. Similary to {@link #getIndexInsensitive(CharSequence, CharSequence)} method
      * assumes all entries for a given header field are sequential
      */
     private static int maxSameNameFieldIndex() {

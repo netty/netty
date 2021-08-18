@@ -78,7 +78,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return (msg instanceof Http2HeadersFrame) || (msg instanceof Http2DataFrame);
+        return msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame;
     }
 
     @Override

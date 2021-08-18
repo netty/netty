@@ -244,11 +244,10 @@ public class ReadOnlyHttp2HeadersTest {
 
     @Test
     public void testIteratorMultipleValues() {
-        Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(false, new AsciiString("200"), new AsciiString[] {
+        Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(false, new AsciiString("200"),
                 new AsciiString("name2"), new AsciiString("value1"),
                 new AsciiString("name1"), new AsciiString("value2"),
-                new AsciiString("name2"), new AsciiString("value3")
-        });
+                new AsciiString("name2"), new AsciiString("value3"));
         Iterator<CharSequence> itr = headers.valueIterator("name2");
         assertTrue(itr.hasNext());
         assertTrue(AsciiString.contentEqualsIgnoreCase("value1", itr.next()));

@@ -675,7 +675,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         private int nextReservationStreamId;
         private int lastStreamKnownByPeer = -1;
-        private boolean pushToAllowed = true;
+        private boolean pushToAllowed;
         private F flowController;
         private int maxStreams;
         private int maxActiveStreams;
@@ -840,7 +840,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void lastStreamKnownByPeer(int lastKnownStream) {
-            this.lastStreamKnownByPeer = lastKnownStream;
+            lastStreamKnownByPeer = lastKnownStream;
         }
 
         @Override

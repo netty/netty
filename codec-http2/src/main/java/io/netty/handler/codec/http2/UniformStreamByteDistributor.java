@@ -159,7 +159,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
             //    we gave the state a chance to write zero length frames. We wait until updateStreamableBytes is
             //    called again before this state is allowed to write.
             windowNegative = windowSize < 0;
-            if (hasFrame && (windowSize > 0 || (windowSize == 0 && !writing))) {
+            if (hasFrame && (windowSize > 0 || windowSize == 0 && !writing)) {
                 addToQueue();
             }
         }

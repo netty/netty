@@ -184,7 +184,7 @@ public class DefaultHttp2Headers
     }
 
     private final class Http2HeaderEntry extends HeaderEntry<CharSequence, CharSequence> {
-        protected Http2HeaderEntry(int hash, CharSequence key, CharSequence value,
+        Http2HeaderEntry(int hash, CharSequence key, CharSequence value,
                 HeaderEntry<CharSequence, CharSequence> next) {
             super(hash, key);
             this.value = value;

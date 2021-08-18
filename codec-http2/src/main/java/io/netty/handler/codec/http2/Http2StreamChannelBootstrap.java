@@ -64,7 +64,6 @@ public final class Http2StreamChannelBootstrap {
      * Allow to specify a {@link ChannelOption} which is used for the {@link Http2StreamChannel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
-    @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap option(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
 
@@ -82,7 +81,6 @@ public final class Http2StreamChannelBootstrap {
      * Allow to specify an initial attribute of the newly created {@link Http2StreamChannel}.  If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
-    @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap attr(AttributeKey<T> key, T value) {
         requireNonNull(key, "key");
         if (value == null) {
@@ -113,7 +111,6 @@ public final class Http2StreamChannelBootstrap {
      * Open a new {@link Http2StreamChannel} to use and notifies the given {@link Promise}.
      * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
      */
-    @SuppressWarnings("deprecation")
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
         try {
             ChannelHandlerContext ctx = findCtx();
@@ -136,9 +133,10 @@ public final class Http2StreamChannelBootstrap {
         return promise;
     }
 
+    @SuppressWarnings("deprecation")
     private ChannelHandlerContext findCtx() throws ClosedChannelException {
         // First try to use cached context and if this not work lets try to lookup the context.
-        ChannelHandlerContext ctx = this.multiplexCtx;
+        ChannelHandlerContext ctx = multiplexCtx;
         if (ctx != null && !ctx.isRemoved()) {
             return ctx;
         }
@@ -156,7 +154,7 @@ public final class Http2StreamChannelBootstrap {
                 throw new ClosedChannelException();
             }
         }
-        this.multiplexCtx = ctx;
+        multiplexCtx = ctx;
         return ctx;
     }
 

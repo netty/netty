@@ -249,8 +249,8 @@ public class Http2ConnectionHandlerTest {
                 Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE;
 
         final AtomicBoolean verified = new AtomicBoolean(false);
-        final Answer verifier = in -> {
-            assertTrue(in.getArgument(0).equals(evt));  // sanity check...
+        final Answer<Object> verifier = in -> {
+            assertEquals(in.getArgument(0), evt);  // sanity check...
             verify(ctx).write(eq(connectionPrefaceBuf()));
             verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
             verified.set(true);
@@ -492,7 +492,7 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(remote).createStream(STREAM_ID, true);

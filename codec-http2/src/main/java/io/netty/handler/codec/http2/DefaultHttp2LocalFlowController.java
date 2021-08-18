@@ -411,7 +411,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
             window += delta;
             processedWindow += delta;
-            lowerBound = Math.min(delta, 0);
+            lowerBound = min(delta, 0);
         }
 
         @Override

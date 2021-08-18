@@ -233,7 +233,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         }
         state.weight = weight;
 
-        if (newParent != state.parent || (exclusive && newParent.children.size() != 1)) {
+        if (newParent != state.parent || exclusive && newParent.children.size() != 1) {
             final List<ParentChangedEvent> events;
             if (newParent.isDescendantOf(state)) {
                 events = new ArrayList<>(2 + (exclusive ? newParent.children.size() : 0));
@@ -320,7 +320,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         try {
             assert nextChildState == null || nextChildState.pseudoTimeToWrite >= childState.pseudoTimeToWrite :
                 "nextChildState[" + nextChildState.streamId + "].pseudoTime(" + nextChildState.pseudoTimeToWrite +
-                ") < " + " childState[" + childState.streamId + "].pseudoTime(" + childState.pseudoTimeToWrite + ")";
+                ") < " + " childState[" + childState.streamId + "].pseudoTime(" + childState.pseudoTimeToWrite + ')';
             int nsent = distribute(nextChildState == null ? maxBytes :
                             min(maxBytes, (int) min((nextChildState.pseudoTimeToWrite - childState.pseudoTimeToWrite) *
                                                childState.weight / oldTotalQueuedWeights + allocationQuantum, MAX_VALUE)
@@ -396,9 +396,6 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
         static final StateOnlyComparator INSTANCE = new StateOnlyComparator();
 
-        private StateOnlyComparator() {
-        }
-
         @Override
         public int compare(State o1, State o2) {
             // "priority only streams" (which have not been activated) are higher priority than streams used for data.
@@ -424,9 +421,6 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         private static final long serialVersionUID = -1437548640227161828L;
 
         static final StatePseudoTimeComparator INSTANCE = new StatePseudoTimeComparator();
-
-        private StatePseudoTimeComparator() {
-        }
 
         @Override
         public int compare(State o1, State o2) {
@@ -556,7 +550,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                     do {
                         // Redistribute the weight of child to its dependency proportionally.
                         State dependency = itr.next().value();
-                        dependency.weight = (short) Math.max(1, dependency.weight * child.weight / totalWeight);
+                        dependency.weight = (short) max(1, dependency.weight * child.weight / totalWeight);
                         takeChild(itr, dependency, false, events);
                     } while (itr.hasNext());
                 }
