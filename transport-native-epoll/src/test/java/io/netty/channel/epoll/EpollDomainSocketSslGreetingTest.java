@@ -26,7 +26,7 @@ import java.util.List;
 public class EpollDomainSocketSslGreetingTest extends SocketSslGreetingTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

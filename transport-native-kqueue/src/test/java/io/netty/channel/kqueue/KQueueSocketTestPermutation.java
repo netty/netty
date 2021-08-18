@@ -50,7 +50,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverSocket(), clientSocket());
+                combo(serverSocket(), clientSocketWithFastOpen());
 
         list.remove(list.size() - 1); // Exclude NIO x NIO test
 
@@ -202,6 +202,6 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public static DomainSocketAddress newSocketAddress() {
-        return UnixTestUtils.newSocketAddress();
+        return UnixTestUtils.newDomainSocketAddress();
     }
 }
