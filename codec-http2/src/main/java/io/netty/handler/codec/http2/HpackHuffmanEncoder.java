@@ -135,7 +135,7 @@ final class HpackHuffmanEncoder {
         for (int i = 0; i < data.length(); i++) {
             len += lengths[data.charAt(i) & 0xFF];
         }
-        return (int) ((len + 7) >> 3);
+        return (int) (len + 7 >> 3);
     }
 
     private final class EncodeProcessor implements ByteProcessor {

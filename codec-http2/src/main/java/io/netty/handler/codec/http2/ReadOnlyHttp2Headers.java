@@ -485,7 +485,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
 
     @Override
     public int size() {
-        return (pseudoHeaders.length + otherHeaders.length) >>> 1;
+        return pseudoHeaders.length + otherHeaders.length >>> 1;
     }
 
     @Override

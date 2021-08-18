@@ -727,6 +727,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     }
                 });
                 p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();

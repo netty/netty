@@ -158,7 +158,7 @@ public class Http2StreamChannelBootstrapTest {
         when(ctx.executor()).thenReturn(executor);
         when(ctx.handler()).thenReturn(handler);
 
-        Promise<Http2StreamChannel> promise = new DefaultPromise(mock(EventExecutor.class));
+        Promise<Http2StreamChannel> promise = new DefaultPromise<Http2StreamChannel>(mock(EventExecutor.class));
         bootstrap.open0(ctx, promise);
         assertThat(promise.isDone(), is(true));
         assertThat(promise.cause(), is(instanceOf(IllegalStateException.class)));

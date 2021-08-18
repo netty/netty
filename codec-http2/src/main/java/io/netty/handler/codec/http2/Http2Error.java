@@ -40,7 +40,7 @@ public enum Http2Error {
     private final long code;
     private static final Http2Error[] INT_TO_ENUM_MAP;
     static {
-        Http2Error[] errors = Http2Error.values();
+        Http2Error[] errors = values();
         Http2Error[] map = new Http2Error[errors.length];
         for (Http2Error error : errors) {
             map[(int) error.code()] = error;

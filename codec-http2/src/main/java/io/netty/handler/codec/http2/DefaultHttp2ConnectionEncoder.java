@@ -555,7 +555,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                               int padding, boolean endOfStream, ChannelPromise promise) {
             super(stream, padding, endOfStream, promise.unvoid());
             this.headers = headers;
-            this.hasPriorty = hasPriority;
+            hasPriorty = hasPriority;
             this.streamDependency = streamDependency;
             this.weight = weight;
             this.exclusive = exclusive;

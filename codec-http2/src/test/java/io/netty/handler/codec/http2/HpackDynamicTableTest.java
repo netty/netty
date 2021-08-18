@@ -98,7 +98,7 @@ public class HpackDynamicTableTest {
         table.add(entry2);
         assertEquals(2, table.length());
         assertEquals(size1 + size2, table.size());
-        table.setCapacity((size1 + size2) * 2); //larger capacity
+        table.setCapacity(((long) size1 + size2) * 2); //larger capacity
         assertEquals(2, table.length());
         assertEquals(size1 + size2, table.size());
         table.setCapacity(size2); //smaller capacity

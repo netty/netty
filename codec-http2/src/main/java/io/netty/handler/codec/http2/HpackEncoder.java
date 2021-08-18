@@ -245,14 +245,14 @@ final class HpackEncoder {
      */
     private static void encodeInteger(ByteBuf out, int mask, int n, long i) {
         assert n >= 0 && n <= 8 : "N: " + n;
-        int nbits = 0xFF >>> (8 - n);
+        int nbits = 0xFF >>> 8 - n;
         if (i < nbits) {
             out.writeByte((int) (mask | i));
         } else {
             out.writeByte(mask | nbits);
             long length = i - nbits;
             for (; (length & ~0x7F) != 0; length >>>= 7) {
-                out.writeByte((int) ((length & 0x7F) | 0x80));
+                out.writeByte((int) (length & 0x7F | 0x80));
             }
             out.writeByte((int) length);
         }

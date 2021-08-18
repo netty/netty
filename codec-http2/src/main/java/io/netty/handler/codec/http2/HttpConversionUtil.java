@@ -443,7 +443,7 @@ public final class HttpConversionUtil {
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority((host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
+                setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;

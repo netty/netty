@@ -161,7 +161,7 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     /**
-     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize}
+     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize()}
      * the remaining headers will be sent in a CONTINUATION frame
      */
     @Test
