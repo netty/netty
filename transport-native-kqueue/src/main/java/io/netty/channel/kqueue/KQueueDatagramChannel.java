@@ -99,10 +99,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
-            return joinGroup(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    null, promise);
+            NetworkInterface iface = config().getNetworkInterface();
+            if (iface == null) {
+                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+            }
+            return joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
