@@ -56,6 +56,11 @@ public class QueryStringEncoderTest {
         e.addParam("d", null);
         assertEquals("/foo?a=1&b=&c&d", e.toString());
         assertEquals(new URI("/foo?a=1&b=&c&d"), e.toUri());
+
+        e = new QueryStringEncoder("/foo");
+        e.addParam("test", "a~b");
+        assertEquals("/foo?test=a~b", e.toString());
+        assertEquals(new URI("/foo?test=a~b"), e.toUri());
     }
 
     @Test
