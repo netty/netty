@@ -76,7 +76,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override
