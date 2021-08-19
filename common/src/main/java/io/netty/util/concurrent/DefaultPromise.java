@@ -205,7 +205,7 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
-    public Future<V> addListener(FutureListener<? super V> listener) {
+    public Promise<V> addListener(FutureListener<? super V> listener) {
         requireNonNull(listener, "listener");
 
         addListener0(listener, null);
@@ -217,7 +217,7 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
-    public <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+    public <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
         requireNonNull(listener, "listener");
 
         addListener0(listener, context == null ? NULL_CONTEXT : context);

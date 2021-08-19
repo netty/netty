@@ -58,4 +58,10 @@ public interface Promise<V> extends Future<V> {
      * without being cancelled. Otherwise {@code false} if this future has been cancelled already.
      */
     boolean setUncancellable();
+
+    @Override
+    Promise<V> addListener(FutureListener<? super V> listener);
+
+    @Override
+    <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
 }
