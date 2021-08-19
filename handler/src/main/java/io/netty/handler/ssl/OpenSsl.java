@@ -206,25 +206,29 @@ public final class OpenSsl {
                 long cert = 0;
                 long key = 0;
                 try {
-                    try {
-                        StringBuilder tlsv13Ciphers = new StringBuilder();
+                    // As we delegate to the KeyManager / TrustManager of the JDK we need to ensure it can actually
+                    // handle TLSv13 as otherwise we may see runtime exceptions
+                    if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
+                        try {
+                            StringBuilder tlsv13Ciphers = new StringBuilder();
 
-                        for (String cipher: TLSV13_CIPHERS) {
-                            String converted = CipherSuiteConverter.toOpenSsl(cipher, IS_BORINGSSL);
-                            if (converted != null) {
-                                tlsv13Ciphers.append(converted).append(':');
+                            for (String cipher : TLSV13_CIPHERS) {
+                                String converted = CipherSuiteConverter.toOpenSsl(cipher, IS_BORINGSSL);
+                                if (converted != null) {
+                                    tlsv13Ciphers.append(converted).append(':');
+                                }
                             }
-                        }
-                        if (tlsv13Ciphers.length() == 0) {
-                            tlsv13Supported = false;
-                        } else {
-                            tlsv13Ciphers.setLength(tlsv13Ciphers.length() - 1);
-                            SSLContext.setCipherSuite(sslCtx, tlsv13Ciphers.toString() , true);
-                            tlsv13Supported = true;
-                        }
+                            if (tlsv13Ciphers.length() == 0) {
+                                tlsv13Supported = false;
+                            } else {
+                                tlsv13Ciphers.setLength(tlsv13Ciphers.length() - 1);
+                                SSLContext.setCipherSuite(sslCtx, tlsv13Ciphers.toString(), true);
+                                tlsv13Supported = true;
+                            }
 
-                    } catch (Exception ignore) {
-                        tlsv13Supported = false;
+                        } catch (Exception ignore) {
+                            tlsv13Supported = false;
+                        }
                     }
 
                     SSLContext.setCipherSuite(sslCtx, "ALL", false);
@@ -367,7 +371,7 @@ public final class OpenSsl {
                 protocols.add(SslProtocols.TLS_v1_2);
             }
 
-            // This is only supported by java11 and later.
+            // This is only supported by java8u272 and later.
             if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)) {
                 protocols.add(SslProtocols.TLS_v1_3);
                 TLSV13_SUPPORTED = true;
