@@ -23,11 +23,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.Mockito;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -37,17 +37,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.lessThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromiseTest.class);
     private static int stackOverflowDepth;
@@ -62,6 +60,7 @@ public class DefaultPromiseTest {
         }
     }
 
+    @SuppressWarnings("InfiniteRecursion")
     private static void findStackOverflowDepth() {
         ++stackOverflowDepth;
         findStackOverflowDepth();
@@ -71,38 +70,99 @@ public class DefaultPromiseTest {
         return max(stackOverflowDepth << 1, stackOverflowDepth);
     }
 
+    private static class RejectingEventExecutor extends AbstractEventExecutor {
+        @Override
+        public boolean isShuttingDown() {
+            return false;
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            return null;
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            return null;
+        }
+
+        @Override
+        public void shutdown() {
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return false;
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return false;
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
+                                                         TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return false;
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            fail("Cannot schedule commands");
+        }
+    }
+
     @Test
     public void testCancelDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Promise<Void> promise = new DefaultPromise<Void>(executor);
         assertTrue(promise.cancel(false));
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertTrue(promise.isCancelled());
     }
 
     @Test
     public void testSuccessDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Object value = new Object();
         Promise<Object> promise = new DefaultPromise<Object>(executor);
         promise.setSuccess(value);
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertSame(value, promise.getNow());
     }
 
     @Test
     public void testFailureDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Exception cause = new Exception();
         Promise<Void> promise = new DefaultPromise<Void>(executor);
         promise.setFailure(cause);
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertSame(cause, promise.cause());
     }
 
@@ -134,7 +194,7 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsReturnedAsCause() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
-        assertThat(promise.cause(), instanceOf(CancellationException.class));
+        assertThat(promise.cause()).isInstanceOf(CancellationException.class);
     }
 
     @Test
@@ -293,7 +353,7 @@ public class DefaultPromiseTest {
                 promise.getKey().start();
                 final long start = System.nanoTime();
                 promise.getValue().awaitUninterruptibly(wait, TimeUnit.NANOSECONDS);
-                assertThat(System.nanoTime() - start, lessThan(wait));
+                assertThat(System.nanoTime() - start).isLessThan(wait);
             }
         } finally {
             if (executor != null) {
@@ -386,11 +446,11 @@ public class DefaultPromiseTest {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    testStackOverFlowChainedFuturesA(executor, p, latch);
+                    testStackOverFlowChainedFuturesB(executor, p, latch);
                 }
             });
         } else {
-            testStackOverFlowChainedFuturesA(executor, p, latch);
+            testStackOverFlowChainedFuturesB(executor, p, latch);
         }
 
         assertTrue(latch.await(2, TimeUnit.SECONDS));
