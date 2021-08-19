@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -113,7 +114,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = EmptyArrays.EMPTY_STRINGS;
         }
-        this.decoderConfig = Objects.requireNonNull(decoderConfig, "decoderConfig");
+        this.decoderConfig = requireNonNull(decoderConfig, "decoderConfig");
     }
 
     /**
@@ -359,7 +360,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
         requireNonNull(channel, "channel");
-        return close0(channel, frame, promise);
+        return close0(channel, channel, frame, promise);
     }
 
     /**
@@ -387,11 +388,12 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
         requireNonNull(ctx, "ctx");
-        return close0(ctx.channel(), frame, promise);
+        return close0(ctx, ctx.channel(), frame, promise);
     }
 
-    private static Future<Void> close0(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return channel.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListeners.CLOSE);
+    private static Future<Void> close0(ChannelOutboundInvoker invoker, Channel channel, CloseWebSocketFrame frame,
+                                       Promise<Void> promise) {
+        return invoker.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListeners.CLOSE);
     }
 
     /**
