@@ -827,12 +827,14 @@ public abstract class SslContext {
                         sessionTimeout, keyStoreType);
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
+                OpenSsl.ensureAvailability();
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, options);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
+                OpenSsl.ensureAvailability();
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
