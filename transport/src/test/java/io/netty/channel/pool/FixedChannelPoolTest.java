@@ -29,6 +29,8 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -404,6 +406,46 @@ public class FixedChannelPoolTest {
             }
         }).awaitUninterruptibly();
         closePromise.awaitUninterruptibly();
+    }
+
+    @Test
+    public void testAcquire0Exception() throws InterruptedException {
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group)
+              .channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+              .channel(LocalServerChannel.class)
+              .childHandler(new ChannelInitializer<LocalChannel>() {
+                  @Override
+                  public void initChannel(LocalChannel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  }
+              });
+
+        // Start server
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        final NullPointerException exception = new NullPointerException();
+        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2) {
+            @Override
+            protected AcquireListener createAcquireListener(Promise<Channel> promise) {
+                throw exception;
+            }
+        };
+
+        Future<Channel> futureChannel = pool.acquire();
+        futureChannel.addListener(new GenericFutureListener<Future<Channel>>() {
+            @Override
+            public void operationComplete(Future<Channel> future) {
+                assertTrue(future.cause() == exception);
+            }
+        });
+        futureChannel.getNow();
+        sc.close().sync();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
