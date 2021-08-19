@@ -15,26 +15,27 @@
  */
 package io.netty.handler.codec.http;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliEncoder;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.BrotliOptions;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
@@ -138,7 +139,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.deflateOptions = null;
         this.zstdOptions = null;
         this.factories = null;
-        supportsCompressionOptions = false;
+        this.supportsCompressionOptions = false;
     }
 
     /**
@@ -170,51 +171,50 @@ public class HttpContentCompressor extends HttpContentEncoder {
         DeflateOptions deflateOptions = null;
         ZstdOptions zstdOptions = null;
         if (compressionOptions == null || compressionOptions.length == 0) {
-            brotliOptions = StandardCompressionOptions.brotli();
+            brotliOptions = Brotli.isAvailable() ? StandardCompressionOptions.brotli() : null;
             gzipOptions = StandardCompressionOptions.gzip();
             deflateOptions = StandardCompressionOptions.deflate();
-            zstdOptions = StandardCompressionOptions.zstd();
+            zstdOptions = Zstd.isAvailable() ? StandardCompressionOptions.zstd() : null;
         } else {
             ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
             for (CompressionOptions compressionOption : compressionOptions) {
                 if (compressionOption instanceof BrotliOptions) {
+                    // if we have BrotliOptions, it means Brotli is available
                     brotliOptions = (BrotliOptions) compressionOption;
                 } else if (compressionOption instanceof GzipOptions) {
                     gzipOptions = (GzipOptions) compressionOption;
                 } else if (compressionOption instanceof DeflateOptions) {
                     deflateOptions = (DeflateOptions) compressionOption;
                 } else if (compressionOption instanceof ZstdOptions) {
-                    zstdOptions = (ZstdOptions) compressionOption;
+                    // zstd might not be available
+                    zstdOptions = Zstd.isAvailable() ? (ZstdOptions) compressionOption : null;
                 } else {
                     throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                             ": " + compressionOption);
                 }
             }
-            if (brotliOptions == null) {
-                brotliOptions = StandardCompressionOptions.brotli();
-            }
-            if (gzipOptions == null) {
-                gzipOptions = StandardCompressionOptions.gzip();
-            }
-            if (deflateOptions == null) {
-                deflateOptions = StandardCompressionOptions.deflate();
-            }
-            if (zstdOptions == null) {
-                zstdOptions = StandardCompressionOptions.zstd();
-            }
         }
-        this.brotliOptions = brotliOptions;
+
         this.gzipOptions = gzipOptions;
         this.deflateOptions = deflateOptions;
+        this.brotliOptions = brotliOptions;
         this.zstdOptions = zstdOptions;
-        this.factories = new HashMap<String, CompressionEncoderFactory>() {
-            {
-                put("gzip", new GzipEncoderFactory());
-                put("deflate", new DeflateEncoderFactory());
-                put("br", new BrEncoderFactory());
-                put("zstd", new ZstdEncoderFactory());
-            }
-        };
+
+        this.factories = new HashMap<String, CompressionEncoderFactory>();
+
+        if (this.gzipOptions != null) {
+            this.factories.put("gzip", new GzipEncoderFactory());
+        }
+        if (this.deflateOptions != null) {
+            this.factories.put("deflate", new DeflateEncoderFactory());
+        }
+        if (this.brotliOptions != null) {
+            this.factories.put("br", new BrEncoderFactory());
+        }
+        if (this.zstdOptions != null) {
+            this.factories.put("zstd", new ZstdEncoderFactory());
+        }
+
         this.compressionLevel = -1;
         this.windowBits = -1;
         this.memLevel = -1;
@@ -314,27 +314,27 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
         if (brQ > 0.0f || zstdQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= zstdQ) {
-                return Brotli.isAvailable() ? "br" : null;
-            } else if (zstdQ != -1.0f && zstdQ >= gzipQ) {
+            if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {
+                return "br";
+            } else if (zstdQ != -1.0f && zstdQ >= gzipQ && this.zstdOptions != null) {
                 return "zstd";
-            } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ && this.gzipOptions != null) {
                 return "gzip";
-            } else if (deflateQ != -1.0f) {
+            } else if (deflateQ != -1.0f && this.deflateOptions != null) {
                 return "deflate";
             }
         }
         if (starQ > 0.0f) {
-            if (brQ == -1.0f) {
-                return Brotli.isAvailable() ? "br" : null;
+            if (brQ == -1.0f && this.brotliOptions != null) {
+                return "br";
             }
-            if (zstdQ == -1.0f) {
+            if (zstdQ == -1.0f && this.zstdOptions != null) {
                 return "zstd";
             }
-            if (gzipQ == -1.0f) {
+            if (gzipQ == -1.0f && this.gzipOptions != null) {
                 return "gzip";
             }
-            if (deflateQ == -1.0f) {
+            if (deflateQ == -1.0f && this.deflateOptions != null) {
                 return "deflate";
             }
         }
