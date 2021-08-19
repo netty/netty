@@ -21,6 +21,9 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
+
+import java.net.SocketAddress;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -104,11 +107,11 @@ import io.netty.util.concurrent.EventExecutor;
  * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
  * FactorialHandler fh = new FactorialHandler();
  *
- * {@link ChannelPipeline} p1 = {@link Channels}.pipeline();
+ * {@link ChannelPipeline} p1 = {@link Channel}.pipeline();
  * p1.addLast("f1", fh);
  * p1.addLast("f2", fh);
  *
- * {@link ChannelPipeline} p2 = {@link Channels}.pipeline();
+ * {@link ChannelPipeline} p2 = {@link Channel}.pipeline();
  * p2.addLast("f3", fh);
  * p2.addLast("f4", fh);
  * </pre>
@@ -183,6 +186,33 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
 
     @Override
     ChannelHandlerContext flush();
+
+    @Override
+    ChannelHandlerContext bind(SocketAddress localAddress, Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext connect(SocketAddress remoteAddress, Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext disconnect(Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext close(Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext register(Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext deregister(Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext write(Object msg, Promise<Void> promise);
+
+    @Override
+    ChannelHandlerContext writeAndFlush(Object msg, Promise<Void> promise);
 
     /**
      * Return the assigned {@link ChannelPipeline}

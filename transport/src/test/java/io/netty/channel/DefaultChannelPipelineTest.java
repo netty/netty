@@ -684,8 +684,8 @@ public class DefaultChannelPipelineTest {
 
         Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        Future<Void> future = pipeline.bind(new LocalAddress("test"), promise);
-        assertTrue(future.isCancelled());
+        pipeline.bind(new LocalAddress("test"), promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -695,8 +695,8 @@ public class DefaultChannelPipelineTest {
 
         Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        Future<Void> future = pipeline.connect(new LocalAddress("test"), promise);
-        assertTrue(future.isCancelled());
+        pipeline.connect(new LocalAddress("test"), promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -706,8 +706,8 @@ public class DefaultChannelPipelineTest {
 
         Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        Future<Void> future = pipeline.disconnect(promise);
-        assertTrue(future.isCancelled());
+        pipeline.disconnect(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -717,8 +717,8 @@ public class DefaultChannelPipelineTest {
 
         Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        Future<Void> future = pipeline.close(promise);
-        assertTrue(future.isCancelled());
+        pipeline.close(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -759,8 +759,8 @@ public class DefaultChannelPipelineTest {
 
         Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        Future<Void> future = pipeline.deregister(promise);
-        assertTrue(future.isCancelled());
+        pipeline.deregister(promise);
+        assertTrue(promise.isCancelled());
     }
 
     @Test
@@ -772,8 +772,8 @@ public class DefaultChannelPipelineTest {
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        Future<Void> future = pipeline.write(buffer, promise);
-        assertTrue(future.isCancelled());
+        pipeline.write(buffer, promise);
+        assertTrue(promise.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
 
@@ -786,8 +786,8 @@ public class DefaultChannelPipelineTest {
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        Future<Void> future = pipeline.writeAndFlush(buffer, promise);
-        assertTrue(future.isCancelled());
+        pipeline.writeAndFlush(buffer, promise);
+        assertTrue(promise.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
 

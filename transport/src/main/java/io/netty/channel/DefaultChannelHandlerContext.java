@@ -423,45 +423,59 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        bind(localAddress, promise);
+        return promise;
     }
 
     @Override
     public Future<Void> connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, promise);
+        return promise;
     }
 
     @Override
     public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, localAddress, promise);
+        return promise;
     }
 
     @Override
     public Future<Void> disconnect() {
-        return disconnect(newPromise());
+        Promise<Void> promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
     public Future<Void> close() {
-        return close(newPromise());
+        Promise<Void> promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
     public Future<Void> register() {
-        return register(newPromise());
+        Promise<Void> promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     @Override
     public Future<Void> deregister() {
-        return deregister(newPromise());
+        Promise<Void> promise = newPromise();
+        deregister(promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> bind(final SocketAddress localAddress, final Promise<Void> promise) {
+    public ChannelHandlerContext bind(final SocketAddress localAddress, final Promise<Void> promise) {
         requireNonNull(localAddress, "localAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -470,7 +484,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeBind(localAddress, promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeBind(SocketAddress localAddress, Promise<Void> promise) {
@@ -491,17 +505,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
+    public ChannelHandlerContext connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return connect(remoteAddress, null, promise);
     }
 
     @Override
-    public Future<Void> connect(
+    public ChannelHandlerContext connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         requireNonNull(remoteAddress, "remoteAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -510,7 +524,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeConnect(remoteAddress, localAddress, promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
@@ -531,7 +545,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> disconnect(final Promise<Void> promise) {
+    public ChannelHandlerContext disconnect(final Promise<Void> promise) {
         if (!channel().metadata().hasDisconnect()) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
@@ -540,7 +554,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -549,7 +563,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeDisconnect(promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeDisconnect(Promise<Void> promise) {
@@ -570,10 +584,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> close(final Promise<Void> promise) {
+    public ChannelHandlerContext close(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -582,7 +596,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeClose(promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeClose(Promise<Void> promise) {
@@ -603,10 +617,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> register(final Promise<Void> promise) {
+    public ChannelHandlerContext register(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -615,7 +629,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeRegister(promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeRegister(Promise<Void> promise) {
@@ -636,10 +650,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> deregister(final Promise<Void> promise) {
+    public ChannelHandlerContext deregister(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return this;
         }
 
         EventExecutor executor = executor();
@@ -648,7 +662,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             safeExecute(executor, () -> findAndInvokeDeregister(promise), promise, null);
         }
-        return promise;
+        return this;
     }
 
     private void findAndInvokeDeregister(Promise<Void> promise) {
@@ -697,14 +711,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> write(Object msg) {
-        return write(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        write(msg, promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> write(final Object msg, final Promise<Void> promise) {
+    public ChannelHandlerContext write(final Object msg, final Promise<Void> promise) {
         write(msg, false, promise);
-
-        return promise;
+        return this;
     }
 
     private void invokeWrite(Object msg, Promise<Void> promise) {
@@ -749,9 +764,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+    public ChannelHandlerContext writeAndFlush(Object msg, Promise<Void> promise) {
         write(msg, true, promise);
-        return promise;
+        return this;
     }
 
     private void invokeWriteAndFlush(Object msg, Promise<Void> promise) {
@@ -805,7 +820,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, promise);
+        return promise;
     }
 
     private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow, Promise<Void> promise) {

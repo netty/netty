@@ -138,52 +138,66 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final Future<Void> bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        bind(localAddress, promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, localAddress, promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> disconnect() {
-        return disconnect(newPromise());
+        Promise<Void> promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> close() {
-        return close(newPromise());
+        Promise<Void> promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
     public Future<Void> register() {
-        return register(newPromise());
+        Promise<Void> promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> register(Promise<Void> promise) {
+    public ChannelHandlerContext register(Promise<Void> promise) {
         try {
             channel().register(promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
     public final Future<Void> deregister() {
-        return deregister(newPromise());
+        Promise<Void> promise = newPromise();
+        deregister(promise);
+        return promise;
     }
 
     @Override
-    public final Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
+    public final ChannelHandlerContext bind(SocketAddress localAddress, Promise<Void> promise) {
         try {
             channel().bind(localAddress, promise);
             this.localAddress = localAddress;
@@ -191,63 +205,63 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
+    public final ChannelHandlerContext connect(SocketAddress remoteAddress, Promise<Void> promise) {
         try {
             channel().connect(remoteAddress, localAddress, promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                                 Promise<Void> promise) {
+    public final ChannelHandlerContext connect(SocketAddress remoteAddress, SocketAddress localAddress,
+                                                Promise<Void> promise) {
         try {
             channel().connect(remoteAddress, localAddress, promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> disconnect(Promise<Void> promise) {
+    public final ChannelHandlerContext disconnect(Promise<Void> promise) {
         try {
             channel().disconnect(promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> close(Promise<Void> promise) {
+    public final ChannelHandlerContext close(Promise<Void> promise) {
         try {
             channel().close(promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> deregister(Promise<Void> promise) {
+    public final ChannelHandlerContext deregister(Promise<Void> promise) {
         try {
             channel().deregister(promise);
         } catch (Exception e) {
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
@@ -266,8 +280,9 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return channel().write(msg, promise);
+    public ChannelHandlerContext write(Object msg, Promise<Void> promise) {
+        channel().write(msg, promise);
+        return this;
     }
 
     @Override
@@ -277,13 +292,16 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return channel().writeAndFlush(msg, promise);
+    public ChannelHandlerContext writeAndFlush(Object msg, Promise<Void> promise) {
+        channel().writeAndFlush(msg, promise);
+        return this;
     }
 
     @Override
     public Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, promise);
+        return promise;
     }
 
     @Override

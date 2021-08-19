@@ -539,6 +539,36 @@ public interface ChannelPipeline
     @Override
     ChannelPipeline flush();
 
+    @Override
+    ChannelPipeline bind(SocketAddress localAddress, Promise<Void> promise);
+
+    @Override
+    ChannelPipeline connect(SocketAddress remoteAddress, Promise<Void> promise);
+
+    @Override
+    ChannelPipeline connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+
+    @Override
+    ChannelPipeline disconnect(Promise<Void> promise);
+
+    @Override
+    ChannelPipeline close(Promise<Void> promise);
+
+    @Override
+    ChannelPipeline register(Promise<Void> promise);
+
+    @Override
+    ChannelPipeline deregister(Promise<Void> promise);
+
+    @Override
+    ChannelPipeline read();
+
+    @Override
+    ChannelPipeline write(Object msg, Promise<Void> promise);
+
+    @Override
+    ChannelPipeline writeAndFlush(Object msg, Promise<Void> promise);
+
     /**
      * Returns the {@link EventExecutor} which is used by all {@link ChannelHandler}s in the pipeline.
      */

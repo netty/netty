@@ -229,7 +229,8 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        PromiseNotifier.cascade(ctx.writeAndFlush(footer), promise);
+        return promise;
     }
 
     private ChannelHandlerContext ctx() {

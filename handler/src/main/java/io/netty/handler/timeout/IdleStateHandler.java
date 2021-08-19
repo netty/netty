@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -296,7 +297,7 @@ public class IdleStateHandler implements ChannelHandler {
     public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
-            ctx.write(msg, promise).addListener(writeListener);
+            PromiseNotifier.cascade(ctx.write(msg), promise).addListener(writeListener);
         } else {
             ctx.write(msg, promise);
         }

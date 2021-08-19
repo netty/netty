@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.regex.Pattern;
 
@@ -208,7 +209,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      */
     @Override
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return channel.writeAndFlush(frame, promise);
+        return PromiseNotifier.cascade(channel.writeAndFlush(frame), promise);
     }
 
     /**
@@ -223,7 +224,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      */
     @Override
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return ctx.writeAndFlush(frame, promise);
+        return PromiseNotifier.cascade(ctx.writeAndFlush(frame), promise);
     }
 
     @Override

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
@@ -102,6 +104,9 @@ public class Http2FrameRoundtripTest {
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
         doAnswer((Answer<Promise<Void>>) invocation ->
                 new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
+
+        doAnswer((Answer<Future<Void>>) invocation ->
+                GlobalEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).write(any());
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
@@ -433,7 +438,8 @@ public class Http2FrameRoundtripTest {
 
     private ByteBuf captureWrites() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx, atLeastOnce()).write(captor.capture(), isA(Promise.class));
+        verify(ctx, Mockito.atLeast(0)).write(captor.capture(), isA(Promise.class));
+        verify(ctx, Mockito.atLeast(0)).write(captor.capture());
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());

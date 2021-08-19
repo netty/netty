@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
@@ -425,38 +426,45 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().bind(localAddress, promise);
+    public Http2StreamChannel bind(SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().bind(localAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, promise);
+    public Http2StreamChannel connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
+    public Http2StreamChannel connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, localAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline().disconnect(promise);
+    public Http2StreamChannel disconnect(Promise<Void> promise) {
+        pipeline().disconnect(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> close(Promise<Void> promise) {
-        return pipeline().close(promise);
+    public Http2StreamChannel close(Promise<Void> promise) {
+        pipeline().close(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> register(Promise<Void> promise) {
-        return pipeline().register(promise);
+    public Http2StreamChannel register(Promise<Void> promise) {
+        pipeline().register(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> deregister(Promise<Void> promise) {
-        return pipeline().deregister(promise);
+    public Http2StreamChannel deregister(Promise<Void> promise) {
+        pipeline().deregister(promise);
+        return this;
     }
 
     @Override
@@ -465,13 +473,15 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline().write(msg, promise);
+    public Http2StreamChannel write(Object msg, Promise<Void> promise) {
+        pipeline().write(msg, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline().writeAndFlush(msg, promise);
+    public Http2StreamChannel writeAndFlush(Object msg, Promise<Void> promise) {
+        pipeline().writeAndFlush(msg, promise);
+        return this;
     }
 
     @Override

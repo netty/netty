@@ -2111,7 +2111,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     if (!flushFuture.isDone()) {
                         logger.warn("{} Last write attempt timed out; force-closing the connection.",
                                 ctx.channel());
-                        addCloseListener(ctx.close(ctx.newPromise()), promise);
+                        addCloseListener(ctx.close(), promise);
                     }
                 }, closeNotifyTimeout, TimeUnit.MILLISECONDS);
             } else {
@@ -2131,7 +2131,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (ctx.channel().isActive()) {
                     // Trigger the close in all cases to make sure the promise is notified
                     // See https://github.com/netty/netty/issues/2358
-                    addCloseListener(ctx.close(ctx.newPromise()), promise);
+                    addCloseListener(ctx.close(), promise);
                 } else {
                     promise.trySuccess(null);
                 }
@@ -2146,7 +2146,7 @@ public class SslHandler extends ByteToMessageDecoder {
                                     ctx.channel(), closeNotifyReadTimeout);
 
                             // Do the close now...
-                            addCloseListener(ctx.close(ctx.newPromise()), promise);
+                            addCloseListener(ctx.close(), promise);
                         }
                     }, closeNotifyReadTimeout, TimeUnit.MILLISECONDS);
                 } else {
@@ -2159,7 +2159,7 @@ public class SslHandler extends ByteToMessageDecoder {
                         closeNotifyReadTimeoutFuture.cancel(false);
                     }
                     if (ctx.channel().isActive()) {
-                        addCloseListener(ctx.close(ctx.newPromise()), promise);
+                        addCloseListener(ctx.close(), promise);
                     } else {
                         promise.trySuccess(null);
                     }

@@ -192,7 +192,7 @@ public class EmbeddedChannelTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::close);
-        testFireChannelInactiveAndUnregistered(channel -> channel.close(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(Channel::close);
     }
 
     @Test
@@ -200,7 +200,7 @@ public class EmbeddedChannelTest {
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::disconnect);
 
-        testFireChannelInactiveAndUnregistered(channel -> channel.disconnect(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(Channel::disconnect);
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {

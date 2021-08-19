@@ -16,6 +16,7 @@ package io.netty.microbench.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -36,11 +37,13 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
 
     @Override
     public final Future<Void> write(Object msg) {
-        return write(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        write(msg, promise);
+        return promise;
     }
 
     @Override
-    public final Future<Void> write(Object msg, Promise<Void> promise) {
+    public final ChannelHandlerContext write(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
@@ -52,11 +55,11 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
-    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+    public final ChannelHandlerContext writeAndFlush(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
@@ -68,11 +71,13 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
+        return this;
     }
 
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, newPromise());
+        return promise;
     }
 }

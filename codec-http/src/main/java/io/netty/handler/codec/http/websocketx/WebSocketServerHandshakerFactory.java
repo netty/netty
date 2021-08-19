@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.Objects;
 
@@ -176,6 +177,6 @@ public class WebSocketServerHandshakerFactory {
                 HttpResponseStatus.UPGRADE_REQUIRED, channel.alloc().buffer(0));
         res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         HttpUtil.setContentLength(res, 0);
-        return channel.writeAndFlush(res, promise);
+        return PromiseNotifier.cascade(channel.writeAndFlush(res), promise);
     }
 }

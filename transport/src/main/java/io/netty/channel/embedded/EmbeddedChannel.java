@@ -225,18 +225,20 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public Future<Void> register() {
-        return register(newPromise());
+        Promise<Void> promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> register(Promise<Void> promise) {
-        Future<Void> future = super.register(promise);
-        assert future.isDone();
-        Throwable cause = future.cause();
+    public Channel register(Promise<Void> promise) {
+        super.register(promise);
+        assert promise.isDone();
+        Throwable cause = promise.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
-        return future;
+        return this;
     }
 
     @Override
@@ -450,7 +452,8 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Future<Void> writeOneOutbound(Object msg, Promise<Void> promise) {
         if (checkOpen(true)) {
-            return write(msg, promise);
+            write(msg, promise);
+            return promise;
         }
         checkException(promise);
         return promise;
@@ -555,31 +558,35 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final Future<Void> close() {
-        return close(newPromise());
+        Promise<Void> promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> disconnect() {
-        return disconnect(newPromise());
+        Promise<Void> promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
-    public final Future<Void> close(Promise<Void> promise) {
+    public final Channel close(Promise<Void> promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         runPendingTasks();
-        Future<Void> future = super.close(promise);
+        super.close(promise);
 
         // Now finish everything else and cancel all scheduled tasks that were not ready set.
         finishPendingTasks(true);
-        return future;
+        return this;
     }
 
     @Override
-    public final Future<Void> disconnect(Promise<Void> promise) {
-        Future<Void> future = super.disconnect(promise);
+    public final Channel disconnect(Promise<Void> promise) {
+        super.disconnect(promise);
         finishPendingTasks(!metadata.hasDisconnect());
-        return future;
+        return this;
     }
 
     private static boolean isNotEmpty(Queue<Object> queue) {

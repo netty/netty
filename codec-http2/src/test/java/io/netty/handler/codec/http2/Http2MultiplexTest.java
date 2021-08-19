@@ -44,6 +44,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -721,7 +722,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void channelClosedWhenCloseListenerCompletes() {
+    public void channelClosedWhenCloseListenerCompletes() throws InterruptedException {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
 
@@ -734,12 +735,15 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
         // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
         Promise<Void> p = childChannel.newPromise();
+        CountDownLatch latch = new CountDownLatch(1);
         p.addListener(childChannel, (channel, future) -> {
             channelOpen.set(channel.isOpen());
             channelActive.set(channel.isActive());
+            latch.countDown();
         });
-        childChannel.close(p).syncUninterruptibly();
+        childChannel.close(p);
 
+        latch.await();
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());
         assertFalse(childChannel.isActive());

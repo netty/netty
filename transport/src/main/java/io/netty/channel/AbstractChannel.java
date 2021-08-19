@@ -274,38 +274,45 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline.bind(localAddress, promise);
+    public Channel bind(SocketAddress localAddress, Promise<Void> promise) {
+        pipeline.bind(localAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline.connect(remoteAddress, promise);
+    public Channel connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        pipeline.connect(remoteAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline.connect(remoteAddress, localAddress, promise);
+    public Channel connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        pipeline.connect(remoteAddress, localAddress, promise);
+        return this;
     }
 
     @Override
-    public Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline.disconnect(promise);
+    public Channel disconnect(Promise<Void> promise) {
+        pipeline.disconnect(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> close(Promise<Void> promise) {
-        return pipeline.close(promise);
+    public Channel close(Promise<Void> promise) {
+        pipeline.close(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> register(Promise<Void> promise) {
-        return pipeline.register(promise);
+    public Channel register(Promise<Void> promise) {
+        pipeline.register(promise);
+        return this;
     }
 
     @Override
-    public Future<Void> deregister(Promise<Void> promise) {
-        return pipeline.deregister(promise);
+    public Channel deregister(Promise<Void> promise) {
+        pipeline.deregister(promise);
+        return this;
     }
 
     @Override
@@ -320,8 +327,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline.write(msg, promise);
+    public Channel write(Object msg, Promise<Void> promise) {
+        pipeline.write(msg, promise);
+        return this;
     }
 
     @Override
@@ -330,8 +338,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline.writeAndFlush(msg, promise);
+    public Channel writeAndFlush(Object msg, Promise<Void> promise) {
+        pipeline.writeAndFlush(msg, promise);
+        return this;
     }
 
     @Override

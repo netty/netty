@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
@@ -79,16 +80,26 @@ public class DefaultHttp2FrameWriterTest {
 
         promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
 
-        Answer<Object> answer = var1 -> {
-            Object msg = var1.getArgument(0);
-            if (msg instanceof ByteBuf) {
-                outbound.writeBytes((ByteBuf) msg);
+        class WritingAnswer<T> implements Answer<T> {
+            private final T returnValue;
+
+            WritingAnswer(T returnValue) {
+                this.returnValue = returnValue;
             }
-            ReferenceCountUtil.release(msg);
-            return future;
-        };
-        when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(Promise.class))).then(answer);
+
+            @Override
+            public T answer(InvocationOnMock invocationOnMock) throws Throwable {
+                Object msg = invocationOnMock.getArgument(0);
+                if (msg instanceof ByteBuf) {
+                    outbound.writeBytes((ByteBuf) msg);
+                }
+                ReferenceCountUtil.release(msg);
+                return returnValue;
+            }
+        }
+
+        when(ctx.write(any())).then(new WritingAnswer<>(future));
+        when(ctx.write(any(), any(Promise.class))).then(new WritingAnswer<>(ctx));
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

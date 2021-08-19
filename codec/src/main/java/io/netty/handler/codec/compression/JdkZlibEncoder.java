@@ -310,7 +310,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
             footer.writeByte(uncBytes >>> 24);
         }
         deflater.end();
-        return ctx.writeAndFlush(footer, promise);
+        PromiseNotifier.cascade(ctx.writeAndFlush(footer), promise);
+        return promise;
     }
 
     private void deflate(ByteBuf out) {

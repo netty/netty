@@ -259,52 +259,63 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-            return channel.bind(localAddress, promise);
+        public ChannelHandlerContext bind(SocketAddress localAddress, Promise<Void> promise) {
+            channel.bind(localAddress, promise);
+            return this;
         }
 
         @Override
-        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, promise);
+        public ChannelHandlerContext connect(SocketAddress remoteAddress, Promise<Void> promise) {
+            channel.connect(remoteAddress, promise);
+            return this;
         }
 
         @Override
-        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, localAddress, promise);
+        public ChannelHandlerContext connect(
+                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            channel.connect(remoteAddress, localAddress, promise);
+            return this;
         }
 
         @Override
-        public Future<Void> disconnect(Promise<Void> promise) {
-            return channel.disconnect(promise);
+        public ChannelHandlerContext disconnect(Promise<Void> promise) {
+            channel.disconnect(promise);
+            return this;
         }
 
         @Override
-        public Future<Void> close(Promise<Void> promise) {
-            return channel.close(promise);
+        public ChannelHandlerContext close(Promise<Void> promise) {
+            channel.close(promise);
+            return this;
         }
 
         @Override
-        public Future<Void> register(Promise<Void> promise) {
-            return channel.register(promise);
+        public ChannelHandlerContext register(Promise<Void> promise) {
+            channel.register(promise);
+            return this;
         }
 
         @Override
-        public Future<Void> deregister(Promise<Void> promise) {
-            return channel.deregister(promise);
+        public ChannelHandlerContext deregister(Promise<Void> promise) {
+            channel.deregister(promise);
+            return this;
         }
 
         @Override
         public Future<Void> write(Object msg) {
-            return write(msg, newPromise());
+            Promise<Void> promise = newPromise();
+            write(msg, promise);
+            return promise;
         }
 
         @Override
-        public Future<Void> write(Object msg, Promise<Void> promise) {
-            return writeAndFlush(msg, promise);
+        public ChannelHandlerContext write(Object msg, Promise<Void> promise) {
+            writeAndFlush(msg, promise);
+            return this;
         }
 
         @Override
-        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+        public ChannelHandlerContext writeAndFlush(Object msg, Promise<Void> promise) {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
@@ -312,12 +323,14 @@ final class Http2FrameInboundWriter {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise;
+            return this;
         }
 
         @Override
         public Future<Void> writeAndFlush(Object msg) {
-            return writeAndFlush(msg, newPromise());
+            Promise<Void> promise = newPromise();
+            writeAndFlush(msg, promise);
+            return promise;
         }
 
         @Override

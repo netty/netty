@@ -227,11 +227,12 @@ public class BootstrapTest {
                         }
 
                         @Override
-                        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
+                        public Channel bind(SocketAddress localAddress, Promise<Void> promise) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
-                            return promise.setFailure(new SocketException());
+                            promise.setFailure(new SocketException());
+                            return this;
                         }
                     });
             bootstrap.childHandler(new DummyHandler());

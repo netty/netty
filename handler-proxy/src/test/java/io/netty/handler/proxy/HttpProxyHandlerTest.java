@@ -256,7 +256,7 @@ public class HttpProxyHandlerTest {
         verifyNoMoreInteractions(promise);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(promise);
+        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(ctx);
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),

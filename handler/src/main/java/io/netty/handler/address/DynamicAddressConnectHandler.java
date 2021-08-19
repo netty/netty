@@ -18,6 +18,7 @@ package io.netty.handler.address;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
@@ -43,13 +44,13 @@ public abstract class DynamicAddressConnectHandler implements ChannelHandler {
             promise.setFailure(e);
             return;
         }
-        ctx.connect(remote, local, promise).addListener(future -> {
+        PromiseNotifier.cascade(ctx.connect(remote, local).addListener(future -> {
             if (future.isSuccess()) {
                 // We only remove this handler from the pipeline once the connect was successful as otherwise
                 // the user may try to connect again.
                 ctx.pipeline().remove(this);
             }
-        });
+        }), promise);
     }
 
     /**
