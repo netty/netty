@@ -674,32 +674,34 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        if (!pendingUnencryptedWrites.isEmpty()) {
-            // Check if queue is not empty first because create a new ChannelException is expensive
-            pendingUnencryptedWrites.releaseAndFailAll(ctx,
-                    new ChannelException("Pending write on removal of SslHandler"));
-        }
-        pendingUnencryptedWrites = null;
-
-        SSLHandshakeException cause = null;
-
-        // If the handshake is not done yet we should fail the handshake promise and notify the rest of the
-        // pipeline.
-        if (!handshakePromise.isDone()) {
-            cause = new SSLHandshakeException("SslHandler removed before handshake completed");
-            if (handshakePromise.tryFailure(cause)) {
-                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+        try {
+            if (!pendingUnencryptedWrites.isEmpty()) {
+                // Check if queue is not empty first because create a new ChannelException is expensive
+                pendingUnencryptedWrites.releaseAndFailAll(ctx,
+                  new ChannelException("Pending write on removal of SslHandler"));
             }
-        }
-        if (!sslClosePromise.isDone()) {
-            if (cause == null) {
+            pendingUnencryptedWrites = null;
+
+            SSLHandshakeException cause = null;
+
+            // If the handshake is not done yet we should fail the handshake promise and notify the rest of the
+            // pipeline.
+            if (!handshakePromise.isDone()) {
                 cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+                if (handshakePromise.tryFailure(cause)) {
+                    ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+                }
             }
-            notifyClosePromise(cause);
-        }
-
-        if (engine instanceof ReferenceCounted) {
-            ((ReferenceCounted) engine).release();
+            if (!sslClosePromise.isDone()) {
+                if (cause == null) {
+                    cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+                }
+                notifyClosePromise(cause);
+            }
+        } finally {
+            if (engine instanceof ReferenceCounted) {
+                ((ReferenceCounted) engine).release();
+            }
         }
     }
 
