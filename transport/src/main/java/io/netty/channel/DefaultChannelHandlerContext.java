@@ -725,10 +725,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             Tasks tasks = invokeTasks();
             Promise<Void> promise = newPromise();
             promise.addListener(channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
-            safeExecute(executor, tasks.invokeFlushTask,
-                        // If flush throws we want to at least propagate the exception through the ChannelPipeline
-                        // as otherwise the user will not be made aware of the failure at all.
-                        promise, null);
+            // If flush throws we want to at least propagate the exception through the ChannelPipeline
+            // as otherwise the user will not be made aware of the failure at all.
+            safeExecute(executor, tasks.invokeFlushTask, promise, null);
         }
 
         return this;
