@@ -20,7 +20,6 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.EventListener;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -504,18 +503,7 @@ public class DefaultPromise<V> implements Promise<V> {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    static void notifyListener0(Future future, Object context, FutureContextListener l) {
-        try {
-            l.operationComplete(context, future);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
-            }
-        }
-    }
-
-    private synchronized void addListener0(EventListener listener, Object context) {
+    private synchronized void addListener0(Object listener, Object context) {
         if (listeners == null && context == null) {
             listeners = listener;
         } else if (listeners instanceof DefaultFutureListeners) {
@@ -523,7 +511,7 @@ public class DefaultPromise<V> implements Promise<V> {
         } else {
             DefaultFutureListeners listeners = new DefaultFutureListeners();
             if (this.listeners != null) {
-                listeners.add((EventListener) this.listeners, null);
+                listeners.add(this.listeners, null);
             }
             listeners.add(listener, context);
             this.listeners = listeners;

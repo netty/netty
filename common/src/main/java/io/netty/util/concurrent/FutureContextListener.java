@@ -26,7 +26,7 @@ import java.util.EventListener;
  * </pre>
  */
 @FunctionalInterface
-public interface FutureContextListener<C, V> extends EventListener {
+public interface FutureContextListener<C, V> {
     /**
      * Invoked when the operation associated with the {@link Future} has been completed.
      *

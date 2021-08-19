@@ -28,7 +28,7 @@ final class DefaultFutureListeners {
         listeners = new Object[4];
     }
 
-    public void add(EventListener listener, Object context) {
+    public void add(Object listener, Object context) {
         Object[] listeners = this.listeners;
         int index = size << 1;
         if (index == listeners.length) {
