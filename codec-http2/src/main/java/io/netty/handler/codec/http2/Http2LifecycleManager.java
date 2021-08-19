@@ -29,9 +29,9 @@ public interface Http2LifecycleManager {
 
     /**
      * Closes the local side of the {@code stream}. Depending on the {@code stream} state this may result in
-     * {@code stream} being closed. See {@link #closeStream(Http2Stream, io.netty.util.concurrent.Future)}.
+     * {@code stream} being closed. See {@link #closeStream(Http2Stream, Future)}.
      * @param stream the stream to be half closed.
-     * @param future See {@link #closeStream(Http2Stream, io.netty.util.concurrent.Future)}.
+     * @param future See {@link #closeStream(Http2Stream, Future)}.
      */
     void closeStreamLocal(Http2Stream stream, Future<Void> future);
 
