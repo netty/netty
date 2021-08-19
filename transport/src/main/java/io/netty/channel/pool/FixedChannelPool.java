@@ -236,7 +236,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 });
             }
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            promise.tryFailure(cause);
         }
         return promise;
     }
@@ -279,7 +279,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 assert pendingAcquireCount > 0;
             }
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            promise.tryFailure(cause);
         }
     }
 
