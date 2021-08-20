@@ -370,6 +370,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
 
+                if (OpenSsl.isBoringSSL() && clientMode) {
+                    // If in client-mode and BoringSSL let's allow to renegotiate once as the server may use this
+                    // for client auth.
+                    //
+                    // See https://github.com/netty/netty/issues/11529
+                    SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
+                }
                 // setMode may impact the overhead.
                 calculateMaxWrapOverhead();
             } catch (Throwable cause) {
@@ -1359,7 +1366,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // As rejectRemoteInitiatedRenegotiation() is called in a finally block we also need to check if we shutdown
         // the engine before as otherwise SSL.getHandshakeCount(ssl) will throw an NPE if the passed in ssl is 0.
         // See https://github.com/netty/netty/issues/7353
-        if (!isDestroyed() && SSL.getHandshakeCount(ssl) > 1 &&
+        if (!isDestroyed() && (!clientMode && SSL.getHandshakeCount(ssl) > 1 ||
+                // Let's allow to renegotiate once for client auth.
+                clientMode && SSL.getHandshakeCount(ssl) > 2) &&
             // As we may count multiple handshakes when TLSv1.3 is used we should just ignore this here as
             // renegotiation is not supported in TLSv1.3 as per spec.
             !SslProtocols.TLS_v1_3.equals(session.getProtocol()) && handshakeState == HandshakeState.FINISHED) {
