@@ -20,6 +20,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 /**
  * The result of an asynchronous operation.
@@ -308,6 +309,52 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      */
     @Override
     boolean cancel(boolean mayInterruptIfRunning);
+
+    /**
+     * Create a new future that will complete with the result of this future mapped through the given mapper function.
+     * <p>
+     * If this future fails, then the returned future will fail as well, with the same exception.
+     * Cancellation of either future will cancel the other.
+     * If the mapper function throws, the returned future will fail, but this future will be unaffected.
+     *
+     * @param mapper The function that will convert the result of this future into the result of the returned future.
+     * @param <R> The result type of the mapper function, and of the returned future.
+     * @return A new future instance that will complete with the mapped result of this future.
+     */
+    default <R> Future<R> map(Function<V, R> mapper) {
+        DefaultPromise<R> promise = new DefaultPromise<>(executor());
+        addListener(PromiseOperator.map(mapper), promise);
+        promise.addListener(this, PromiseNotifier::propagateCancel);
+        return promise;
+    }
+
+    /**
+     * Create a new future that will complete with the result of this future flat-mapped through the given mapper
+     * function.
+     * <p>
+     * The "flat" in "flat-map" means the given mapper function produces a result that itself is a future-of-R,
+     * yet this method also returns a future-of-R, rather than a future-of-future-of-R.
+     * In other words, if the same mapper function was used with the {@link #map(Function)} method, you would get back
+     * a {@code Future<Future<R>>}.
+     * These nested futures are "flattened" into a {@code Future<R>} by this method.
+     * Note that the future returned by this method is not the same instance as the one the mapper function returns.
+     * The reason is that this method needs to return immediately, but the mapper function cannot be applied before this
+     * future has completed.
+     * <p>
+     * If this future fails, then the returned future will fail as well, with the same exception.
+     * Cancellation of either future will cancel the other.
+     * If the mapper function throws, the returned future will fail, but this future will be unaffected.
+     *
+     * @param mapper The function that will convert the result of this future into the result of the returned future.
+     * @param <R> The result type of the mapper function, and of the returned future.
+     * @return A new future instance that will complete with the mapped result of this future.
+     */
+    default <R> Future<R> flatMap(Function<V, Future<R>> mapper) {
+        DefaultPromise<R> promise = new DefaultPromise<>(executor());
+        addListener(PromiseOperator.flatMap(mapper), promise);
+        promise.addListener(this, PromiseNotifier::propagateCancel);
+        return promise;
+    }
 
     /**
      * Returns the {@link EventExecutor} that is tied to this {@link Future}.

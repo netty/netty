@@ -17,6 +17,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
+import io.netty.util.internal.TypeParameterMatcherTest.C;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,6 +39,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.util.concurrent.DefaultPromise.newSuccessfulPromise;
+import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static java.lang.Math.max;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -172,21 +175,21 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testCancellationExceptionIsReturnedAsCause() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
         assertTrue(promise.isFailed());
@@ -194,8 +197,8 @@ public class DefaultPromiseTest {
 
     @Test
     public void testStackOverflowWithImmediateEventExecutorA() throws Exception {
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, true);
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, false);
     }
 
     @Test
@@ -216,8 +219,8 @@ public class DefaultPromiseTest {
 
     @Test
     public void testNoStackOverflowWithImmediateEventExecutorB() throws Exception {
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), INSTANCE, true);
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), INSTANCE, false);
     }
 
     @Test
@@ -354,7 +357,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalUncancellableCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -363,7 +366,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalSuccessCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -372,7 +375,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void setUncancellableGetNow() {
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         assertThrows(IllegalStateException.class, () -> promise.getNow());
         assertFalse(promise.isDone());
         assertTrue(promise.setUncancellable());
@@ -392,7 +395,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSync() throws InterruptedException {
         Exception exception = new Exception();
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.setFailure(exception);
         assertTrue(promise.isFailed());
 
@@ -406,7 +409,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSyncUninterruptibly() {
         Exception exception = new Exception();
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.setFailure(exception);
         assertTrue(promise.isFailed());
 
@@ -419,14 +422,14 @@ public class DefaultPromiseTest {
 
     @Test
     public void throwCancelled() throws InterruptedException {
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.cancel(true);
         assertThrows(CancellationException.class, promise::sync);
     }
 
     @Test
     public void mustPassContextToContextListener() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         Object context = new Object();
         Object result = new Object();
         promise.addListener(context, (ctx, future) -> {
@@ -439,7 +442,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void mustPassNullContextToContextListener() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         Object result = new Object();
         promise.addListener(null, (ctx, future) -> {
             assertNull(ctx);
@@ -447,6 +450,177 @@ public class DefaultPromiseTest {
             assertSame(future.getNow(), result);
         });
         promise.setSuccess(result);
+    }
+
+    @Test
+    public void mapMustApplyMapperFunctionWhenFutureSucceeds() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.map(i -> i.toString());
+        promise.setSuccess(42);
+        assertThat(strFut.getNow()).isEqualTo("42");
+    }
+
+    @Test
+    public void mapMustApplyMapperFunctionOnSuccededFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        promise.setSuccess(42);
+        assertThat(promise.map(i -> i.toString()).getNow()).isEqualTo("42");
+    }
+
+    @Test
+    public void mapOnFailedFutureMustProduceFailedFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Exception cause = new Exception("boom");
+        promise.setFailure(cause);
+        assertThat(promise.map(i -> i.toString()).cause()).isSameAs(cause);
+    }
+
+    @Test
+    public void mapOnFailedFutureMustNotApplyMapperFunction() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Exception cause = new Exception("boom");
+        promise.setFailure(cause);
+        AtomicInteger counter = new AtomicInteger();
+        assertThat(promise.map(i -> {
+            counter.getAndIncrement();
+            return i.toString();
+        }).cause()).isSameAs(cause);
+        assertThat(counter.get()).isZero();
+    }
+
+    @Test
+    public void mapMustFailReturnedFutureWhenMapperFunctionThrows() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        RuntimeException cause = new RuntimeException("boom");
+        Future<Object> future = promise.map(i -> {
+            throw cause;
+        });
+        promise.setSuccess(42);
+        assertThat(future.cause()).isSameAs(cause);
+    }
+
+    @Test
+    public void mapMustNotFailOriginalFutureWhenMapperFunctionThrows() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        promise.map(i -> {
+            throw new RuntimeException("boom");
+        });
+        promise.setSuccess(42);
+        assertThat(promise.getNow()).isEqualTo(42);
+    }
+
+    @Test
+    public void cancelOnFutureFromMapMustCancelOriginalFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.map(i -> i.toString());
+        strFut.cancel(false);
+        assertTrue(promise.isCancelled());
+        assertTrue(strFut.isCancelled());
+    }
+
+    @Test
+    public void cancelOnOriginalFutureMustCancelFutureFromMap() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.map(i -> i.toString());
+        promise.cancel(false);
+        assertTrue(promise.isCancelled());
+        assertTrue(strFut.isCancelled());
+    }
+
+    @Test
+    public void flatMapMustApplyMapperFunctionWhenFutureSucceeds() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        promise.setSuccess(42);
+        assertThat(strFut.getNow()).isEqualTo("42");
+    }
+
+    @Test
+    public void flatMapMustApplyMapperFunctionOnSuccededFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        promise.setSuccess(42);
+        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).getNow()).isEqualTo("42");
+    }
+
+    @Test
+    public void flatMapOnFailedFutureMustProduceFailedFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Exception cause = new Exception("boom");
+        promise.setFailure(cause);
+        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).cause()).isSameAs(cause);
+    }
+
+    @Test
+    public void flatMapOnFailedFutureMustNotApplyMapperFunction() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Exception cause = new Exception("boom");
+        promise.setFailure(cause);
+        AtomicInteger counter = new AtomicInteger();
+        assertThat(promise.flatMap(i -> {
+            counter.getAndIncrement();
+            return newSuccessfulPromise(INSTANCE, i.toString());
+        }).cause()).isSameAs(cause);
+        assertThat(counter.get()).isZero();
+    }
+
+    @Test
+    public void flatMapMustFailReturnedFutureWhenMapperFunctionThrows() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        RuntimeException cause = new RuntimeException("boom");
+        Future<Object> future = promise.flatMap(i -> {
+            throw cause;
+        });
+        promise.setSuccess(42);
+        assertThat(future.cause()).isSameAs(cause);
+    }
+
+    @Test
+    public void flatMapMustNotFailOriginalFutureWhenMapperFunctionThrows() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        promise.flatMap(i -> {
+            throw new RuntimeException("boom");
+        });
+        promise.setSuccess(42);
+        assertThat(promise.getNow()).isEqualTo(42);
+    }
+
+    @Test
+    public void cancelOnFutureFromFlatMapMustCancelOriginalFuture() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        strFut.cancel(false);
+        assertTrue(promise.isCancelled());
+        assertTrue(strFut.isCancelled());
+    }
+
+    @Test
+    public void cancelOnOriginalFutureMustCancelFutureFromFlatMap() {
+        DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        promise.cancel(false);
+        assertTrue(promise.isCancelled());
+        assertTrue(strFut.isCancelled());
+    }
+
+    @Test
+    public void futureFromFlatMapMustNotCompleteUntilMappedFutureCompletes() throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Integer> original = new DefaultPromise<>(executor);
+        CountDownLatch mappingLatchEnter = new CountDownLatch(1);
+        CountDownLatch mappingLatchExit = new CountDownLatch(1);
+        Future<String> strFut = original.flatMap(i -> {
+            return executor.submit(() -> {
+                mappingLatchEnter.countDown();
+                mappingLatchExit.await();
+                return i.toString();
+            });
+        });
+
+        executor.submit(() -> original.setSuccess(42));
+        mappingLatchEnter.await();
+        assertFalse(strFut.await(100));
+        mappingLatchExit.countDown();
+        assertThat(strFut.get(5, TimeUnit.SECONDS)).isEqualTo("42");
     }
 
     @Test
@@ -601,7 +775,7 @@ public class DefaultPromiseTest {
 
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         promise.addListener(future ->
                 promise.addListener(future1 -> latch.countDown()));
         if (cause == null) {
