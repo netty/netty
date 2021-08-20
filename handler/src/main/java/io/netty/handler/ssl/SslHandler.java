@@ -37,7 +37,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -699,9 +698,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 notifyClosePromise(cause);
             }
         } finally {
-            if (engine instanceof ReferenceCounted) {
-                ((ReferenceCounted) engine).release();
-            }
+            ReferenceCountUtil.release(engine);
         }
     }
 
