@@ -66,6 +66,7 @@ public class TcpDnsTest {
         assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
         ReferenceCountUtil.release(readResponse);
         ReferenceCountUtil.release(record);
+        query.release();
         assertFalse(channel.finish());
     }
 
