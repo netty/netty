@@ -367,7 +367,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // for client auth.
                     //
                     // See https://github.com/netty/netty/issues/11529
-                    SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
+                    try {
+                        SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
                 }
                 // setMode may impact the overhead.
                 calculateMaxWrapOverhead();
