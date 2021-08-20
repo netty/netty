@@ -36,7 +36,7 @@ import static io.netty.util.internal.PromiseNotificationUtil.trySuccess;
  * This way, only the operator instance itself necessarily needs to be allocated, and in the case of
  * {@link #passThrough()} even that is avoided.
  */
-interface PromiseOperator<R> {
+interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
     InternalLogger LOGGER = InternalLoggerFactory.getInstance(PromiseOperator.class);
     PassThrough<?> PASS_THROUGH_CONSTANT = new PassThrough<>();
 
@@ -63,11 +63,9 @@ interface PromiseOperator<R> {
         }
     }
 
-    void cascadeCompletion(Future<?> completed, DefaultPromise<R> recipient);
-
     class PassThrough<R> implements PromiseOperator<R> {
         @Override
-        public void cascadeCompletion(Future<?> completed, DefaultPromise<R> recipient) {
+        public void operationComplete(Promise<R> recipient, Future<?> completed) throws Exception {
             if (completed.isSuccess()) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -90,7 +88,7 @@ interface PromiseOperator<R> {
         }
 
         @Override
-        public void cascadeCompletion(Future<?> completed, DefaultPromise<R> recipient) {
+        public void operationComplete(Promise<R> recipient, Future<?> completed) throws Exception {
             if (completed.isSuccess()) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -113,13 +111,13 @@ interface PromiseOperator<R> {
         }
 
         @Override
-        public void cascadeCompletion(Future<?> completed, DefaultPromise<R> recipient) {
+        public void operationComplete(Promise<R> recipient, Future<?> completed) throws Exception {
             if (completed.isSuccess()) {
                 try {
                     @SuppressWarnings("unchecked")
                     T result = (T) completed.getNow();
                     Future<R> future = mapper.apply(result);
-                    future.addListener(passThrough(), recipient);
+                    future.addListener(recipient, passThrough());
                     recipient.addListener(future, PromiseNotifier::propagateCancel);
                 } catch (Exception e) {
                     tryFailure(recipient, e, LOGGER);

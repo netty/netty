@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> implements Promise<V>, FutureContextListener<PromiseOperator<V>, Object> {
+public class DefaultPromise<V> implements Promise<V> {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger REJECTED_EXECUTION_LOGGER =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
@@ -171,11 +171,6 @@ public class DefaultPromise<V> implements Promise<V>, FutureContextListener<Prom
     @Override
     public boolean isCancellable() {
         return result == null;
-    }
-
-    @Override
-    public void operationComplete(PromiseOperator<V> cascade, Future<?> future) throws Exception {
-        cascade.cascadeCompletion(future, this);
     }
 
     private static final class LeanCancellationException extends CancellationException {

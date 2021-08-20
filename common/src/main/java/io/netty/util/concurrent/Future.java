@@ -322,8 +322,8 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * @return A new future instance that will complete with the mapped result of this future.
      */
     default <R> Future<R> map(Function<V, R> mapper) {
-        DefaultPromise<R> promise = new DefaultPromise<>(executor());
-        addListener(PromiseOperator.map(mapper), promise);
+        Promise<R> promise = executor().newPromise();
+        addListener(promise, PromiseOperator.map(mapper));
         promise.addListener(this, PromiseNotifier::propagateCancel);
         return promise;
     }
@@ -350,8 +350,8 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * @return A new future instance that will complete with the mapped result of this future.
      */
     default <R> Future<R> flatMap(Function<V, Future<R>> mapper) {
-        DefaultPromise<R> promise = new DefaultPromise<>(executor());
-        addListener(PromiseOperator.flatMap(mapper), promise);
+        Promise<R> promise = executor().newPromise();
+        addListener(promise, PromiseOperator.flatMap(mapper));
         promise.addListener(this, PromiseNotifier::propagateCancel);
         return promise;
     }
