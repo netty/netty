@@ -18,11 +18,8 @@ package io.netty.channel.socket.nio;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
@@ -30,7 +27,9 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -159,12 +158,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public ChannelFuture shutdownOutput() {
+    public Future<Void> shutdownOutput() {
         return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
+    public Future<Void> shutdownOutput(final Promise<Void> promise) {
         final EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
@@ -175,7 +174,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public ChannelFuture shutdownInput() {
+    public Future<Void> shutdownInput() {
         return shutdownInput(newPromise());
     }
 
@@ -185,7 +184,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public ChannelFuture shutdownInput(final ChannelPromise promise) {
+    public Future<Void> shutdownInput(final Promise<Void> promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
@@ -196,35 +195,34 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public ChannelFuture shutdown() {
+    public Future<Void> shutdown() {
         return shutdown(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdown(final ChannelPromise promise) {
-        ChannelFuture shutdownOutputFuture = shutdownOutput();
+    public Future<Void> shutdown(final Promise<Void> promise) {
+        Future<Void> shutdownOutputFuture = shutdownOutput();
         if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(shutdownOutputFuture, promise);
+            shutdownOutputDone(promise, shutdownOutputFuture);
         } else {
-            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
-                    shutdownOutputDone(shutdownOutputFuture1, promise));
+            shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
         return promise;
     }
 
-    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
-        ChannelFuture shutdownInputFuture = shutdownInput();
+    private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {
+        Future<Void> shutdownInputFuture = shutdownInput();
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+            shutdownInputFuture.addListener(shutdownInputFuture1 ->
                     shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
+    private static void shutdownDone(Future<?> shutdownOutputFuture,
+                                     Future<?> shutdownInputFuture,
+                                     Promise<Void> promise) {
         Throwable shutdownOutputCause = shutdownOutputFuture.cause();
         Throwable shutdownInputCause = shutdownInputFuture.cause();
         if (shutdownOutputCause != null) {
@@ -236,13 +234,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         } else if (shutdownInputCause != null) {
             promise.setFailure(shutdownInputCause);
         } else {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
-    private void shutdownInput0(final ChannelPromise promise) {
+    private void shutdownInput0(Promise<Void> promise) {
         try {
             shutdownInput0();
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (Throwable t) {
             promise.setFailure(t);
         }
@@ -466,7 +464,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return super.getOption(option);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public Map<ChannelOption<?>, Object> getOptions() {
             return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));

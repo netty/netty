@@ -18,12 +18,12 @@ package io.netty.channel.local;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -96,7 +96,7 @@ public class LocalTransportThreadModelTest2 {
     static class LocalHandler implements ChannelHandler {
         private final String name;
 
-        public volatile ChannelFuture lastWriteFuture;
+        public volatile Future<Void> lastWriteFuture;
 
         public final AtomicInteger count = new AtomicInteger(0);
 

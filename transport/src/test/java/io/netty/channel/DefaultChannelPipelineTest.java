@@ -32,12 +32,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -51,11 +49,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -687,9 +682,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
+        Future<Void> future = pipeline.bind(new LocalAddress("test"), promise);
         assertTrue(future.isCancelled());
     }
 
@@ -698,9 +693,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
+        Future<Void> future = pipeline.connect(new LocalAddress("test"), promise);
         assertTrue(future.isCancelled());
     }
 
@@ -709,9 +704,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.disconnect(promise);
+        Future<Void> future = pipeline.disconnect(promise);
         assertTrue(future.isCancelled());
     }
 
@@ -720,9 +715,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.close(promise);
+        Future<Void> future = pipeline.close(promise);
         assertTrue(future.isCancelled());
     }
 
@@ -735,8 +730,9 @@ public class DefaultChannelPipelineTest {
         pipeline2.channel().register().sync();
 
         try {
-            ChannelPromise promise2 = pipeline2.channel().newPromise();
-            assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise2));
+            Promise<Void> promise2 = pipeline2.channel().newPromise();
+            // Promises can complete across pipelines.
+            pipeline.close(promise2);
         } finally {
             pipeline.close();
             pipeline2.close();
@@ -744,12 +740,12 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
+    public void testUnexpectedVoidPromiseCloseFuture() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
         try {
-            ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
+            Promise<Void> promise = (Promise<Void>) pipeline.channel().closeFuture();
             assertThrows(IllegalArgumentException.class, () -> pipeline.close(promise));
         } finally {
             pipeline.close();
@@ -761,9 +757,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.deregister(promise);
+        Future<Void> future = pipeline.deregister(promise);
         assertTrue(future.isCancelled());
     }
 
@@ -772,11 +768,11 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.write(buffer, promise);
+        Future<Void> future = pipeline.write(buffer, promise);
         assertTrue(future.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
@@ -786,11 +782,11 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register().sync();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.writeAndFlush(buffer, promise);
+        Future<Void> future = pipeline.writeAndFlush(buffer, promise);
         assertTrue(future.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
@@ -1035,7 +1031,7 @@ public class DefaultChannelPipelineTest {
         validator.validate();
     }
 
-    private static void assertChannelPipelineException(ChannelFuture f) {
+    private static void assertChannelPipelineException(Future<Void> f) {
         try {
             f.syncUninterruptibly();
         } catch (CompletionException e) {
@@ -1124,8 +1120,8 @@ public class DefaultChannelPipelineTest {
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-            pipeline1.channel().register().addListener((ChannelFutureListener) future -> {
-                ChannelPipeline pipeline = future.channel().pipeline();
+            pipeline1.channel().register().addListener(channel, (ch, future) -> {
+                ChannelPipeline pipeline = ch.pipeline();
                 final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
                 pipeline.addLast(new ChannelHandler() {
                     @Override
@@ -1248,7 +1244,7 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                 fail();
                 ctx.bind(localAddress, promise);
             }
@@ -1256,35 +1252,35 @@ public class DefaultChannelPipelineTest {
             @Skip
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, Promise<Void> promise) {
                 fail();
                 ctx.connect(remoteAddress, localAddress, promise);
             }
 
             @Skip
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.disconnect(promise);
             }
 
             @Skip
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.close(promise);
             }
 
             @Skip
             @Override
-            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.register(promise);
             }
 
             @Skip
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.deregister(promise);
             }
@@ -1298,7 +1294,7 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 fail();
                 ctx.write(msg, promise);
             }
@@ -1418,40 +1414,40 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                 executionMask |= MASK_BIND;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, Promise<Void> promise) {
                 executionMask |= MASK_CONNECT;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_DISCONNECT;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_CLOSE;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_REGISTER;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_DEREGISTER;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -1460,9 +1456,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 executionMask |= MASK_WRITE;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -1647,10 +1643,12 @@ public class DefaultChannelPipelineTest {
         channel2.register().syncUninterruptibly();
 
         try {
+            Promise<Void> promise = channel2.newPromise();
+            promise.setSuccess(null);
             if (flush) {
-                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+                channel.writeAndFlush(referenceCounted, promise);
             } else {
-                channel.write(referenceCounted, channel2.newPromise());
+                channel.write(referenceCounted, promise);
             }
             fail();
         } catch (IllegalArgumentException expected) {
@@ -1698,7 +1696,7 @@ public class DefaultChannelPipelineTest {
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     if (msg == writeObject) {
                         doneLatch.countDown();
                     }
@@ -1757,76 +1755,6 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class CheckExceptionHandler implements ChannelHandler {
-        private final Throwable expected;
-        private final Promise<Void> promise;
-
-        CheckExceptionHandler(Throwable expected, Promise<Void> promise) {
-            this.expected = expected;
-            this.promise = promise;
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            if (cause instanceof ChannelPipelineException && cause.getCause() == expected) {
-                promise.setSuccess(null);
-            } else {
-                promise.setFailure(new AssertionError("cause not the expected instance"));
-            }
-        }
-    }
-
-    private static void assertHandler(CheckOrderHandler actual, CheckOrderHandler... handlers) throws Throwable {
-        for (CheckOrderHandler h : handlers) {
-            if (h == actual) {
-                actual.checkError();
-                return;
-            }
-        }
-        fail("handler was not one of the expected handlers");
-    }
-
-    private static final class CheckOrderHandler implements ChannelHandler {
-        private final Queue<CheckOrderHandler> addedQueue;
-        private final Queue<CheckOrderHandler> removedQueue;
-        private final AtomicReference<Throwable> error = new AtomicReference<>();
-
-        CheckOrderHandler(Queue<CheckOrderHandler> addedQueue, Queue<CheckOrderHandler> removedQueue) {
-            this.addedQueue = addedQueue;
-            this.removedQueue = removedQueue;
-        }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            addedQueue.add(this);
-            checkExecutor(ctx);
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            removedQueue.add(this);
-            checkExecutor(ctx);
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            error.set(cause);
-        }
-
-        void checkError() throws Throwable {
-            Throwable cause = error.get();
-            if (cause != null) {
-                throw cause;
-            }
-        }
-
-        private void checkExecutor(ChannelHandlerContext ctx) {
-            if (!ctx.executor().inEventLoop()) {
-                error.set(new AssertionError());
-            }
-        }
-    }
-
     private static final class CheckEventExecutorHandler extends ChannelHandlerAdapter {
         final EventExecutor executor;
         final Promise<Void> addedPromise;
@@ -1861,23 +1789,6 @@ public class DefaultChannelPipelineTest {
             } else {
                 promise.setFailure(new AssertionError("EventExecutor not the same"));
             }
-        }
-    }
-    private static final class ErrorChannelHandler extends ChannelHandlerAdapter {
-        private final AtomicReference<Throwable> error;
-
-        ErrorChannelHandler(AtomicReference<Throwable> error) {
-            this.error = error;
-        }
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            error.set(new AssertionError());
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            error.set(new AssertionError());
         }
     }
 
@@ -1941,7 +1852,7 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             outboundBuffer.add(msg);
         }
 
@@ -2000,82 +1911,6 @@ public class DefaultChannelPipelineTest {
             validate(true, false);
 
             afterRemove = true;
-        }
-    }
-
-    private static final class WrapperExecutor extends AbstractEventExecutor {
-
-        private final ExecutorService wrapped = Executors.newSingleThreadExecutor();
-
-        @Override
-        public boolean isShuttingDown() {
-            return wrapped.isShutdown();
-        }
-
-        @Override
-        public Future<?> shutdownGracefully(long l, long l2, TimeUnit timeUnit) {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public Future<?> terminationFuture() {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public void shutdown() {
-            wrapped.shutdown();
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            return wrapped.shutdownNow();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            return wrapped.isShutdown();
-        }
-
-        @Override
-        public boolean isTerminated() {
-            return wrapped.isTerminated();
-        }
-
-        @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            return wrapped.awaitTermination(timeout, unit);
-        }
-
-        @Override
-        public boolean inEventLoop(Thread thread) {
-            return false;
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            wrapped.execute(command);
-        }
-
-        @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(
-                Runnable command, long initialDelay, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
         }
     }
 }

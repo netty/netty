@@ -40,6 +40,9 @@ public interface RunnableScheduledFuture<V> extends
     long delayNanos(long currentTimeNanos);
 
     @Override
-    RunnableScheduledFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
+    RunnableScheduledFuture<V> addListener(FutureListener<? super V> listener);
+
+    @Override
+    <C> RunnableScheduledFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
 }
 

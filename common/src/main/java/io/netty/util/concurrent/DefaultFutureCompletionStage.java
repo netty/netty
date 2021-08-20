@@ -28,7 +28,7 @@ import java.util.function.Function;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Wraps a {@link io.netty.util.concurrent.Future} and provides a {@link FutureCompletionStage} implementation
+ * Wraps a {@link Future} and provides a {@link FutureCompletionStage} implementation
  * on top of it.
  *
  * @param <V> the value type.
@@ -41,7 +41,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
     // Just a marker
     private static final Executor SAME_AS_FUTURE = task -> {
-        throw new UnsupportedOperationException("Only a marker, should never been called!");
+        throw new UnsupportedOperationException("Marker executor. Should never be called!");
     };
 
     private final Future<V> future;
@@ -191,7 +191,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         future.addListener(future -> {
             Throwable cause = future.cause();
             if (cause == null) {
-                @SuppressWarnings("unchecked") V value = (V) future.getNow();
+                V value = future.getNow();
                 if (executeDirectly(executor)) {
                     thenApplyAsync0(promise, value, fn);
                 } else {
@@ -224,7 +224,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         future.addListener(future -> {
             Throwable cause = future.cause();
             if (cause == null) {
-                @SuppressWarnings("unchecked") V value = (V) future.getNow();
+                V value = future.getNow();
                 if (executeDirectly(executor)) {
                     thenAcceptAsync0(promise, value, action);
                 } else {
@@ -333,6 +333,8 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
         Promise<U> promise = executor().newPromise();
         BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<V, U>(promise) {
+            private static final long serialVersionUID = -8454630185124276599L;
+
             @Override
             protected U apply(V value) {
                 return fn.apply(value);
@@ -351,6 +353,8 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
         Promise<Void> promise = executor().newPromise();
         BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<V, Void>(promise) {
+            private static final long serialVersionUID = -8429618092318150682L;
+
             @Override
             protected Void apply(V value) {
                 action.accept(value);
@@ -370,6 +374,8 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
         Promise<Void> promise = executor().newPromise();
         BiConsumer<Object, Throwable> consumer = new AtomicBiConsumer<Object, Void>(promise) {
+            private static final long serialVersionUID = 5994110691767731494L;
+
             @Override
             protected Void apply(Object value) {
                 action.run();
@@ -391,7 +397,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         future.addListener(f -> {
            Throwable cause = f.cause();
            if (cause == null) {
-               @SuppressWarnings("unchecked") V value = (V) f.getNow();
+               V value = f.getNow();
                if (executeDirectly(executor)) {
                    thenComposeAsync0(promise, fn, value);
                } else {
@@ -430,7 +436,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         future.addListener(f -> {
             Throwable error = f.cause();
             if (error == null) {
-                @SuppressWarnings("unchecked") V value = (V) f.getNow();
+                V value = f.getNow();
                 promise.setSuccess(value);
             } else {
                 final V result;
@@ -464,10 +470,9 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
     }
 
     private static <V> void whenCompleteAsync0(
-            Promise<V> promise, Future<? super V> f, BiConsumer<? super V, ? super Throwable> action) {
+            Promise<V> promise, Future<? extends V> f, BiConsumer<? super V, ? super Throwable> action) {
         Throwable cause = f.cause();
-
-        @SuppressWarnings("unchecked") V value = cause == null ? (V) f.getNow() : null;
+        V value = cause == null ? f.getNow() : null;
         try {
             action.accept(value, cause);
         } catch (Throwable error) {
@@ -532,6 +537,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
     private abstract static class AtomicBiConsumer<V, U> extends AtomicReference<Object>
             implements BiConsumer<V, Throwable> {
+        private static final long serialVersionUID = 880039612531973027L;
 
         private final Promise<U> promise;
 

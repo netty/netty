@@ -15,8 +15,11 @@
  */
 package io.netty.channel;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import io.netty.channel.local.LocalHandler;
+import io.netty.util.concurrent.Promise;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -24,10 +27,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.channel.local.LocalHandler;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultChannelPipelineTailTest {
 
@@ -276,7 +277,7 @@ public class DefaultChannelPipelineTailTest {
 
         private class MyUnsafe extends AbstractUnsafe {
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                 if (!ensureOpen(promise)) {
                     return;
                 }
@@ -287,7 +288,7 @@ public class DefaultChannelPipelineTailTest {
                     readIfIsAutoRead();
                 }
 
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         }
 

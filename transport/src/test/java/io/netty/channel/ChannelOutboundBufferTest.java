@@ -19,15 +19,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.compositeBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -257,7 +261,7 @@ public class ChannelOutboundBufferTest {
 
         final class TestUnsafe extends AbstractUnsafe {
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                 throw new UnsupportedOperationException();
             }
         }

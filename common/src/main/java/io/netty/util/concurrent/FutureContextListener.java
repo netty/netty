@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,14 +19,18 @@ import java.util.EventListener;
 
 /**
  * Listens to the result of a {@link Future}.  The result of the asynchronous operation is notified once this listener
- * is added by calling {@link Future#addListener(GenericFutureListener)}.
+ * is added by calling {@link Future#addListener(Object, FutureContextListener)}.
+ * <pre>
+ * Future f = new DefaultPromise(..);
+ * f.addListener(context, (context, future) -> { .. });
+ * </pre>
  */
-public interface GenericFutureListener<F extends Future<?>> extends EventListener {
-
+@FunctionalInterface
+public interface FutureContextListener<C, V> {
     /**
      * Invoked when the operation associated with the {@link Future} has been completed.
      *
      * @param future  the source {@link Future} which called this callback
      */
-    void operationComplete(F future) throws Exception;
+    void operationComplete(C context, Future<? extends V> future) throws Exception;
 }

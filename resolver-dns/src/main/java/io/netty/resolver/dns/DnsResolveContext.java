@@ -19,7 +19,6 @@ package io.netty.resolver.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -207,7 +206,7 @@ abstract class DnsResolveContext<T> {
             searchDomainPromise.addListener(new FutureListener<List<T>>() {
                 private int searchDomainIdx = initialSearchDomainIdx;
                 @Override
-                public void operationComplete(Future<List<T>> future) {
+                public void operationComplete(Future<? extends List<T>> future) {
                     Throwable cause = future.cause();
                     if (cause == null) {
                         final List<T> result = future.getNow();
@@ -413,7 +412,7 @@ abstract class DnsResolveContext<T> {
                                       queryLifecycleObserver, promise, cause);
             return;
         }
-        final ChannelPromise writePromise = parent.ch.newPromise();
+        final Promise<Void> writePromise = parent.ch.newPromise();
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 parent.ch.eventLoop().newPromise();
 
@@ -424,7 +423,7 @@ abstract class DnsResolveContext<T> {
 
         queryLifecycleObserver.queryWritten(nameServerAddr, writePromise);
 
-        f.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future -> {
+        f.addListener(future -> {
             queriesInProgress.remove(future);
 
             if (promise.isDone() || future.isCancelled()) {
@@ -476,7 +475,7 @@ abstract class DnsResolveContext<T> {
         queriesInProgress.add(resolveFuture);
 
         Promise<List<InetAddress>> resolverPromise = parent.executor().newPromise();
-        resolverPromise.addListener((FutureListener<List<InetAddress>>) future -> {
+        resolverPromise.addListener(future -> {
             // Remove placeholder.
             queriesInProgress.remove(resolveFuture);
 
@@ -521,7 +520,7 @@ abstract class DnsResolveContext<T> {
         private final AuthoritativeDnsServerCache wrapped;
 
         RedirectAuthoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
-            this.wrapped = authoritativeDnsServerCache;
+            wrapped = authoritativeDnsServerCache;
         }
 
         @Override

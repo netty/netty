@@ -15,6 +15,20 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
+import junit.framework.AssertionFailedError;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.stubbing.Answer;
+
 import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -31,20 +45,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.concurrent.EventExecutor;
-import junit.framework.AssertionFailedError;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.stubbing.Answer;
 
 /**
  * Tests for {@link DefaultHttp2LocalFlowController}.
@@ -64,7 +64,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private ChannelPromise promise;
+    private Promise<Void> promise;
 
     private DefaultHttp2Connection connection;
 
@@ -424,9 +424,10 @@ public class DefaultHttp2LocalFlowControllerTest {
         verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt(), eq(promise));
     }
 
+    @SuppressWarnings("unchecked")
     private void verifyWindowUpdateNotSent() {
         verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(),
-                any(ChannelPromise.class));
+                any(Promise.class));
     }
 
     private int window(int streamId) {

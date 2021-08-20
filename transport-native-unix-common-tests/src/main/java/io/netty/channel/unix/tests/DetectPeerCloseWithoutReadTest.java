@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -89,7 +89,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             ByteBuf buf = clientChannel.alloc().buffer(expectedBytes);
             buf.writerIndex(buf.writerIndex() + expectedBytes);
-            clientChannel.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+            clientChannel.writeAndFlush(buf).addListener(clientChannel, ChannelFutureListeners.CLOSE);
 
             latch.await();
             assertEquals(expectedBytes, bytesRead.get());
@@ -140,7 +140,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
                         public void channelActive(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer(expectedBytes);
                             buf.writerIndex(buf.writerIndex() + expectedBytes);
-                            ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+                            ctx.writeAndFlush(buf).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                             ctx.fireChannelActive();
                         }
                     });

@@ -23,12 +23,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -53,7 +50,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
@@ -115,23 +111,23 @@ public class SslHandlerTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testNonApplicationDataFailureFailsQueuedWrites() throws Exception {
         final CountDownLatch writeLatch = new CountDownLatch(1);
-        final Queue<ChannelPromise> writesToFail = new ConcurrentLinkedQueue<ChannelPromise>();
+        final Queue<Promise<Void>> writesToFail = new ConcurrentLinkedQueue<>();
         SSLEngine engine = newClientModeSSLEngine();
         SslHandler handler = new SslHandler(engine) {
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 super.write(ctx, msg, promise);
                 writeLatch.countDown();
             }
         };
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (msg instanceof ByteBuf) {
                     if (((ByteBuf) msg).isReadable()) {
                         writesToFail.add(promise);
                     } else {
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     }
                 }
                 ReferenceCountUtil.release(msg);
@@ -141,14 +137,14 @@ public class SslHandlerTest {
         try {
             final CountDownLatch writeCauseLatch = new CountDownLatch(1);
             final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
-            ch.write(wrappedBuffer(new byte[]{1})).addListener((ChannelFutureListener) future -> {
+            ch.write(wrappedBuffer(new byte[]{1})).addListener(future -> {
                 failureRef.compareAndSet(null, future.cause());
                 writeCauseLatch.countDown();
             });
             writeLatch.await();
 
             // Simulate failing the SslHandler non-application writes after there are applications writes queued.
-            ChannelPromise promiseToFail;
+            Promise<Void> promiseToFail;
             while ((promiseToFail = writesToFail.poll()) != null) {
                 promiseToFail.setFailure(new RuntimeException("fake exception"));
             }
@@ -379,7 +375,7 @@ public class SslHandlerTest {
         SSLEngine engine = newServerModeSSLEngine();
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        ChannelPromise promise = ch.newPromise();
+        Promise<Void> promise = ch.newPromise();
         ByteBuf buf = Unpooled.buffer(10).writeZero(10);
         ch.writeAndFlush(buf, promise);
         assertFalse(promise.isDone());
@@ -513,7 +509,7 @@ public class SslHandlerTest {
                 final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
-                sslHandler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                sslHandler.handshakeFuture().addListener(future -> {
                     ch.eventLoop().execute(() -> {
                         ch.pipeline().remove(sslHandler);
 
@@ -612,7 +608,7 @@ public class SslHandlerTest {
                           public void channelActive(ChannelHandlerContext ctx) {
                               ByteBuf buf = ctx.alloc().buffer(10);
                               buf.writeZero(buf.capacity());
-                              ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
+                              ctx.writeAndFlush(buf).addListener(future -> {
                                   events.add(future);
                                   latch.countDown();
                               });
@@ -659,7 +655,7 @@ public class SslHandlerTest {
             assertTrue(evt instanceof SslCloseCompletionEvent);
             assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
 
-            ChannelFuture future = (ChannelFuture) events.take();
+            Future<Void> future = (Future<Void>) events.take();
             assertThat(future.cause(), is(instanceOf(SSLException.class)));
 
             serverChannel.close().sync();
@@ -870,7 +866,7 @@ public class SslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).addListener((GenericFutureListener<Future<Channel>>) future -> {
+                    }).connect(sc.localAddress()).addListener(future -> {
                         // Write something to trigger the handshake before fireChannelActive is called.
                         future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                     }).get();
@@ -946,7 +942,7 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress());
             if (!startTls) {
-                future.addListener((GenericFutureListener<Future<Channel>>) future1 -> {
+                future.addListener(future1 -> {
                     // Write something to trigger the handshake before fireChannelActive is called.
                     future1.getNow().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                 });

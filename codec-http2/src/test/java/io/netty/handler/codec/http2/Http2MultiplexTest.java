@@ -17,11 +17,8 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -31,12 +28,12 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -75,6 +72,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     private final Http2Headers request = new DefaultHttp2Headers()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
@@ -153,7 +151,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         verify(frameWriter).writeFrame(any(ChannelHandlerContext.class), eq((byte) 99), eqStreamId(childChannel),
-                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+                any(Http2Flags.class), any(ByteBuf.class), any(Promise.class));
     }
 
     private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
@@ -561,18 +559,18 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     public void outboundStreamShouldNotWriteResetFrameOnClose_IfStreamDidntExist() {
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 any(Http2Headers.class), anyInt(), anyBoolean(),
-                any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
+                any(Promise.class))).thenAnswer(new Answer<Future<Void>>() {
 
             private boolean headersWritten;
             @Override
-            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
+            public Future<Void> answer(InvocationOnMock invocationOnMock) {
                 // We want to fail to write the first headers frame. This is what happens if the connection
                 // refuses to allocate a new stream due to having received a GOAWAY.
                 if (!headersWritten) {
                     headersWritten = true;
-                    return ((ChannelPromise) invocationOnMock.getArgument(5)).setFailure(new Exception("boom"));
+                    return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(new Exception("boom"));
                 }
-                return ((ChannelPromise) invocationOnMock.getArgument(5)).setSuccess();
+                return ((Promise<Void>) invocationOnMock.getArgument(5)).setSuccess(null);
             }
         });
 
@@ -636,11 +634,11 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean(),
-                any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
-            return ((ChannelPromise) invocationOnMock.getArgument(5)).setFailure(
+                any(Promise.class))).thenAnswer(invocationOnMock -> {
+            return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(
                         new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed"));
         });
-        final ChannelFuture future = childChannel.writeAndFlush(
+        final Future<Void> future = childChannel.writeAndFlush(
                 new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
 
         parentChannel.flush();
@@ -700,12 +698,12 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
-               eq(headers), anyInt(), anyBoolean(), any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
-               return ((ChannelPromise) invocationOnMock.getArgument(5)).setFailure(
+               eq(headers), anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(invocationOnMock -> {
+               return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(
                        new Http2NoMoreStreamIdsException());
         });
 
-        final ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
+        final Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         parentChannel.flush();
 
         assertFalse(childChannel.isActive());
@@ -735,10 +733,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
         // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
-        ChannelPromise p = childChannel.newPromise();
-        p.addListener((ChannelFutureListener) future -> {
-            channelOpen.set(future.channel().isOpen());
-            channelActive.set(future.channel().isActive());
+        Promise<Void> p = childChannel.newPromise();
+        p.addListener(childChannel, (channel, future) -> {
+            channelOpen.set(channel.isOpen());
+            channelActive.set(channel.isActive());
         });
         childChannel.close(p).syncUninterruptibly();
 
@@ -758,9 +756,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
          final AtomicBoolean channelOpen = new AtomicBoolean(true);
          final AtomicBoolean channelActive = new AtomicBoolean(true);
 
-         childChannel.closeFuture().addListener((ChannelFutureListener) future -> {
-             channelOpen.set(future.channel().isOpen());
-             channelActive.set(future.channel().isActive());
+         childChannel.closeFuture().addListener(childChannel, (channel, future) -> {
+             channelOpen.set(channel.isOpen());
+             channelActive.set(channel.isActive());
          });
          childChannel.close().syncUninterruptibly();
 
@@ -771,7 +769,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
     @Test
     public void channelClosedWhenWriteFutureFails() {
-        final Queue<ChannelPromise> writePromises = new ArrayDeque<ChannelPromise>();
+        final Queue<Promise<Void>> writePromises = new ArrayDeque<>();
 
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
@@ -785,20 +783,20 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean(),
-                any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
-            ChannelPromise promise = invocationOnMock.getArgument(5);
+                any(Promise.class))).thenAnswer(invocationOnMock -> {
+            Promise<Void> promise = invocationOnMock.getArgument(5);
             writePromises.offer(promise);
             return promise;
         });
 
-        ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
+        Future<Void> f = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         assertFalse(f.isDone());
-        f.addListener((ChannelFutureListener) future-> {
-            channelOpen.set(future.channel().isOpen());
-            channelActive.set(future.channel().isActive());
+        f.addListener(childChannel, (channel, future)-> {
+            channelOpen.set(channel.isOpen());
+            channelActive.set(channel.isActive());
         });
 
-        ChannelPromise first = writePromises.poll();
+        Promise<Void> first = writePromises.poll();
         first.setFailure(new ClosedChannelException());
         f.awaitUninterruptibly();
 
@@ -885,7 +883,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isWritable());
         assertEquals(bytesBeforeUnwritable, childChannel.bytesBeforeUnwritable());
 
-        ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
+        Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
                 Unpooled.buffer().writeZero((int) bytesBeforeUnwritable)));
         assertFalse(childChannel.isWritable());
         assertTrue(parentChannel.isWritable());
@@ -978,7 +976,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
         childChannel.unsafe().close(childChannel.newPromise());
 
-        ChannelPromise promise = childChannel.newPromise();
+        Promise<Void> promise = childChannel.newPromise();
         childChannel.unsafe().close(promise);
         promise.syncUninterruptibly();
         childChannel.closeFuture().syncUninterruptibly();

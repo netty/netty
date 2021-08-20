@@ -15,24 +15,23 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
@@ -114,7 +113,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         queue.add(new PendingWrite(msg, promise));
     }
 
@@ -258,7 +257,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                     queue.remove();
                 }
                 // Flush each chunk to conserve memory
-                ChannelFuture f = ctx.writeAndFlush(message);
+                Future<Void> f = ctx.writeAndFlush(message);
                 if (endOfInput) {
                     if (f.isDone()) {
                         handleEndOfInputFuture(f, currentWrite);
@@ -268,14 +267,14 @@ public class ChunkedWriteHandler implements ChannelHandler {
                         // be closed before its not written.
                         //
                         // See https://github.com/netty/netty/issues/303
-                        f.addListener((ChannelFutureListener) future -> handleEndOfInputFuture(future, currentWrite));
+                        f.addListener(future -> handleEndOfInputFuture(future, currentWrite));
                     }
                 } else {
                     final boolean resume = !channel.isWritable();
                     if (f.isDone()) {
-                        handleFuture(f, currentWrite, resume);
+                        handleFuture(channel, f, currentWrite, resume);
                     } else {
-                        f.addListener((ChannelFutureListener) future -> handleFuture(future, currentWrite, resume));
+                        f.addListener(future -> handleFuture(channel, future, currentWrite, resume));
                     }
                 }
                 requiresFlush = false;
@@ -296,7 +295,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
         }
     }
 
-    private static void handleEndOfInputFuture(ChannelFuture future, PendingWrite currentWrite) {
+    private static void handleEndOfInputFuture(Future<?> future, PendingWrite currentWrite) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
         if (!future.isSuccess()) {
             closeInput(input);
@@ -310,13 +309,13 @@ public class ChunkedWriteHandler implements ChannelHandler {
         }
     }
 
-    private void handleFuture(ChannelFuture future, PendingWrite currentWrite, boolean resume) {
+    private void handleFuture(Channel channel, Future<?> future, PendingWrite currentWrite, boolean resume) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
         if (!future.isSuccess()) {
             closeInput(input);
             currentWrite.fail(future.cause());
         } else {
-            if (resume && future.channel().isWritable()) {
+            if (resume && channel.isWritable()) {
                 resumeTransfer();
             }
         }
@@ -334,9 +333,9 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private static final class PendingWrite {
         final Object msg;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        PendingWrite(Object msg, ChannelPromise promise) {
+        PendingWrite(Object msg, Promise<Void> promise) {
             this.msg = msg;
             this.promise = promise;
         }
@@ -351,7 +350,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
             }
-            promise.trySuccess();
+            promise.trySuccess(null);
         }
     }
 }

@@ -18,10 +18,10 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -51,7 +51,7 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
             cb.handler(new ChannelHandler() { });
             cc = cb.register().get();
             cc.connect(sc.localAddress()).syncUninterruptibly();
-            ChannelFuture connectFuture2 = cc.connect(sc.localAddress()).await();
+            Future<Void> connectFuture2 = cc.connect(sc.localAddress()).await();
             assertTrue(connectFuture2.cause() instanceof AlreadyConnectedException);
         } finally {
             if (cc != null) {

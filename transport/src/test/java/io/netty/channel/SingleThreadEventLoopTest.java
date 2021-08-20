@@ -20,6 +20,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +45,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -347,7 +353,7 @@ public class SingleThreadEventLoopTest {
 
         try {
             Channel channel = new LocalChannel(loopA);
-            ChannelFuture f = channel.register();
+            Future<Void> f = channel.register();
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
@@ -367,8 +373,8 @@ public class SingleThreadEventLoopTest {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
-        ChannelPromise promise = ch.newPromise();
-        promise.addListener((ChannelFutureListener) future -> latch.countDown());
+        Promise<Void> promise = ch.newPromise();
+        promise.addListener(future -> latch.countDown());
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -380,7 +386,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = ch.register(promise);
+            Future<Void> f = ch.register(promise);
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));

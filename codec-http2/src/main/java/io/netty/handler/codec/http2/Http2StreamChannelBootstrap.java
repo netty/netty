@@ -15,11 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -37,6 +33,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class Http2StreamChannelBootstrap {
@@ -186,8 +184,8 @@ public final class Http2StreamChannelBootstrap {
             return;
         }
 
-        ChannelFuture future = streamChannel.register();
-        future.addListener((ChannelFutureListener) future1 -> {
+        Future<Void> future = streamChannel.register();
+        future.addListener(future1 -> {
             if (future1.isSuccess()) {
                 promise.setSuccess(streamChannel);
             } else if (future1.isCancelled()) {

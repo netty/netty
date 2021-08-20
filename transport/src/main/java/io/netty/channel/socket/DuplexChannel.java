@@ -16,8 +16,8 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.Socket;
 
@@ -35,14 +35,14 @@ public interface DuplexChannel extends Channel {
     /**
      * @see Socket#shutdownInput()
      */
-    ChannelFuture shutdownInput();
+    Future<Void> shutdownInput();
 
     /**
-     * Will shutdown the input and notify {@link ChannelPromise}.
+     * Will shutdown the input and notify {@link Promise}.
      *
      * @see Socket#shutdownInput()
      */
-    ChannelFuture shutdownInput(ChannelPromise promise);
+    Future<Void> shutdownInput(Promise<Void> promise);
 
     /**
      * @see Socket#isOutputShutdown()
@@ -52,14 +52,14 @@ public interface DuplexChannel extends Channel {
     /**
      * @see Socket#shutdownOutput()
      */
-    ChannelFuture shutdownOutput();
+    Future<Void> shutdownOutput();
 
     /**
-     * Will shutdown the output and notify {@link ChannelPromise}.
+     * Will shutdown the output and notify {@link Promise}.
      *
      * @see Socket#shutdownOutput()
      */
-    ChannelFuture shutdownOutput(ChannelPromise promise);
+    Future<Void> shutdownOutput(Promise<Void> promise);
 
     /**
      * Determine if both the input and output of this channel have been shutdown.
@@ -70,14 +70,14 @@ public interface DuplexChannel extends Channel {
      * Will shutdown the input and output sides of this channel.
      * @return will be completed when both shutdown operations complete.
      */
-    ChannelFuture shutdown();
+    Future<Void> shutdown();
 
     /**
      * Will shutdown the input and output sides of this channel.
      * @param promise will be completed when both shutdown operations complete.
      * @return will be completed when both shutdown operations complete.
      */
-    ChannelFuture shutdown(ChannelPromise promise);
+    Future<Void> shutdown(Promise<Void> promise);
 
     @Override
     DuplexChannelConfig config();

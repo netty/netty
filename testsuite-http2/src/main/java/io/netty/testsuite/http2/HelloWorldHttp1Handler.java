@@ -17,7 +17,7 @@ package io.netty.testsuite.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -53,14 +53,14 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
 
         ByteBuf content = ctx.alloc().buffer();
         content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
-        ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ")");
+        ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ')');
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
         if (!keepAlive) {
-            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         } else {
             response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             ctx.write(response);

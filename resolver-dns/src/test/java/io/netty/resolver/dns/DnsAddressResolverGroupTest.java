@@ -21,8 +21,6 @@ import io.netty.channel.local.LocalHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.resolver.AddressResolver;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -47,17 +45,14 @@ public class DnsAddressResolverGroupTest {
             AddressResolver<?> resolver = resolverGroup.getResolver(defaultEventLoopGroup.next());
             resolver.resolve(new SocketAddress() {
                 private static final long serialVersionUID = 3169703458729818468L;
-            }).addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) {
-                    try {
-                        assertThat(future.cause(),
-                                instanceOf(UnsupportedAddressTypeException.class));
-                        assertTrue(loop.inEventLoop());
-                        promise.setSuccess(null);
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
-                    }
+            }).addListener(future -> {
+                try {
+                    assertThat(future.cause(),
+                               instanceOf(UnsupportedAddressTypeException.class));
+                    assertTrue(loop.inEventLoop());
+                    promise.setSuccess(null);
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
             }).await();
             promise.sync();

@@ -17,9 +17,9 @@ package io.netty.handler.codec.http.websocketx;
 
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -31,7 +31,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     private final boolean dropPongFrames;
     private final WebSocketCloseStatus closeStatus;
     private final long forceCloseTimeoutMillis;
-    private ChannelPromise closeSent;
+    private Promise<Void> closeSent;
 
     /**
      * Creates a new {@link WebSocketProtocolHandler} that will <i>drop</i> {@link PongWebSocketFrame}s.
@@ -82,7 +82,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
         if (closeStatus == null || !ctx.channel().isActive()) {
             ctx.close(promise);
         } else {
@@ -96,7 +96,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
@@ -108,7 +108,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         }
     }
 
-    void closeSent(ChannelPromise promise) {
+    void closeSent(Promise<Void> promise) {
         closeSent = promise;
     }
 

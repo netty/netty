@@ -22,12 +22,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -58,7 +57,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
@@ -217,7 +216,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public final void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, Promise<Void> promise) {
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -239,7 +238,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
-                            ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                            Promise<Void> connectPromise = AbstractNioChannel.this.connectPromise;
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
                                     "connection timed out: " + remoteAddress))) {
@@ -248,7 +247,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
+                    promise.addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -264,18 +263,18 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+        private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
             }
 
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
             boolean active = isActive();
 
             // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
+            boolean promiseSet = promise.trySuccess(null);
 
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
@@ -290,7 +289,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+        private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
@@ -454,7 +453,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        ChannelPromise promise = connectPromise;
+        Promise<Void> promise = connectPromise;
         if (promise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
             promise.tryFailure(new ClosedChannelException());

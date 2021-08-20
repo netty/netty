@@ -17,10 +17,10 @@ package io.netty.handler.ipfilter;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
@@ -107,7 +107,7 @@ public class IpSubnetFilterTest {
             private final byte[] message = {1, 2, 3, 4, 5, 6, 7};
 
             @Override
-            protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
+            protected Future<Void> channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 assertTrue(ctx.channel().isActive());
                 assertTrue(ctx.channel().isWritable());
                 assertEquals("192.168.57.1", remoteAddress.getHostName());
@@ -126,7 +126,7 @@ public class IpSubnetFilterTest {
 
         RuleBasedIpFilter allowHandler = new RuleBasedIpFilter(filter0) {
             @Override
-            protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
+            protected Future<Void> channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 fail();
                 return null;
             }

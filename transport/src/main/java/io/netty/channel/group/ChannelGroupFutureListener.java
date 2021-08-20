@@ -15,14 +15,14 @@
  */
 package io.netty.channel.group;
 
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 
 /**
  * Listens to the result of a {@link ChannelGroupFuture}.  The result of the
  * asynchronous {@link ChannelGroup} I/O operations is notified once this
- * listener is added by calling {@link ChannelGroupFuture#addListener(GenericFutureListener)}
+ * listener is added by calling {@link ChannelGroupFuture#addListener(FutureListener)}
  * and all I/O operations are complete.
  */
-public interface ChannelGroupFutureListener extends GenericFutureListener<ChannelGroupFuture> {
+public interface ChannelGroupFutureListener extends FutureListener<Void> {
 
 }

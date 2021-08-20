@@ -22,7 +22,10 @@ package io.netty.util.concurrent;
 public interface RunnableFuture<V> extends java.util.concurrent.RunnableFuture<V>, Future<V> {
 
     @Override
-    RunnableFuture<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
+    RunnableFuture<V> addListener(FutureListener<? super V> listener);
+
+    @Override
+    <C> RunnableFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
 
     @Override
     RunnableFuture<V> sync() throws InterruptedException;

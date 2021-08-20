@@ -19,7 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
-
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -76,7 +77,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         // the flush() is invoked from a non-I/O thread while the other are from
         // an I/O thread.
 
-        ChannelFuture future = clientChannel.write(createTestBuf(2000));
+        Future<Void> future = clientChannel.write(createTestBuf(2000));
 
         clientChannel.flush();
         future.sync();
@@ -173,7 +174,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
@@ -227,7 +228,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 promise.addListener(future -> ctx.channel().close());
                 ctx.write(msg, promise);
                 ctx.channel().flush();

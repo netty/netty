@@ -19,14 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,19 +33,19 @@ import static org.mockito.Mockito.when;
 public class PromiseCombinerTest {
     @Mock
     private Promise<Void> p1;
-    private GenericFutureListener<Future<Void>> l1;
-    private final GenericFutureListenerConsumer l1Consumer = new GenericFutureListenerConsumer() {
+    private FutureListener<Void> l1;
+    private final FutureListenerConsumer l1Consumer = new FutureListenerConsumer() {
         @Override
-        public void accept(GenericFutureListener<Future<Void>> listener) {
+        public void accept(FutureListener<Void> listener) {
             l1 = listener;
         }
     };
     @Mock
     private Promise<Void> p2;
-    private GenericFutureListener<Future<Void>> l2;
-    private final GenericFutureListenerConsumer l2Consumer = new GenericFutureListenerConsumer() {
+    private FutureListener<Void> l2;
+    private final FutureListenerConsumer l2Consumer = new FutureListenerConsumer() {
         @Override
-        public void accept(GenericFutureListener<Future<Void>> listener) {
+        public void accept(FutureListener<Void> listener) {
             l2 = listener;
         }
     };
@@ -95,14 +93,12 @@ public class PromiseCombinerTest {
         assertThrows(IllegalStateException.class, () -> combiner.add(p2));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testAddAllAfterFinish() {
         combiner.finish(p1);
         assertThrows(IllegalStateException.class, () -> combiner.addAll(p2));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testFinishCalledTwiceThrows() {
         combiner.finish(p1);
@@ -210,13 +206,13 @@ public class PromiseCombinerTest {
         verify(p, never()).setFailure(any(Throwable.class));
     }
 
-    private static void mockSuccessPromise(Promise<Void> p, GenericFutureListenerConsumer consumer) {
+    private static void mockSuccessPromise(Promise<Void> p, FutureListenerConsumer consumer) {
         when(p.isDone()).thenReturn(true);
         when(p.isSuccess()).thenReturn(true);
         mockListener(p, consumer);
     }
 
-    private static void mockFailedPromise(Promise<Void> p, Throwable cause, GenericFutureListenerConsumer consumer) {
+    private static void mockFailedPromise(Promise<Void> p, Throwable cause, FutureListenerConsumer consumer) {
         when(p.isDone()).thenReturn(true);
         when(p.isSuccess()).thenReturn(false);
         when(p.cause()).thenReturn(cause);
@@ -224,14 +220,14 @@ public class PromiseCombinerTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static void mockListener(final Promise<Void> p, final GenericFutureListenerConsumer consumer) {
+    private static void mockListener(final Promise<Void> p, final FutureListenerConsumer consumer) {
         doAnswer(invocation -> {
-            consumer.accept((GenericFutureListener) invocation.getArgument(0));
+            consumer.accept(invocation.getArgument(0));
             return p;
-        }).when(p).addListener(any(GenericFutureListener.class));
+        }).when(p).addListener(any(FutureListener.class));
     }
 
-    interface GenericFutureListenerConsumer {
-        void accept(GenericFutureListener<Future<Void>> listener);
+    interface FutureListenerConsumer {
+        void accept(FutureListener<Void> listener);
     }
 }

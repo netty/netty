@@ -67,7 +67,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
 
-    private final Future<?> terminationFuture = new FailedFuture<>(this, new UnsupportedOperationException());
+    private final Future<?> terminationFuture = DefaultPromise.newFailedPromise(
+            this, new UnsupportedOperationException());
 
     private GlobalEventExecutor() {
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(

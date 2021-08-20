@@ -17,9 +17,8 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
@@ -29,10 +28,7 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SucceededFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -201,12 +197,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             doResolveAndConnect0(channel, remoteAddress, localAddress, resolveAndConnectPromise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            regFuture.addListener((GenericFutureListener<Future<Channel>>) future -> {
+            regFuture.addListener(future -> {
                 // Directly obtain the cause and do a null check, so we only need one volatile read in case of a
                 // failure.
                 Throwable cause = future.cause();
                 if (cause != null) {
-                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                    // Registration on the EventLoop failed so fail the Promise directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
                     resolveAndConnectPromise.setFailure(cause);
                 } else {
@@ -247,7 +243,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             }
 
             // Wait until the name resolution is finished.
-            resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+            resolveFuture.addListener(future -> {
                 if (future.cause() != null) {
                     channel.close();
                     promise.setFailure(future.cause());
@@ -265,8 +261,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
-            ChannelPromise connectPromise = channel.newPromise();
-            connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            Promise<Void> connectPromise = channel.newPromise();
+            connectPromise.addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
             cascade(true, connectPromise, promise, channel);
             if (localAddress == null) {
                 channel.connect(remoteAddress, connectPromise);
@@ -285,7 +281,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         p.addLast(config.handler());
 
-        return new SucceededFuture<>(channel.eventLoop(), channel);
+        return DefaultPromise.newSuccessfulPromise(channel.eventLoop(), channel);
     }
 
     @Override

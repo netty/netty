@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -41,6 +40,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -244,6 +244,7 @@ public class HttpProxyHandlerTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static void testInitialMessage(InetSocketAddress socketAddress,
                                            String expectedUrl,
                                            String expectedHostHeader,
@@ -251,7 +252,7 @@ public class HttpProxyHandlerTest {
                                            boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
-        ChannelPromise promise = mock(ChannelPromise.class);
+        Promise<Void> promise = mock(Promise.class);
         verifyNoMoreInteractions(promise);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);

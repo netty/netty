@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -515,7 +513,7 @@ public class ProxyHandlerTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII)).addListener(
-                    (ChannelFutureListener) future -> {
+                    future -> {
                         latch.countDown();
                         if (!(future.cause() instanceof ProxyConnectException)) {
                             exceptions.add(new AssertionError(
@@ -739,7 +737,7 @@ public class ProxyHandlerTest {
             });
 
             Channel channel = b.connect(DESTINATION).get();
-            ChannelFuture cf = channel.closeFuture();
+            Future<Void> cf = channel.closeFuture();
             boolean finished = cf.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
             finished &= testHandler.latch.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
 

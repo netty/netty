@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
@@ -2115,7 +2114,7 @@ public class DnsNameResolverTest {
         }
 
         @Override
-        public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
+        public void queryWritten(InetSocketAddress dnsServerAddress, Future<Void> future) {
             events.add(new QueryWrittenEvent(dnsServerAddress));
         }
 

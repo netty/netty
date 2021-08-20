@@ -15,19 +15,19 @@
  */
 package io.netty.handler.timeout;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Raises a {@link WriteTimeoutException} when a write operation cannot finish in a certain period of time.
@@ -104,7 +104,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (timeoutNanos > 0) {
             scheduleTimeout(ctx, promise);
         }
@@ -126,7 +126,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
         }
     }
 
-    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+    private void scheduleTimeout(final ChannelHandlerContext ctx, final Promise<Void> promise) {
         // Schedule a timeout.
         final WriteTimeoutTask task = new WriteTimeoutTask(ctx, promise);
         task.scheduledFuture = ctx.executor().schedule(task, timeoutNanos, TimeUnit.NANOSECONDS);
@@ -182,10 +182,10 @@ public class WriteTimeoutHandler implements ChannelHandler {
         }
     }
 
-    private final class WriteTimeoutTask implements Runnable, ChannelFutureListener {
+    private final class WriteTimeoutTask implements Runnable, FutureListener<Void> {
 
         private final ChannelHandlerContext ctx;
-        private final ChannelPromise promise;
+        private final Promise<Void> promise;
 
         // WriteTimeoutTask is also a node of a doubly-linked list
         WriteTimeoutTask prev;
@@ -193,7 +193,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
 
         ScheduledFuture<?> scheduledFuture;
 
-        WriteTimeoutTask(ChannelHandlerContext ctx, ChannelPromise promise) {
+        WriteTimeoutTask(ChannelHandlerContext ctx, Promise<Void> promise) {
             this.ctx = ctx;
             this.promise = promise;
         }
@@ -214,7 +214,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(Future<? extends Void> future) throws Exception {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
 

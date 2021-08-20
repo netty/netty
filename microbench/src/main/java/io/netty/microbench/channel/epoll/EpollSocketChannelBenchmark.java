@@ -22,19 +22,20 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.epoll.EpollHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
+
+import java.util.concurrent.TimeUnit;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     private static final Runnable runnable = () -> { };
@@ -80,7 +81,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new ChannelHandler() {
 
-                private ChannelPromise lastWritePromise;
+                private Promise<Void> lastWritePromise;
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -89,7 +90,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                             ByteBuf buf = (ByteBuf) msg;
                             try {
                                 if (buf.readableBytes() == 1) {
-                                    lastWritePromise.trySuccess();
+                                    lastWritePromise.trySuccess(null);
                                     lastWritePromise = null;
                                 } else {
                                     throw new AssertionError();
@@ -103,7 +104,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         if (lastWritePromise != null) {
                             throw new IllegalStateException();
                         }

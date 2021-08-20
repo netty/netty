@@ -15,53 +15,77 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.logging.InternalLogger;
+
 import java.util.Arrays;
+import java.util.EventListener;
 
 final class DefaultFutureListeners {
-
-    private GenericFutureListener<? extends Future<?>>[] listeners;
+    private Object[] listeners;
     private int size;
 
-    @SuppressWarnings("unchecked")
-    DefaultFutureListeners(
-            GenericFutureListener<? extends Future<?>> first, GenericFutureListener<? extends Future<?>> second) {
-        listeners = new GenericFutureListener[2];
-        listeners[0] = first;
-        listeners[1] = second;
-        size = 2;
+    DefaultFutureListeners() {
+        listeners = new Object[4];
     }
 
-    public void add(GenericFutureListener<? extends Future<?>> l) {
-        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
-        final int size = this.size;
-        if (size == listeners.length) {
-            this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
+    public void add(Object listener, Object context) {
+        Object[] listeners = this.listeners;
+        int index = size << 1;
+        if (index == listeners.length) {
+            this.listeners = listeners = Arrays.copyOf(listeners, listeners.length << 1);
         }
-        listeners[size] = l;
-        this.size = size + 1;
+        listeners[index] = listener;
+        listeners[index + 1] = context;
+        size++;
     }
 
-    public void remove(GenericFutureListener<? extends Future<?>> l) {
-        final GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
-        int size = this.size;
-        for (int i = 0; i < size; i ++) {
-            if (listeners[i] == l) {
-                int listenersToMove = size - i - 1;
+    public void remove(EventListener listener) {
+        final Object[] listeners = this.listeners;
+        for (int i = 0, len = listeners.length; i < len; i += 2) {
+            Object candidateListener = listeners[i]; // With associated context at listeners[i + 1]
+            if (candidateListener == listener) {
+                int listenersToMove = len - i - 2;
                 if (listenersToMove > 0) {
-                    System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
+                    System.arraycopy(listeners, i + 2, listeners, i, listenersToMove);
                 }
-                listeners[-- size] = null;
-                this.size = size;
+                listeners[len - 2] = null;
+                listeners[len - 1] = null;
+                size--;
                 return;
             }
         }
     }
 
-    public GenericFutureListener<? extends Future<?>>[] listeners() {
-        return listeners;
-    }
-
-    public int size() {
-        return size;
+    @SuppressWarnings("unchecked")
+    public <V> void notifyListeners(DefaultPromise<V> promise, InternalLogger logger) {
+        int size = this.size;
+        Object[] listeners = this.listeners;
+        for (int i = 0, len = size << 1; i < len; i += 2) {
+            Object listener = listeners[i];
+            Object context = listeners[i + 1];
+            try {
+                // Since a listener could in theory be both a FutureListener and a FutureContextListener,
+                // we use the presence of a context object to determine which one was meant when the listener
+                // was added. The context reference will never be null if the FutureContextListener was intended,
+                // even if the context passed was null. In that case, the reference will point to the
+                // NULL_CONTEXT, and we have to convert it back to null here.
+                if (context != null) {
+                    FutureContextListener<Object, V> fcl = (FutureContextListener<Object, V>) listener;
+                    fcl.operationComplete(context == DefaultPromise.NULL_CONTEXT ? null : context, promise);
+                } else if (listener instanceof FutureListener) {
+                    FutureListener<V> fl = (FutureListener<V>) listener;
+                    fl.operationComplete(promise);
+                } else if (listener != null) {
+                    logger.warn("Unknown future listener type: {} of type {}", listener, listener.getClass());
+                } else {
+                    break; // Listeners are always densely packed in the array, so finding a null means we're done.
+                }
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    String className = listener.getClass().getName();
+                    logger.warn("An exception was thrown by " + className + ".operationComplete()", t);
+                }
+            }
+        }
     }
 }

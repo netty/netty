@@ -26,8 +26,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -91,7 +90,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             }
         });
 
-        GenericFutureListener<Future<? super Channel>> listener = future -> {
+        FutureListener<Channel> listener = future -> {
             if (!future.isSuccess()) {
                 clientDonePromise.tryFailure(future.cause());
             }

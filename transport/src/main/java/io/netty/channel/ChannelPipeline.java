@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -141,14 +142,14 @@ import java.util.NoSuchElementException;
  * </li>
  * <li>Outbound event propagation methods:
  *     <ul>
- *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#write(Object, ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#bind(SocketAddress, Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#write(Object, Promise)}</li>
  *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
- *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#disconnect(Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#close(Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#deregister(Promise)}</li>
  *     </ul>
  * </li>
  * </ul>
@@ -166,7 +167,7 @@ import java.util.NoSuchElementException;
  *
  * public class MyOutboundHandler implements {@link ChannelOutboundHandler} {
  *     {@code @Override}
- *     public void close({@link ChannelHandlerContext} ctx, {@link ChannelPromise} promise) {
+ *     public void close({@link ChannelHandlerContext} ctx, {@link Promise} promise) {
  *         System.out.println("Closing ..");
  *         ctx.close(promise);
  *     }

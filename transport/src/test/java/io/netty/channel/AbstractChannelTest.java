@@ -15,17 +15,25 @@
  */
 package io.netty.channel;
 
+import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
-import io.netty.util.NetUtil;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class AbstractChannelTest {
 
@@ -97,7 +105,7 @@ public class AbstractChannelTest {
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
-        channel.unsafe().deregister(new DefaultChannelPromise(channel));
+        channel.unsafe().deregister(channel.newPromise());
 
         registerChannel(channel);
 
@@ -139,9 +147,9 @@ public class AbstractChannelTest {
                 return new AbstractUnsafe() {
                     @Override
                     public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                         active = true;
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     }
                 };
             }
@@ -181,7 +189,7 @@ public class AbstractChannelTest {
         }
     }
 
-    private static void assertClosedChannelException(ChannelFuture future, IOException expected)
+    private static void assertClosedChannelException(Future<Void> future, IOException expected)
             throws InterruptedException {
         Throwable cause = future.await().cause();
         assertTrue(cause instanceof ClosedChannelException);
@@ -189,7 +197,7 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
-        DefaultChannelPromise future = new DefaultChannelPromise(channel);
+        Promise<Void> future = channel.newPromise();
         channel.register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
@@ -227,7 +235,7 @@ public class AbstractChannelTest {
         protected AbstractUnsafe newUnsafe() {
             return new AbstractUnsafe() {
                 @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                     promise.setFailure(new UnsupportedOperationException());
                 }
             };

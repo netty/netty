@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -34,6 +33,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -432,7 +432,7 @@ public class DataCompressionHttp2Test {
         return clientChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseClient() {
+    private Promise<Void> newPromiseClient() {
         return ctxClient().newPromise();
     }
 }

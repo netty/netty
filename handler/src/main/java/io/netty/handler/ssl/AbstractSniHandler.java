@@ -17,7 +17,6 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 
@@ -128,7 +127,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     }
 
     @Override
-    protected void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception {
+    protected void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception {
         try {
             onLookupComplete(ctx, hostname, future);
         } finally {
@@ -153,7 +152,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
      * @see #lookup(ChannelHandlerContext, String)
      */
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
-                                             String hostname, Future<T> future) throws Exception;
+                                             String hostname, Future<? extends T> future) throws Exception;
 
     private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();

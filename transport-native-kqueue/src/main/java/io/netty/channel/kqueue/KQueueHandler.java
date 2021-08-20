@@ -228,7 +228,7 @@ public final class KQueueHandler implements IoHandler {
             }
 
             AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) channel.unsafe();
-            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+            // First check for EPOLLOUT as we may need to fail the connect Promise before try
             // to read from the file descriptor.
             if (filter == Native.EVFILT_WRITE) {
                 unsafe.writeReady();

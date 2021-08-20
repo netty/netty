@@ -15,18 +15,18 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.util.List;
 
 public class MessageToMessageEncoderTest {
 
@@ -59,7 +59,7 @@ public class MessageToMessageEncoderTest {
         ChannelHandler writeThrower = new ChannelHandler() {
             private boolean firstWritten;
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (firstWritten) {
                     ctx.write(msg, promise);
                 } else {
@@ -71,7 +71,7 @@ public class MessageToMessageEncoderTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(writeThrower, encoder);
         Object msg = new Object();
-        ChannelFuture write = channel.writeAndFlush(msg);
+        Future<Void> write = channel.writeAndFlush(msg);
         assertSame(firstWriteException, write.cause());
         assertSame(msg, channel.readOutbound());
         assertFalse(channel.finish());

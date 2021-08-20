@@ -16,7 +16,7 @@
 package io.netty.testsuite.svm;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -51,7 +51,7 @@ public class HttpNativeServerHandler extends SimpleChannelInboundHandler<HttpObj
             response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
             if (!keepAlive) {
-                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+                ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
             } else {
                 response.headers().set(CONNECTION, KEEP_ALIVE);
                 ctx.write(response);

@@ -31,12 +31,22 @@ import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
 import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
@@ -56,16 +66,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
@@ -354,7 +354,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
             if (!nextProtoList.isEmpty()) {
-                String[] appProtocols = nextProtoList.toArray(new String[0]);
+                String[] appProtocols = nextProtoList.toArray(EmptyArrays.EMPTY_STRINGS);
                 int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
                 switch (apn.protocol()) {
@@ -1044,7 +1044,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             @Override
-            public void operationComplete(Future<byte[]> future) {
+            public void operationComplete(Future<? extends byte[]> future) {
                 Throwable cause = future.cause();
                 if (cause == null) {
                     try {

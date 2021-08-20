@@ -15,10 +15,10 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
@@ -66,7 +66,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
         receivedMessages ++;
         if (receivedMessages == FactorialClient.COUNT) {
             // Offer the answer after closing the connection.
-            ctx.channel().close().addListener((ChannelFutureListener) future -> {
+            ctx.channel().close().addListener(future -> {
                 boolean offered = answer.offer(msg);
                 assert offered;
             });
@@ -81,7 +81,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
-        ChannelFuture future = null;
+        Future<Void> future = null;
         for (int i = 0; i < 4096 && next <= FactorialClient.COUNT; i++) {
             future = ctx.write(Integer.valueOf(next));
             next++;
@@ -93,12 +93,12 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
         ctx.flush();
     }
 
-    private final ChannelFutureListener numberSender = future -> {
+    private final FutureListener<Void> numberSender = future -> {
         if (future.isSuccess()) {
             sendNumbers();
         } else {
             future.cause().printStackTrace();
-            future.channel().close();
+            ctx.channel().close();
         }
     };
 }

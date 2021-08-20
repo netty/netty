@@ -17,13 +17,13 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,11 +47,9 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,7 +79,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static final int STATE_RECV_TRAILERS = 1 << 1;
 
     private Http2ConnectionDecoder decoder;
-    private ChannelPromise promise;
+    private Promise<Void> promise;
 
     @Mock
     private Http2Connection connection;
@@ -106,7 +103,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Channel channel;
 
     @Mock
-    private ChannelFuture future;
+    private Future<Void> future;
 
     @Mock
     private Http2Stream stream;
@@ -133,7 +130,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
@@ -623,6 +620,7 @@ public class DefaultHttp2ConnectionDecoderTest {
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void headersDependencyNotCreatedShouldCreateAndSucceed() throws Exception {
         final short weight = 1;
@@ -631,7 +629,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(STREAM_DEPENDENCY_ID),
                 eq(weight), eq(true), eq(0), eq(true));
         verify(remoteFlow).updateDependencyTree(eq(STREAM_ID), eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
-        verify(lifecycleManager).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+        verify(lifecycleManager).closeStreamRemote(eq(stream), any(Future.class));
     }
 
     @Test

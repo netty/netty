@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.Promise;
 
 /**
  * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link ByteBuf} and consumers take bytes in
@@ -51,15 +52,15 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     /**
      * Remove a {@link ByteBuf} from the queue with the specified number of bytes. Any added buffer who's bytes are
-     * fully consumed during removal will have it's promise completed when the passed aggregate {@link ChannelPromise}
+     * fully consumed during removal will have it's promise completed when the passed aggregate {@link Promise}
      * completes.
      *
      * @param bytes the maximum number of readable bytes in the returned {@link ByteBuf}, if {@code bytes} is greater
-     *              than {@link #readableBytes} then a buffer of length {@link #readableBytes} is returned.
+     *              than {@link #readableBytes()} then a buffer of length {@link #readableBytes()} is returned.
      * @param aggregatePromise used to aggregate the promises and listeners for the constituent buffers.
      * @return a {@link ByteBuf} composed of the enqueued buffers.
      */
-    public ByteBuf remove(int bytes, ChannelPromise aggregatePromise) {
+    public ByteBuf remove(int bytes, Promise<Void> aggregatePromise) {
         return remove(channel.alloc(), bytes, aggregatePromise);
     }
 

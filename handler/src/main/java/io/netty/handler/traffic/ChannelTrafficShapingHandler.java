@@ -17,7 +17,7 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  * </li>
  * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
  * {@code channelWritabilityChanged(ctx)} to handle writability, or through
- * {@code future.addListener(new GenericFutureListener())} on the future returned by
+ * {@code future.addListener(future -> ...)} on the future returned by
  * {@code ctx.write()}.</li>
  * <li><p>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
@@ -165,9 +165,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     private static final class ToSend {
         final long relativeTimeAction;
         final Object toSend;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        private ToSend(final long delay, final Object toSend, final ChannelPromise promise) {
+        private ToSend(final long delay, final Object toSend, final Promise<Void> promise) {
             relativeTimeAction = delay;
             this.toSend = toSend;
             this.promise = promise;
@@ -177,7 +177,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     @Override
     void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long delay, final long now,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         final ToSend newToSend;
         // write order control
         synchronized (this) {

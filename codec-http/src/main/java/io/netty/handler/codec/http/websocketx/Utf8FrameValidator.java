@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -92,7 +92,7 @@ public class Utf8FrameValidator implements ChannelHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof CorruptedFrameException && ctx.channel().isOpen()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
         ctx.fireExceptionCaught(cause);
     }

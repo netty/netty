@@ -18,17 +18,17 @@ package io.netty.handler.codec.memcache.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
@@ -108,52 +108,63 @@ public final class BinaryMemcacheClientCodec extends
                     return ctx.channel();
                 }
 
+                @Override
                 public EventExecutor executor() {
                     return ctx.executor();
                 }
 
+                @Override
                 public String name() {
                     return ctx.name();
                 }
 
+                @Override
                 public ChannelHandler handler() {
                     return ctx.handler();
                 }
 
+                @Override
                 public boolean isRemoved() {
                     return ctx.isRemoved();
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelRegistered() {
                     ctx.fireChannelRegistered();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelUnregistered() {
                     ctx.fireChannelUnregistered();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelActive() {
                     ctx.fireChannelActive();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelInactive() {
                     ctx.fireChannelInactive();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
                     ctx.fireExceptionCaught(cause);
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireUserEventTriggered(Object evt) {
                     ctx.fireUserEventTriggered(evt);
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelRead(Object msg) {
                     if (failOnMissingResponse && msg instanceof LastMemcacheContent) {
                         requestResponseCounter.decrementAndGet();
@@ -162,128 +173,155 @@ public final class BinaryMemcacheClientCodec extends
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelReadComplete() {
                     ctx.fireChannelReadComplete();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext fireChannelWritabilityChanged() {
                     ctx.fireChannelWritabilityChanged();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext read() {
                     ctx.read();
                     return this;
                 }
 
+                @Override
                 public ChannelHandlerContext flush() {
                     ctx.flush();
                     return this;
                 }
 
+                @Override
                 public ChannelPipeline pipeline() {
                     return ctx.pipeline();
                 }
 
+                @Override
                 public ByteBufAllocator alloc() {
                     return ctx.alloc();
                 }
 
+                @Override
                 @Deprecated
                 public <T> Attribute<T> attr(AttributeKey<T> key) {
                     return ctx.attr(key);
                 }
 
+                @Override
                 @Deprecated
                 public <T> boolean hasAttr(AttributeKey<T> key) {
                     return ctx.hasAttr(key);
                 }
 
-                public ChannelFuture bind(SocketAddress localAddress) {
+                @Override
+                public Future<Void> bind(SocketAddress localAddress) {
                     return ctx.bind(localAddress);
                 }
 
-                public ChannelFuture connect(SocketAddress remoteAddress) {
+                @Override
+                public Future<Void> connect(SocketAddress remoteAddress) {
                     return ctx.connect(remoteAddress);
                 }
 
-                public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+                @Override
+                public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
                     return ctx.connect(remoteAddress, localAddress);
                 }
 
-                public ChannelFuture disconnect() {
+                @Override
+                public Future<Void> disconnect() {
                     return ctx.disconnect();
                 }
 
-                public ChannelFuture close() {
+                @Override
+                public Future<Void> close() {
                     return ctx.close();
                 }
 
-                public ChannelFuture deregister() {
+                @Override
+                public Future<Void> deregister() {
                     return ctx.deregister();
                 }
 
                 @Override
-                public ChannelFuture register() {
+                public Future<Void> register() {
                     return ctx.register();
                 }
 
                 @Override
-                public ChannelFuture register(ChannelPromise promise) {
+                public Future<Void> register(Promise<Void> promise) {
                     return ctx.register(promise);
                 }
 
-                public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                @Override
+                public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
                     return ctx.bind(localAddress, promise);
                 }
 
-                public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+                @Override
+                public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
                     return ctx.connect(remoteAddress, promise);
                 }
 
-                public ChannelFuture connect(
-                        SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                @Override
+                public Future<Void> connect(
+                        SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                     return ctx.connect(remoteAddress, localAddress, promise);
                 }
 
-                public ChannelFuture disconnect(ChannelPromise promise) {
+                @Override
+                public Future<Void> disconnect(Promise<Void> promise) {
                     return ctx.disconnect(promise);
                 }
 
-                public ChannelFuture close(ChannelPromise promise) {
+                @Override
+                public Future<Void> close(Promise<Void> promise) {
                     return ctx.close(promise);
                 }
 
-                public ChannelFuture deregister(ChannelPromise promise) {
+                @Override
+                public Future<Void> deregister(Promise<Void> promise) {
                     return ctx.deregister(promise);
                 }
 
-                public ChannelFuture write(Object msg) {
+                @Override
+                public Future<Void> write(Object msg) {
                     return ctx.write(msg);
                 }
 
-                public ChannelFuture write(Object msg, ChannelPromise promise) {
+                @Override
+                public Future<Void> write(Object msg, Promise<Void> promise) {
                     return ctx.write(msg, promise);
                 }
 
-                public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+                @Override
+                public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
                     return ctx.writeAndFlush(msg, promise);
                 }
 
-                public ChannelFuture writeAndFlush(Object msg) {
+                @Override
+                public Future<Void> writeAndFlush(Object msg) {
                     return ctx.writeAndFlush(msg);
                 }
 
-                public ChannelPromise newPromise() {
+                @Override
+                public Promise<Void> newPromise() {
                     return ctx.newPromise();
                 }
 
-                public ChannelFuture newSucceededFuture() {
+                @Override
+                public Future<Void> newSucceededFuture() {
                     return ctx.newSucceededFuture();
                 }
 
-                public ChannelFuture newFailedFuture(Throwable cause) {
+                @Override
+                public Future<Void> newFailedFuture(Throwable cause) {
                     return ctx.newFailedFuture(cause);
                 }
             };

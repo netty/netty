@@ -18,18 +18,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
@@ -38,11 +37,13 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link DefaultHttp2FrameWriter}.
  */
+@SuppressWarnings("unchecked")
 public class DefaultHttp2FrameWriterTest {
     private DefaultHttp2FrameWriter frameWriter;
 
@@ -50,7 +51,7 @@ public class DefaultHttp2FrameWriterTest {
 
     private ByteBuf expectedOutbound;
 
-    private ChannelPromise promise;
+    private Promise<Void> promise;
 
     private Http2HeadersEncoder http2HeadersEncoder;
 
@@ -58,7 +59,7 @@ public class DefaultHttp2FrameWriterTest {
     private Channel channel;
 
     @Mock
-    private ChannelFuture future;
+    private Future<Void> future;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -76,7 +77,7 @@ public class DefaultHttp2FrameWriterTest {
 
         expectedOutbound = Unpooled.EMPTY_BUFFER;
 
-        promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
 
         Answer<Object> answer = var1 -> {
             Object msg = var1.getArgument(0);
@@ -87,7 +88,7 @@ public class DefaultHttp2FrameWriterTest {
             return future;
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(ChannelPromise.class))).then(answer);
+        when(ctx.write(any(), any(Promise.class))).then(answer);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

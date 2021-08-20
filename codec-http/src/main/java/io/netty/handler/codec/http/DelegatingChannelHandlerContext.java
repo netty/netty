@@ -17,24 +17,24 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
     private final ChannelHandlerContext ctx;
 
     DelegatingChannelHandlerContext(ChannelHandlerContext ctx) {
-        this.ctx = ObjectUtil.checkNotNull(ctx, "ctx");
+        this.ctx = Objects.requireNonNull(ctx, "ctx");
     }
 
     @Override
@@ -150,108 +150,108 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Void> bind(SocketAddress localAddress) {
         return ctx.bind(localAddress);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress) {
         return ctx.connect(remoteAddress);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return ctx.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public ChannelFuture disconnect() {
+    public Future<Void> disconnect() {
         return ctx.disconnect();
     }
 
     @Override
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return ctx.close();
     }
 
     @Override
-    public ChannelFuture deregister() {
+    public Future<Void> deregister() {
         return ctx.deregister();
     }
 
     @Override
-    public ChannelFuture register() {
+    public Future<Void> register() {
         return ctx.register();
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
+    public Future<Void> register(Promise<Void> promise) {
         return ctx.register(promise);
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
         return ctx.bind(localAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return ctx.connect(remoteAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> connect(
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         return ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
+    public Future<Void> disconnect(Promise<Void> promise) {
         return ctx.disconnect(promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise promise) {
+    public Future<Void> close(Promise<Void> promise) {
         return ctx.close(promise);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
+    public Future<Void> deregister(Promise<Void> promise) {
         return ctx.deregister(promise);
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
+    public Future<Void> write(Object msg) {
         return ctx.write(msg);
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
+    public Future<Void> write(Object msg, Promise<Void> promise) {
         return ctx.write(msg, promise);
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         return ctx.writeAndFlush(msg, promise);
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg) {
+    public Future<Void> writeAndFlush(Object msg) {
         return ctx.writeAndFlush(msg);
     }
 
     @Override
-    public ChannelPromise newPromise() {
+    public Promise<Void> newPromise() {
         return ctx.newPromise();
     }
 
     @Override
-    public ChannelFuture newSucceededFuture() {
+    public Future<Void> newSucceededFuture() {
         return ctx.newSucceededFuture();
     }
 
     @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
+    public Future<Void> newFailedFuture(Throwable cause) {
         return ctx.newFailedFuture(cause);
     }
 }

@@ -18,13 +18,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCounted;
-
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -178,11 +177,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
                 }
 
-                ChannelFuture future = streamChannel.register();
+                Future<Void> future = streamChannel.register();
                 if (future.isDone()) {
-                    Http2MultiplexHandler.registerDone(future);
+                    Http2MultiplexHandler.registerDone(streamChannel, future);
                 } else {
-                    future.addListener(Http2MultiplexHandler.CHILD_CHANNEL_REGISTRATION_LISTENER);
+                    future.addListener(streamChannel, Http2MultiplexHandler.CHILD_CHANNEL_REGISTRATION_LISTENER);
                 }
                 break;
             case CLOSED:
@@ -312,8 +311,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
 
         @Override
-        protected ChannelFuture write0(ChannelHandlerContext ctx, Object msg) {
-            ChannelPromise promise = ctx.newPromise();
+        protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
+            Promise<Void> promise = ctx.newPromise();
             Http2MultiplexCodec.this.write(ctx, msg, promise);
             return promise;
         }

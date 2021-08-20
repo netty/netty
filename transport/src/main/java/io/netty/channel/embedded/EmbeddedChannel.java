@@ -25,8 +25,6 @@ import java.util.Queue;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -34,12 +32,14 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -61,7 +61,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final ChannelFutureListener recordExceptionListener = this::recordException;
+    private final FutureListener<Void> recordExceptionListener = this::recordException;
 
     private final ChannelMetadata metadata;
     private final ChannelConfig config;
@@ -218,19 +218,19 @@ public class EmbeddedChannel extends AbstractChannel {
             }
         });
         if (register) {
-            ChannelFuture future = register();
+            Future<Void> future = register();
             assert future.isDone();
         }
     }
 
     @Override
-    public ChannelFuture register() {
+    public Future<Void> register() {
         return register(newPromise());
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ChannelFuture future = super.register(promise);
+    public Future<Void> register(Promise<Void> promise) {
+        Future<Void> future = super.register(promise);
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
@@ -352,17 +352,17 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneOutbound(Object)
      */
-    public ChannelFuture writeOneInbound(Object msg) {
+    public Future<Void> writeOneInbound(Object msg) {
         return writeOneInbound(msg, newPromise());
     }
 
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link #write(Object, Promise)}.
      *
-     * @see #writeOneOutbound(Object, ChannelPromise)
+     * @see #writeOneOutbound(Object, Promise)
      */
-    public ChannelFuture writeOneInbound(Object msg, ChannelPromise promise) {
+    public Future<Void> writeOneInbound(Object msg, Promise<Void> promise) {
         if (checkOpen(true)) {
             pipeline().fireChannelRead(msg);
         }
@@ -380,7 +380,7 @@ public class EmbeddedChannel extends AbstractChannel {
         return this;
     }
 
-    private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
+    private Future<Void> flushInbound(boolean recordException, Promise<Void> promise) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
           readIfIsAutoRead();
@@ -388,7 +388,7 @@ public class EmbeddedChannel extends AbstractChannel {
       }
 
       checkException(promise);
-      return promise;
+        return promise;
     }
 
     /**
@@ -416,7 +416,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
             int size = futures.size();
             for (int i = 0; i < size; i++) {
-                ChannelFuture future = (ChannelFuture) futures.get(i);
+                Future<Void> future = (Future<Void>) futures.get(i);
                 if (future.isDone()) {
                     recordException(future);
                 } else {
@@ -438,17 +438,17 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneInbound(Object)
      */
-    public ChannelFuture writeOneOutbound(Object msg) {
+    public Future<Void> writeOneOutbound(Object msg) {
         return writeOneOutbound(msg, newPromise());
     }
 
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link #write(Object, Promise)}.
      *
-     * @see #writeOneInbound(Object, ChannelPromise)
+     * @see #writeOneInbound(Object, Promise)
      */
-    public ChannelFuture writeOneOutbound(Object msg, ChannelPromise promise) {
+    public Future<Void> writeOneOutbound(Object msg, Promise<Void> promise) {
         if (checkOpen(true)) {
             return write(msg, promise);
         }
@@ -554,21 +554,21 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final ChannelFuture close() {
+    public final Future<Void> close() {
         return close(newPromise());
     }
 
     @Override
-    public final ChannelFuture disconnect() {
+    public final Future<Void> disconnect() {
         return disconnect(newPromise());
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
+    public final Future<Void> close(Promise<Void> promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         runPendingTasks();
-        ChannelFuture future = super.close(promise);
+        Future<Void> future = super.close(promise);
 
         // Now finish everything else and cancel all scheduled tasks that were not ready set.
         finishPendingTasks(true);
@@ -576,8 +576,8 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        ChannelFuture future = super.disconnect(promise);
+    public final Future<Void> disconnect(Promise<Void> promise) {
+        Future<Void> future = super.disconnect(promise);
         finishPendingTasks(!metadata.hasDisconnect());
         return future;
     }
@@ -624,7 +624,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private void recordException(ChannelFuture future) {
+    private void recordException(Future<?> future) {
         if (!future.isSuccess()) {
             recordException(future.cause());
         }
@@ -643,7 +643,7 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Checks for the presence of an {@link Exception}.
      */
-    private void checkException(ChannelPromise promise) {
+    private void checkException(Promise<Void> promise) {
         Throwable t = lastException;
         if (t != null) {
             lastException = null;
@@ -655,7 +655,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
             promise.setFailure(t);
         } else if (promise != null) {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -793,31 +793,31 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void register(ChannelPromise promise) {
+            public void register(Promise<Void> promise) {
                 EmbeddedUnsafe.this.register(promise);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void bind(SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(SocketAddress localAddress, Promise<Void> promise) {
                 EmbeddedUnsafe.this.bind(localAddress, promise);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                 EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void disconnect(ChannelPromise promise) {
+            public void disconnect(Promise<Void> promise) {
                 EmbeddedUnsafe.this.disconnect(promise);
                 mayRunPendingTasks();
             }
 
             @Override
-            public void close(ChannelPromise promise) {
+            public void close(Promise<Void> promise) {
                 EmbeddedUnsafe.this.close(promise);
                 mayRunPendingTasks();
             }
@@ -829,7 +829,7 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void deregister(ChannelPromise promise) {
+            public void deregister(Promise<Void> promise) {
                 EmbeddedUnsafe.this.deregister(promise);
                 mayRunPendingTasks();
             }
@@ -841,7 +841,7 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void write(Object msg, ChannelPromise promise) {
+            public void write(Object msg, Promise<Void> promise) {
                 EmbeddedUnsafe.this.write(msg, promise);
                 mayRunPendingTasks();
             }
@@ -859,7 +859,7 @@ public class EmbeddedChannel extends AbstractChannel {
         };
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             safeSetSuccess(promise);
         }
     }

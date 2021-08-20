@@ -15,18 +15,14 @@
  */
 package io.netty.handler.traffic;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -39,6 +35,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -72,7 +72,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * </li>
  * <li>In your handler, you should consider to use the {@code channel.isWritable()} and
  * {@code channelWritabilityChanged(ctx)} to handle writability, or through
- * {@code future.addListener(new GenericFutureListener())} on the future returned by
+ * {@code future.addListener(future -> ...)} on the future returned by
  * {@code ctx.write()}.</li>
  * <li>You shall also consider to have object size in read or write operations relatively adapted to
  * the bandwidth you required: for instance having 10 MB objects for 10KB/s will lead to burst effect,
@@ -597,10 +597,10 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     private static final class ToSend {
         final long relativeTimeAction;
         final Object toSend;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
         final long size;
 
-        private ToSend(final long delay, final Object toSend, final long size, final ChannelPromise promise) {
+        private ToSend(final long delay, final Object toSend, final long size, final Promise<Void> promise) {
             relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
@@ -648,7 +648,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
         if (size > 0) {
@@ -692,7 +692,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     @Override
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         Channel channel = ctx.channel();
         Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);

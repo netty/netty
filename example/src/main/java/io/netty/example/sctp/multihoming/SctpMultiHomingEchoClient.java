@@ -17,7 +17,6 @@ package io.netty.example.sctp.multihoming;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -79,10 +78,10 @@ public final class SctpMultiHomingEchoClient {
             channel.bindAddress(localSecondaryAddress).sync();
 
             // Finish connect
-            ChannelFuture connectFuture = channel.connect(remoteAddress).sync();
+            Future<Void> connectFuture = channel.connect(remoteAddress).sync();
 
             // Wait until the connection is closed.
-            connectFuture.channel().closeFuture().sync();
+            channel.closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
             group.shutdownGracefully();

@@ -21,12 +21,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
@@ -54,8 +52,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
@@ -490,7 +486,7 @@ public class DnsNameResolver extends InetNameResolver {
         channelFuture = responseHandler.channelActivePromise;
         try {
             ch = b.createUnregistered();
-            ChannelFuture future = localAddress == null ? ch.register() : ch.bind(localAddress);
+            Future<Void> future = localAddress == null ? ch.register() : ch.bind(localAddress);
             if (future.cause() != null) {
                 throw future.cause();
             }
@@ -998,7 +994,7 @@ public class DnsNameResolver extends InetNameResolver {
                                    DnsCache resolveCache, boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
         doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
-        allPromise.addListener((FutureListener<List<InetAddress>>) future -> {
+        allPromise.addListener(future -> {
             if (future.isSuccess()) {
                 trySuccess(promise, future.getNow().get(0));
             } else {
@@ -1221,7 +1217,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             DnsRecord[] additionals,
             boolean flush,
-            ChannelPromise writePromise,
+            Promise<Void> writePromise,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
@@ -1279,7 +1275,7 @@ public class DnsNameResolver extends InetNameResolver {
             .group(executor())
             .channelFactory(socketChannelFactory)
             .handler(TCP_ENCODER);
-            bs.connect(res.sender()).addListener((GenericFutureListener<Future<Channel>>) future -> {
+            bs.connect(res.sender()).addListener(future -> {
                 if (!future.isSuccess()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
@@ -1334,19 +1330,15 @@ public class DnsNameResolver extends InetNameResolver {
                     }
                 });
 
-                promise.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
-                    @Override
-                    public void operationComplete(
-                            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-                        channel.close();
+                promise.addListener(addressEnvelopeFuture -> {
+                    channel.close();
 
-                        if (future.isSuccess()) {
-                            qCtx.finish(future.getNow());
-                            res.release();
-                        } else {
-                            // TCP fallback failed, just use the truncated response.
-                            qCtx.finish(res);
-                        }
+                    if (addressEnvelopeFuture.isSuccess()) {
+                        qCtx.finish(addressEnvelopeFuture.getNow());
+                        res.release();
+                    } else {
+                        // TCP fallback failed, just use the truncated response.
+                        qCtx.finish(res);
                     }
                 });
                 tcpCtx.query(true, channel.newPromise());

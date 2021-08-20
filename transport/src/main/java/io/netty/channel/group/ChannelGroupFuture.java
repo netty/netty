@@ -16,17 +16,16 @@
 package io.netty.channel.group;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 
 import java.util.Iterator;
 
 /**
  * The result of an asynchronous {@link ChannelGroup} operation.
- * {@link ChannelGroupFuture} is composed of {@link ChannelFuture}s which
+ * {@link ChannelGroupFuture} is composed of {@link Future}s which
  * represent the outcome of the individual I/O operations that affect the
  * {@link Channel}s in the {@link ChannelGroup}.
  *
@@ -43,13 +42,13 @@ import java.util.Iterator;
  * {@link ChannelGroupFutureListener} so you can get notified when the I/O
  * operation have been completed.
  *
- * <h3>Prefer {@link #addListener(GenericFutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
  *
- * It is recommended to prefer {@link #addListener(GenericFutureListener)} to
+ * It is recommended to prefer {@link #addListener(FutureListener)} to
  * {@link #await()} wherever possible to get notified when I/O operations are
  * done and to do any follow-up tasks.
  * <p>
- * {@link #addListener(GenericFutureListener)} is non-blocking.  It simply
+ * {@link #addListener(FutureListener)} is non-blocking.  It simply
  * adds the specified {@link ChannelGroupFutureListener} to the
  * {@link ChannelGroupFuture}, and I/O thread will notify the listeners when
  * the I/O operations associated with the future is done.
@@ -102,7 +101,7 @@ import java.util.Iterator;
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
  */
-public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture> {
+public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>> {
 
     /**
      * Returns the {@link ChannelGroup} which is associated with this future.
@@ -110,13 +109,13 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     ChannelGroup group();
 
     /**
-     * Returns the {@link ChannelFuture} of the individual I/O operation which
+     * Returns the {@link Future} of the individual I/O operation which
      * is associated with the specified {@link Channel}.
      *
-     * @return the matching {@link ChannelFuture} if found.
+     * @return the matching {@link Future} if found.
      *         {@code null} otherwise.
      */
-    ChannelFuture find(Channel channel);
+    Future<Void> find(Channel channel);
 
     /**
      * Returns {@code true} if and only if all I/O operations associated with
@@ -141,7 +140,7 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     boolean isPartialFailure();
 
     @Override
-    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
+    ChannelGroupFuture addListener(FutureListener<? super Void> listener);
 
     @Override
     ChannelGroupFuture await() throws InterruptedException;
@@ -156,11 +155,11 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     ChannelGroupFuture sync() throws InterruptedException;
 
     /**
-     * Returns the {@link Iterator} that enumerates all {@link ChannelFuture}s
+     * Returns the {@link Iterator} that enumerates all {@link Future}s
      * which are associated with this future.  Please note that the returned
-     * {@link Iterator} is is unmodifiable, which means a {@link ChannelFuture}
+     * {@link Iterator} is is unmodifiable, which means a {@link Future}
      * cannot be removed from this future.
      */
     @Override
-    Iterator<ChannelFuture> iterator();
+    Iterator<Future<Void>> iterator();
 }

@@ -17,8 +17,7 @@ package io.netty.example.http.file;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -28,22 +27,23 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -52,9 +52,17 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -191,8 +199,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         ctx.write(response);
 
         // Write the content.
-        ChannelFuture sendFileFuture;
-        ChannelFuture lastContentFuture;
+        Future<Void> sendFileFuture;
+        Future<Void> lastContentFuture;
         if (ctx.pipeline().get(SslHandler.class) == null) {
             sendFileFuture =
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
@@ -205,18 +213,13 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             lastContentFuture = sendFileFuture;
         }
 
-        sendFileFuture.addListener(new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                System.err.println(future.channel() + " Transfer complete.");
-            }
-        });
+        sendFileFuture.addListener(ctx.channel(), (channel, future) ->
+                System.err.println(channel + " Transfer complete."));
 
         // Decide whether to close the connection or not.
         if (!keepAlive) {
             // Close the connection when the whole content is written out.
-            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            lastContentFuture.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 
@@ -232,11 +235,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     private static String sanitizeUri(String uri) {
         // Decode the path.
-        try {
-            uri = URLDecoder.decode(uri, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new Error(e);
-        }
+        uri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
 
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
@@ -350,11 +349,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
-        ChannelFuture flushPromise = ctx.writeAndFlush(response);
+        Future<Void> flushPromise = ctx.writeAndFlush(response);
 
         if (!keepAlive) {
             // Close the connection as soon as the response is sent.
-            flushPromise.addListener(ChannelFutureListener.CLOSE);
+            flushPromise.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
         }
     }
 

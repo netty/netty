@@ -23,10 +23,8 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
@@ -38,6 +36,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -62,7 +61,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
     protected EpollRegistration registration;
@@ -158,7 +157,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
         try {
-            ChannelPromise promise = connectPromise;
+            Promise<Void> promise = connectPromise;
             if (promise != null) {
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                 promise.tryFailure(new ClosedChannelException());
@@ -432,7 +431,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         final void epollInFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
-            if (allocHandle.isReceivedRdHup() || (readPending && maybeMoreDataToRead)) {
+            if (allocHandle.isReceivedRdHup() || readPending && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -580,7 +579,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -601,7 +600,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
-                            ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
+                            Promise<Void> connectPromise = AbstractEpollChannel.this.connectPromise;
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
                                     "connection timed out: " + remoteAddress))) {
@@ -610,7 +609,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
+                    promise.addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -626,19 +625,19 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+        private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
             }
             active = true;
 
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
             boolean active = isActive();
 
             // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
+            boolean promiseSet = promise.trySuccess(null);
 
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
@@ -653,7 +652,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+        private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;

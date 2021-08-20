@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -28,13 +27,13 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.URI;
 import java.util.concurrent.CompletionException;
-import org.junit.jupiter.api.Timeout;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -244,7 +243,7 @@ public class WebSocketHandshakeHandOverTest {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-                    ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> clientForceClosed = true);
+                    ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame());
                 }
             }

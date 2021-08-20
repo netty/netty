@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -156,12 +155,12 @@ public class HttpClientCodecTest {
                             sChannel.writeAndFlush(Unpooled.wrappedBuffer(("HTTP/1.0 200 OK\r\n" +
                             "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
                             "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1)))
-                                    .addListener((ChannelFutureListener) future -> {
+                                    .addListener(future -> {
                                         assertTrue(future.isSuccess());
                                         sChannel.writeAndFlush(Unpooled.wrappedBuffer(
                                                 "<html><body>hello half closed!</body></html>\r\n"
                                                 .getBytes(CharsetUtil.ISO_8859_1)))
-                                                .addListener((ChannelFutureListener) future1 -> {
+                                                .addListener(future1 -> {
                                                     assertTrue(future1.isSuccess());
                                                     sChannel.shutdownOutput();
                                                 });

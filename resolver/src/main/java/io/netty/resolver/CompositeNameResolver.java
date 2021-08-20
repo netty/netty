@@ -65,7 +65,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
             promise.setFailure(lastFailure);
         } else {
             NameResolver<T> resolver = resolvers[resolverIndex];
-            resolver.resolve(inetHost).addListener((FutureListener<T>) future -> {
+            resolver.resolve(inetHost).addListener(future -> {
                 if (future.isSuccess()) {
                     promise.setSuccess(future.getNow());
                 } else {
@@ -88,7 +88,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
             promise.setFailure(lastFailure);
         } else {
             NameResolver<T> resolver = resolvers[resolverIndex];
-            resolver.resolveAll(inetHost).addListener((FutureListener<List<T>>) future -> {
+            resolver.resolveAll(inetHost).addListener(future -> {
                 if (future.isSuccess()) {
                     promise.setSuccess(future.getNow());
                 } else {

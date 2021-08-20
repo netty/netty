@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -39,13 +38,14 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -56,10 +56,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class Http2StreamFrameToHttpObjectCodecTest {
 
@@ -454,7 +454,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
                 new ChannelHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
                             ctx.write(Unpooled.EMPTY_BUFFER, promise);
@@ -884,10 +884,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
             new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } else {
                         ctx.write(msg, promise);
                     }
@@ -897,10 +897,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel plaintextCh = new EmbeddedChannel(
             new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } else {
                         ctx.write(msg, promise);
                     }

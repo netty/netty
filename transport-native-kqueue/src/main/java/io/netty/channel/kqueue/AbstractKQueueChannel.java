@@ -23,10 +23,8 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
@@ -36,6 +34,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -59,7 +58,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
     private KQueueRegistration registration;
@@ -412,9 +411,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
                 // not set before calling connect. This means finishConnect will not detect any error and would
                 // successfully complete the connectPromise and update the channel state to active (which is incorrect).
-                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
                 AbstractKQueueChannel.this.connectPromise = null;
-                if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
+                if (connectPromise.tryFailure(cause instanceof ConnectException? cause
                                 : new ConnectException("failed to connect").initCause(cause))) {
                     closeIfClosed();
                     return true;
@@ -531,7 +530,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, Promise<Void> promise) {
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -552,7 +551,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
-                            ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                            Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
                                     "connection timed out: " + remoteAddress))) {
@@ -561,7 +560,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener((ChannelFutureListener) future -> {
+                    promise.addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -577,19 +576,19 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+        private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;
             }
             active = true;
 
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
             boolean active = isActive();
 
             // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
+            boolean promiseSet = promise.trySuccess(null);
 
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
@@ -604,7 +603,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+        private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
                 return;

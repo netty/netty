@@ -15,20 +15,18 @@
  */
 package io.netty.channel.sctp.nio;
 
-import static java.util.Objects.requireNonNull;
-
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -40,6 +38,8 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link io.netty.channel.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
@@ -156,16 +156,16 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public ChannelFuture bindAddress(InetAddress localAddress) {
+    public Future<Void> bindAddress(InetAddress localAddress) {
         return bindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }
@@ -176,16 +176,16 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public ChannelFuture unbindAddress(InetAddress localAddress) {
+    public Future<Void> unbindAddress(InetAddress localAddress) {
         return unbindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }

@@ -42,7 +42,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -315,8 +314,7 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     })
                     .connect(sc.localAddress())
-                    .addListener((GenericFutureListener<Future<Channel>>) future ->
-                        future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
+                    .addListener(future -> future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
                     .get();
 
             assertTrue(activeLatch.await(5, TimeUnit.SECONDS));

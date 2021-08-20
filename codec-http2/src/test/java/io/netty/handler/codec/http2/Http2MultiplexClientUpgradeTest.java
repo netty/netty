@@ -66,7 +66,10 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
         C codec = newCodec(upgradeHandler);
         EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(upgradeHandler));
 
-        codec.onHttpClientUpgrade();
+        ch.eventLoop().submit(() -> {
+            codec.onHttpClientUpgrade();
+            return null;
+        }).sync();
 
         assertFalse(upgradeHandler.stateOnActive.localSideOpen());
         assertTrue(upgradeHandler.stateOnActive.remoteSideOpen());

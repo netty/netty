@@ -17,7 +17,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -263,7 +262,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
                 child.pipeline().addLast(childHandler);
 
-                child.register().addListener((ChannelFutureListener) future -> {
+                child.register().addListener(future -> {
                     if (!future.isSuccess()) {
                         forceClose(child, future.cause());
                     }

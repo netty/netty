@@ -20,12 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
@@ -34,6 +31,8 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -398,12 +397,12 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    public ChannelFuture shutdownOutput() {
+    public Future<Void> shutdownOutput() {
         return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
+    public Future<Void> shutdownOutput(final Promise<Void> promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
@@ -414,12 +413,12 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    public ChannelFuture shutdownInput() {
+    public Future<Void> shutdownInput() {
         return shutdownInput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownInput(final ChannelPromise promise) {
+    public Future<Void> shutdownInput(final Promise<Void> promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
@@ -429,46 +428,45 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         return promise;
     }
 
-    private void shutdownInput0(ChannelPromise promise) {
+    private void shutdownInput0(Promise<Void> promise) {
         try {
             socket.shutdown(true, false);
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    public ChannelFuture shutdown() {
+    public Future<Void> shutdown() {
         return shutdown(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdown(final ChannelPromise promise) {
-        ChannelFuture shutdownOutputFuture = shutdownOutput();
+    public Future<Void> shutdown(final Promise<Void> promise) {
+        Future<Void> shutdownOutputFuture = shutdownOutput();
         if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(shutdownOutputFuture, promise);
+            shutdownOutputDone(promise, shutdownOutputFuture);
         } else {
-            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
-                    shutdownOutputDone(shutdownOutputFuture1, promise));
+            shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
         return promise;
     }
 
-    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
-        ChannelFuture shutdownInputFuture = shutdownInput();
+    private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {
+        Future<Void> shutdownInputFuture = shutdownInput();
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+            shutdownInputFuture.addListener(shutdownInputFuture1 ->
                     shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
+    private static void shutdownDone(Future<?> shutdownOutputFuture,
+                                     Future<?> shutdownInputFuture,
+                                     Promise<Void> promise) {
         Throwable shutdownOutputCause = shutdownOutputFuture.cause();
         Throwable shutdownInputCause = shutdownInputFuture.cause();
         if (shutdownOutputCause != null) {
@@ -480,7 +478,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else if (shutdownInputCause != null) {
             promise.setFailure(shutdownInputCause);
         } else {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 

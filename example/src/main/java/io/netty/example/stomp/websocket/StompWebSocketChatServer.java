@@ -19,8 +19,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 public class StompWebSocketChatServer {
 
@@ -34,14 +32,11 @@ public class StompWebSocketChatServer {
                     .group(boosGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompWebSocketChatServerInitializer("/chat"));
-            bootstrap.bind(port).addListener(new GenericFutureListener<Future<Object>>() {
-                @Override
-                public void operationComplete(Future<Object> future) {
-                    if (future.isSuccess()) {
-                        System.out.println("Open your web browser and navigate to http://127.0.0.1:" + PORT + '/');
-                    } else {
-                        System.out.println("Cannot start server, follows exception " + future.cause());
-                    }
+            bootstrap.bind(port).addListener(future -> {
+                if (future.isSuccess()) {
+                    System.out.println("Open your web browser and navigate to http://127.0.0.1:" + PORT + '/');
+                } else {
+                    System.out.println("Cannot start server, follows exception " + future.cause());
                 }
             }).get().closeFuture().sync();
         } finally {

@@ -21,9 +21,7 @@ import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -34,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class UniqueIpFilterTest {
 
     @Test
-    public void testUniqueIpFilterHandler() throws ExecutionException, InterruptedException {
+    public void testUniqueIpFilterHandler() throws Exception {
         final CyclicBarrier barrier = new CyclicBarrier(2);
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         try {

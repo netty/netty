@@ -15,11 +15,11 @@
 package io.netty.microbench.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
     protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
@@ -35,16 +35,16 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     protected abstract void handleException(Throwable t);
 
     @Override
-    public final ChannelFuture write(Object msg) {
+    public final Future<Void> write(Object msg) {
         return write(msg, newPromise());
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
+    public final Future<Void> write(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 channel().write(msg, promise);
             }
@@ -56,11 +56,11 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
@@ -72,7 +72,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg) {
+    public final Future<Void> writeAndFlush(Object msg) {
         return writeAndFlush(msg, newPromise());
     }
 }

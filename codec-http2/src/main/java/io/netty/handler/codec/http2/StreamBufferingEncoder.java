@@ -17,10 +17,10 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -153,16 +153,16 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int padding, boolean endStream, ChannelPromise promise) {
+    public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                                     int padding, boolean endStream, Promise<Void> promise) {
         return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
                 false, padding, endStream, promise);
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int streamDependency, short weight, boolean exclusive,
-                                      int padding, boolean endOfStream, ChannelPromise promise) {
+    public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                                     int streamDependency, short weight, boolean exclusive,
+                                     int padding, boolean endOfStream, Promise<Void> promise) {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
@@ -184,8 +184,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-                                        ChannelPromise promise) {
+    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+                                       Promise<Void> promise) {
         if (isExistingStream(streamId)) {
             return super.writeRstStream(ctx, streamId, errorCode, promise);
         }
@@ -198,7 +198,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             // about the stream anymore and thus there is not point in failing the promises and invoking
             // error handling routines.
             stream.close(null);
-            promise.setSuccess();
+            promise.setSuccess(null);
         } else {
             promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
@@ -206,8 +206,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                   int padding, boolean endOfStream, ChannelPromise promise) {
+    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+                                  int padding, boolean endOfStream, Promise<Void> promise) {
         if (isExistingStream(streamId)) {
             return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
         }
@@ -311,9 +311,9 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     private abstract static class Frame {
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        Frame(ChannelPromise promise) {
+        Frame(Promise<Void> promise) {
             this.promise = promise;
         }
 
@@ -322,7 +322,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
          */
         void release(Throwable t) {
             if (t == null) {
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(t);
             }
@@ -340,7 +340,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         final boolean endOfStream;
 
         HeadersFrame(Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-                     int padding, boolean endOfStream, ChannelPromise promise) {
+                     int padding, boolean endOfStream, Promise<Void> promise) {
             super(promise);
             this.headers = headers;
             this.streamDependency = streamDependency;
@@ -361,7 +361,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         final int padding;
         final boolean endOfStream;
 
-        DataFrame(ByteBuf data, int padding, boolean endOfStream, ChannelPromise promise) {
+        DataFrame(ByteBuf data, int padding, boolean endOfStream, Promise<Void> promise) {
             super(promise);
             this.data = data;
             this.padding = padding;
