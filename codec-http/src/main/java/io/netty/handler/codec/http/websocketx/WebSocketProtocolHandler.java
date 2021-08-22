@@ -19,6 +19,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -82,30 +83,33 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+    public Future<Void> close(final ChannelHandlerContext ctx) {
         if (closeStatus == null || !ctx.channel().isActive()) {
-            ctx.close(promise);
-        } else {
-            if (closeSent == null) {
-                write(ctx, new CloseWebSocketFrame(closeStatus), ctx.newPromise());
-            }
-            flush(ctx);
-            applyCloseSentTimeout(ctx);
-            closeSent.addListener(future -> ctx.close(promise));
+            return ctx.close();
         }
+        if (closeSent == null) {
+            write(ctx, new CloseWebSocketFrame(closeStatus));
+        }
+        flush(ctx);
+        applyCloseSentTimeout(ctx);
+        Promise<Void> promise = ctx.newPromise();
+        closeSent.addListener(future -> ctx.close().addListener(new PromiseNotifier<>(promise)));
+        return promise;
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
-            promise.setFailure(new ClosedChannelException());
-        } else if (msg instanceof CloseWebSocketFrame) {
+            return ctx.newFailedFuture(new ClosedChannelException());
+        }
+        if (msg instanceof CloseWebSocketFrame) {
+            Promise<Void> promise = ctx.newPromise();
             closeSent(promise);
             ctx.write(msg).addListener(new PromiseNotifier<>(false, closeSent));
-        } else {
-            ctx.write(msg, promise);
+            return promise;
         }
+        return ctx.write(msg);
     }
 
     void closeSent(Promise<Void> promise) {

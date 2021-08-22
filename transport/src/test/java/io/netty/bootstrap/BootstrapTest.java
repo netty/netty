@@ -58,7 +58,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -225,14 +226,6 @@ public class BootstrapTest {
                             close();
                             return newFailedFuture(new SocketException());
                         }
-
-                        @Override
-                        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-                            // Close the Channel to emulate what NIO and others impl do on bind failure
-                            // See https://github.com/netty/netty/issues/2586
-                            close();
-                            return promise.setFailure(new SocketException());
-                        }
                     });
             bootstrap.childHandler(new DummyHandler());
             bootstrap.handler(registerHandler);
@@ -266,33 +259,8 @@ public class BootstrapTest {
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
-            CompletionException exception =
-                    assertThrows(CompletionException.class, future::syncUninterruptibly);
-            assertThat(exception.getCause()).isInstanceOf(ConnectException.class);
-        } finally {
-            group.shutdownGracefully();
-        }
-    }
-
-    @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testLateRegistrationConnectWithCreateUnregistered() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-        LateRegisterHandler registerHandler = new LateRegisterHandler();
-        try {
-            final Bootstrap bootstrapA = new Bootstrap();
-            bootstrapA.group(group);
-            bootstrapA.channel(LocalChannel.class);
-            bootstrapA.handler(registerHandler);
-            Channel channel = bootstrapA.createUnregistered();
-            Future<Void> registerFuture = channel.register();
-            Future<Void> connectFuture = channel.connect(LocalAddress.ANY);
-            assertFalse(connectFuture.isDone());
-            registerHandler.registerPromise().setSuccess(null);
-            registerFuture.sync();
-            CompletionException exception =
-                    assertThrows(CompletionException.class, connectFuture::syncUninterruptibly);
-            assertTrue(exception.getCause() instanceof ConnectException);
+            CompletionException cause = assertThrows(CompletionException.class, future::syncUninterruptibly);
+            assertThat(cause.getCause(), instanceOf(ConnectException.class));
         } finally {
             group.shutdownGracefully();
         }
@@ -334,8 +302,8 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
-        assertThat(connectFuture.await(10000)).isTrue();
-        assertThat(connectFuture.cause()).isInstanceOf(UnknownHostException.class);
+        assertTrue(connectFuture.await(10000));
+        assertThat(connectFuture.cause(), instanceOf(UnknownHostException.class));
     }
 
     @Test
@@ -352,8 +320,8 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
-        assertThat(connectFuture.await(10000)).isTrue();
-        assertThat(connectFuture.cause()).isSameAs(exception);
+        assertTrue(connectFuture.await(10000));
+        assertSame(connectFuture.cause(), exception);
     }
 
     @Test
@@ -412,16 +380,15 @@ public class BootstrapTest {
         private Promise<Void> registerPromise;
 
         @Override
-        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-            registerPromise = promise;
+        public Future<Void> register(ChannelHandlerContext ctx) {
+            registerPromise = ctx.newPromise();
             latch.countDown();
-            Promise<Void> newPromise = ctx.newPromise();
-            newPromise.addListener(future -> {
+            return ctx.register().addListener(future -> {
                 if (!future.isSuccess()) {
+                    future.cause().printStackTrace();
                     registerPromise.tryFailure(future.cause());
                 }
             });
-            ctx.register(newPromise);
         }
 
         Promise<Void> registerPromise() throws InterruptedException {

@@ -142,14 +142,14 @@ import java.util.NoSuchElementException;
  * </li>
  * <li>Outbound event propagation methods:
  *     <ul>
- *     <li>{@link ChannelHandlerContext#bind(SocketAddress, Promise)}</li>
- *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, Promise)}</li>
- *     <li>{@link ChannelHandlerContext#write(Object, Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#bind(SocketAddress)}</li>
+ *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress)}</li>
+ *     <li>{@link ChannelHandlerContext#write(Object)}</li>
  *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
- *     <li>{@link ChannelHandlerContext#disconnect(Promise)}</li>
- *     <li>{@link ChannelHandlerContext#close(Promise)}</li>
- *     <li>{@link ChannelHandlerContext#deregister(Promise)}</li>
+ *     <li>{@link ChannelHandlerContext#disconnect()}</li>
+ *     <li>{@link ChannelHandlerContext#close()}</li>
+ *     <li>{@link ChannelHandlerContext#deregister()}</li>
  *     </ul>
  * </li>
  * </ul>

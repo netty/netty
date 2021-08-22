@@ -24,7 +24,9 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -93,13 +95,15 @@ public class HttpServerUpgradeHandlerTest {
             }
 
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+            public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
                 // We ensure that we're in the read call and defer the write so we can
                 // make sure the pipeline was reformed irrespective of the flush completing.
                 assertTrue(inReadCall);
                 writeUpgradeMessage = true;
-                ctx.channel().eventLoop().execute(() -> ctx.write(msg, promise));
-                promise.addListener(future -> writeFlushed = true);
+                Promise<Void> promise = ctx.newPromise();
+                ctx.channel().eventLoop().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
+                promise.addListener(f -> writeFlushed = true);
+                return promise;
             }
         };
 

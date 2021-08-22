@@ -18,15 +18,14 @@ package io.netty.channel;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AbstractChannel.ClosePromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.StringUtil;
@@ -84,8 +83,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         this.handler = handler;
     }
 
-    private static void failRemoved(DefaultChannelHandlerContext ctx, Promise<Void> promise) {
-        promise.setFailure(newRemovedException(ctx, null));
+    private static Future<Void> failRemoved(DefaultChannelHandlerContext ctx) {
+        return ctx.newFailedFuture(newRemovedException(ctx, null));
     }
 
     private void notifyHandlerRemovedAlready() {
@@ -423,248 +422,183 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+        requireNonNull(localAddress, "localAddress");
+
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            return findAndInvokeBind(localAddress);
+        }
+
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () -> PromiseNotifier.fuse(findAndInvokeBind(localAddress), promise), promise, null);
+        return promise;
     }
 
     @Override
     public Future<Void> connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> disconnect() {
-        return disconnect(newPromise());
-    }
-
-    @Override
-    public Future<Void> close() {
-        return close(newPromise());
-    }
-
-    @Override
-    public Future<Void> register() {
-        return register(newPromise());
+        return connect(remoteAddress, null);
     }
 
     @Override
     public Future<Void> deregister() {
-        return deregister(newPromise());
-    }
-
-    @Override
-    public Future<Void> bind(final SocketAddress localAddress, final Promise<Void> promise) {
-        requireNonNull(localAddress, "localAddress");
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
-        }
-
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeBind(localAddress, promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeBind(localAddress, promise), promise, null);
+            return findAndInvokeDeregister();
         }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () -> PromiseNotifier.fuse(findAndInvokeDeregister(), promise), promise, null);
         return promise;
     }
-
-    private void findAndInvokeBind(SocketAddress localAddress, Promise<Void> promise) {
+    private Future<Void> findAndInvokeBind(SocketAddress localAddress) {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_BIND);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeBind(localAddress, promise);
+        return ctx.invokeBind(localAddress);
     }
 
-    private void invokeBind(SocketAddress localAddress, Promise<Void> promise) {
+    private Future<Void> invokeBind(SocketAddress localAddress) {
         try {
-            handler().bind(this, localAddress, promise);
+            return handler().bind(this, localAddress);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return connect(remoteAddress, null, promise);
     }
 
     @Override
     public Future<Void> connect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
+            final SocketAddress remoteAddress, final SocketAddress localAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
-        }
-
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeConnect(remoteAddress, localAddress, promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeConnect(remoteAddress, localAddress, promise), promise, null);
+            return findAndInvokeConnect(remoteAddress, localAddress);
         }
+        Promise<Void> promise  = newPromise();
+            safeExecute(executor, () ->
+                    PromiseNotifier.fuse(findAndInvokeConnect(remoteAddress, localAddress), promise), promise, null);
+
         return promise;
     }
 
-    private void findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+    private Future<Void> findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_CONNECT);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeConnect(remoteAddress, localAddress, promise);
+        return ctx.invokeConnect(remoteAddress, localAddress);
     }
 
-    private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+    private Future<Void> invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         try {
-            handler().connect(this, remoteAddress, localAddress, promise);
+            return handler().connect(this, remoteAddress, localAddress);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
     }
 
     @Override
-    public Future<Void> disconnect(final Promise<Void> promise) {
+    public Future<Void> disconnect() {
         if (!channel().metadata().hasDisconnect()) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
-            return close(promise);
-        }
-
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
+            return close();
         }
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeDisconnect(promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeDisconnect(promise), promise, null);
+            return findAndInvokeDisconnect();
         }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () ->
+                PromiseNotifier.fuse(findAndInvokeDisconnect(), promise), promise, null);
         return promise;
     }
 
-    private void findAndInvokeDisconnect(Promise<Void> promise) {
+    private Future<Void> findAndInvokeDisconnect() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_DISCONNECT);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeDisconnect(promise);
+        return ctx.invokeDisconnect();
     }
 
-    private void invokeDisconnect(Promise<Void> promise) {
+    private Future<Void> invokeDisconnect() {
         try {
-            handler().disconnect(this, promise);
+            return handler().disconnect(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
     }
 
     @Override
-    public Future<Void> close(final Promise<Void> promise) {
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
-        }
-
+    public Future<Void> close() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeClose(promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeClose(promise), promise, null);
+            return findAndInvokeClose();
         }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () ->
+                PromiseNotifier.fuse(findAndInvokeClose(), promise), promise, null);
         return promise;
     }
 
-    private void findAndInvokeClose(Promise<Void> promise) {
+    private Future<Void> findAndInvokeClose() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_CLOSE);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeClose(promise);
+        return ctx.invokeClose();
     }
 
-    private void invokeClose(Promise<Void> promise) {
+    private Future<Void> invokeClose() {
         try {
-            handler().close(this, promise);
+            return handler().close(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, true, promise);
+            return handleOutboundHandlerException(t, true);
         }
     }
 
     @Override
-    public Future<Void> register(final Promise<Void> promise) {
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
-        }
-
+    public Future<Void> register() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeRegister(promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeRegister(promise), promise, null);
+            return findAndInvokeRegister();
         }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () ->
+                PromiseNotifier.fuse(findAndInvokeRegister(), promise), promise, null);
         return promise;
     }
 
-    private void findAndInvokeRegister(Promise<Void> promise) {
+    private Future<Void> findAndInvokeRegister() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_REGISTER);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeRegister(promise);
+        return ctx.invokeRegister();
     }
 
-    private void invokeRegister(Promise<Void> promise) {
+    private Future<Void> invokeRegister() {
         try {
-            handler().register(this, promise);
+            return handler().register(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
     }
 
-    @Override
-    public Future<Void> deregister(final Promise<Void> promise) {
-        if (isNotValidPromise(promise)) {
-            // cancelled
-            return promise;
-        }
-
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            findAndInvokeDeregister(promise);
-        } else {
-            safeExecute(executor, () -> findAndInvokeDeregister(promise), promise, null);
-        }
-        return promise;
-    }
-
-    private void findAndInvokeDeregister(Promise<Void> promise) {
+    private Future<Void> findAndInvokeDeregister() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_DEREGISTER);
         if (ctx == null) {
-            failRemoved(this, promise);
-            return;
+            return failRemoved(this);
         }
-        ctx.invokeDeregister(promise);
+        return ctx.invokeDeregister();
     }
 
-    private void invokeDeregister(Promise<Void> promise) {
+    private Future<Void> invokeDeregister() {
         try {
-            handler().deregister(this, promise);
+            return handler().deregister(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
     }
 
@@ -691,28 +625,21 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().read(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, null);
+            handleOutboundHandlerException(t, false);
         }
     }
 
     @Override
     public Future<Void> write(Object msg) {
-        return write(msg, newPromise());
+        return write(msg, false);
     }
 
-    @Override
-    public Future<Void> write(final Object msg, final Promise<Void> promise) {
-        write(msg, false, promise);
-
-        return promise;
-    }
-
-    private void invokeWrite(Object msg, Promise<Void> promise) {
+    private Future<Void> invokeWrite(Object msg) {
         final Object m = pipeline.touch(msg, this);
         try {
-            handler().write(this, m, promise);
+            return handler().write(this, m);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, promise);
+            return handleOutboundHandlerException(t, false);
         }
     }
 
@@ -744,33 +671,23 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().flush(this);
         } catch (Throwable t) {
-            handleOutboundHandlerException(t, false, null);
+            handleOutboundHandlerException(t, false);
         }
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        write(msg, true, promise);
-        return promise;
+    public Future<Void> writeAndFlush(Object msg) {
+        return write(msg, true);
     }
 
-    private void invokeWriteAndFlush(Object msg, Promise<Void> promise) {
-        invokeWrite(msg, promise);
+    private Future<Void> invokeWriteAndFlush(Object msg) {
+        Future<Void> f = invokeWrite(msg);
         invokeFlush();
+        return f;
     }
 
-    private void write(Object msg, boolean flush, Promise<Void> promise) {
+    private Future<Void> write(Object msg, boolean flush) {
         requireNonNull(msg, "msg");
-        try {
-            if (isNotValidPromise(promise)) {
-                ReferenceCountUtil.release(msg);
-                // cancelled
-                return;
-            }
-        } catch (RuntimeException e) {
-            ReferenceCountUtil.release(msg);
-            throw e;
-        }
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
@@ -778,15 +695,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                     (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
             if (next == null) {
                 ReferenceCountUtil.release(msg);
-                failRemoved(this, promise);
-                return;
+                return failRemoved(this);
             }
             if (flush) {
-                next.invokeWriteAndFlush(msg, promise);
-            } else {
-                next.invokeWrite(msg, promise);
+                return next.invokeWriteAndFlush(msg);
             }
+            return next.invokeWrite(msg);
         } else {
+            Promise<Void> promise  = newPromise();
             final AbstractWriteTask task;
             if (flush) {
                 task = WriteAndFlushTask.newInstance(this, msg, promise);
@@ -800,21 +716,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 // See https://github.com/netty/netty/issues/8343.
                 task.cancel();
             }
+            return promise;
         }
     }
 
-    @Override
-    public Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
-    }
-
-    private void handleOutboundHandlerException(Throwable cause, boolean closeDidThrow, Promise<Void> promise) {
+    private Future<Void> handleOutboundHandlerException(Throwable cause, boolean closeDidThrow) {
         String msg = handler() + " threw an exception while handling an outbound event. This is most likely a bug";
-
-        if (promise != null && !promise.isDone()) {
-            // This is a "best-effort" approach to at least ensure the promise will be completed somehow.
-            promise.tryFailure(new IllegalStateException(msg, cause));
-        }
 
         logger.warn("{}. This is most likely a bug, closing the channel.", msg, cause);
         if (closeDidThrow) {
@@ -826,6 +733,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             // and so give all handlers the chance to do something during close.
             channel().close();
         }
+        return newFailedFuture(new IllegalStateException(msg, cause));
     }
 
     @Override
@@ -841,31 +749,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public Future<Void> newFailedFuture(Throwable cause) {
         return pipeline().newFailedFuture(cause);
-    }
-
-    private static boolean isNotValidPromise(Promise<Void> promise) {
-        requireNonNull(promise, "promise");
-
-        if (promise.isDone()) {
-            // Check if the promise was cancelled and if so signal that the processing of the operation
-            // should not be performed.
-            //
-            // See https://github.com/netty/netty/issues/2349
-            if (promise.isCancelled()) {
-                return true;
-            }
-            throw new IllegalArgumentException("promise already done: " + promise);
-        }
-
-        if (promise.getClass() == DefaultPromise.class) {
-            return false;
-        }
-
-        if (promise instanceof ClosePromise) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(ClosePromise.class) + " not allowed in a pipeline");
-        }
-        return false;
     }
 
     private DefaultChannelHandlerContext findContextInbound(int mask) {
@@ -1022,10 +905,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         public final void run() {
             try {
                 decrementPendingOutboundBytes();
+                if (promise.isCancelled()) {
+                    ReferenceCountUtil.release(msg);
+                    return;
+                }
                 DefaultChannelHandlerContext next = findContext(ctx);
                 if (next == null) {
                     ReferenceCountUtil.release(msg);
-                    failRemoved(ctx, promise);
+                    failRemoved(ctx).addListener(new PromiseNotifier<>(promise));
                     return;
                 }
                 write(next, msg, promise);
@@ -1057,7 +944,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
 
         protected void write(DefaultChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            ctx.invokeWrite(msg, promise);
+            PromiseNotifier.fuse(ctx.invokeWrite(msg), promise);
         }
     }
 

@@ -21,7 +21,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,7 +56,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpRequest) msg).headers())) {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
@@ -71,7 +71,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
             request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
         }
 
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     @Override

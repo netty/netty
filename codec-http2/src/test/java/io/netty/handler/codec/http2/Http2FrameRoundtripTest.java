@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
+
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
@@ -65,7 +67,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests encoding/decoding each HTTP2 frame type.
  */
-@SuppressWarnings("unchecked")
 public class Http2FrameRoundtripTest {
     private static final byte[] MESSAGE = "hello world".getBytes(UTF_8);
     private static final int STREAM_ID = 0x7FFFFFFF;
@@ -98,10 +99,12 @@ public class Http2FrameRoundtripTest {
         when(ctx.alloc()).thenReturn(alloc);
         when(ctx.executor()).thenReturn(executor);
         when(ctx.channel()).thenReturn(channel);
+        doAnswer((Answer<Future<Void>>) in ->
+                DefaultPromise.newSuccessfulPromise(executor, null)).when(ctx).write(any());
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
         doAnswer((Answer<Promise<Void>>) invocation ->
-                new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
+                new DefaultPromise<>(GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
@@ -433,7 +436,7 @@ public class Http2FrameRoundtripTest {
 
     private ByteBuf captureWrites() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx, atLeastOnce()).write(captor.capture(), isA(Promise.class));
+        verify(ctx, atLeastOnce()).write(captor.capture());
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());

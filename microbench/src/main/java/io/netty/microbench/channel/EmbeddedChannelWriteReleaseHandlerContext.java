@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
 public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
     protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
@@ -36,43 +35,29 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
 
     @Override
     public final Future<Void> write(Object msg) {
-        return write(msg, newPromise());
-    }
-
-    @Override
-    public final Future<Void> write(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
-            } else {
-                channel().write(msg, promise);
+                return channel().newSucceededFuture();
             }
+            return channel().write(msg);
         } catch (Exception e) {
-            promise.setFailure(e);
             handleException(e);
+            return channel().newFailedFuture(e);
         }
-        return promise;
-    }
-
-    @Override
-    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
-            } else {
-                channel().writeAndFlush(msg, promise);
-            }
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
     }
 
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        try {
+            if (msg instanceof ReferenceCounted) {
+                ((ReferenceCounted) msg).release();
+                return channel().newSucceededFuture();
+            }
+            return channel().writeAndFlush(msg);
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
     }
 }

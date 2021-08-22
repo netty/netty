@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -32,9 +32,9 @@ final class LoggingHandler implements ChannelHandler {
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         log(Event.WRITE);
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     @Override
@@ -44,44 +44,43 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+    public Future<Void> bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
         log(Event.BIND, "localAddress=" + localAddress);
-        ctx.bind(localAddress, promise);
+        return  ctx.bind(localAddress);
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            Promise<Void> promise) {
+    public Future<Void> connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
         log(Event.CONNECT, "remoteAddress=" + remoteAddress + " localAddress=" + localAddress);
-        ctx.connect(remoteAddress, localAddress, promise);
+        return ctx.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
         log(Event.DISCONNECT);
-        ctx.disconnect(promise);
+        return ctx.disconnect();
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> close(ChannelHandlerContext ctx) {
         log(Event.CLOSE);
-        ctx.close(promise);
+        return ctx.close();
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> register(ChannelHandlerContext ctx) {
         log(Event.REGISTER);
-        ctx.register(promise);
+        return ctx.register();
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> deregister(ChannelHandlerContext ctx) {
         log(Event.DEREGISTER);
-        ctx.deregister(promise);
+        return ctx.deregister();
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         log(Event.READ);
         ctx.read();
     }

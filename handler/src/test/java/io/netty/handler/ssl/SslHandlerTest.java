@@ -115,22 +115,27 @@ public class SslHandlerTest {
         SSLEngine engine = newClientModeSSLEngine();
         SslHandler handler = new SslHandler(engine) {
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                super.write(ctx, msg, promise);
+            public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
+                Future<Void> future =  super.write(ctx, msg);
                 writeLatch.countDown();
+                return future;
             }
         };
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                if (msg instanceof ByteBuf) {
-                    if (((ByteBuf) msg).isReadable()) {
-                        writesToFail.add(promise);
-                    } else {
-                        promise.setSuccess(null);
-                    }
-                }
-                ReferenceCountUtil.release(msg);
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                 try {
+                     if (msg instanceof ByteBuf) {
+                         if (((ByteBuf) msg).isReadable()) {
+                             Promise<Void> promise = ctx.newPromise();
+                             writesToFail.add(promise);
+                             return promise;
+                         }
+                     }
+                     return ctx.newSucceededFuture();
+                 } finally {
+                     ReferenceCountUtil.release(msg);
+                 }
             }
         }, handler);
 
@@ -375,13 +380,12 @@ public class SslHandlerTest {
         SSLEngine engine = newServerModeSSLEngine();
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        Promise<Void> promise = ch.newPromise();
         ByteBuf buf = Unpooled.buffer(10).writeZero(10);
-        ch.writeAndFlush(buf, promise);
-        assertFalse(promise.isDone());
+        Future<Void> future = ch.writeAndFlush(buf);
+        assertFalse(future.isDone());
         assertTrue(ch.finishAndReleaseAll());
-        assertTrue(promise.isDone());
-        assertThat(promise.cause(), is(instanceOf(SSLException.class)));
+        assertTrue(future.isDone());
+        assertThat(future.cause(), is(instanceOf(SSLException.class)));
     }
 
     @Test
@@ -418,7 +422,7 @@ public class SslHandlerTest {
         private volatile boolean readIssued;
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             readIssued = true;
             ctx.read();
         }

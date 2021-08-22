@@ -72,7 +72,7 @@ import java.net.SocketAddress;
  *
  * <h3>Release resources</h3>
  * <p>
- * It is important to call {@link #close()} or {@link #close(Promise)} to release all
+ * It is important to call {@link #close()} to release all
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
@@ -246,53 +246,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().bind(localAddress, promise);
-    }
-
-    @Override
-    default Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, promise);
-    }
-
-    @Override
-    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    default Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline().disconnect(promise);
-    }
-
-    @Override
-    default Future<Void> close(Promise<Void> promise) {
-        return pipeline().close(promise);
-    }
-
-    @Override
-    default Future<Void> register(Promise<Void> promise) {
-        return pipeline().register(promise);
-    }
-
-    @Override
-    default Future<Void> deregister(Promise<Void> promise) {
-        return pipeline().deregister(promise);
-    }
-
-    @Override
     default Future<Void> write(Object msg) {
         return pipeline().write(msg);
-    }
-
-    @Override
-    default Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline().write(msg, promise);
-    }
-
-    @Override
-    default Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline().writeAndFlush(msg, promise);
     }
 
     @Override

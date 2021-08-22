@@ -32,7 +32,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -285,40 +285,39 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                         Promise<Void> promise) {
-            codec.bind(ctx, localAddress, promise);
+        public Future<Void> bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
+            return codec.bind(ctx, localAddress);
         }
 
         @Override
-        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                            Promise<Void> promise) {
-            codec.connect(ctx, remoteAddress, localAddress, promise);
+        public Future<Void> connect(
+                ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
+            return codec.connect(ctx, remoteAddress, localAddress);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.disconnect(ctx, promise);
+        public Future<Void> disconnect(ChannelHandlerContext ctx) {
+            return codec.disconnect(ctx);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.close(ctx, promise);
+        public Future<Void> close(ChannelHandlerContext ctx) {
+            return codec.close(ctx);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.deregister(ctx, promise);
+        public Future<Void> deregister(ChannelHandlerContext ctx) {
+            return codec.deregister(ctx);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx)  {
             codec.read(ctx);
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            codec.write(ctx, msg, promise);
+        public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+           return codec.write(ctx, msg);
         }
 
         @Override

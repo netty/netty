@@ -491,25 +491,7 @@ public abstract class WebSocketClientHandshaker {
      */
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
-        return close(channel, frame, channel.newPromise());
-    }
-
-    /**
-     * Performs the closing handshake
-     *
-     * When called from within a {@link ChannelHandler} you most likely want to use
-     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, Promise)}.
-     *
-     * @param channel
-     *            Channel
-     * @param frame
-     *            Closing Frame that was received
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done
-     */
-    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        requireNonNull(channel, "channel");
-        return close0(channel, channel, frame, promise);
+        return close0(channel, channel, frame);
     }
 
     /**
@@ -522,34 +504,19 @@ public abstract class WebSocketClientHandshaker {
      */
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         requireNonNull(ctx, "ctx");
-        return close(ctx, frame, ctx.newPromise());
-    }
-
-    /**
-     * Performs the closing handshake
-     *
-     * @param ctx
-     *            the {@link ChannelHandlerContext} to use.
-     * @param frame
-     *            Closing Frame that was received
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done
-     */
-    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
-        requireNonNull(ctx, "ctx");
-        return close0(ctx, ctx.channel(), frame, promise);
+        return close0(ctx, ctx.channel(), frame);
     }
 
     private Future<Void> close0(final ChannelOutboundInvoker invoker, final Channel channel,
-                                 CloseWebSocketFrame frame, Promise<Void> promise) {
-        invoker.writeAndFlush(frame, promise);
+                                 CloseWebSocketFrame frame) {
+        Future<Void> f = invoker.writeAndFlush(frame);
         final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
         final WebSocketClientHandshaker handshaker = this;
         if (forceCloseTimeoutMillis <= 0 || !channel.isActive() || forceCloseInit != 0) {
-            return promise;
+            return f;
         }
 
-        promise.addListener(future -> {
+        f.addListener(future -> {
             // If flush operation failed, there is no reason to expect
             // a server to receive CloseFrame. Thus this should be handled
             // by the application separately.
@@ -568,7 +535,7 @@ public abstract class WebSocketClientHandshaker {
                 });
             }
         });
-        return promise;
+        return f;
     }
 
     /**

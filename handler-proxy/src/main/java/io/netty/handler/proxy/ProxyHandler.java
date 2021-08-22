@@ -164,17 +164,14 @@ public abstract class ProxyHandler implements ChannelHandler {
     protected abstract void removeDecoder(ChannelHandlerContext ctx) throws Exception;
 
     @Override
-    public final void connect(
-            ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            Promise<Void> promise) {
-
+    public final Future<Void> connect(
+            ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
         if (destinationAddress != null) {
-            promise.setFailure(new ConnectionPendingException());
-            return;
+            return ctx.newFailedFuture(new ConnectionPendingException());
         }
 
         destinationAddress = remoteAddress;
-        ctx.connect(proxyAddress, localAddress, promise);
+        return ctx.connect(proxyAddress, localAddress);
     }
 
     @Override
@@ -393,13 +390,14 @@ public abstract class ProxyHandler implements ChannelHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public final Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         if (finished) {
             writePendingWrites();
-            ctx.write(msg, promise);
-        } else {
-            addPendingWrite(ctx, msg, promise);
+            return ctx.write(msg);
         }
+        Promise<Void> promise = ctx.newPromise();
+        addPendingWrite(ctx, msg, promise);
+        return promise;
     }
 
     @Override
@@ -420,8 +418,9 @@ public abstract class ProxyHandler implements ChannelHandler {
 
     private void writePendingWrites() {
         if (pendingWrites != null) {
-            pendingWrites.removeAndWriteAll();
+            PendingWriteQueue queue = pendingWrites;
             pendingWrites = null;
+            queue.removeAndWriteAll();
         }
     }
 

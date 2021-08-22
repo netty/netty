@@ -26,7 +26,7 @@ import io.netty.handler.codec.stomp.StompHeadersSubframe;
 import io.netty.handler.codec.stomp.StompSubframeEncoder;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -92,15 +92,10 @@ public class StompEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void writeStompFrame() throws Exception {
-        stompEncoder.write(context, stompFrame.retain(), newPromise());
+    public Future<Void> writeStompFrame() {
+        return stompEncoder.write(context, stompFrame.retain());
     }
 
-    private Promise<Void> newPromise() {
-        return context.newPromise();
-    }
-
-    @Override
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
         return super.newOptionsBuilder().addProfiler(GCProfiler.class);
     }

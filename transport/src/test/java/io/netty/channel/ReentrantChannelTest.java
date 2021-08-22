@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -174,12 +173,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
                 }
-                ctx.write(msg,  promise);
+                return ctx.write(msg);
             }
 
             @Override
@@ -228,10 +227,10 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                promise.addListener(future -> ctx.channel().close());
-                ctx.write(msg, promise);
+            public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
+                Future<Void> f = ctx.write(msg).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                 ctx.channel().flush();
+                return f;
             }
         });
 
@@ -259,7 +258,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
             @Override
             public void flush(ChannelHandlerContext ctx) {
-                throw new RuntimeException("intentional failure");
+                throw new IllegalStateException("intentional failure");
+            }
+
+        }, new ChannelHandler() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                ctx.close();
             }
         });
 

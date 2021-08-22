@@ -257,7 +257,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
     protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception;
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (suppressRead) {
             readPending = true;
         } else {

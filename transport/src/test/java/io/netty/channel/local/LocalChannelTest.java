@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.ConnectException;
+import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
@@ -369,9 +370,8 @@ public class LocalChannelTest {
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(() -> {
-                    Promise<Void> promise = ccCpy.newPromise();
-                    promise.addListener(future -> ccCpy.pipeline().lastContext().close());
-                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
+                    ccCpy.writeAndFlush(data.retainedDuplicate())
+                            .addListener(future -> ccCpy.pipeline().lastContext().close());
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -492,10 +492,8 @@ public class LocalChannelTest {
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(() -> {
-                    Promise<Void> promise = ccCpy.newPromise();
-                    promise.addListener(future ->
-                            ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise()));
-                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
+                    ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future ->
+                            ccCpy.writeAndFlush(data2.retainedDuplicate()));
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -567,12 +565,10 @@ public class LocalChannelTest {
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
             cc.pipeline().lastContext().executor().execute(() -> {
-                Promise<Void> promise = ccCpy.newPromise();
-                promise.addListener(future -> {
+                ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future -> {
                     Channel serverChannelCpy = serverChannelRef.get();
-                    serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                    serverChannelCpy.writeAndFlush(data2.retainedDuplicate());
                 });
-                ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
             });
 
             assertTrue(messageLatch.await(5, SECONDS));
@@ -643,13 +639,11 @@ public class LocalChannelTest {
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(() -> {
-                    Promise<Void> promise = ccCpy.newPromise();
-                    promise.addListener(future -> {
+                    ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future -> {
                         Channel serverChannelCpy = serverChannelRef.get();
                         serverChannelCpy.writeAndFlush(
-                            data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                                data2.retainedDuplicate());
                     });
-                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -719,7 +713,7 @@ public class LocalChannelTest {
 
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(() ->
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
+                        ccCpy.writeAndFlush(data.retainedDuplicate())
                 .addListener(future -> {
                     serverChannelCpy.eventLoop().execute(() -> {
                         // The point of this test is to write while the peer is closed, so we should
@@ -735,8 +729,7 @@ public class LocalChannelTest {
                                 fail();
                             }
                         }
-                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
-                            serverChannelCpy.newPromise())
+                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate())
                             .addListener(future1 -> {
                                 if (!future1.isSuccess() &&
                                     future1.cause() instanceof ClosedChannelException) {
@@ -764,7 +757,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 300000, unit = TimeUnit.MILLISECONDS)
     public void testConnectFutureBeforeChannelActive() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -795,6 +788,13 @@ public class LocalChannelTest {
 
             cc.pipeline().addLast(new TestHandler() {
                 @Override
+                public Future<Void> connect(ChannelHandlerContext ctx,
+                                             SocketAddress remoteAddress, SocketAddress localAddress) {
+                    super.connect(ctx, remoteAddress, localAddress);
+                    return promise.setSuccess(null);
+                }
+
+                @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Ensure the promise was done before the handler method is triggered.
                     if (promise.isDone()) {
@@ -805,7 +805,8 @@ public class LocalChannelTest {
                 }
             });
             // Connect to the server
-            cc.connect(sc.localAddress(), promise).sync();
+            cc.connect(sc.localAddress()).sync();
+            promise.sync();
 
             assertPromise.syncUninterruptibly();
             assertTrue(promise.isSuccess());

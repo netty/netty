@@ -16,9 +16,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 
-import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -121,68 +120,26 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
-    }
-
-    @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
-        ctx.read();
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof HttpRequest)) {
-            ctx.write(msg, promise);
-            return;
+            return ctx.write(msg);
         }
 
         if (upgradeRequested) {
-            promise.setFailure(new IllegalStateException(
+            return ctx.newFailedFuture(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
-            return;
         }
 
         upgradeRequested = true;
         setUpgradeRequestHeaders(ctx, (HttpRequest) msg);
 
         // Continue writing the request.
-        ctx.write(msg, promise);
+        Future<Void> f = ctx.write(msg);
 
         // Notify that the upgrade request was issued.
         ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_ISSUED);
         // Now we wait for the next HTTP response to see if we switch protocols.
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx) {
-        ctx.flush();
+        return f;
     }
 
     @Override

@@ -15,22 +15,7 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundInvoker;
-import io.netty.channel.ChannelPipeline;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -39,6 +24,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.concurrent.ScheduledFuture;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -192,15 +194,12 @@ public class EmbeddedChannelTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::close);
-        testFireChannelInactiveAndUnregistered(channel -> channel.close(channel.newPromise()));
     }
 
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::disconnect);
-
-        testFireChannelInactiveAndUnregistered(channel -> channel.disconnect(channel.newPromise()));
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {
@@ -249,11 +248,11 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
+    public void testHasNoDisconnectSkipDisconnect() {
         EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelHandler() {
             @Override
-            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-                promise.tryFailure(new Throwable());
+            public Future<Void> close(ChannelHandlerContext ctx) {
+                return ctx.newFailedFuture(new Throwable());
             }
         });
         assertFalse(channel.disconnect().isSuccess());
@@ -344,8 +343,10 @@ public class EmbeddedChannelTest {
     public void testWriteLater() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
-                ctx.executor().execute(() -> ctx.write(msg, promise));
+            public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
+                Promise<Void> promise = ctx.newPromise();
+                ctx.executor().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
+                return promise;
             }
         });
         Object msg = new Object();
@@ -361,10 +362,12 @@ public class EmbeddedChannelTest {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+            public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
+                Promise<Void> promise = ctx.newPromise();
                 ctx.executor().schedule(() -> {
-                    ctx.writeAndFlush(msg, promise);
+                    ctx.writeAndFlush(msg).addListener(new PromiseNotifier<>(promise));
                 }, delay, TimeUnit.MILLISECONDS);
+                return promise;
             }
         });
         Object msg = new Object();
@@ -448,9 +451,10 @@ public class EmbeddedChannelTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                ctx.write(msg, promise);
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                Future<Void> future = ctx.write(msg);
                 latch.countDown();
+                return future;
             }
 
             @Override
@@ -567,15 +571,15 @@ public class EmbeddedChannelTest {
         private final Queue<Integer> queue = new ArrayDeque<>();
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public Future<Void> disconnect(ChannelHandlerContext ctx) {
             queue.add(DISCONNECT);
-            promise.setSuccess(null);
+            return ctx.newSucceededFuture();
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public Future<Void> close(ChannelHandlerContext ctx) {
             queue.add(CLOSE);
-            promise.setSuccess(null);
+            return ctx.newSucceededFuture();
         }
 
         Integer pollEvent() {

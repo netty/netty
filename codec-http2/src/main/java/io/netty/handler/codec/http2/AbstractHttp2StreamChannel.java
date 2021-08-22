@@ -941,9 +941,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
-        Promise<Void> promise = ctx.newPromise();
-        ctx.write(msg, promise);
-        return promise;
+        return ctx.write(msg);
     }
 
     protected abstract boolean isParentReadInProgress();

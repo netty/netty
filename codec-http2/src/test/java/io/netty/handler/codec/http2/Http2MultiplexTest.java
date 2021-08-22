@@ -29,6 +29,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -738,7 +739,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             channelOpen.set(channel.isOpen());
             channelActive.set(channel.isActive());
         });
-        childChannel.close(p).syncUninterruptibly();
+        childChannel.close().addListener(new PromiseNotifier<>(p)).syncUninterruptibly();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());

@@ -640,25 +640,24 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream1 = frameCodec.newStream();
         Http2FrameStream stream2 = frameCodec.newStream();
 
-        Promise<Void> promise1 = channel.newPromise();
-        Promise<Void> promise2 = channel.newPromise();
-
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
+        Future<Void> future1 = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
+        Future<Void> future2 = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
         assertTrue(isStreamIdValid(stream2.id()));
 
-        assertTrue(promise1.syncUninterruptibly().isSuccess());
-        assertFalse(promise2.isDone());
+        assertTrue(future1.syncUninterruptibly().isSuccess());
+        assertFalse(future2.isDone());
 
         // Increase concurrent streams limit to 2
         frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(2));
 
         channel.flush();
 
-        assertTrue(promise2.syncUninterruptibly().isSuccess());
+        assertTrue(future2.syncUninterruptibly().isSuccess());
     }
 
     @Test
@@ -671,35 +670,34 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream2 = frameCodec.newStream();
         Http2FrameStream stream3 = frameCodec.newStream();
 
-        Promise<Void> promise1 = channel.newPromise();
-        Promise<Void> promise2 = channel.newPromise();
-        Promise<Void> promise3 = channel.newPromise();
-
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3), promise3);
+        Future<Void> future1 = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
+        Future<Void> future2 = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
+        Future<Void> future3 = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3));
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
         assertTrue(isStreamIdValid(stream2.id()));
 
-        assertTrue(promise1.syncUninterruptibly().isSuccess());
-        assertFalse(promise2.isDone());
-        assertFalse(promise3.isDone());
+        assertTrue(future1.syncUninterruptibly().isSuccess());
+        assertFalse(future2.isDone());
+        assertFalse(future3.isDone());
 
         // Increase concurrent streams limit to 2
         frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(2));
         channel.flush();
 
         // As we increased the limit to 2 we should have also succeed the second frame.
-        assertTrue(promise2.syncUninterruptibly().isSuccess());
-        assertFalse(promise3.isDone());
+        assertTrue(future2.syncUninterruptibly().isSuccess());
+        assertFalse(future3.isDone());
 
         frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(3));
         channel.flush();
 
         // With the max streams of 3 all streams should be succeed now.
-        assertTrue(promise3.syncUninterruptibly().isSuccess());
+        assertTrue(future3.syncUninterruptibly().isSuccess());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -707,25 +705,20 @@ public class Http2FrameCodecTest {
     @Test
     public void doNotLeakOnFailedInitializationForChannels() throws Exception {
         setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings().maxConcurrentStreams(2));
-
         Http2FrameStream stream1 = frameCodec.newStream();
         Http2FrameStream stream2 = frameCodec.newStream();
-
-        Promise<Void> stream1HeaderPromise = channel.newPromise();
-        Promise<Void> stream2HeaderPromise = channel.newPromise();
-
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
-                              stream1HeaderPromise);
+        Future<Void> stream1HeaderFuture = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
         channel.runPendingTasks();
 
         frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.EMPTY_BUFFER);
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
-                              stream2HeaderPromise);
+        Future<Void> stream2HeaderFuture = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
         channel.runPendingTasks();
 
-        assertTrue(stream1HeaderPromise.syncUninterruptibly().isSuccess());
-        assertTrue(stream2HeaderPromise.isDone());
+        assertTrue(stream1HeaderFuture.syncUninterruptibly().isSuccess());
+        assertTrue(stream2HeaderFuture.isDone());
 
         assertEquals(0, frameCodec.numInitializingStreams());
         assertFalse(channel.finishAndReleaseAll());
@@ -743,15 +736,15 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream = frameCodec.newStream();
         assertNotNull(stream);
 
-        Promise<Void> writePromise = channel.newPromise();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream), writePromise);
+        Future<Void> writeFuture = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream));
 
         Http2GoAwayFrame goAwayFrame = inboundHandler.readInbound();
         assertNotNull(goAwayFrame);
         assertEquals(NO_ERROR.code(), goAwayFrame.errorCode());
         assertEquals(Integer.MAX_VALUE, goAwayFrame.lastStreamId());
         goAwayFrame.release();
-        assertThat(writePromise.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
+        assertThat(writeFuture.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
     }
 
     @Test

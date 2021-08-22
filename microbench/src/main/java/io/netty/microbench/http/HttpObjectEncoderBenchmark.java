@@ -36,7 +36,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -102,22 +101,18 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void fullMessage() throws Exception {
-        encoder.write(context, fullRequest, newPromise());
+        encoder.write(context, fullRequest);
     }
 
     @Benchmark
     public void contentLength() throws Exception {
-        encoder.write(context, contentLengthRequest, newPromise());
-        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, contentLengthRequest);
+        encoder.write(context, lastContent);
     }
 
     @Benchmark
     public void chunked() throws Exception {
-        encoder.write(context, chunkedRequest, newPromise());
-        encoder.write(context, lastContent, newPromise());
-    }
-
-    private Promise<Void> newPromise() {
-        return context.newPromise();
+        encoder.write(context, chunkedRequest);
+        encoder.write(context, lastContent);
     }
 }

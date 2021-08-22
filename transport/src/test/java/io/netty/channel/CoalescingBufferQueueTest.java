@@ -19,6 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -39,7 +40,6 @@ public class CoalescingBufferQueueTest {
     private ByteBuf mouse;
 
     private Promise<Void> catPromise, emptyPromise;
-    private Promise<Void> voidPromise;
     private FutureListener<Void> mouseListener;
 
     private boolean mouseDone;
@@ -60,7 +60,6 @@ public class CoalescingBufferQueueTest {
             mouseSuccess = future.isSuccess();
         };
         emptyPromise = newPromise();
-        voidPromise = channel.newPromise();
 
         cat = Unpooled.wrappedBuffer("cat".getBytes(CharsetUtil.US_ASCII));
         mouse = Unpooled.wrappedBuffer("mouse".getBytes(CharsetUtil.US_ASCII));
@@ -91,29 +90,6 @@ public class CoalescingBufferQueueTest {
     }
 
     @Test
-    public void testAddFirstVoidPromise() {
-        writeQueue.add(cat, catPromise);
-        assertQueueSize(3, false);
-        writeQueue.add(mouse, mouseListener);
-        assertQueueSize(8, false);
-        Promise<Void> aggregatePromise = newPromise();
-        assertEquals("catmous", dequeue(7, aggregatePromise));
-        ByteBuf remainder = Unpooled.wrappedBuffer("mous".getBytes(CharsetUtil.US_ASCII));
-        writeQueue.addFirst(remainder, voidPromise);
-        Promise<Void> aggregatePromise2 = newPromise();
-        assertEquals("mouse", dequeue(5, aggregatePromise2));
-        aggregatePromise2.setSuccess(null);
-        // Because we used a void promise above, we shouldn't complete catPromise until aggregatePromise is completed.
-        assertFalse(catPromise.isSuccess());
-        assertTrue(mouseSuccess);
-        aggregatePromise.setSuccess(null);
-        assertTrue(catPromise.isSuccess());
-        assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
-    }
-
-    @Test
     public void testAggregateWithFullRead() {
         writeQueue.add(cat, catPromise);
         assertQueueSize(3, false);
@@ -127,19 +103,6 @@ public class CoalescingBufferQueueTest {
         aggregatePromise.setSuccess(null);
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
-    }
-
-    @Test
-    public void testWithVoidPromise() {
-        writeQueue.add(cat, voidPromise);
-        writeQueue.add(mouse, voidPromise);
-        assertQueueSize(8, false);
-        assertEquals("catm", dequeue(4, newPromise()));
-        assertQueueSize(4, false);
-        assertEquals("ouse", dequeue(4, newPromise()));
-        assertQueueSize(0, true);
         assertEquals(0, cat.refCnt());
         assertEquals(0, mouse.refCnt());
     }
@@ -276,7 +239,7 @@ public class CoalescingBufferQueueTest {
         if (fail) {
             writeQueue.releaseAndFailAll(new IllegalStateException());
         } else {
-            ByteBuf buffer = writeQueue.removeFirst(voidPromise);
+            ByteBuf buffer = writeQueue.removeFirst(channel.newPromise());
             assertEquals(1, buffer.readByte());
             assertEquals(2, buffer.readByte());
             assertEquals(3, buffer.readByte());
@@ -284,7 +247,7 @@ public class CoalescingBufferQueueTest {
             buffer.release();
             assertTrue(channel.isWritable());
 
-            buffer = writeQueue.removeFirst(voidPromise);
+            buffer = writeQueue.removeFirst(channel.newPromise());
             assertEquals(4, buffer.readByte());
             assertEquals(5, buffer.readByte());
             assertFalse(buffer.isReadable());

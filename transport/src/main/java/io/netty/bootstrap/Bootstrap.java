@@ -261,14 +261,14 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
-            Promise<Void> connectPromise = channel.newPromise();
-            connectPromise.addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
-            cascade(true, connectPromise, promise, channel);
+            final Future<Void> future;
             if (localAddress == null) {
-                channel.connect(remoteAddress, connectPromise);
+                future = channel.connect(remoteAddress);
             } else {
-                channel.connect(remoteAddress, localAddress, connectPromise);
+                future = channel.connect(remoteAddress, localAddress);
             }
+            future.addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
+            cascade(true, future, promise, channel);
         });
     }
 

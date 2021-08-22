@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetSocketAddress;
@@ -91,34 +91,34 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        encoder.bind(ctx, localAddress, promise);
+    public Future<Void> bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
+        return encoder.bind(ctx, localAddress);
     }
 
     @Override
-    public void connect(
+    public Future<Void> connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, Promise<Void> promise) {
-        encoder.connect(ctx, remoteAddress, localAddress, promise);
+            SocketAddress localAddress) {
+        return encoder.connect(ctx, remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.disconnect(ctx, promise);
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
+        return encoder.disconnect(ctx);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.close(ctx, promise);
+    public Future<Void> close(ChannelHandlerContext ctx) {
+        return encoder.close(ctx);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.deregister(ctx, promise);
+    public Future<Void> deregister(ChannelHandlerContext ctx) {
+        return encoder.deregister(ctx);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         encoder.read(ctx);
     }
 

@@ -27,7 +27,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -239,7 +239,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         if (!isClosed) {
             if (ctx.channel() instanceof SocketChannel) {
                 handleTCP(ctx, msg, true);
@@ -249,7 +249,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
             }
         }
-        super.write(ctx, msg, promise);
+        return super.write(ctx, msg);
     }
 
     /**

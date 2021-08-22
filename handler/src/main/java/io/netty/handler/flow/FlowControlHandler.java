@@ -132,7 +132,7 @@ public class FlowControlHandler implements ChannelHandler {
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (dequeue(ctx, 1) == 0) {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be

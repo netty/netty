@@ -35,6 +35,27 @@ public class PromiseNotifier<V> implements FutureListener<V> {
     private final boolean logNotifyFailure;
 
     /**
+     * Fuse the {@link Future} and {@link Promise}. This means that if the {@link Future} completes the {@link Promise}
+     * will be notified. That said cancellation is propagated both ways. This means if the {@link Future} is cancelled
+     * the {@link Promise} is cancelled as well and vise-versa.
+     *
+     * @param future    the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise   the {@link Promise} which will be notified
+     * @param <V>       the type of the value.
+     * @param <F>       the type of the {@link Future}
+     * @return
+     */
+    public static <V, F extends Future<V>> F fuse(F future, Promise<? super V> promise) {
+        promise.addListener(p -> {
+            if (p.isCancelled()) {
+                future.cancel(false);
+            }
+        });
+        future.addListener(new PromiseNotifier<>(promise));
+        return future;
+    }
+
+    /**
      * Create a new instance.
      *
      * @param promises  the {@link Promise}s to notify once this {@link FutureListener} is notified.

@@ -213,7 +213,7 @@ public class WebSocketHandshakeHandOverTest {
             // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
             // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
             // we would manually close the channel.
-            clientWsHandler.close(ctx, ctx.newPromise());
+            clientWsHandler.close(ctx);
 
             // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
             // channel is closed.

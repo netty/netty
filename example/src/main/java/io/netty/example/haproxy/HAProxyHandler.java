@@ -21,7 +21,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
 public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
 
@@ -32,8 +31,8 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        Future<Void> future = ctx.write(msg, promise);
+    public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
+        Future<Void> future = ctx.write(msg);
         if (msg instanceof HAProxyMessage) {
             future.addListener(fut -> {
                 if (fut.isSuccess()) {
@@ -44,5 +43,6 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                 }
             });
         }
+        return future;
     }
 }

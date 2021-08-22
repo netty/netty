@@ -17,7 +17,6 @@ package io.netty.handler.timeout;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WriteTimeoutHandlerTest {
 
+    // TODO: Remove ?
     @Test
     public void testPromiseUseDifferentExecutor() throws Exception {
         EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
@@ -35,7 +35,7 @@ public class WriteTimeoutHandlerTest {
             channel.pipeline().addLast(new WriteTimeoutHandler(10000));
             final CountDownLatch latch = new CountDownLatch(1);
             channel.register();
-            channel.writeAndFlush("something", new DefaultPromise<>(group1.next())).addListener(f -> {
+            channel.writeAndFlush("something").addListener(f -> {
                 latch.countDown();
             });
 

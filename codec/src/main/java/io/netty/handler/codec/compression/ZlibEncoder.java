@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
@@ -46,12 +45,4 @@ public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
      * operation completes.
      */
     public abstract Future<Void> close();
-
-    /**
-     * Close this {@link ZlibEncoder} and so finish the encoding.
-     * The given {@link Future} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public abstract Future<Void> close(Promise<Void> promise);
-
 }
