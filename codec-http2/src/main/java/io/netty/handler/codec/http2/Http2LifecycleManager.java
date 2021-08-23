@@ -59,13 +59,11 @@ public interface Http2LifecycleManager {
      * @param ctx The context used for communication and buffer allocation if necessary.
      * @param streamId The identifier of the stream to reset.
      * @param errorCode Justification as to why this stream is being reset. See {@link Http2Error}.
-     * @param promise Used to indicate the return status of this operation.
      * @return Will be considered successful when the connection and stream state has been updated, and a
      * {@code RST_STREAM} frame has been sent to the peer. If the stream state has already been updated and a
      * {@code RST_STREAM} frame has been sent then the return status may indicate success immediately.
      */
-    Future<Void> resetStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            Promise<Void> promise);
+    Future<Void> resetStream(ChannelHandlerContext ctx, int streamId, long errorCode);
 
     /**
      * Prevents the peer from creating streams and close the connection if {@code errorCode} is not
@@ -78,13 +76,12 @@ public interface Http2LifecycleManager {
      * @param lastStreamId The last stream that the local endpoint is claiming it will accept.
      * @param errorCode The rational as to why the connection is being closed. See {@link Http2Error}.
      * @param debugData For diagnostic purposes (carries no semantic value).
-     * @param promise Used to indicate the return status of this operation.
      * @return Will be considered successful when the connection and stream state has been updated, and a
      * {@code GO_AWAY} frame has been sent to the peer. If the stream state has already been updated and a
      * {@code GO_AWAY} frame has been sent then the return status may indicate success immediately.
      */
     Future<Void> goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData, Promise<Void> promise);
+            ByteBuf debugData);
 
     /**
      * Processes the given error.

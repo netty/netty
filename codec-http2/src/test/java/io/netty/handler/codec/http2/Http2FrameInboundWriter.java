@@ -49,59 +49,59 @@ final class Http2FrameInboundWriter {
     }
 
     void writeInboundData(int streamId, ByteBuf data, int padding, boolean endStream) {
-        writer.writeData(ctx, streamId, data, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+        writer.writeData(ctx, streamId, data, padding, endStream).syncUninterruptibly();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
                          int padding, boolean endStream) {
-        writer.writeHeaders(ctx, streamId, headers, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+        writer.writeHeaders(ctx, streamId, headers, padding, endStream).syncUninterruptibly();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
                                int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
         writer.writeHeaders(ctx, streamId, headers, streamDependency,
-                weight, exclusive, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+                weight, exclusive, padding, endStream).syncUninterruptibly();
     }
 
     void writeInboundPriority(int streamId, int streamDependency,
                                 short weight, boolean exclusive) {
         writer.writePriority(ctx, streamId, streamDependency, weight,
-                exclusive, ctx.newPromise()).syncUninterruptibly();
+                exclusive).syncUninterruptibly();
     }
 
     void writeInboundRstStream(int streamId, long errorCode) {
-        writer.writeRstStream(ctx, streamId, errorCode, ctx.newPromise()).syncUninterruptibly();
+        writer.writeRstStream(ctx, streamId, errorCode).syncUninterruptibly();
     }
 
     void writeInboundSettings(Http2Settings settings) {
-        writer.writeSettings(ctx, settings, ctx.newPromise()).syncUninterruptibly();
+        writer.writeSettings(ctx, settings).syncUninterruptibly();
     }
 
     void writeInboundSettingsAck() {
-        writer.writeSettingsAck(ctx, ctx.newPromise()).syncUninterruptibly();
+        writer.writeSettingsAck(ctx).syncUninterruptibly();
     }
 
     void writeInboundPing(boolean ack, long data) {
-        writer.writePing(ctx, ack, data, ctx.newPromise()).syncUninterruptibly();
+        writer.writePing(ctx, ack, data).syncUninterruptibly();
     }
 
     void writePushPromise(int streamId, int promisedStreamId,
                                    Http2Headers headers, int padding) {
            writer.writePushPromise(ctx, streamId, promisedStreamId,
-                   headers, padding, ctx.newPromise()).syncUninterruptibly();
+                   headers, padding).syncUninterruptibly();
     }
 
     void writeInboundGoAway(int lastStreamId, long errorCode, ByteBuf debugData) {
-        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData, ctx.newPromise()).syncUninterruptibly();
+        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).syncUninterruptibly();
     }
 
     void writeInboundWindowUpdate(int streamId, int windowSizeIncrement) {
-        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement, ctx.newPromise()).syncUninterruptibly();
+        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement).syncUninterruptibly();
     }
 
     void writeInboundFrame(byte frameType, int streamId,
                              Http2Flags flags, ByteBuf payload) {
-        writer.writeFrame(ctx, frameType, streamId, flags, payload, ctx.newPromise()).syncUninterruptibly();
+        writer.writeFrame(ctx, frameType, streamId, flags, payload).syncUninterruptibly();
     }
 
     private static final class WriteInboundChannelHandlerContext

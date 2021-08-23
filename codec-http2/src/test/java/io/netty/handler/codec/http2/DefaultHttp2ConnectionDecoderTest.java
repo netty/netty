@@ -79,7 +79,6 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static final int STATE_RECV_TRAILERS = 1 << 1;
 
     private Http2ConnectionDecoder decoder;
-    private Promise<Void> promise;
 
     @Mock
     private Http2Connection connection;
@@ -130,7 +129,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
@@ -209,7 +208,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onSettingsRead(ctx, new Http2Settings());
         verify(listener).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         assertTrue(decoder.prefaceReceived());
-        verify(encoder).writeSettingsAck(eq(ctx), eq(promise));
+        verify(encoder).writeSettingsAck(eq(ctx));
 
         // Simulate receiving the SETTINGS ACK for the initial settings.
         decode().onSettingsAckRead(ctx);
@@ -793,7 +792,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void pingReadShouldReplyWithAck() throws Exception {
         decode().onPingRead(ctx, 0L);
-        verify(encoder).writePing(eq(ctx), eq(true), eq(0L), eq(promise));
+        verify(encoder).writePing(eq(ctx), eq(true), eq(0L));
         verify(listener, never()).onPingAckRead(eq(ctx), any(long.class));
     }
 

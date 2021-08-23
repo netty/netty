@@ -100,7 +100,7 @@ public abstract class WebSocketServerHandshakerTest {
                                                              "ws://example.com/chat");
         request.headers().set("x-client-header", "value");
         try {
-            serverHandshaker.handshake(null, request, null, null);
+            serverHandshaker.handshake(null, request, null);
         } catch (WebSocketServerHandshakeException exception) {
             assertNotNull(exception.getMessage());
             assertEquals(request.headers(), exception.request().headers());

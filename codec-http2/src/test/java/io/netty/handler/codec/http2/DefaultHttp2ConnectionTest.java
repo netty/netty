@@ -22,7 +22,6 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalHandler;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -157,10 +156,9 @@ public class DefaultHttp2ConnectionTest {
         final Promise<Void> promise = group.next().newPromise();
         final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
         client.forEachActiveStream(stream -> {
-            client.close(promise).addListener((FutureListener<Void>) future -> {
-                assertTrue(promise.isDone());
+            client.close(promise.addListener(future -> {
                 latch.countDown();
-            });
+            }));
             return true;
         });
         assertTrue(latch.await(5, TimeUnit.SECONDS));
@@ -186,10 +184,9 @@ public class DefaultHttp2ConnectionTest {
                 return true;
             });
         } catch (Http2Exception ignored) {
-            client.close(promise).addListener((FutureListener<Void>) future -> {
-                assertTrue(promise.isDone());
+            client.close(promise.addListener(future -> {
                 latch.countDown();
-            });
+            }));
         }
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
@@ -636,10 +633,10 @@ public class DefaultHttp2ConnectionTest {
     private void testRemoveAllStreams() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = group.next().newPromise();
-        client.close(promise).addListener((FutureListener<Void>) future -> {
+        client.close(promise.addListener(future -> {
             assertTrue(promise.isDone());
             latch.countDown();
-        });
+        }));
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 

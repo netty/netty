@@ -33,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayDeque;
@@ -59,7 +58,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link Http2ControlFrameLimitEncoder}.
  */
-@SuppressWarnings("unchecked")
 public class Http2ControlFrameLimitEncoderTest {
 
     private Http2ControlFrameLimitEncoder encoder;
@@ -101,22 +99,22 @@ public class Http2ControlFrameLimitEncoderTest {
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
 
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class)))
-                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise(invocationOnMock, 3));
-        when(writer.writeSettingsAck(any(ChannelHandlerContext.class), any(Promise.class)))
-                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise(invocationOnMock, 1));
-        when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong(), any(Promise.class)))
+        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong()))
+                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise());
+        when(writer.writeSettingsAck(any(ChannelHandlerContext.class)))
+                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise());
+        when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong()))
                 .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
-                    Promise<Void> promise = handlePromise(invocationOnMock, 3);
+                    Promise<Void> promise = handlePromise();
                     if (invocationOnMock.getArgument(1) == Boolean.FALSE) {
                         promise.trySuccess(null);
                     }
                     return promise;
                 });
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(Promise.class))).thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
+        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
+                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
                     ReferenceCountUtil.release(invocationOnMock.getArgument(3));
-                    Promise<Void> promise = invocationOnMock.getArgument(4);
+                    Promise<Void> promise =  ImmediateEventExecutor.INSTANCE.newPromise();
                     goAwayPromises.offer(promise);
                     return promise;
                 });
@@ -139,7 +137,12 @@ public class Http2ControlFrameLimitEncoderTest {
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(executor.inEventLoop()).thenReturn(true);
         doAnswer((Answer<Promise>) invocation -> newPromise()).when(ctx).newPromise();
+        doAnswer((Answer<Future>) invocation ->
+                ImmediateEventExecutor.INSTANCE.newFailedFuture(invocation.getArgument(0)))
+                .when(ctx).newFailedFuture(any(Throwable.class));
+
         when(ctx.executor()).thenReturn(executor);
+        when(ctx.close()).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
         when(channel.isWritable()).thenReturn(true);
@@ -152,12 +155,12 @@ public class Http2ControlFrameLimitEncoderTest {
         handler.handlerAdded(ctx);
     }
 
-    private Promise<Void> handlePromise(InvocationOnMock invocationOnMock, int promiseIdx) {
-        Promise<Void> promise = invocationOnMock.getArgument(promiseIdx);
+    private Promise<Void> handlePromise() {
+        Promise<Void> p =  ImmediateEventExecutor.INSTANCE.newPromise();
         if (++numWrites == 2) {
-            promise.setSuccess(null);
+            return p.setSuccess(null);
         }
-        return promise;
+        return p;
     }
 
     @AfterEach
@@ -178,75 +181,75 @@ public class Http2ControlFrameLimitEncoderTest {
 
     @Test
     public void testLimitSettingsAck() {
-        assertFalse(encoder.writeSettingsAck(ctx, newPromise()).isDone());
+        assertFalse(encoder.writeSettingsAck(ctx).isDone());
         // The second write is always marked as success by our mock, which means it will also not be queued and so
         // not count to the number of queued frames.
-        assertTrue(encoder.writeSettingsAck(ctx, newPromise()).isSuccess());
-        assertFalse(encoder.writeSettingsAck(ctx, newPromise()).isDone());
+        assertTrue(encoder.writeSettingsAck(ctx).isSuccess());
+        assertFalse(encoder.writeSettingsAck(ctx).isDone());
 
         verifyFlushAndClose(0, false);
 
-        assertFalse(encoder.writeSettingsAck(ctx, newPromise()).isDone());
-        assertFalse(encoder.writeSettingsAck(ctx, newPromise()).isDone());
+        assertFalse(encoder.writeSettingsAck(ctx).isDone());
+        assertFalse(encoder.writeSettingsAck(ctx).isDone());
 
         verifyFlushAndClose(1, true);
     }
 
     @Test
     public void testLimitPingAck() {
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isDone());
+        assertFalse(encoder.writePing(ctx, true, 8).isDone());
         // The second write is always marked as success by our mock, which means it will also not be queued and so
         // not count to the number of queued frames.
-        assertTrue(encoder.writePing(ctx, true, 8, newPromise()).isSuccess());
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isDone());
+        assertTrue(encoder.writePing(ctx, true, 8).isSuccess());
+        assertFalse(encoder.writePing(ctx, true, 8).isDone());
 
         verifyFlushAndClose(0, false);
 
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isDone());
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isDone());
+        assertFalse(encoder.writePing(ctx, true, 8).isDone());
+        assertFalse(encoder.writePing(ctx, true, 8).isDone());
 
         verifyFlushAndClose(1, true);
     }
 
     @Test
     public void testNotLimitPing() {
-        assertTrue(encoder.writePing(ctx, false, 8, newPromise()).isSuccess());
-        assertTrue(encoder.writePing(ctx, false, 8, newPromise()).isSuccess());
-        assertTrue(encoder.writePing(ctx, false, 8, newPromise()).isSuccess());
-        assertTrue(encoder.writePing(ctx, false, 8, newPromise()).isSuccess());
+        assertTrue(encoder.writePing(ctx, false, 8).isSuccess());
+        assertTrue(encoder.writePing(ctx, false, 8).isSuccess());
+        assertTrue(encoder.writePing(ctx, false, 8).isSuccess());
+        assertTrue(encoder.writePing(ctx, false, 8).isSuccess());
 
         verifyFlushAndClose(0, false);
     }
 
     @Test
     public void testLimitRst() {
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
         // The second write is always marked as success by our mock, which means it will also not be queued and so
         // not count to the number of queued frames.
-        assertTrue(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isSuccess());
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
+        assertTrue(encoder.writeRstStream(ctx, 1, CANCEL.code()).isSuccess());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
 
         verifyFlushAndClose(0, false);
 
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
 
         verifyFlushAndClose(1, true);
     }
 
     @Test
     public void testLimit() {
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
         // The second write is always marked as success by our mock, which means it will also not be queued and so
         // not count to the number of queued frames.
-        assertTrue(encoder.writePing(ctx, false, 8, newPromise()).isSuccess());
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isSuccess());
+        assertTrue(encoder.writePing(ctx, false, 8).isSuccess());
+        assertFalse(encoder.writePing(ctx, true, 8).isSuccess());
 
         verifyFlushAndClose(0, false);
 
-        assertFalse(encoder.writeSettingsAck(ctx, newPromise()).isDone());
-        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code(), newPromise()).isDone());
-        assertFalse(encoder.writePing(ctx, true, 8, newPromise()).isSuccess());
+        assertFalse(encoder.writeSettingsAck(ctx).isDone());
+        assertFalse(encoder.writeRstStream(ctx, 1, CANCEL.code()).isDone());
+        assertFalse(encoder.writePing(ctx, true, 8).isSuccess());
 
         verifyFlushAndClose(1, true);
     }
@@ -256,7 +259,7 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, times(invocations)).close();
         if (failed) {
             verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
-                    any(ByteBuf.class), any(Promise.class));
+                    any(ByteBuf.class));
         }
     }
 

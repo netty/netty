@@ -498,7 +498,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
                 // remote peer applies these settings before any subsequent frames that we may send which depend upon
                 // these new settings. See https://github.com/netty/netty/issues/6520.
-                encoder.writeSettingsAck(ctx, ctx.newPromise());
+                encoder.writeSettingsAck(ctx);
 
                 encoder.remoteSettings(settings);
             } else {
@@ -512,7 +512,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             if (autoAckPing) {
                 // Send an ack back to the remote client.
-                encoder.writePing(ctx, true, data, ctx.newPromise());
+                encoder.writePing(ctx, true, data);
             }
             listener.onPingRead(ctx, data);
         }

@@ -253,10 +253,8 @@ public interface Http2Connection {
      * all streams that exists (active or otherwise) will be closed and removed.
      * <p>Note if iterating active streams via {@link #forEachActiveStream(Http2StreamVisitor)} and an exception is
      * thrown it is necessary to call this method again to ensure the close completes.
-     * @param promise Will be completed when all streams have been removed, and listeners have been notified.
-     * @return A future that will be completed when all streams have been removed, and listeners have been notified.
      */
-    Future<Void> close(Promise<Void> promise);
+    void close(Promise<Void> promise);
 
     /**
      * Creates a new key that is unique within this {@link Http2Connection}.

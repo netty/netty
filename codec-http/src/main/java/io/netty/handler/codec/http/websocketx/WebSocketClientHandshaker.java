@@ -236,31 +236,19 @@ public abstract class WebSocketClientHandshaker {
      */
     public Future<Void> handshake(Channel channel) {
         requireNonNull(channel, "channel");
-        return handshake(channel, channel.newPromise());
-    }
-
-    /**
-     * Begins the opening handshake
-     *
-     * @param channel
-     *            Channel
-     * @param promise
-     *            the {@link Promise} to be notified when the opening handshake is sent
-     */
-    public final Future<Void> handshake(Channel channel, final Promise<Void> promise) {
         ChannelPipeline pipeline = channel.pipeline();
         HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
-               promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+               return channel.newFailedFuture(new IllegalStateException("ChannelPipeline does not contain " +
                        "an HttpResponseDecoder or HttpClientCodec"));
-               return promise;
             }
         }
 
         FullHttpRequest request = newHandshakeRequest();
 
+        Promise<Void> promise = channel.newPromise();
         channel.writeAndFlush(request).addListener(channel, (ch, future) -> {
             if (future.isSuccess()) {
                 ChannelPipeline p = ch.pipeline();
@@ -385,29 +373,12 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link Future} which is notified once the handshake completes.
      */
     public final Future<Void> processHandshake(final Channel channel, HttpResponse response) {
-        return processHandshake(channel, response, channel.newPromise());
-    }
-
-    /**
-     * Process the opening handshake initiated by {@link #handshake}}.
-     *
-     * @param channel
-     *            Channel
-     * @param response
-     *            HTTP response containing the closing handshake details
-     * @param promise
-     *            the {@link Promise} to notify once the handshake completes.
-     * @return future
-     *            the {@link Future} which is notified once the handshake completes.
-     */
-    public final Future<Void> processHandshake(final Channel channel, HttpResponse response,
-                                                final Promise<Void> promise) {
         if (response instanceof FullHttpResponse) {
             try {
                 finishHandshake(channel, (FullHttpResponse) response);
-                promise.setSuccess(null);
+                return channel.newSucceededFuture();
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                return channel.newFailedFuture(cause);
             }
         } else {
             ChannelPipeline p = channel.pipeline();
@@ -415,10 +386,12 @@ public abstract class WebSocketClientHandshaker {
             if (ctx == null) {
                 ctx = p.context(HttpClientCodec.class);
                 if (ctx == null) {
-                    return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                    return channel.newFailedFuture(new IllegalStateException("ChannelPipeline does not contain " +
                             "an HttpResponseDecoder or HttpClientCodec"));
                 }
             }
+
+            Promise<Void> promise = channel.newPromise();
             // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more
             // then enough for the websockets handshake payload.
             //
@@ -459,8 +432,8 @@ public abstract class WebSocketClientHandshaker {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
+            return promise;
         }
-        return promise;
     }
 
     /**

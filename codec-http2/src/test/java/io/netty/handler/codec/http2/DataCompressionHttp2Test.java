@@ -139,7 +139,7 @@ public class DataCompressionHttp2Test {
                 .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, () -> {
-            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, true, newPromiseClient());
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, true);
             clientHandler.flush(ctxClient());
         });
         awaitServer();
@@ -157,8 +157,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -178,8 +178,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -201,9 +201,9 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -224,8 +224,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -245,8 +245,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -266,8 +266,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -287,8 +287,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();
@@ -310,8 +310,8 @@ public class DataCompressionHttp2Test {
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
 
             runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
                 clientHandler.flush(ctxClient());
             });
             awaitServer();

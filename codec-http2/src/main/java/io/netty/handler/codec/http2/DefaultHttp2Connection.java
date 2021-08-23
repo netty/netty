@@ -20,7 +20,6 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
@@ -116,7 +115,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public Future<Void> close(final Promise<Void> promise) {
+    public void close(final Promise<Void> promise) {
         requireNonNull(promise, "promise");
         // Since we allow this method to be called multiple times, we must make sure that all the promises are notified
         // when all streams are removed and the close operation completes.
@@ -131,7 +130,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
         if (isStreamMapEmpty()) {
             promise.trySuccess(null);
-            return promise;
+            return;
         }
 
         Iterator<PrimitiveEntry<Http2Stream>> itr = streamMap.entries().iterator();
@@ -162,7 +161,6 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
             }
         }
-        return closePromise;
     }
 
     @Override

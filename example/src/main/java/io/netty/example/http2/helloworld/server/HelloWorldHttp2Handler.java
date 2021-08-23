@@ -88,8 +88,8 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
-        encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
-        encoder().writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
+        encoder().writeHeaders(ctx, streamId, headers, 0, false);
+        encoder().writeData(ctx, streamId, payload, 0, true);
 
         // no need to call flush as channelReadComplete(...) will take care of it.
     }
