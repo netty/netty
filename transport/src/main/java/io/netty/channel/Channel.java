@@ -222,7 +222,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     @Override
     default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline().connect(remoteAddress);
+        return pipeline().connect(remoteAddress, localAddress);
     }
 
     @Override
