@@ -285,6 +285,30 @@ public class BootstrapTest {
     }
 
     @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testLateRegistrationConnectWithCreateUnregistered() throws Throwable {
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        LateRegisterHandler registerHandler = new LateRegisterHandler();
+        try {
+            final Bootstrap bootstrapA = new Bootstrap();
+            bootstrapA.group(group);
+            bootstrapA.channel(LocalChannel.class);
+            bootstrapA.handler(registerHandler);
+            Channel channel = bootstrapA.createUnregistered();
+            Future<Void> registerFuture = channel.register();
+            Future<Void> connectFuture = channel.connect(LocalAddress.ANY);
+            assertFalse(connectFuture.isDone());
+            registerHandler.registerPromise().setSuccess(null);
+            registerFuture.sync();
+            CompletionException exception =
+                    assertThrows(CompletionException.class, connectFuture::syncUninterruptibly);
+            assertTrue(exception.getCause() instanceof ConnectException);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
     public void testAsyncResolutionFailure() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
@@ -385,7 +409,6 @@ public class BootstrapTest {
             latch.countDown();
             return ctx.register().addListener(future -> {
                 if (!future.isSuccess()) {
-                    future.cause().printStackTrace();
                     registerPromise.tryFailure(future.cause());
                 }
             });

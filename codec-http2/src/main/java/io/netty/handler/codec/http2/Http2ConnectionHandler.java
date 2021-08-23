@@ -919,13 +919,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 return;
             }
             closed = true;
-            if (ctx.channel().isActive()) {
+            // Before trying to close we need to check if the handler still exists in the pipeline as it may
+            // have been removed already.
+            if (!ctx.isRemoved()) {
                 if (promise == null) {
                     ctx.close();
                 } else {
                     ctx.close().addListener(new PromiseNotifier<>(promise));
                 }
-            } else {
+            } else if (promise != null) {
                 promise.setSuccess(null);
             }
         }

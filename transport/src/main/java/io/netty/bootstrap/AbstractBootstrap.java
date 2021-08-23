@@ -319,7 +319,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(() -> {
             if (regFuture.isSuccess()) {
-                PromiseNotifier.fuse(channel.bind(localAddress), promise)
+                PromiseNotifier.cascade(channel.bind(localAddress), promise)
                         .addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
             } else {
                 promise.setFailure(regFuture.cause());

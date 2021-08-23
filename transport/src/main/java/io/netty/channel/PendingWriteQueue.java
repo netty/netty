@@ -144,7 +144,7 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     Promise<Void> promise = write.promise;
                     recycle(write, false);
-                    PromiseNotifier.fuse(ctx.write(msg), promise);
+                    PromiseNotifier.cascade(ctx.write(msg), promise);
                     write = next;
                 }
             }
@@ -221,7 +221,7 @@ public final class PendingWriteQueue {
         recycle(write, true);
 
         Future<Void> future = ctx.write(msg);
-        PromiseNotifier.fuse(future, promise);
+        PromiseNotifier.cascade(future, promise);
         return future;
     }
 

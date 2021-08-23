@@ -757,7 +757,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    @Timeout(value = 300000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testConnectFutureBeforeChannelActive() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -783,21 +783,22 @@ public class LocalChannelTest {
 
             cc = cb.register().get();
 
-            final Promise<Void> promise = cc.newPromise();
+            final AtomicReference<Future<Void>> ref = new AtomicReference<>();
             final Promise<Void> assertPromise = cc.eventLoop().newPromise();
 
             cc.pipeline().addLast(new TestHandler() {
                 @Override
                 public Future<Void> connect(ChannelHandlerContext ctx,
                                              SocketAddress remoteAddress, SocketAddress localAddress) {
-                    super.connect(ctx, remoteAddress, localAddress);
-                    return promise.setSuccess(null);
+                    Future<Void> future = super.connect(ctx, remoteAddress, localAddress);
+                    ref.set(future);
+                    return future;
                 }
 
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Ensure the promise was done before the handler method is triggered.
-                    if (promise.isDone()) {
+                    if (ref.get().isDone()) {
                         assertPromise.setSuccess(null);
                     } else {
                         assertPromise.setFailure(new AssertionError("connect promise should be done"));
@@ -806,10 +807,10 @@ public class LocalChannelTest {
             });
             // Connect to the server
             cc.connect(sc.localAddress()).sync();
-            promise.sync();
+            Future<Void> f = ref.get().sync();
 
             assertPromise.syncUninterruptibly();
-            assertTrue(promise.isSuccess());
+            assertTrue(f.isSuccess());
         } finally {
             closeChannel(cc);
             closeChannel(sc);

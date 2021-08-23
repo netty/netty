@@ -260,13 +260,7 @@ final class Http2FrameInboundWriter {
 
         @Override
         public Future<Void> write(Object msg) {
-            try {
-                channel.writeInbound(msg);
-                channel.runPendingTasks();
-            } catch (Throwable cause) {
-                return newFailedFuture(cause);
-            }
-            return newSucceededFuture();
+            return writeAndFlush(msg);
         }
 
         @Override

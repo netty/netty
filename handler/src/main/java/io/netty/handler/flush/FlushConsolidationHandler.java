@@ -152,7 +152,7 @@ public class FlushConsolidationHandler implements ChannelHandler {
     }
 
     @Override
-    public io.netty.util.concurrent.Future<Void> disconnect(ChannelHandlerContext ctx) {
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
         return ctx.disconnect();
