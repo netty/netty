@@ -474,8 +474,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return findAndInvokeConnect(remoteAddress, localAddress);
         }
         Promise<Void> promise  = newPromise();
-            safeExecute(executor, () ->
-                    PromiseNotifier.cascade(findAndInvokeConnect(remoteAddress, localAddress), promise), promise, null);
+        safeExecute(executor, () ->
+                PromiseNotifier.cascade(findAndInvokeConnect(remoteAddress, localAddress), promise), promise, null);
 
         return promise;
     }
