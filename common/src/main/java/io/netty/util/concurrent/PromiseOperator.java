@@ -26,15 +26,16 @@ import static io.netty.util.internal.PromiseNotificationUtil.tryFailure;
 import static io.netty.util.internal.PromiseNotificationUtil.trySuccess;
 
 /**
- * Internal operators interface used for implementing {@link Future#map(Function)}
- * and {@link Future#flatMap(Function)}.
+ * Internal operators interface used for implementing {@link Future#map(Function)} and {@link
+ * Future#flatMap(Function)}.
  * <p>
- * <em>Note:</em> The operations themselves are implemented as static inner classes instead of lambdas to aid debugging.
+ * <em>Note:</em> The operations themselves are implemented as static inner classes instead of lambdas to aid
+ * debugging.
  * <p>
- * This library reduces object allocation compared to what could otherwise be accomplished, by relying on the
- * {@link DefaultPromise} itself being a {@link FutureContextListener} that take the operator instance as a context.
- * This way, only the operator instance itself necessarily needs to be allocated, and in the case of
- * {@link #passThrough()} even that is avoided.
+ * This library reduces object allocation compared to what could otherwise be accomplished, by relying on the {@link
+ * DefaultPromise} itself being a {@link FutureContextListener} that take the operator instance as a context. This way,
+ * only the operator instance itself necessarily needs to be allocated, and in the case of {@link #passThrough()} even
+ * that is avoided.
  */
 interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
     InternalLogger LOGGER = InternalLoggerFactory.getInstance(PromiseOperator.class);
@@ -47,7 +48,7 @@ interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
 
     static <T, R> PromiseOperator<R> map(Function<T, R> mapper) {
         Objects.requireNonNull(mapper, "The mapper function cannot be null.");
-         return new Mapper<>(mapper);
+        return new Mapper<>(mapper);
     }
 
     static <T, R> PromiseOperator<R> flatMap(Function<T, Future<R>> mapper) {
