@@ -255,7 +255,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
                 // EventLoop
                 Promise<Channel> p = executor.newPromise();
-                AcquireListener l = createAcquireListener(promise);
+                AcquireListener l = new AcquireListener(promise);
                 l.acquired();
                 p.addListener(l);
                 super.acquire(p);
@@ -281,10 +281,6 @@ public class FixedChannelPool extends SimpleChannelPool {
         } catch (Throwable cause) {
             promise.tryFailure(cause);
         }
-    }
-
-    protected AcquireListener createAcquireListener(Promise<Channel> promise) {
-        return new AcquireListener(promise);
     }
 
     private void tooManyOutstanding(Promise<?> promise) {
@@ -402,7 +398,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         public abstract void onTimeout(AcquireTask task);
     }
 
-    protected class AcquireListener implements FutureListener<Channel> {
+    private class AcquireListener implements FutureListener<Channel> {
         private final Promise<Channel> originalPromise;
         protected boolean acquired;
 

@@ -27,15 +27,18 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -380,25 +383,25 @@ public class SimpleChannelPoolTest {
         final NullPointerException exception = new NullPointerException();
         final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new ChannelPoolHandler() {
             @Override
-            public void channelReleased(Channel ch) throws Exception {
+            public void channelReleased(Channel ch) {
             }
             @Override
-            public void channelAcquired(Channel ch) throws Exception {
+            public void channelAcquired(Channel ch) {
                 throw exception;
             }
             @Override
-            public void channelCreated(Channel ch) throws Exception {
+            public void channelCreated(Channel ch) {
             }
         });
 
-        Future<Channel> futureChannel = pool.acquire();
-        futureChannel.addListener(new GenericFutureListener<Future<Channel>>() {
-            @Override
-            public void operationComplete(Future<Channel> future) throws Exception {
-                assertTrue(future.cause() == exception);
-            }
-        });
-        futureChannel.getNow();
+        try {
+            pool.acquire().sync();
+        } catch (NullPointerException e) {
+            assertSame(e, exception);
+        }
+
         sc.close().sync();
+        pool.close();
+        group.shutdownGracefully();
     }
 }

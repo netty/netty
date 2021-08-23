@@ -29,7 +29,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -409,12 +408,11 @@ public class FixedChannelPoolTest {
     }
 
     @Test
-    public void testAcquire0Exception() throws InterruptedException {
+    public void testChannelAcquiredException() throws InterruptedException {
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
-        cb.group(group)
-              .channel(LocalChannel.class);
+        cb.group(group).channel(LocalChannel.class);
 
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group)
@@ -428,24 +426,28 @@ public class FixedChannelPoolTest {
 
         // Start server
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
-
         final NullPointerException exception = new NullPointerException();
-        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2) {
+        FixedChannelPool pool = new FixedChannelPool(cb, new ChannelPoolHandler() {
             @Override
-            protected AcquireListener createAcquireListener(Promise<Channel> promise) {
+            public void channelReleased(Channel ch) {
+            }
+            @Override
+            public void channelAcquired(Channel ch) {
                 throw exception;
             }
-        };
-
-        Future<Channel> futureChannel = pool.acquire();
-        futureChannel.addListener(new GenericFutureListener<Future<Channel>>() {
             @Override
-            public void operationComplete(Future<Channel> future) {
-                assertTrue(future.cause() == exception);
+            public void channelCreated(Channel ch) {
             }
-        });
-        futureChannel.getNow();
+        }, 2);
+
+        try {
+            pool.acquire().sync();
+        } catch (NullPointerException e) {
+            assertSame(e, exception);
+        }
+
         sc.close().sync();
+        pool.close();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
