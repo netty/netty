@@ -39,8 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.concurrent.DefaultPromise.newSuccessfulPromise;
-import static io.netty.util.concurrent.Futures.flatMap;
-import static io.netty.util.concurrent.Futures.map;
 import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static java.lang.Math.max;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -456,7 +454,7 @@ public class DefaultPromiseTest {
     @Test
     public void mapMustApplyMapperFunctionWhenFutureSucceeds() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = map(promise, i -> i.toString());
+        Future<String> strFut = promise.map(i -> i.toString());
         promise.setSuccess(42);
         assertThat(strFut.getNow()).isEqualTo("42");
     }
@@ -465,7 +463,7 @@ public class DefaultPromiseTest {
     public void mapMustApplyMapperFunctionOnSuccededFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(42);
-        assertThat(map(promise, i -> i.toString()).getNow()).isEqualTo("42");
+        assertThat(promise.map(i -> i.toString()).getNow()).isEqualTo("42");
     }
 
     @Test
@@ -473,7 +471,7 @@ public class DefaultPromiseTest {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Exception cause = new Exception("boom");
         promise.setFailure(cause);
-        assertThat(map(promise, i -> i.toString()).cause()).isSameAs(cause);
+        assertThat(promise.map(i -> i.toString()).cause()).isSameAs(cause);
     }
 
     @Test
@@ -482,7 +480,7 @@ public class DefaultPromiseTest {
         Exception cause = new Exception("boom");
         promise.setFailure(cause);
         AtomicInteger counter = new AtomicInteger();
-        assertThat(map(promise, i -> {
+        assertThat(promise.map(i -> {
             counter.getAndIncrement();
             return i.toString();
         }).cause()).isSameAs(cause);
@@ -493,7 +491,7 @@ public class DefaultPromiseTest {
     public void mapMustFailReturnedFutureWhenMapperFunctionThrows() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         RuntimeException cause = new RuntimeException("boom");
-        Future<Object> future = map(promise, i -> {
+        Future<Object> future = promise.map(i -> {
             throw cause;
         });
         promise.setSuccess(42);
@@ -503,7 +501,7 @@ public class DefaultPromiseTest {
     @Test
     public void mapMustNotFailOriginalFutureWhenMapperFunctionThrows() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        map(promise, i -> {
+        promise.map(i -> {
             throw new RuntimeException("boom");
         });
         promise.setSuccess(42);
@@ -513,7 +511,7 @@ public class DefaultPromiseTest {
     @Test
     public void cancelOnFutureFromMapMustCancelOriginalFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = map(promise, i -> i.toString());
+        Future<String> strFut = promise.map(i -> i.toString());
         strFut.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
@@ -522,7 +520,7 @@ public class DefaultPromiseTest {
     @Test
     public void cancelOnOriginalFutureMustCancelFutureFromMap() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = map(promise, i -> i.toString());
+        Future<String> strFut = promise.map(i -> i.toString());
         promise.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
@@ -531,7 +529,7 @@ public class DefaultPromiseTest {
     @Test
     public void flatMapMustApplyMapperFunctionWhenFutureSucceeds() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = flatMap(promise, i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
         promise.setSuccess(42);
         assertThat(strFut.getNow()).isEqualTo("42");
     }
@@ -540,7 +538,7 @@ public class DefaultPromiseTest {
     public void flatMapMustApplyMapperFunctionOnSuccededFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(42);
-        assertThat(flatMap(promise, i -> newSuccessfulPromise(INSTANCE, i.toString())).getNow()).isEqualTo("42");
+        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).getNow()).isEqualTo("42");
     }
 
     @Test
@@ -548,7 +546,7 @@ public class DefaultPromiseTest {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Exception cause = new Exception("boom");
         promise.setFailure(cause);
-        assertThat(flatMap(promise, i -> newSuccessfulPromise(INSTANCE, i.toString())).cause()).isSameAs(cause);
+        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).cause()).isSameAs(cause);
     }
 
     @Test
@@ -557,7 +555,7 @@ public class DefaultPromiseTest {
         Exception cause = new Exception("boom");
         promise.setFailure(cause);
         AtomicInteger counter = new AtomicInteger();
-        assertThat(flatMap(promise, i -> {
+        assertThat(promise.flatMap(i -> {
             counter.getAndIncrement();
             return newSuccessfulPromise(INSTANCE, i.toString());
         }).cause()).isSameAs(cause);
@@ -568,7 +566,7 @@ public class DefaultPromiseTest {
     public void flatMapMustFailReturnedFutureWhenMapperFunctionThrows() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         RuntimeException cause = new RuntimeException("boom");
-        Future<Object> future = flatMap(promise, i -> {
+        Future<Object> future = promise.flatMap(i -> {
             throw cause;
         });
         promise.setSuccess(42);
@@ -578,7 +576,7 @@ public class DefaultPromiseTest {
     @Test
     public void flatMapMustNotFailOriginalFutureWhenMapperFunctionThrows() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        flatMap(promise, i -> {
+        promise.flatMap(i -> {
             throw new RuntimeException("boom");
         });
         promise.setSuccess(42);
@@ -588,7 +586,7 @@ public class DefaultPromiseTest {
     @Test
     public void cancelOnFutureFromFlatMapMustCancelOriginalFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = flatMap(promise, i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
         strFut.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
@@ -597,7 +595,7 @@ public class DefaultPromiseTest {
     @Test
     public void cancelOnOriginalFutureMustCancelFutureFromFlatMap() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = flatMap(promise, i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
         promise.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
@@ -609,7 +607,7 @@ public class DefaultPromiseTest {
         DefaultPromise<Integer> original = new DefaultPromise<>(executor);
         CountDownLatch mappingLatchEnter = new CountDownLatch(1);
         CountDownLatch mappingLatchExit = new CountDownLatch(1);
-        Future<String> strFut = flatMap(original, i -> {
+        Future<String> strFut = original.flatMap(i -> {
             return executor.submit(() -> {
                 mappingLatchEnter.countDown();
                 mappingLatchExit.await();
