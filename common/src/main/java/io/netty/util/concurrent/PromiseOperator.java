@@ -23,7 +23,6 @@ import java.util.function.Function;
 
 import static io.netty.util.internal.PromiseNotificationUtil.tryCancel;
 import static io.netty.util.internal.PromiseNotificationUtil.tryFailure;
-import static io.netty.util.internal.PromiseNotificationUtil.trySuccess;
 
 /**
  * Internal operators interface used for implementing {@link Future#map(Function)} and {@link
@@ -71,7 +70,7 @@ interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
                 try {
                     @SuppressWarnings("unchecked")
                     R result = (R) completed.getNow();
-                    trySuccess(recipient, result, LOGGER);
+                    recipient.trySuccess(result);
                 } catch (RuntimeException e) {
                     tryFailure(recipient, e, LOGGER);
                 }
@@ -93,8 +92,11 @@ interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
             if (completed.isSuccess()) {
                 try {
                     @SuppressWarnings("unchecked")
-                    R result = mapper.apply((T) completed.getNow());
-                    trySuccess(recipient, result, LOGGER);
+                    T result = (T) completed.getNow();
+                    if (recipient.setUncancellable()) {
+                        R mapped = mapper.apply(result);
+                        recipient.setSuccess(mapped);
+                    }
                 } catch (RuntimeException e) {
                     tryFailure(recipient, e, LOGGER);
                 }
@@ -117,9 +119,11 @@ interface PromiseOperator<R> extends FutureContextListener<Promise<R>, Object> {
                 try {
                     @SuppressWarnings("unchecked")
                     T result = (T) completed.getNow();
-                    Future<R> future = mapper.apply(result);
-                    future.addListener(recipient, passThrough());
-                    recipient.addListener(future, PromiseNotifier::propagateCancel);
+                    if (recipient.setUncancellable()) {
+                        Future<R> future = mapper.apply(result);
+                        future.addListener(recipient, passThrough());
+                        recipient.addListener(future, PromiseNotifier::propagateCancel);
+                    }
                 } catch (Exception e) {
                     tryFailure(recipient, e, LOGGER);
                 }
