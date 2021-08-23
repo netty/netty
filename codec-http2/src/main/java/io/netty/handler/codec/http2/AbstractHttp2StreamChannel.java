@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
@@ -370,128 +369,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public ChannelPipeline pipeline() {
         return pipeline;
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return config().getAllocator();
-    }
-
-    @Override
-    public Channel read() {
-        pipeline().read();
-        return this;
-    }
-
-    @Override
-    public Channel flush() {
-        pipeline().flush();
-        return this;
-    }
-
-    @Override
-    public Future<Void> bind(SocketAddress localAddress) {
-        return pipeline().bind(localAddress);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress) {
-        return pipeline().connect(remoteAddress);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline().connect(remoteAddress, localAddress);
-    }
-
-    @Override
-    public Future<Void> disconnect() {
-        return pipeline().disconnect();
-    }
-
-    @Override
-    public Future<Void> close() {
-        return pipeline().close();
-    }
-
-    @Override
-    public Future<Void> register() {
-        return pipeline().register();
-    }
-
-    @Override
-    public Future<Void> deregister() {
-        return pipeline().deregister();
-    }
-
-    @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().bind(localAddress, promise);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, promise);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline().disconnect(promise);
-    }
-
-    @Override
-    public Future<Void> close(Promise<Void> promise) {
-        return pipeline().close(promise);
-    }
-
-    @Override
-    public Future<Void> register(Promise<Void> promise) {
-        return pipeline().register(promise);
-    }
-
-    @Override
-    public Future<Void> deregister(Promise<Void> promise) {
-        return pipeline().deregister(promise);
-    }
-
-    @Override
-    public Future<Void> write(Object msg) {
-        return pipeline().write(msg);
-    }
-
-    @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline().write(msg, promise);
-    }
-
-    @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline().writeAndFlush(msg, promise);
-    }
-
-    @Override
-    public Future<Void> writeAndFlush(Object msg) {
-        return pipeline().writeAndFlush(msg);
-    }
-
-    @Override
-    public Promise<Void> newPromise() {
-        return pipeline().newPromise();
-    }
-
-    @Override
-    public Future<Void> newSucceededFuture() {
-        return pipeline().newSucceededFuture();
-    }
-
-    @Override
-    public Future<Void> newFailedFuture(Throwable cause) {
-        return pipeline().newFailedFuture(cause);
     }
 
     @Override

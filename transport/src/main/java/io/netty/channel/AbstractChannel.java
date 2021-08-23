@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
@@ -54,7 +53,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelId id;
     private final Unsafe unsafe;
     private final ChannelPipeline pipeline;
-    private final Future<Void> succeedFuture;
     private final ClosePromise closePromise;
 
     private volatile SocketAddress localAddress;
@@ -79,7 +77,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
         closePromise = new ClosePromise(eventLoop);
-        succeedFuture = DefaultPromise.newSuccessfulPromise(eventLoop, null);
         id = newId();
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -95,7 +92,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
         closePromise = new ClosePromise(eventLoop);
-        succeedFuture = DefaultPromise.newSuccessfulPromise(eventLoop, null);
         this.id = id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
@@ -104,6 +100,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private EventLoop validateEventLoop(EventLoop eventLoop) {
         return requireNonNull(eventLoop, "eventLoop");
     }
+
     protected final int maxMessagesPerWrite() {
         ChannelConfig config = config();
         if (config instanceof DefaultChannelConfig) {
@@ -138,28 +135,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        return buf != null && buf.isWritable();
-    }
-
-    @Override
-    public long bytesBeforeUnwritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeUnwritable() : 0;
-    }
-
-    @Override
-    public long bytesBeforeWritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
-    }
-
-    @Override
     public Channel parent() {
         return parent;
     }
@@ -167,11 +142,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelPipeline pipeline() {
         return pipeline;
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return config().getAllocator();
     }
 
     @Override
@@ -230,123 +200,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public boolean isRegistered() {
         return registered;
-    }
-
-    @Override
-    public Future<Void> bind(SocketAddress localAddress) {
-        return pipeline.bind(localAddress);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress) {
-        return pipeline.connect(remoteAddress);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline.connect(remoteAddress, localAddress);
-    }
-
-    @Override
-    public Future<Void> disconnect() {
-        return pipeline.disconnect();
-    }
-
-    @Override
-    public Future<Void> close() {
-        return pipeline.close();
-    }
-
-    @Override
-    public Future<Void> register() {
-        return pipeline.register();
-    }
-
-    @Override
-    public Future<Void> deregister() {
-        return pipeline.deregister();
-    }
-
-    @Override
-    public Channel flush() {
-        pipeline.flush();
-        return this;
-    }
-
-    @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline.bind(localAddress, promise);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline.connect(remoteAddress, promise);
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline.disconnect(promise);
-    }
-
-    @Override
-    public Future<Void> close(Promise<Void> promise) {
-        return pipeline.close(promise);
-    }
-
-    @Override
-    public Future<Void> register(Promise<Void> promise) {
-        return pipeline.register(promise);
-    }
-
-    @Override
-    public Future<Void> deregister(Promise<Void> promise) {
-        return pipeline.deregister(promise);
-    }
-
-    @Override
-    public Channel read() {
-        pipeline.read();
-        return this;
-    }
-
-    @Override
-    public Future<Void> write(Object msg) {
-        return pipeline.write(msg);
-    }
-
-    @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline.write(msg, promise);
-    }
-
-    @Override
-    public Future<Void> writeAndFlush(Object msg) {
-        return pipeline.writeAndFlush(msg);
-    }
-
-    @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline.writeAndFlush(msg, promise);
-    }
-
-    @Override
-    public Promise<Void> newPromise() {
-        return new DefaultPromise<>(eventLoop);
-    }
-
-    @Override
-    public Future<Void> newSucceededFuture() {
-        return succeedFuture;
-    }
-
-    @Override
-    public Future<Void> newFailedFuture(Throwable cause) {
-        return DefaultPromise.newFailedPromise(eventLoop, cause);
     }
 
     @Override

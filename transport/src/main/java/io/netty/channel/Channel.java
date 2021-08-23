@@ -160,19 +160,32 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * this method returns {@code false} are queued until the I/O thread is
      * ready to process the queued write requests.
      */
-    boolean isWritable();
+    default boolean isWritable() {
+        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
+        return buf != null && buf.isWritable();
+    }
 
     /**
      * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
      */
-    long bytesBeforeUnwritable();
+    default long bytesBeforeUnwritable() {
+        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeUnwritable() : 0;
+    }
 
     /**
      * Get how many bytes must be drained from underlying buffers until {@link #isWritable()} returns {@code true}.
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code true} then 0.
      */
-    long bytesBeforeWritable();
+    default long bytesBeforeWritable() {
+        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
+    }
 
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
@@ -187,13 +200,126 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
-    ByteBufAllocator alloc();
+    default ByteBufAllocator alloc() {
+        return config().getAllocator();
+    }
 
     @Override
-    Channel read();
+    default Channel read() {
+        pipeline().read();
+        return this;
+    }
 
     @Override
-    Channel flush();
+    default Future<Void> bind(SocketAddress localAddress) {
+        return pipeline().bind(localAddress);
+    }
+
+    @Override
+    default Future<Void> connect(SocketAddress remoteAddress) {
+        return pipeline().connect(remoteAddress);
+    }
+
+    @Override
+    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return pipeline().connect(remoteAddress);
+    }
+
+    @Override
+    default Future<Void> disconnect() {
+        return pipeline().disconnect();
+    }
+
+    @Override
+    default Future<Void> close() {
+        return pipeline().close();
+    }
+
+    @Override
+    default Future<Void> register() {
+        return pipeline().register();
+    }
+
+    @Override
+    default Future<Void> deregister() {
+        return pipeline().deregister();
+    }
+
+    @Override
+    default Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
+        return pipeline().bind(localAddress, promise);
+    }
+
+    @Override
+    default Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        return pipeline().connect(remoteAddress, promise);
+    }
+
+    @Override
+    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        return pipeline().connect(remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    default Future<Void> disconnect(Promise<Void> promise) {
+        return pipeline().disconnect(promise);
+    }
+
+    @Override
+    default Future<Void> close(Promise<Void> promise) {
+        return pipeline().close(promise);
+    }
+
+    @Override
+    default Future<Void> register(Promise<Void> promise) {
+        return pipeline().register(promise);
+    }
+
+    @Override
+    default Future<Void> deregister(Promise<Void> promise) {
+        return pipeline().deregister(promise);
+    }
+
+    @Override
+    default Future<Void> write(Object msg) {
+        return pipeline().write(msg);
+    }
+
+    @Override
+    default Future<Void> write(Object msg, Promise<Void> promise) {
+        return pipeline().write(msg, promise);
+    }
+
+    @Override
+    default Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+        return pipeline().writeAndFlush(msg, promise);
+    }
+
+    @Override
+    default Future<Void> writeAndFlush(Object msg) {
+        return pipeline().writeAndFlush(msg);
+    }
+
+    @Override
+    default Channel flush() {
+        pipeline().flush();
+        return this;
+    }
+
+    @Override
+    default Promise<Void> newPromise() {
+        return eventLoop().newPromise();
+    }
+
+    @Override
+    default Future<Void> newSucceededFuture() {
+        return eventLoop().newSucceededFuture(null);
+    }
+
+    @Override
+    default Future<Void> newFailedFuture(Throwable cause) {
+        return eventLoop().newFailedFuture(cause);
+    }
 
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods

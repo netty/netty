@@ -32,11 +32,11 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEventExecutor.class);
-
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 
     private final Collection<EventExecutor> selfCollection = Collections.singleton(this);
+    private final Future<?> successFullVoidFuture = DefaultPromise.newSuccessfulPromise(this, null);
 
     @Override
     public EventExecutor next() {
@@ -82,6 +82,11 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
+        if (result == null) {
+            @SuppressWarnings("unchecked")
+            Future<V> f = (Future<V>) successFullVoidFuture;
+            return f;
+        }
         return DefaultPromise.newSuccessfulPromise(this, result);
     }
 
