@@ -74,6 +74,8 @@ public final class Futures {
      * @return A new future instance that will complete with the mapped result of this future.
      */
     public static <V, R> Future<R> flatMap(Future<V> future, Function<V, Future<R>> mapper) {
+        Objects.requireNonNull(future, "The future cannot be null.");
+        Objects.requireNonNull(mapper, "The mapper function cannot be null.");
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new FlatMapper<>(promise, mapper));
         promise.addListener(future, PromiseNotifier::propagateCancel);
