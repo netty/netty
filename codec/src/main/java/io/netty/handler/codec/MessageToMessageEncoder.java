@@ -24,6 +24,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -86,22 +87,26 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                 out = CodecOutputList.newInstance();
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
-                try {
-                    encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
-                }
-
-                if (out.isEmpty()) {
-                    throw new EncoderException(
-                            StringUtil.simpleClassName(this) + " must produce at least one message.");
-                }
-                final int sizeMinusOne = out.size() - 1;
-                if (sizeMinusOne == 0) {
-                    return ctx.write(out.getUnsafe(0));
-                }
                 Promise<Void> promise = ctx.newPromise();
-                writePromiseCombiner(ctx, out, promise);
+                try {
+                    try {
+                        encode(ctx, cast, out);
+                    } finally {
+                        ReferenceCountUtil.release(cast);
+                    }
+
+                    if (out.isEmpty()) {
+                        throw new EncoderException(
+                                StringUtil.simpleClassName(this) + " must produce at least one message.");
+                    }
+                } finally {
+                    final int sizeMinusOne = out.size() - 1;
+                    if (sizeMinusOne == 0) {
+                        PromiseNotifier.cascade(ctx.write(out.getUnsafe(0)), promise);
+                    } else {
+                        writePromiseCombiner(ctx, out, promise);
+                    }
+                }
                 return promise;
             } else {
                 return ctx.write(msg);

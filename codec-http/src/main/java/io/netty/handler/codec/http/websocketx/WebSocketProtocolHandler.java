@@ -87,13 +87,12 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         if (closeStatus == null || !ctx.channel().isActive()) {
             return ctx.close();
         }
-        if (closeSent == null) {
-            write(ctx, new CloseWebSocketFrame(closeStatus));
-        }
+        final Future<Void> future = closeSent == null ? write(ctx, new CloseWebSocketFrame(closeStatus)) : closeSent;
+
         flush(ctx);
         applyCloseSentTimeout(ctx);
         Promise<Void> promise = ctx.newPromise();
-        closeSent.addListener(future -> ctx.close().addListener(new PromiseNotifier<>(promise)));
+        future.addListener(f -> ctx.close().addListener(new PromiseNotifier<>(promise)));
         return promise;
     }
 
