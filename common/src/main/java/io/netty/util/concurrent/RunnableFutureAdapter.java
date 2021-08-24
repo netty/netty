@@ -45,6 +45,11 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
+    public boolean isFailed() {
+        return promise.isFailed();
+    }
+
+    @Override
     public boolean isCancellable() {
         return promise.isCancellable();
     }

@@ -22,7 +22,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -166,6 +165,8 @@ public class DefaultPromiseTest {
         Exception cause = new Exception();
         DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
         promise.setFailure(cause);
+        assertTrue(promise.isFailed());
+        assertFalse(promise.isSuccess());
         assertSame(cause, promise.cause());
     }
 
@@ -188,6 +189,7 @@ public class DefaultPromiseTest {
         DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
+        assertTrue(promise.isFailed());
     }
 
     @Test
@@ -356,6 +358,7 @@ public class DefaultPromiseTest {
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
+        assertFalse(promise.isFailed());
     }
 
     @Test
@@ -364,21 +367,25 @@ public class DefaultPromiseTest {
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
+        assertFalse(promise.isFailed());
     }
 
     @Test
     public void setUncancellableGetNow() {
         DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        assertNull(promise.getNow());
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
+        assertFalse(promise.isDone());
         assertTrue(promise.setUncancellable());
-        assertNull(promise.getNow());
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
         assertFalse(promise.isDone());
         assertFalse(promise.isSuccess());
+        assertFalse(promise.isFailed());
 
         promise.setSuccess("success");
 
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
+        assertFalse(promise.isFailed());
         assertEquals("success", promise.getNow());
     }
 
@@ -387,6 +394,7 @@ public class DefaultPromiseTest {
         Exception exception = new Exception();
         DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setFailure(exception);
+        assertTrue(promise.isFailed());
 
         try {
             promise.sync();
@@ -400,6 +408,7 @@ public class DefaultPromiseTest {
         Exception exception = new Exception();
         DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setFailure(exception);
+        assertTrue(promise.isFailed());
 
         try {
             promise.syncUninterruptibly();
@@ -438,6 +447,19 @@ public class DefaultPromiseTest {
             assertSame(future.getNow(), result);
         });
         promise.setSuccess(result);
+    }
+
+    @Test
+    public void getNowOnUnfinishedPromiseMustThrow() {
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        assertThrows(IllegalStateException.class, () -> promise.getNow());
+    }
+
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void causeOnUnfinishedPromiseMustThrow() {
+        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        assertThrows(IllegalStateException.class, () -> promise.cause());
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,

@@ -53,9 +53,9 @@ import java.util.concurrent.TimeoutException;
  * |      isDone() = false    |    |    +---------------------------+
  * |   isSuccess() = false    |----+---->      isDone() = true      |
  * | isCancelled() = false    |    |    |       cause() = non-null  |
- * |       cause() = null     |    |    +===========================+
- * +--------------------------+    |    | Completed by cancellation |
- *                                 |    +---------------------------+
+ * |       cause() = throws   |    |    +===========================+
+ * |      getNow() = throws   |    |    | Completed by cancellation |
+ * +--------------------------+    |    +---------------------------+
  *                                 +---->      isDone() = true      |
  *                                      | isCancelled() = true      |
  *                                      +---------------------------+
@@ -168,10 +168,14 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
-     * Returns {@code true} if and only if the I/O operation was completed
-     * successfully.
+     * Returns {@code true} if and only if the operation was completed successfully.
      */
     boolean isSuccess();
+
+    /**
+     * Returns {@code true} if and only if the operation was completed and failed.
+     */
+    boolean isFailed();
 
     /**
      * returns {@code true} if and only if the operation can be cancelled via {@link #cancel(boolean)}.
@@ -183,8 +187,8 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * failed.
      *
      * @return the cause of the failure.
-     *         {@code null} if succeeded or this future is not
-     *         completed yet.
+     *         {@code null} if succeeded.
+     * @throws IllegalStateException if this {@code Future} has not completed yet.
      */
     Throwable cause();
 
@@ -291,10 +295,9 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     boolean awaitUninterruptibly(long timeoutMillis);
 
     /**
-     * Return the result without blocking. If the future is not done yet this will return {@code null}.
+     * Return the result without blocking. If the future is not done yet this will throw {@link IllegalStateException}.
      *
-     * As it is possible that a {@code null} value is used to mark the future as successful you also need to check
-     * if the future is really done with {@link #isDone()} and not rely on the returned {@code null} value.
+     * @throws IllegalStateException if this {@code Future} has not completed yet.
      */
     V getNow();
 
