@@ -308,45 +308,6 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     }
 
     /**
-     * Create a new {@link Future} that will complete with the result of this {@link Future} mapped through the given
-     * mapper function.
-     * <p>
-     * If this future fails, then the returned future will fail as well, with the same exception. Cancellation of either
-     * future will cancel the other. If the mapper function throws, the returned future will fail, but this future will
-     * be unaffected.
-     *
-     * @param mapper The function that will convert the result of this future into the result of the returned future.
-     * @param <R>    The result type of the mapper function, and of the returned future.
-     * @return A new future instance that will complete with the mapped result of this future.
-     */
-    default <R> Future<R> map(Function<V, R> mapper) {
-        return Futures.map(this, mapper);
-    }
-
-    /**
-     * Create a new {@link Future} that will complete with the result of this {@link Future} flat-mapped through the
-     * given mapper function.
-     * <p>
-     * The "flat" in "flat-map" means the given mapper function produces a result that itself is a future-of-R, yet this
-     * method also returns a future-of-R, rather than a future-of-future-of-R. In other words, if the same mapper
-     * function was used with the {@link #map(Function)} method, you would get back a {@code Future<Future<R>>}.
-     * These nested futures are "flattened" into a {@code Future<R>} by this method. Note that the future returned by
-     * this method is not the same instance as the one the mapper function returns. The reason is that this method needs
-     * to return immediately, but the mapper function cannot be applied before this future has completed.
-     * <p>
-     * If this future fails, then the returned future will fail as well, with the same exception. Cancellation of either
-     * future will cancel the other. If the mapper function throws, the returned future will fail, but this future will
-     * be unaffected.
-     *
-     * @param mapper The function that will convert the result of this future into the result of the returned future.
-     * @param <R>    The result type of the mapper function, and of the returned future.
-     * @return A new future instance that will complete with the mapped result of this future.
-     */
-    default <R> Future<R> flatMap(Function<V, Future<R>> mapper) {
-        return Futures.flatMap(this, mapper);
-    }
-
-    /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
      * updates as well.
      */
