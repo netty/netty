@@ -297,7 +297,6 @@ public class BootstrapTest {
             Channel channel = bootstrapA.createUnregistered();
             Future<Void> registerFuture = channel.register();
             Future<Void> connectFuture = channel.connect(LocalAddress.ANY);
-            assertFalse(connectFuture.isDone());
             registerHandler.registerPromise().setSuccess(null);
             registerFuture.sync();
             CompletionException exception =
