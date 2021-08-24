@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -96,7 +97,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         cb.option(ChannelOption.ALLOW_HALF_CLOSURE, halfClosure);
         Future<Channel> future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
         assertThat(future.cause()).isInstanceOf(ConnectException.class);
-        assertThat(errorPromise.cause()).isNull();
+        assertFalse(errorPromise.isFailed());
     }
 
     @Test
