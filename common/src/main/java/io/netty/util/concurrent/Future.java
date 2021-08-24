@@ -168,10 +168,14 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
-     * Returns {@code true} if and only if the I/O operation was completed
-     * successfully.
+     * Returns {@code true} if and only if the operation was completed successfully.
      */
     boolean isSuccess();
+
+    /**
+     * Returns {@code true} if and only if the operation was completed and failed.
+     */
+    boolean isFailed();
 
     /**
      * returns {@code true} if and only if the operation can be cancelled via {@link #cancel(boolean)}.

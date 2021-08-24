@@ -164,6 +164,11 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
+    public boolean isFailed() {
+        return result instanceof CauseHolder;
+    }
+
+    @Override
     public boolean isCancellable() {
         return result == null;
     }

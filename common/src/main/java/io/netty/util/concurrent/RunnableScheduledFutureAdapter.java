@@ -146,6 +146,11 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
+    public boolean isFailed() {
+        return promise.isFailed();
+    }
+
+    @Override
     public boolean isCancellable() {
         return promise.isCancellable();
     }

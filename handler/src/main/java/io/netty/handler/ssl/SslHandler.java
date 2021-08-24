@@ -1033,7 +1033,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        boolean handshakeFailed = handshakePromise.isDone() && handshakePromise.cause() != null;
+        boolean handshakeFailed = handshakePromise.isFailed();
 
         ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,

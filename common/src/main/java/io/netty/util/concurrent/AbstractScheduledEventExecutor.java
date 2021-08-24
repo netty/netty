@@ -399,6 +399,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
+        public boolean isFailed() {
+            return future.isFailed();
+        }
+
+        @Override
         public boolean isCancellable() {
             return future.isCancellable();
         }
