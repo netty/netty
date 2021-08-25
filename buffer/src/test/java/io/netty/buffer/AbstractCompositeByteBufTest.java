@@ -1647,7 +1647,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         int capacity = 1024 * 1024; // 1MB
         final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
         final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
-        for (int i = 0; i >= 0; i += capacity) {
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
             buffers.add(buffer.duplicate());
         }
         // Add one more
@@ -1671,7 +1671,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         int capacity = 1024 * 1024; // 1MB
         final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
         final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
-        for (int i = 0; i >= 0; i += capacity) {
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
             buffers.add(buffer.duplicate());
         }
         // Add one more
