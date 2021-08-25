@@ -18,11 +18,11 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import static io.netty.util.internal.PromiseNotificationUtil.tryFailure;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Combinator operations on {@linkplain Future futures}.
@@ -32,6 +32,7 @@ import static io.netty.util.internal.PromiseNotificationUtil.tryFailure;
 public final class Futures {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(Futures.class);
     private static final PassThrough<?> PASS_THROUGH_CONSTANT = new PassThrough<Object>();
+    private static final PropagateCancel PROPAGATE_CANCEL = new PropagateCancel();
 
     /**
      * Creates a new {@link Future} that will complete with the result of the given {@link Future} mapped through the
@@ -47,14 +48,19 @@ public final class Futures {
      * @return A new future instance that will complete with the mapped result of this future.
      */
     public static <V, R> Future<R> map(Future<V> future, Function<V, R> mapper) {
-        Objects.requireNonNull(future, "The future cannot be null.");
-        Objects.requireNonNull(mapper, "The mapper function cannot be null.");
+        requireNonNull(future, "The future cannot be null.");
+        requireNonNull(mapper, "The mapper function cannot be null.");
+        if (future.isFailed()) {
+            @SuppressWarnings("unchecked") // Cast is safe because the result type is not used in failed futures.
+            Future<R> failed = (Future<R>) future;
+            return failed;
+        }
         if (future.isSuccess()) {
             return future.executor().submit(new CallableMapper<>(future, mapper));
         }
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new Mapper<>(promise, mapper));
-        promise.addListener(future, PromiseNotifier::propagateCancel);
+        promise.addListener(future, propagateCancel());
         return promise;
     }
 
@@ -65,9 +71,7 @@ public final class Futures {
      * The "flat" in "flat-map" means the given mapper function produces a result that itself is a future-of-R, yet this
      * method also returns a future-of-R, rather than a future-of-future-of-R. In other words, if the same mapper
      * function was used with the {@link #map(Future, Function)} method, you would get back a {@code Future<Future<R>>}.
-     * These nested futures are "flattened" into a {@code Future<R>} by this method. Note that the future returned by
-     * this method is not the same instance as the one the mapper function returns. The reason is that this method needs
-     * to return immediately, but the mapper function cannot be applied before this future has completed.
+     * These nested futures are "flattened" into a {@code Future<R>} by this method.
      * <p>
      * Effectively, this method behaves similar to this serial code, except asynchronously and with proper exception
      * and cancellation handling:
@@ -86,19 +90,21 @@ public final class Futures {
      * @return A new future instance that will complete with the mapped result of this future.
      */
     public static <V, R> Future<R> flatMap(Future<V> future, Function<V, Future<R>> mapper) {
-        Objects.requireNonNull(future, "The future cannot be null.");
-        Objects.requireNonNull(mapper, "The mapper function cannot be null.");
+        requireNonNull(future, "The future cannot be null.");
+        requireNonNull(mapper, "The mapper function cannot be null.");
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new FlatMapper<>(promise, mapper));
         if (!future.isSuccess()) {
             // Propagate cancellation if future is either incomplete or failed.
             // Failed means it could be cancelled, so that needs to be propagated.
-            promise.addListener(future, PromiseNotifier::propagateCancel);
+            promise.addListener(future, propagateCancel());
         }
         return promise;
     }
 
-    private Futures() {
+    @SuppressWarnings("unchecked")
+    static FutureContextListener<Future<?>, Object> propagateCancel() {
+        return (FutureContextListener<Future<?>, Object>) (FutureContextListener<?, ?>) PROPAGATE_CANCEL;
     }
 
     @SuppressWarnings("unchecked")
@@ -117,7 +123,19 @@ public final class Futures {
         }
     }
 
-    private static class PassThrough<R> implements FutureContextListener<Promise<R>, Object> {
+    private Futures() {
+    }
+
+    private static final class PropagateCancel implements FutureContextListener<Future<Object>, Object> {
+        @Override
+        public void operationComplete(Future<Object> context, Future<?> future) throws Exception {
+            if (future.isCancelled()) {
+                context.cancel(false);
+            }
+        }
+    }
+
+    private static final class PassThrough<R> implements FutureContextListener<Promise<R>, Object> {
         @Override
         public void operationComplete(Promise<R> recipient, Future<?> completed) throws Exception {
             if (completed.isSuccess()) {
@@ -125,7 +143,7 @@ public final class Futures {
                     @SuppressWarnings("unchecked")
                     R result = (R) completed.getNow();
                     recipient.trySuccess(result);
-                } catch (RuntimeException e) {
+                } catch (Throwable e) {
                     tryFailure(recipient, e, LOGGER);
                 }
             } else {
@@ -134,7 +152,7 @@ public final class Futures {
         }
     }
 
-    private static class CallableMapper<R, T> implements Callable<R> {
+    private static final class CallableMapper<R, T> implements Callable<R> {
         private final Future<T> future;
         private final Function<T, R> mapper;
 
@@ -149,7 +167,7 @@ public final class Futures {
         }
     }
 
-    private static class Mapper<R, T> implements FutureListener<Object> {
+    private static final class Mapper<R, T> implements FutureListener<Object> {
         private final Promise<R> recipient;
         private final Function<T, R> mapper;
 
@@ -166,7 +184,7 @@ public final class Futures {
                     T result = (T) completed.getNow();
                     R mapped = mapper.apply(result);
                     recipient.trySuccess(mapped);
-                } catch (RuntimeException e) {
+                } catch (Throwable e) {
                     tryFailure(recipient, e, LOGGER);
                 }
             } else {
@@ -175,7 +193,7 @@ public final class Futures {
         }
     }
 
-    private static class FlatMapper<R, T> implements FutureListener<Object> {
+    private static final class FlatMapper<R, T> implements FutureListener<Object> {
         private final Promise<R> recipient;
         private final Function<T, Future<R>> mapper;
 
@@ -193,11 +211,13 @@ public final class Futures {
                     Future<R> future = mapper.apply(result);
                     if (future.isSuccess()) {
                         recipient.trySuccess(future.getNow());
+                    } else if (future.isFailed()) {
+                        propagateUncommonCompletion(future, recipient);
                     } else {
                         future.addListener(recipient, passThrough());
-                        recipient.addListener(future, PromiseNotifier::propagateCancel);
+                        recipient.addListener(future, propagateCancel());
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     tryFailure(recipient, e, LOGGER);
                 }
             } else {
