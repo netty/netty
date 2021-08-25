@@ -86,7 +86,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
 
                 Future<Void> handshakeFuture = handshaker.handshake(ctx.channel(), req);
                 handshakeFuture.addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         localHandshakePromise.tryFailure(future.cause());
                         ctx.fireExceptionCaught(future.cause());
                     } else {

@@ -65,7 +65,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
                 final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().eventLoop());
 
                 ctx.writeAndFlush(ch.fd()).addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         Throwable cause = future.cause();
                         queue.offer(cause);
                     }

@@ -48,7 +48,7 @@ public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Setti
         if (!promise.awaitUninterruptibly(timeout, unit)) {
             throw new IllegalStateException("Timed out waiting for settings");
         }
-        if (!promise.isSuccess()) {
+        if (promise.isFailed()) {
             throw new RuntimeException(promise.cause());
         }
     }

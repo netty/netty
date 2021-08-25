@@ -1276,7 +1276,7 @@ public class DnsNameResolver extends InetNameResolver {
             .channelFactory(socketChannelFactory)
             .handler(TCP_ENCODER);
             bs.connect(res.sender()).addListener(future -> {
-                if (!future.isSuccess()) {
+                if (future.isFailed()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
                     }

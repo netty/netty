@@ -62,7 +62,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
                     List<Map.Entry<Channel, Throwable>> failed =
                             new ArrayList<>(failureCount);
                     for (Entry<Channel, Future<Void>> entry: futures.entrySet()) {
-                        if (!entry.getValue().isSuccess()) {
+                        if (entry.getValue().isFailed()) {
                             failed.add(new DefaultEntry<>(entry.getKey(), entry.getValue().cause()));
                         }
                     }

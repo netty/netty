@@ -263,7 +263,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 child.pipeline().addLast(childHandler);
 
                 child.register().addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         forceClose(child, future.cause());
                     }
                 });

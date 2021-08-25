@@ -215,6 +215,7 @@ public class PromiseCombinerTest {
     private static void mockFailedPromise(Promise<Void> p, Throwable cause, FutureListenerConsumer consumer) {
         when(p.isDone()).thenReturn(true);
         when(p.isSuccess()).thenReturn(false);
+        when(p.isFailed()).thenReturn(true);
         when(p.cause()).thenReturn(cause);
         mockListener(p, consumer);
     }

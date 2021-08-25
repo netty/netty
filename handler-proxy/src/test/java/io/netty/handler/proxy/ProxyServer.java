@@ -169,7 +169,7 @@ abstract class ProxyServer {
                 this.finished = true;
                 Future<Channel> f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
                 f.addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         recordException(future.cause());
                         ctx.close();
                     } else {

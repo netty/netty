@@ -78,7 +78,7 @@ public class RedisClient {
                 // Sends the received line to the server.
                 lastWriteFuture = ch.writeAndFlush(line);
                 lastWriteFuture.addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         System.err.print("write failed: ");
                         future.cause().printStackTrace(System.err);
                     }

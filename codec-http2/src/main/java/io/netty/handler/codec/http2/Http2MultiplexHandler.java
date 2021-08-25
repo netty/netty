@@ -129,7 +129,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         // Handle any errors that occurred on the local thread while registering. Even though
         // failures can happen after this point, they will be handled by the channel by closing the
         // childChannel.
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             if (childChannel.isRegistered()) {
                 childChannel.close();
             } else {

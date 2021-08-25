@@ -49,12 +49,12 @@ public enum ChannelFutureListeners implements FutureContextListener<Channel, Obj
             channel.close();
             break;
         case CLOSE_ON_FAILURE:
-            if (!future.isSuccess()) {
+            if (future.isFailed()) {
                 channel.close();
             }
             break;
         case FIRE_EXCEPTION_ON_FAILURE:
-            if (!future.isSuccess()) {
+            if (future.isFailed()) {
                 channel.pipeline().fireExceptionCaught(future.cause());
             }
         }

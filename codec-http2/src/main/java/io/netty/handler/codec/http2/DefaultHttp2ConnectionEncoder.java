@@ -583,7 +583,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             Future<Void> f = sendHeaders(frameWriter, ctx, stream.id(), headers, hasPriority, streamDependency,
                                          weight, exclusive, padding, endOfStream, promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
-            if (f.isSuccess() || !f.isDone()) {
+            if (!f.isFailed()) { // "not failed" means either not done, or completed successfully.
                 // This just sets internal stream state which is used elsewhere in the codec and doesn't
                 // necessarily mean the write will complete successfully.
                 stream.headersSent(isInformational);
@@ -623,7 +623,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
         @Override
         public void operationComplete(Future<? extends Void> future) throws Exception {
-            if (!future.isSuccess()) {
+            if (future.isFailed()) {
                 error(flowController().channelHandlerContext(), future.cause());
             }
         }

@@ -51,7 +51,7 @@ public final class PromiseCombiner {
         private void operationComplete0(Future<?> future) {
             assert executor.inEventLoop();
             ++doneCount;
-            if (!future.isSuccess() && cause == null) {
+            if (future.isFailed() && cause == null) {
                 cause = future.cause();
             }
             if (doneCount == expectedCount && aggregatePromise != null) {

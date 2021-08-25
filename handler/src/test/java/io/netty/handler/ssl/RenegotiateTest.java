@@ -81,7 +81,7 @@ public abstract class RenegotiateTest {
 
                                             renegotiate = true;
                                             handler.renegotiate().addListener((FutureListener<Channel>) future -> {
-                                                if (!future.isSuccess()) {
+                                                if (future.isFailed()) {
                                                     error.compareAndSet(null, future.cause());
                                                     ctx.close();
                                                 }

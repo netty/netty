@@ -251,14 +251,14 @@ public class HttpObjectAggregator
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
                 Future<Void> future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
                 future.addListener(future1 -> {
-                    if (!future1.isSuccess()) {
+                    if (future1.isFailed()) {
                         logger.debug("Failed to send a 413 Request Entity Too Large.", future1.cause());
                     }
                     ctx.close();
                 });
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {
-                    if (!future.isSuccess()) {
+                    if (future.isFailed()) {
                         logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                         ctx.close();
                     }
