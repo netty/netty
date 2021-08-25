@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -281,7 +281,7 @@ public class NettyBlockHoundIntegrationTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInboundHandlerAdapter())
+                    .childHandler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0))
                     .get();
 
@@ -293,7 +293,7 @@ public class NettyBlockHoundIntegrationTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslHandler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelHandler() {
 
                                 @Override
                                 public void channelActive(ChannelHandlerContext ctx) {
@@ -451,7 +451,7 @@ public class NettyBlockHoundIntegrationTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline()
                               .addLast(clientSslHandler)
-                              .addLast(new ChannelInboundHandlerAdapter() {
+                              .addLast(new ChannelHandler() {
 
                                   @Override
                                   public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {

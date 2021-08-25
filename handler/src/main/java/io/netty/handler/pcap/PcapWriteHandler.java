@@ -18,9 +18,8 @@ package io.netty.handler.pcap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufConvertible;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -47,13 +46,13 @@ import java.util.Objects;
  * Things to keep in mind when using {@link PcapWriteHandler} with TCP:
  *
  *    <ul>
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#channelActive(ChannelHandlerContext)} is called,
+ *        <li> Whenever {@link ChannelHandler#channelActive(ChannelHandlerContext)} is called,
  *        a fake TCP 3-way handshake (SYN, SYN+ACK, ACK) is simulated as new connection in Pcap. </li>
  *
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#handlerRemoved(ChannelHandlerContext)} is called,
+ *        <li> Whenever {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} is called,
  *        a fake TCP 3-way handshake (FIN+ACK, FIN+ACK, ACK) is simulated as connection shutdown in Pcap.  </li>
  *
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#exceptionCaught(ChannelHandlerContext, Throwable)}
+ *        <li> Whenever {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
  *        is called, a fake TCP RST is sent to simulate connection Reset in Pcap. </li>
  *
  *        <li> ACK is sent each time data is send / received. </li>
@@ -63,7 +62,7 @@ import java.util.Objects;
  *    </ul>
  * </p>
  */
-public final class PcapWriteHandler extends ChannelDuplexHandler implements Closeable {
+public final class PcapWriteHandler implements ChannelHandler, Closeable {
 
     /**
      * Logger for logging events
@@ -221,7 +220,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             }
         }
 
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     @Override
@@ -235,7 +234,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
@@ -249,7 +248,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
             }
         }
-        return super.write(ctx, msg);
+        return ctx.write(msg);
     }
 
     /**
@@ -512,7 +511,6 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         }
 
         close();
-        super.handlerRemoved(ctx);
     }
 
     @Override
