@@ -61,7 +61,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     });
 
             final Channel inboundChannel = ctx.channel();
-            b.group(inboundChannel.eventLoop())
+            b.group(inboundChannel.executor())
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .option(ChannelOption.SO_KEEPALIVE, true)
@@ -104,7 +104,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     });
 
             final Channel inboundChannel = ctx.channel();
-            b.group(inboundChannel.eventLoop())
+            b.group(inboundChannel.executor())
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .option(ChannelOption.SO_KEEPALIVE, true)

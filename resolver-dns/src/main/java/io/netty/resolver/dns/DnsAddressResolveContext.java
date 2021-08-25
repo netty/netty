@@ -79,12 +79,12 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     @Override
     void cache(String hostname, DnsRecord[] additionals,
                DnsRecord result, InetAddress convertedResult) {
-        resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(), parent.ch.eventLoop());
+        resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(), parent.ch.executor());
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
-        resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
+        resolveCache.cache(hostname, additionals, cause, parent.ch.executor());
     }
 
     @Override

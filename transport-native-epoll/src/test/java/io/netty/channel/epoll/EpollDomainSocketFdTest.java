@@ -62,7 +62,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().eventLoop());
+                final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().executor());
 
                 ctx.writeAndFlush(ch.fd()).addListener(future -> {
                     if (!future.isSuccess()) {

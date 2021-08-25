@@ -134,7 +134,7 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(() -> {
+            channel.executor().submit(() -> {
                 // NOOP
             }).syncUninterruptibly();
             Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
@@ -171,7 +171,7 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(() -> {
+            channel.executor().submit(() -> {
                 // NOOP
             }).syncUninterruptibly();
             assertEquals(1, initChannelCalled.get());

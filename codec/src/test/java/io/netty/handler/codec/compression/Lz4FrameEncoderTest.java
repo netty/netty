@@ -272,7 +272,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             clientChannel = bs.connect(serverChannel.localAddress()).get();
 
             final Channel finalClientChannel = clientChannel;
-            clientChannel.eventLoop().execute(() -> {
+            clientChannel.executor().execute(() -> {
                 finalClientChannel.close();
                 final int size = 27;
                 ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);

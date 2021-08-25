@@ -147,19 +147,32 @@ public interface ChannelOutboundInvoker {
     /**
      * Return a new {@link Promise}.
      */
-    Promise<Void> newPromise();
+    default Promise<Void> newPromise() {
+        return executor().newPromise();
+    }
 
     /**
      * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    Future<Void> newSucceededFuture();
+    default Future<Void> newSucceededFuture() {
+        return executor().newSucceededFuture(null);
+    }
 
     /**
      * Create a new {@link Future} which is marked as failed already. So {@link Future#isSuccess()}
      * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    Future<Void> newFailedFuture(Throwable cause);
+    default Future<Void> newFailedFuture(Throwable cause) {
+        return executor().newFailedFuture(cause);
+    }
+
+    /**
+     * Returns the {@link EventExecutor} that is used to execute the operations of this {@link ChannelOutboundInvoker}.
+     *
+     * @return  the executor.
+     */
+    EventExecutor executor();
 }

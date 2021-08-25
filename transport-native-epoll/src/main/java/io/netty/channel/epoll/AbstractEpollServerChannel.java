@@ -95,7 +95,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
         @Override
         void epollInReady() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final ChannelConfig config = config();
             if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();

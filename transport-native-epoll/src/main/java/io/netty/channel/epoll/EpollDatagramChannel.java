@@ -459,7 +459,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         @Override
         void epollInReady() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             EpollDatagramChannelConfig config = config();
             if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();

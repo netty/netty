@@ -537,9 +537,4 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
-
-    /**
-     * Returns the {@link EventExecutor} which is used by all {@link ChannelHandler}s in the pipeline.
-     */
-    EventExecutor executor();
 }

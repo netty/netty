@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -63,7 +62,7 @@ public final class Http2TestUtil {
      * Runs the given operation within the event loop thread of the given {@link Channel}.
      */
     static void runInChannel(Channel channel, final Http2Runnable runnable) {
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             try {
                 runnable.run();
             } catch (Http2Exception e) {

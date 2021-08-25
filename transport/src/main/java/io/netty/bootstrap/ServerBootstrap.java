@@ -165,7 +165,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     Future<Channel> init(Channel channel) {
-        Promise<Channel> promise = new DefaultPromise<>(channel.eventLoop());
+        Promise<Channel> promise = new DefaultPromise<>(channel.executor());
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -184,7 +184,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     pipeline.addLast(handler);
                 }
 
-                ch.eventLoop().execute(() -> {
+                ch.executor().execute(() -> {
                     pipeline.addLast(new ServerBootstrapAcceptor(
                             ch, currentChildHandler, currentChildOptions, currentChildAttrs));
                     promise.setSuccess(ch);
@@ -241,7 +241,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
 
-            EventLoop childEventLoop = child.eventLoop();
+            EventLoop childEventLoop = child.executor();
             // Ensure we always execute on the child EventLoop.
             if (childEventLoop.inEventLoop()) {
                 initChild(child);
@@ -255,7 +255,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         private void initChild(final Channel child) {
-            assert child.eventLoop().inEventLoop();
+            assert child.executor().inEventLoop();
             try {
                 setChannelOptions(child, childOptions, logger);
                 setAttributes(child, childAttrs);
@@ -284,7 +284,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 // stop accept new connections for 1 second to allow the channel to recover
                 // See https://github.com/netty/netty/issues/1328
                 config.setAutoRead(false);
-                ctx.channel().eventLoop().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
+                ctx.channel().executor().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
             }
             // still let the exceptionCaught event flow through the pipeline to give the user
             // a chance to do something with it

@@ -89,7 +89,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
 
         @Override
         void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final ChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadFilter0();

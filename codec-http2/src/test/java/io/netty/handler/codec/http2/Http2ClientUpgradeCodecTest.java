@@ -71,7 +71,7 @@ public class Http2ClientUpgradeCodecTest {
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
-        channel.eventLoop().submit(() -> {
+        channel.executor().submit(() -> {
             codec.upgradeTo(ctx, null);
             return null;
         }).sync();

@@ -241,7 +241,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
         @Override
         void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final DomainDatagramChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadFilter0();

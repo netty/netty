@@ -101,7 +101,7 @@ public class HttpServerUpgradeHandlerTest {
                 assertTrue(inReadCall);
                 writeUpgradeMessage = true;
                 Promise<Void> promise = ctx.newPromise();
-                ctx.channel().eventLoop().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
+                ctx.channel().executor().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
                 promise.addListener(f -> writeFlushed = true);
                 return promise;
             }

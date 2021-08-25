@@ -514,11 +514,11 @@ public class SslHandlerTest {
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
                 sslHandler.handshakeFuture().addListener(future -> {
-                    ch.eventLoop().execute(() -> {
+                    ch.executor().execute(() -> {
                         ch.pipeline().remove(sslHandler);
 
                         // Schedule the close so removal has time to propagate exception if any.
-                        ch.eventLoop().execute(ch::close);
+                        ch.executor().execute(ch::close);
                     });
                 });
 

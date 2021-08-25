@@ -342,7 +342,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     @Override
     public Future<Void> bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
                 promise.setSuccess(null);
@@ -350,7 +350,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(() -> bindAddress(localAddress, promise));
+            executor().execute(() -> bindAddress(localAddress, promise));
         }
         return promise;
     }
@@ -362,7 +362,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     @Override
     public Future<Void> unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
                 promise.setSuccess(null);
@@ -370,7 +370,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(() -> unbindAddress(localAddress, promise));
+            executor().execute(() -> unbindAddress(localAddress, promise));
         }
         return promise;
     }

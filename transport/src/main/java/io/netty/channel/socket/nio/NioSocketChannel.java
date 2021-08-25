@@ -164,7 +164,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public Future<Void> shutdownOutput(final Promise<Void> promise) {
-        final EventLoop loop = eventLoop();
+        final EventLoop loop = executor();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
@@ -185,7 +185,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public Future<Void> shutdownInput(final Promise<Void> promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
         } else {
