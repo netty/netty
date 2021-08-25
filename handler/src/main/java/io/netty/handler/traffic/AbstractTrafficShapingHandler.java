@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -549,9 +550,10 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+    public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
+        Promise<Void> promise = ctx.newPromise();
         if (size > 0) {
             // compute the number of ms to wait before continue with the channel
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
@@ -561,11 +563,12 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);
-                return;
+                return promise;
             }
         }
         // to maintain order of write
         submitWrite(ctx, msg, size, 0, now, promise);
+        return promise;
     }
 
     @Deprecated

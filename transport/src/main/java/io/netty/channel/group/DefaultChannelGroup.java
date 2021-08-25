@@ -253,7 +253,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
                 futures.put(c, c.write(safeDuplicate(message)));
             }
         }
-        final ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
+        ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
         ReferenceCountUtil.release(message);
         return future;
     }

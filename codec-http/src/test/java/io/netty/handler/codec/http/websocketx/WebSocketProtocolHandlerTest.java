@@ -24,7 +24,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -153,20 +152,22 @@ public class WebSocketProtocolHandlerTest {
 
     @Test
     public void testTimeout() throws Exception {
-        final AtomicReference<Promise<Void>> ref = new AtomicReference<>();
+        final AtomicReference<Future<Void>> ref = new AtomicReference<>();
         WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
                 false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                ref.set(promise);
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                Future<Void> future = ctx.newPromise();
+                ref.set(future);
                 ReferenceCountUtil.release(msg);
+                return future;
             }
         }, handler);
 
         Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame());
         ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
-        handler.close(ctx, ctx.newPromise());
+        handler.close(ctx);
 
         do {
             Thread.sleep(10);

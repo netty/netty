@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -59,12 +58,12 @@ public class MessageToMessageEncoderTest {
         ChannelHandler writeThrower = new ChannelHandler() {
             private boolean firstWritten;
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                 if (firstWritten) {
-                    ctx.write(msg, promise);
+                    return ctx.write(msg);
                 } else {
                     firstWritten = true;
-                    promise.setFailure(firstWriteException);
+                    return ctx.newFailedFuture(firstWriteException);
                 }
             }
         };

@@ -20,17 +20,14 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
-
-import java.util.concurrent.Future;
 
 /**
  * {@link ChannelHandler} which consolidates {@link Channel#flush()} / {@link ChannelHandlerContext#flush()}
  * operations (which also includes
- * {@link Channel#writeAndFlush(Object)} / {@link Channel#writeAndFlush(Object, Promise)} and
- * {@link ChannelOutboundInvoker#writeAndFlush(Object)} /
- * {@link ChannelOutboundInvoker#writeAndFlush(Object, Promise)}).
+ * {@link Channel#writeAndFlush(Object)} and
+ * {@link ChannelOutboundInvoker#writeAndFlush(Object)}.
  * <p>
  * Flush operations are generally speaking expensive as these may trigger a syscall on the transport level. Thus it is
  * in most cases (where write latency can be traded with throughput) a good idea to try to minimize flush operations
@@ -155,17 +152,17 @@ public class FlushConsolidationHandler implements ChannelHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.disconnect(promise);
+        return ctx.disconnect();
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> close(ChannelHandlerContext ctx) {
         // Try to flush one last time if flushes are pending before close the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.close(promise);
+        return ctx.close();
     }
 
     @Override

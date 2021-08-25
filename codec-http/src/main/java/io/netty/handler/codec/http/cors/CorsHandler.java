@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -215,7 +214,7 @@ public class CorsHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, Promise<Void> promise) {
+    public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
@@ -223,7 +222,7 @@ public class CorsHandler implements ChannelHandler {
                 setExposeHeaders(response);
             }
         }
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {

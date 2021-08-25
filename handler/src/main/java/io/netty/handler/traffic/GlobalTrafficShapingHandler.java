@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -272,7 +273,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                         trafficCounter.bytesRealWriteFlowControl(size);
                         perChannel.queueSize -= size;
                         queuesSize.addAndGet(-size);
-                        ctx.write(toSend.toSend, toSend.promise);
+                        ctx.write(toSend.toSend).addListener(new PromiseNotifier<>(toSend.promise));
                     }
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
@@ -344,7 +345,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         synchronized (perChannel) {
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
-                ctx.write(msg, promise);
+                ctx.write(msg).addListener(new PromiseNotifier<>(promise));
                 perChannel.lastWriteTimestamp = now;
                 return;
             }
@@ -378,7 +379,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                     trafficCounter.bytesRealWriteFlowControl(size);
                     perChannel.queueSize -= size;
                     queuesSize.addAndGet(-size);
-                    ctx.write(newToSend.toSend, newToSend.promise);
+                    ctx.write(newToSend.toSend).addListener(new PromiseNotifier<>(newToSend.promise));
                     perChannel.lastWriteTimestamp = now;
                 } else {
                     perChannel.messagesQueue.addFirst(newToSend);

@@ -43,7 +43,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link DefaultHttp2FrameWriter}.
  */
-@SuppressWarnings("unchecked")
 public class DefaultHttp2FrameWriterTest {
     private DefaultHttp2FrameWriter frameWriter;
 
@@ -88,7 +87,6 @@ public class DefaultHttp2FrameWriterTest {
             return future;
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(Promise.class))).then(answer);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

@@ -256,13 +256,13 @@ public class HttpProxyHandlerTest {
         verifyNoMoreInteractions(promise);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(promise);
+        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class))).thenReturn(promise);
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),
                 headers,
                 ignoreDefaultPortsInConnectHostHeader);
-        handler.connect(ctx, socketAddress, null, promise);
+        handler.connect(ctx, socketAddress, null);
 
         FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx);
         try {
@@ -280,7 +280,7 @@ public class HttpProxyHandlerTest {
         } finally {
             request.release();
         }
-        verify(ctx).connect(proxyAddress, null, promise);
+        verify(ctx).connect(proxyAddress, null);
     }
 
     @Test

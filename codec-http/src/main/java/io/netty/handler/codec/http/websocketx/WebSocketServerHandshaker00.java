@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
 import java.util.regex.Pattern;
 
@@ -203,12 +202,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            the {@link Channel} to use.
      * @param frame
      *            Web Socket frame that was received.
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done.
+     * @return    the {@link Future} which will be notified once the operations completes.
      */
     @Override
-    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return channel.writeAndFlush(frame, promise);
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
+        return channel.writeAndFlush(frame);
     }
 
     /**
@@ -218,12 +216,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            the {@link ChannelHandlerContext} to use.
      * @param frame
      *            Closing Frame that was received.
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done.
+     * @return    the {@link ChannelFuture} which will be notified once the operations completes.
      */
     @Override
-    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
-        return ctx.writeAndFlush(frame, promise);
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+        return ctx.writeAndFlush(frame);
     }
 
     @Override

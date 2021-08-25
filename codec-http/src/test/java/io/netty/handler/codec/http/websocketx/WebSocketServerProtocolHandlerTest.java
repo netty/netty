@@ -32,7 +32,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -459,9 +459,9 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler implements ChannelHandler {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
             responses.add((FullHttpResponse) msg);
-            promise.setSuccess(null);
+            return ctx.newSucceededFuture();
         }
 
         @Override

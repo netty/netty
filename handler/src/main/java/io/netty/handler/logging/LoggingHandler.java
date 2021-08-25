@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
 @Sharable
-@SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
+@SuppressWarnings({ "StringBufferReplaceableByString" })
 public class LoggingHandler implements ChannelHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
@@ -222,45 +222,45 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+    public Future<Void> bind(ChannelHandlerContext ctx, SocketAddress localAddress) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND", localAddress));
         }
-        ctx.bind(localAddress, promise);
+        return ctx.bind(localAddress);
     }
 
     @Override
-    public void connect(
+    public Future<Void> connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            SocketAddress remoteAddress, SocketAddress localAddress) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT", remoteAddress, localAddress));
         }
-        ctx.connect(remoteAddress, localAddress, promise);
+        return ctx.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT"));
         }
-        ctx.disconnect(promise);
+        return ctx.disconnect();
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> close(ChannelHandlerContext ctx) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE"));
         }
-        ctx.close(promise);
+        return ctx.close();
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> deregister(ChannelHandlerContext ctx) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER"));
         }
-        ctx.deregister(promise);
+        return ctx.deregister();
     }
 
     @Override
@@ -280,11 +280,11 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "WRITE", msg));
         }
-        ctx.write(msg, promise);
+        return ctx.write(msg);
     }
 
     @Override
@@ -335,7 +335,7 @@ public class LoggingHandler implements ChannelHandler {
 
     /**
      * Formats an event and returns the formatted message.  This method is currently only used for formatting
-     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}.
+     * {@link ChannelHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress)}.
      *
      * @param eventName the name of the event
      * @param firstArg  the first argument of the event

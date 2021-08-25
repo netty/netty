@@ -21,8 +21,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -78,42 +80,44 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         CodecOutputList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
                 out = CodecOutputList.newInstance();
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
+                Promise<Void> promise = ctx.newPromise();
                 try {
-                    encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
-                }
+                    try {
+                        encode(ctx, cast, out);
+                    } finally {
+                        ReferenceCountUtil.release(cast);
+                    }
 
-                if (out.isEmpty()) {
-                    throw new EncoderException(
-                            StringUtil.simpleClassName(this) + " must produce at least one message.");
-                }
-            } else {
-                ctx.write(msg, promise);
-            }
-        } catch (EncoderException e) {
-            promise.setFailure(e);
-        } catch (Throwable t) {
-            promise.setFailure(new EncoderException(t));
-        } finally {
-            if (out != null) {
-                try {
-                    final int sizeMinusOne = out.size() - 1;
-                    if (sizeMinusOne == 0) {
-                        ctx.write(out.getUnsafe(0), promise);
-                    } else if (sizeMinusOne > 0) {
-                        writePromiseCombiner(ctx, out, promise);
+                    if (out.isEmpty()) {
+                        throw new EncoderException(
+                                StringUtil.simpleClassName(this) + " must produce at least one message.");
                     }
                 } finally {
-                    out.recycle();
+                    final int sizeMinusOne = out.size() - 1;
+                    if (sizeMinusOne == 0) {
+                        PromiseNotifier.cascade(ctx.write(out.getUnsafe(0)), promise);
+                    } else {
+                        writePromiseCombiner(ctx, out, promise);
+                    }
                 }
+                return promise;
+            } else {
+                return ctx.write(msg);
+            }
+        } catch (EncoderException e) {
+            return ctx.newFailedFuture(e);
+        } catch (Throwable t) {
+            return ctx.newFailedFuture(new EncoderException(t));
+        } finally {
+            if (out != null) {
+                out.recycle();
             }
         }
     }

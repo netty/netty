@@ -28,6 +28,7 @@ import io.netty.channel.epoll.EpollHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -104,12 +105,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                         if (lastWritePromise != null) {
                             throw new IllegalStateException();
                         }
-                        lastWritePromise = promise;
-                        ctx.write(msg);
+                        lastWritePromise = ctx.newPromise();
+                        return ctx.write(msg);
                     }
                 });
             }

@@ -255,54 +255,8 @@ public final class BinaryMemcacheClientCodec extends
                 }
 
                 @Override
-                public Future<Void> register(Promise<Void> promise) {
-                    return ctx.register(promise);
-                }
-
-                @Override
-                public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-                    return ctx.bind(localAddress, promise);
-                }
-
-                @Override
-                public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-                    return ctx.connect(remoteAddress, promise);
-                }
-
-                @Override
-                public Future<Void> connect(
-                        SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                    return ctx.connect(remoteAddress, localAddress, promise);
-                }
-
-                @Override
-                public Future<Void> disconnect(Promise<Void> promise) {
-                    return ctx.disconnect(promise);
-                }
-
-                @Override
-                public Future<Void> close(Promise<Void> promise) {
-                    return ctx.close(promise);
-                }
-
-                @Override
-                public Future<Void> deregister(Promise<Void> promise) {
-                    return ctx.deregister(promise);
-                }
-
-                @Override
                 public Future<Void> write(Object msg) {
                     return ctx.write(msg);
-                }
-
-                @Override
-                public Future<Void> write(Object msg, Promise<Void> promise) {
-                    return ctx.write(msg, promise);
-                }
-
-                @Override
-                public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-                    return ctx.writeAndFlush(msg, promise);
                 }
 
                 @Override

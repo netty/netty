@@ -18,6 +18,7 @@ package io.netty.handler.traffic;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
@@ -146,7 +147,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     long size = calculateSize(toSend.toSend);
                     trafficCounter.bytesRealWriteFlowControl(size);
                     queueSize -= size;
-                    ctx.write(toSend.toSend, toSend.promise);
+                    ctx.write(toSend.toSend).addListener(new PromiseNotifier<>(toSend.promise));
                 }
             } else {
                 for (ToSend toSend : messagesQueue) {
@@ -183,7 +184,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         synchronized (this) {
             if (delay == 0 && messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
-                ctx.write(msg, promise);
+                ctx.write(msg).addListener(new PromiseNotifier<>(promise));
                 return;
             }
             newToSend = new ToSend(delay + now, msg, promise);
@@ -204,7 +205,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     long size = calculateSize(newToSend.toSend);
                     trafficCounter.bytesRealWriteFlowControl(size);
                     queueSize -= size;
-                    ctx.write(newToSend.toSend, newToSend.promise);
+                    ctx.write(newToSend.toSend).addListener(new PromiseNotifier<>(newToSend.promise));
                 } else {
                     messagesQueue.addFirst(newToSend);
                     break;

@@ -259,65 +259,19 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-            return channel.bind(localAddress, promise);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, promise);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, localAddress, promise);
-        }
-
-        @Override
-        public Future<Void> disconnect(Promise<Void> promise) {
-            return channel.disconnect(promise);
-        }
-
-        @Override
-        public Future<Void> close(Promise<Void> promise) {
-            return channel.close(promise);
-        }
-
-        @Override
-        public Future<Void> register(Promise<Void> promise) {
-            return channel.register(promise);
-        }
-
-        @Override
-        public Future<Void> deregister(Promise<Void> promise) {
-            return channel.deregister(promise);
-        }
-
-        @Override
         public Future<Void> write(Object msg) {
-            return write(msg, newPromise());
-        }
-
-        @Override
-        public Future<Void> write(Object msg, Promise<Void> promise) {
-            return writeAndFlush(msg, promise);
-        }
-
-        @Override
-        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-            try {
-                channel.writeInbound(msg);
-                channel.runPendingTasks();
-                promise.setSuccess(null);
-            } catch (Throwable cause) {
-                promise.setFailure(cause);
-            }
-            return promise;
+            return writeAndFlush(msg);
         }
 
         @Override
         public Future<Void> writeAndFlush(Object msg) {
-            return writeAndFlush(msg, newPromise());
+            try {
+                channel.writeInbound(msg);
+                channel.runPendingTasks();
+            } catch (Throwable cause) {
+                return newFailedFuture(cause);
+            }
+            return newSucceededFuture();
         }
 
         @Override

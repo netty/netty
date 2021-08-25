@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
@@ -77,14 +78,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      * Handles conversion of {@link HttpMessage} and {@link HttpContent} to HTTP/2 frames.
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof HttpMessage || msg instanceof HttpContent)) {
-            ctx.write(msg, promise);
-            return;
+            return ctx.write(msg);
         }
 
         boolean release = true;
+        Promise<Void> promise = ctx.newPromise();
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.executor());
         try {
@@ -142,6 +142,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             }
             promiseAggregator.doneAllocatingPromises();
         }
+        return promise;
     }
 
     private static void writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,

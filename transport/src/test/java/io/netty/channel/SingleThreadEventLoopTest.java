@@ -21,7 +21,6 @@ import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -373,8 +372,6 @@ public class SingleThreadEventLoopTest {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
-        Promise<Void> promise = ch.newPromise();
-        promise.addListener(future -> latch.countDown());
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -386,7 +383,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            Future<Void> f = ch.register(promise);
+            Future<Void> f = ch.register().addListener(future -> latch.countDown());
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));

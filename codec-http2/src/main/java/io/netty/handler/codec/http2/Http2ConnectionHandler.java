@@ -27,12 +27,12 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
@@ -437,31 +437,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> close(ChannelHandlerContext ctx) {
         if (decoupleCloseAndGoAway) {
-            ctx.close(promise);
-            return;
+            return ctx.close();
         }
         // Avoid NotYetConnectedException and avoid sending before connection preface
         if (!ctx.channel().isActive() || !prefaceSent()) {
-            ctx.close(promise);
-            return;
+            return ctx.close();
         }
 
         // If the user has already sent a GO_AWAY frame they may be attempting to do a graceful shutdown which requires
@@ -471,7 +453,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // https://github.com/netty/netty/issues/5307
         Future<Void> f = connection().goAwaySent() ? ctx.write(EMPTY_BUFFER) : goAway(ctx, null, ctx.newPromise());
         ctx.flush();
+        Promise<Void> promise = ctx.newPromise();
         doGracefulShutdown(ctx, f, promise);
+        return promise;
     }
 
     private FutureListener<Object> newClosingChannelFutureListener(
@@ -506,26 +490,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 };
             }
         }
-    }
-
-    @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
-        ctx.read();
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
     }
 
     @Override
@@ -955,10 +919,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 return;
             }
             closed = true;
-            if (promise == null) {
-                ctx.close();
-            } else {
-                ctx.close(promise);
+            // Before trying to close we need to check if the handler still exists in the pipeline as it may
+            // have been removed already.
+            if (!ctx.isRemoved()) {
+                if (promise == null) {
+                    ctx.close();
+                } else {
+                    ctx.close().addListener(new PromiseNotifier<>(promise));
+                }
+            } else if (promise != null) {
+                promise.setSuccess(null);
             }
         }
     }

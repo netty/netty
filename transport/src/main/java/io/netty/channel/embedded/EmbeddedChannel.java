@@ -225,12 +225,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public Future<Void> register() {
-        return register(newPromise());
-    }
-
-    @Override
-    public Future<Void> register(Promise<Void> promise) {
-        Future<Void> future = super.register(promise);
+        Future<Void> future = super.register();
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
@@ -342,7 +337,7 @@ public class EmbeddedChannel extends AbstractChannel {
             p.fireChannelRead(m);
         }
 
-        flushInbound(false, null);
+        flushInbound(false);
         return isNotEmpty(inboundMessages);
     }
 
@@ -353,21 +348,10 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #writeOneOutbound(Object)
      */
     public Future<Void> writeOneInbound(Object msg) {
-        return writeOneInbound(msg, newPromise());
-    }
-
-    /**
-     * Writes one message to the inbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, Promise)}.
-     *
-     * @see #writeOneOutbound(Object, Promise)
-     */
-    public Future<Void> writeOneInbound(Object msg, Promise<Void> promise) {
         if (checkOpen(true)) {
             pipeline().fireChannelRead(msg);
         }
-        checkException(promise);
-        return promise;
+        return checkException0();
     }
 
     /**
@@ -376,19 +360,17 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #flushOutbound()
      */
     public EmbeddedChannel flushInbound() {
-        flushInbound(true, null);
+        flushInbound(true);
         return this;
     }
 
-    private Future<Void> flushInbound(boolean recordException, Promise<Void> promise) {
+    private void flushInbound(boolean recordException) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
           readIfIsAutoRead();
           runPendingTasks();
       }
-
-      checkException(promise);
-        return promise;
+      checkException();
     }
 
     /**
@@ -439,21 +421,10 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #writeOneInbound(Object)
      */
     public Future<Void> writeOneOutbound(Object msg) {
-        return writeOneOutbound(msg, newPromise());
-    }
-
-    /**
-     * Writes one message to the outbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, Promise)}.
-     *
-     * @see #writeOneInbound(Object, Promise)
-     */
-    public Future<Void> writeOneOutbound(Object msg, Promise<Void> promise) {
         if (checkOpen(true)) {
-            return write(msg, promise);
+            return write(msg);
         }
-        checkException(promise);
-        return promise;
+        return checkException0();
     }
 
     /**
@@ -465,7 +436,7 @@ public class EmbeddedChannel extends AbstractChannel {
         if (checkOpen(true)) {
             flushOutbound0();
         }
-        checkException(null);
+        checkException();
         return this;
     }
 
@@ -555,20 +526,10 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final Future<Void> close() {
-        return close(newPromise());
-    }
-
-    @Override
-    public final Future<Void> disconnect() {
-        return disconnect(newPromise());
-    }
-
-    @Override
-    public final Future<Void> close(Promise<Void> promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         runPendingTasks();
-        Future<Void> future = super.close(promise);
+        Future<Void> future = super.close();
 
         // Now finish everything else and cancel all scheduled tasks that were not ready set.
         finishPendingTasks(true);
@@ -576,8 +537,8 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final Future<Void> disconnect(Promise<Void> promise) {
-        Future<Void> future = super.disconnect(promise);
+    public final Future<Void> disconnect() {
+        Future<Void> future = super.disconnect();
         finishPendingTasks(!metadata.hasDisconnect());
         return future;
     }
@@ -643,27 +604,25 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Checks for the presence of an {@link Exception}.
      */
-    private void checkException(Promise<Void> promise) {
-        Throwable t = lastException;
-        if (t != null) {
-            lastException = null;
-
-            if (promise == null) {
-                PlatformDependent.throwException(t);
-                return;
-            }
-
-            promise.setFailure(t);
-        } else if (promise != null) {
-            promise.setSuccess(null);
+    private Future<Void> checkException0() {
+        try {
+            checkException();
+        } catch (Throwable cause) {
+            return newFailedFuture(cause);
         }
+        return newSucceededFuture();
     }
 
     /**
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-        checkException(null);
+        Throwable t = lastException;
+        if (t != null) {
+            lastException = null;
+
+            PlatformDependent.throwException(t);
+        }
     }
 
     /**

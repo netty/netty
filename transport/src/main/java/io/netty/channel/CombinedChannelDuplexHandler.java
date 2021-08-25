@@ -243,72 +243,71 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void bind(
+    public Future<Void> bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, Promise<Void> promise) {
+            SocketAddress localAddress) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.bind(outboundCtx, localAddress, promise);
+            return outboundHandler.bind(outboundCtx, localAddress);
         } else {
-            outboundCtx.bind(localAddress, promise);
+            return outboundCtx.bind(localAddress);
         }
     }
 
     @Override
-    public void connect(
+    public Future<Void> connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress,
-            Promise<Void> promise) {
+            SocketAddress remoteAddress, SocketAddress localAddress) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
+            return outboundHandler.connect(outboundCtx, remoteAddress, localAddress);
         } else {
-            outboundCtx.connect(remoteAddress, localAddress, promise);
+            return outboundCtx.connect(remoteAddress, localAddress);
         }
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> disconnect(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.disconnect(outboundCtx, promise);
+            return outboundHandler.disconnect(outboundCtx);
         } else {
-            outboundCtx.disconnect(promise);
+            return outboundCtx.disconnect();
         }
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> close(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.close(outboundCtx, promise);
+            return outboundHandler.close(outboundCtx);
         } else {
-            outboundCtx.close(promise);
+            return outboundCtx.close();
         }
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> register(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.register(outboundCtx, promise);
+            return outboundHandler.register(outboundCtx);
         } else {
-            outboundCtx.register(promise);
+            return outboundCtx.register();
         }
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public Future<Void> deregister(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.deregister(outboundCtx, promise);
+            return outboundHandler.deregister(outboundCtx);
         } else {
-            outboundCtx.deregister(promise);
+            return outboundCtx.deregister();
         }
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.read(outboundCtx);
@@ -318,12 +317,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.write(outboundCtx, msg, promise);
+            return outboundHandler.write(outboundCtx, msg);
         } else {
-            outboundCtx.write(msg, promise);
+            return outboundCtx.write(msg);
         }
     }
 
@@ -463,42 +462,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-            return ctx.bind(localAddress, promise);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            return ctx.connect(remoteAddress, promise);
-        }
-
-        @Override
-        public Future<Void> connect(
-                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
-        }
-
-        @Override
-        public Future<Void> disconnect(Promise<Void> promise) {
-            return ctx.disconnect(promise);
-        }
-
-        @Override
-        public Future<Void> close(Promise<Void> promise) {
-            return ctx.close(promise);
-        }
-
-        @Override
-        public Future<Void> register(Promise<Void> promise) {
-            return ctx.register(promise);
-        }
-
-        @Override
-        public Future<Void> deregister(Promise<Void> promise) {
-            return ctx.deregister(promise);
-        }
-
-        @Override
         public ChannelHandlerContext read() {
             ctx.read();
             return this;
@@ -510,19 +473,9 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public Future<Void> write(Object msg, Promise<Void> promise) {
-            return ctx.write(msg, promise);
-        }
-
-        @Override
         public ChannelHandlerContext flush() {
             ctx.flush();
             return this;
-        }
-
-        @Override
-        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-            return ctx.writeAndFlush(msg, promise);
         }
 
         @Override

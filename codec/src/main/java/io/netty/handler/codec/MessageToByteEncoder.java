@@ -22,7 +22,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.TypeParameterMatcher;
 
 
@@ -96,7 +96,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -110,19 +110,17 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
                 }
 
                 if (buf.isReadable()) {
-                    ctx.write(buf, promise);
-                } else {
-                    buf.release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    Future<Void> f = ctx.write(buf);
+                    buf = null;
+                    return f;
                 }
-                buf = null;
-            } else {
-                ctx.write(msg, promise);
+                return ctx.write(Unpooled.EMPTY_BUFFER);
             }
+            return ctx.write(msg);
         } catch (EncoderException e) {
-            promise.setFailure(e);
+            return ctx.newFailedFuture(e);
         } catch (Throwable e) {
-            promise.setFailure(new EncoderException(e));
+            return ctx.newFailedFuture(new EncoderException(e));
         } finally {
             if (buf != null) {
                 buf.release();

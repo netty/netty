@@ -174,22 +174,14 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      * The returned {@link Future} will be notified once the operation completes.
      */
     public Future<Void> close() {
-        return close(ctx().newPromise());
-    }
-
-    /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link Future} will be notified once the operation
-     * completes and will also be returned.
-     */
-    public Future<Void> close(Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            return finishEncode(ctx);
         } else {
+            Promise<Void> promise = ctx.newPromise();
             executor.execute(() -> {
-                Future<Void> f = finishEncode(ctx(), promise);
+                Future<Void> f = finishEncode(ctx());
                 PromiseNotifier.cascade(f, promise);
             });
             return promise;
@@ -197,22 +189,23 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, Promise<Void> promise) {
-        Future<Void> f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(f1 -> ctx.close(promise));
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(() -> {
-                ctx.close(promise);
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+    public Future<Void> close(final ChannelHandlerContext ctx) {
+        Future<Void> f = finishEncode(ctx);
+        if (f.isDone()) {
+            return ctx.close();
         }
+        Promise<Void> promise = ctx.newPromise();
+        f.addListener(f1 -> ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        // Ensure the channel is closed even if the write operation completes in time.
+        ctx.executor().schedule(() -> {
+            ctx.close().addListener(new PromiseNotifier<>(false, promise));
+        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        return promise;
     }
 
-    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
+    private Future<Void> finishEncode(final ChannelHandlerContext ctx) {
         if (finished) {
-            promise.setSuccess(null);
-            return promise;
+            return ctx.newSucceededFuture();
         }
         finished = true;
 
@@ -229,7 +222,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        return ctx.writeAndFlush(footer);
     }
 
     private ChannelHandlerContext ctx() {

@@ -41,7 +41,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -342,25 +341,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
-        return close(channel, frame, channel.newPromise());
-    }
-
-    /**
-     * Performs the closing handshake.
-     *
-     * When called from within a {@link ChannelHandler} you most likely want to use
-     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, Promise)}.
-     *
-     * @param channel
-     *            the {@link Channel} to use.
-     * @param frame
-     *            Closing Frame that was received.
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done
-     */
-    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        requireNonNull(channel, "channel");
-        return close0(channel, channel, frame, promise);
+        return close0(channel, channel, frame);
     }
 
     /**
@@ -373,27 +354,11 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         requireNonNull(ctx, "ctx");
-        return close(ctx, frame, ctx.newPromise());
+        return close0(ctx, ctx.channel(), frame);
     }
 
-    /**
-     * Performs the closing handshake.
-     *
-     * @param ctx
-     *            the {@link ChannelHandlerContext} to use.
-     * @param frame
-     *            Closing Frame that was received.
-     * @param promise
-     *            the {@link Promise} to be notified when the closing handshake is done.
-     */
-    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
-        requireNonNull(ctx, "ctx");
-        return close0(ctx, ctx.channel(), frame, promise);
-    }
-
-    private static Future<Void> close0(ChannelOutboundInvoker invoker, Channel channel, CloseWebSocketFrame frame,
-                                       Promise<Void> promise) {
-        return invoker.writeAndFlush(frame, promise).addListener(channel, ChannelFutureListeners.CLOSE);
+    private static Future<Void> close0(ChannelOutboundInvoker invoker, Channel channel, CloseWebSocketFrame frame) {
+        return invoker.writeAndFlush(frame).addListener(channel, ChannelFutureListeners.CLOSE);
     }
 
     /**

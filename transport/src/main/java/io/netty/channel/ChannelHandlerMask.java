@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -130,31 +129,29 @@ final class ChannelHandlerMask {
             if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
                 mask &= ~MASK_USER_EVENT_TRIGGERED;
             }
-            if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
-                    SocketAddress.class, Promise.class)) {
+            if (isSkippable(handlerType, "bind", ChannelHandlerContext.class, SocketAddress.class)) {
                 mask &= ~MASK_BIND;
             }
             if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
-                    SocketAddress.class, Promise.class)) {
+                    SocketAddress.class)) {
                 mask &= ~MASK_CONNECT;
             }
-            if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, Promise.class)) {
+            if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class)) {
                 mask &= ~MASK_DISCONNECT;
             }
-            if (isSkippable(handlerType, "close", ChannelHandlerContext.class, Promise.class)) {
+            if (isSkippable(handlerType, "close", ChannelHandlerContext.class)) {
                 mask &= ~MASK_CLOSE;
             }
-            if (isSkippable(handlerType, "register", ChannelHandlerContext.class, Promise.class)) {
+            if (isSkippable(handlerType, "register", ChannelHandlerContext.class)) {
                 mask &= ~MASK_REGISTER;
             }
-            if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, Promise.class)) {
+            if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class)) {
                 mask &= ~MASK_DEREGISTER;
             }
             if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
                 mask &= ~MASK_READ;
             }
-            if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
-                    Object.class, Promise.class)) {
+            if (isSkippable(handlerType, "write", ChannelHandlerContext.class, Object.class)) {
                 mask &= ~MASK_WRITE;
             }
             if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {

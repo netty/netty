@@ -122,7 +122,7 @@ public class Http2ConnectionRoundtripTest {
     @AfterEach
     public void teardown() throws Exception {
         if (clientChannel != null) {
-            clientChannel.close().syncUninterruptibly();
+            clientChannel.close().await();
             clientChannel = null;
         }
         if (serverChannel != null) {
@@ -645,18 +645,17 @@ public class Http2ConnectionRoundtripTest {
                     newPromise());
             clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                     ReferenceCountUtil.release(msg);
 
                     try {
                         // Ensure we update the window size so we will try to write the rest of the frame while
                         // processing the flush.
                         http2Client.encoder().flowController().initialWindowSize(8);
+                        return ctx.newFailedFuture(new IllegalStateException());
                     } catch (Http2Exception e) {
-                        promise.setFailure(e);
-                        return;
+                        return ctx.newFailedFuture(e);
                     }
-                    promise.setFailure(new IllegalStateException());
                 }
             });
 
