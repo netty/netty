@@ -116,7 +116,7 @@ import java.util.NoSuchElementException;
  * <li>3 and 4 don't implement inbound handling methods of {@link ChannelHandler},
  *     and therefore the actual evaluation order of an inbound  event will be: 1, 2, and 5.</li>
  * <li>1 and 2 don't implement outbound handling methods of {@link ChannelHandler}, and therefore the actual evaluation
- *     order of a outbound event will be: 5, 4, and 3.</li>
+ *     order of an outbound event will be: 5, 4, and 3.</li>
  * <li>If 5 implements both inbound and outbound handling methods of {@link ChannelHandler}, the evaluation order of
  *     an inbound and a outbound event could be 125 and 543 respectively.</li>
  * </ul>
