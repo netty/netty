@@ -112,6 +112,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
@@ -134,4 +135,3 @@
     </dependency>
   </dependencies>
 </project>
-
