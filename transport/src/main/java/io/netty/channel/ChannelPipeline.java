@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -114,11 +113,11 @@ import java.util.NoSuchElementException;
  * When an event goes outbound, the order is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
  * the evaluation of certain handlers to shorten the stack depth:
  * <ul>
- * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the actual evaluation order of an inbound
- *     event will be: 1, 2, and 5.</li>
- * <li>1 and 2 don't implement {@link ChannelOutboundHandler}, and therefore the actual evaluation order of a
- *     outbound event will be: 5, 4, and 3.</li>
- * <li>If 5 implements both {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the evaluation order of
+ * <li>3 and 4 don't implement inbound handling methods of {@link ChannelHandler},
+ *     and therefore the actual evaluation order of an inbound  event will be: 1, 2, and 5.</li>
+ * <li>1 and 2 don't implement outbound handling methods of {@link ChannelHandler}, and therefore the actual evaluation
+ *     order of a outbound event will be: 5, 4, and 3.</li>
+ * <li>If 5 implements both inbound and outbound handling methods of {@link ChannelHandler}, the evaluation order of
  *     an inbound and a outbound event could be 125 and 543 respectively.</li>
  * </ul>
  *
@@ -157,7 +156,7 @@ import java.util.NoSuchElementException;
  * and the following example shows how the event propagation is usually done:
  *
  * <pre>
- * public class MyInboundHandler implements {@link ChannelInboundHandler} {
+ * public class MyInboundHandler implements {@link ChannelHandler} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         System.out.println("Connected!");
@@ -165,11 +164,11 @@ import java.util.NoSuchElementException;
  *     }
  * }
  *
- * public class MyOutboundHandler implements {@link ChannelOutboundHandler} {
+ * public class MyOutboundHandler implements {@link ChannelHandler} {
  *     {@code @Override}
- *     public void close({@link ChannelHandlerContext} ctx, {@link Promise} promise) {
+ *     public Future&ltVoid&gt close({@link ChannelHandlerContext} ctx) {
  *         System.out.println("Closing ..");
- *         ctx.close(promise);
+ *         return ctx.close();
  *     }
  * }
  * </pre>

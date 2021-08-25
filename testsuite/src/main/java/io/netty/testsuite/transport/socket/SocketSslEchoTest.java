@@ -20,9 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -293,7 +293,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("clientHandler", clientHandler);
-                sch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                sch.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {

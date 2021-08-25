@@ -16,18 +16,17 @@
 
 package io.netty.example.haproxy;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
 import io.netty.util.concurrent.Future;
 
-public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
+public class HAProxyHandler implements ChannelHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         ctx.pipeline().addBefore(ctx.name(), null, HAProxyMessageEncoder.INSTANCE);
-        super.handlerAdded(ctx);
     }
 
     @Override

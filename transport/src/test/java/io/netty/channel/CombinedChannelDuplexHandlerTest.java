@@ -176,7 +176,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     public void testOutboundEvents() {
-        ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter();
+        ChannelHandler inboundHandler = new ChannelHandlerAdapter() { };
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler> handler =
