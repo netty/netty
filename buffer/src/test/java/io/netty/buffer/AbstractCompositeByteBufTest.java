@@ -1576,6 +1576,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertTrue(cbuf.release());
     }
 
+    // See https://github.com/netty/netty/issues/11612
+    @Test
+    public void testAddComponentWithNullEntry() {
+        final ByteBuf buffer = Unpooled.buffer(8).writeZero(8);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        try {
+            compositeByteBuf.addComponents(true, new ByteBuf[] { buffer, null });
+            assertEquals(8, compositeByteBuf.readableBytes());
+            assertEquals(1, compositeByteBuf.numComponents());
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
     @Test
     public void testOverflowWhileAddingComponent() {
         int capacity = 1024 * 1024; // 1MB
