@@ -1493,7 +1493,7 @@ public abstract class SSLEngineTest {
                                 // The server then attempts to trigger a flush operation once the application data is
                                 // received from the client. The flush will encrypt all data and should not result in
                                 // deadlock.
-                                ctx.channel().eventLoop().schedule(() -> {
+                                ctx.channel().executor().schedule(() -> {
                                     ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(101));
                                 }, 500, TimeUnit.MILLISECONDS);
                             }

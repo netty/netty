@@ -326,7 +326,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     // but the close will be done after the Selector did process all events. Because of
                     // this we will need to give it a bit time to ensure the FD is actual closed before we
                     // count down the latch and try to write.
-                    channel.eventLoop().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
+                    channel.executor().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
                 }));
             }
         }

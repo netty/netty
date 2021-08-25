@@ -1157,7 +1157,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
         return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(),
-                      ch.eventLoop().newPromise());
+                      ch.executor().newPromise());
     }
 
     /**
@@ -1167,7 +1167,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
         return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(),
-                     ch.eventLoop().newPromise());
+                     ch.executor().newPromise());
     }
 
     /**
@@ -1288,7 +1288,7 @@ public class DnsNameResolver extends InetNameResolver {
                 final Channel channel = future.getNow();
 
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
-                        channel.eventLoop().newPromise();
+                        channel.executor().newPromise();
                 final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(DnsNameResolver.this, channel,
                         (InetSocketAddress) channel.remoteAddress(), qCtx.question(),
                         EMPTY_ADDITIONALS, promise);

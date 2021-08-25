@@ -317,7 +317,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             final SocketAddress localAddress, final Promise<Void> promise) {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             if (regFuture.isSuccess()) {
                 PromiseNotifier.cascade(channel.bind(localAddress), promise)
                         .addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);

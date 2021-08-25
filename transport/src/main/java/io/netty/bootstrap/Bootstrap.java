@@ -217,7 +217,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     private void doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
                                       final SocketAddress localAddress, final Promise<Channel> promise) {
         try {
-            final EventLoop eventLoop = channel.eventLoop();
+            final EventLoop eventLoop = channel.executor();
             final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
@@ -260,7 +260,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             SocketAddress remoteAddress, SocketAddress localAddress, Channel channel, Promise<Channel> promise) {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             final Future<Void> future;
             if (localAddress == null) {
                 future = channel.connect(remoteAddress);
@@ -281,7 +281,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         p.addLast(config.handler());
 
-        return DefaultPromise.newSuccessfulPromise(channel.eventLoop(), channel);
+        return DefaultPromise.newSuccessfulPromise(channel.executor(), channel);
     }
 
     @Override

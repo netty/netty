@@ -308,7 +308,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     final void clearReadFilter() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
-            final EventLoop loop = eventLoop();
+            final EventLoop loop = executor();
             final AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) unsafe();
             if (loop.inEventLoop()) {
                 unsafe.clearReadFilter0();
@@ -507,11 +507,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 return;
             }
             readReadyRunnablePending = true;
-            eventLoop().execute(readReadyRunnable);
+            executor().execute(readReadyRunnable);
         }
 
         protected final void clearReadFilter0() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             try {
                 readPending = false;
                 readFilter(false);
@@ -550,7 +550,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                        connectTimeoutFuture = executor().schedule(() -> {
                             Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
@@ -618,7 +618,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
 
             boolean connectStillInProgress = false;
             try {

@@ -139,12 +139,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Object executeSingle() throws Exception {
-        return chan.eventLoop().submit(runnable).get();
+        return chan.executor().submit(runnable).get();
     }
 
     @Benchmark
     @GroupThreads(3)
     public Object executeMulti() throws Exception {
-        return chan.eventLoop().submit(runnable).get();
+        return chan.executor().submit(runnable).get();
     }
 }

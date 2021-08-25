@@ -102,7 +102,7 @@ public final class Http2StreamChannelBootstrap {
      * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
      */
     public Future<Http2StreamChannel> open() {
-        return open(channel.eventLoop().newPromise());
+        return open(channel.executor().newPromise());
     }
 
     /**

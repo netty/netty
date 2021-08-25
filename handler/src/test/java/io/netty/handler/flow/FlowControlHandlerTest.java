@@ -505,7 +505,7 @@ public class FlowControlHandlerTest {
                 if (num >= 3) {
                     //We have received 3 messages. Remove myself later
                     final ChannelHandler handler = this;
-                    ctx.channel().eventLoop().execute(new Runnable() {
+                    ctx.channel().executor().execute(new Runnable() {
                         @Override
                         public void run() {
                             ctx.pipeline().remove(handler);

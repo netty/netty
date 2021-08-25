@@ -392,7 +392,7 @@ public class ChannelOutboundBufferTest {
 
         ChannelOutboundBuffer cob = ch.unsafe().outboundBuffer();
 
-        ch.eventLoop().execute(() -> {
+        ch.executor().execute(() -> {
             // Trigger channelWritabilityChanged() by writing a lot.
             ch.write(buffer().writeZero(257));
             assertThat(buf.toString(), is("false "));

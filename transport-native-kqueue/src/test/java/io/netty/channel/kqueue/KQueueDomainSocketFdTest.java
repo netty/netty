@@ -62,7 +62,7 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final KQueueDomainSocketChannel ch = new KQueueDomainSocketChannel(ctx.channel().eventLoop());
+                final KQueueDomainSocketChannel ch = new KQueueDomainSocketChannel(ctx.channel().executor());
 
                 ctx.writeAndFlush(ch.fd()).addListener(future -> {
                     if (!future.isSuccess()) {

@@ -106,7 +106,7 @@ public class TrafficShapingHandlerTest {
             ch.writeAndFlush(Unpooled.wrappedBuffer("bar".getBytes(CharsetUtil.UTF_8))).await();
             assertNotNull(attr.get());
             final Channel clientChannel = ch;
-            ch.eventLoop().submit(() -> {
+            ch.executor().submit(() -> {
                 clientChannel.pipeline().remove("traffic-shaping");
             }).await();
             //the attribute--reopen task must be released.

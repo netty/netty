@@ -42,15 +42,15 @@ public class DnsResolveContextTest {
         EmbeddedChannel channel = new EmbeddedChannel();
         DnsCnameCache cache = new DefaultDnsCnameCache();
         if (chainLength == 1) {
-            cache.cache(HOSTNAME, HOSTNAME, Long.MAX_VALUE, channel.eventLoop());
+            cache.cache(HOSTNAME, HOSTNAME, Long.MAX_VALUE, channel.executor());
         } else {
             String lastName = HOSTNAME;
             for (int i = 1; i < chainLength; i++) {
                 String nextName = i + "." + lastName;
-                cache.cache(lastName, nextName, Long.MAX_VALUE, channel.eventLoop());
+                cache.cache(lastName, nextName, Long.MAX_VALUE, channel.executor());
                 lastName = nextName;
             }
-            cache.cache(lastName, HOSTNAME, Long.MAX_VALUE, channel.eventLoop());
+            cache.cache(lastName, HOSTNAME, Long.MAX_VALUE, channel.executor());
         }
         return cache;
     }

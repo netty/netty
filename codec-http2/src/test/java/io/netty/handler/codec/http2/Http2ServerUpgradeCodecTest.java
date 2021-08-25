@@ -75,7 +75,7 @@ public class Http2ServerUpgradeCodecTest {
         } else {
             codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
         }
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
             codec.upgradeTo(ctx, request);
         });

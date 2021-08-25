@@ -119,7 +119,7 @@ public class LocalChannelTest {
                 // Connect to the server
                 cc = cb.connect(sc.localAddress()).get();
                 final Channel ccCpy = cc;
-                cc.eventLoop().execute(() -> {
+                cc.executor().execute(() -> {
                     // Send a message event up the pipeline.
                     ccCpy.pipeline().fireChannelRead("Hello, World");
                     latch.countDown();
@@ -715,7 +715,7 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(() ->
                         ccCpy.writeAndFlush(data.retainedDuplicate())
                 .addListener(future -> {
-                    serverChannelCpy.eventLoop().execute(() -> {
+                    serverChannelCpy.executor().execute(() -> {
                         // The point of this test is to write while the peer is closed, so we should
                         // ensure the peer is actually closed before we write.
                         int waitCount = 0;
@@ -784,7 +784,7 @@ public class LocalChannelTest {
             cc = cb.register().get();
 
             final AtomicReference<Future<Void>> ref = new AtomicReference<>();
-            final Promise<Void> assertPromise = cc.eventLoop().newPromise();
+            final Promise<Void> assertPromise = cc.executor().newPromise();
 
             cc.pipeline().addLast(new TestHandler() {
                 @Override

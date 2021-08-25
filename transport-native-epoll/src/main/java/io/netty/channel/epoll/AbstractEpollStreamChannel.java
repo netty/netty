@@ -312,7 +312,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             clearFlag(Native.EPOLLOUT);
 
             // We used our writeSpin quantum, and should try to write again later.
-            eventLoop().execute(flushTask);
+            executor().execute(flushTask);
         } else {
             // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
             // when it can accept more data.
@@ -430,7 +430,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public Future<Void> shutdownOutput(final Promise<Void> promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
@@ -451,7 +451,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (closeExecutor != null) {
             closeExecutor.execute(() -> shutdownInput0(promise));
         } else {
-            EventLoop loop = eventLoop();
+            EventLoop loop = executor();
             if (loop.inEventLoop()) {
                 shutdownInput0(promise);
             } else {

@@ -539,7 +539,7 @@ public class DefaultChannelPipelineTest {
 
             // Add handler.
             p.addFirst(handler.name, handler);
-            self.eventLoop().execute(() -> {
+            self.executor().execute(() -> {
                 // Validate handler life-cycle methods called.
                 handler.validate(true, false);
 
@@ -559,7 +559,7 @@ public class DefaultChannelPipelineTest {
         for (final LifeCycleAwareTestHandler handler : handlers) {
             assertSame(handler, p.remove(handler.name));
 
-            self.eventLoop().execute(() -> {
+            self.executor().execute(() -> {
                 // Validate handler life-cycle methods called.
                 handler.validate(true, true);
                 removeLatch.countDown();
@@ -576,7 +576,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(() -> {
+        self.executor().submit(() -> {
             ChannelPipeline p = self.pipeline();
             handler1.inboundBuffer.add(8);
             assertEquals(8, handler1.inboundBuffer.peek());
@@ -595,7 +595,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(() -> {
+        self.executor().submit(() -> {
             ChannelPipeline p = self.pipeline();
             handler2.outboundBuffer.add(8);
             assertEquals(8, handler2.outboundBuffer.peek());
@@ -614,7 +614,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(() -> {
+        self.executor().submit(() -> {
             ChannelPipeline p = self.pipeline();
             handler1.outboundBuffer.add(8);
             assertEquals(8, handler1.outboundBuffer.peek());
@@ -632,7 +632,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(() -> {
+        self.executor().submit(() -> {
             ChannelPipeline p = self.pipeline();
             handler1.inboundBuffer.add(8);
             handler1.outboundBuffer.add(8);
@@ -657,7 +657,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2, handler3);
 
-        self.eventLoop().submit(() -> {
+        self.executor().submit(() -> {
             ChannelPipeline p = self.pipeline();
             handler2.inboundBuffer.add(8);
             handler2.outboundBuffer.add(8);
@@ -1099,7 +1099,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.channel().closeFuture().syncUninterruptibly();
 
                 // Schedule something on the EventLoop to ensure all other scheduled tasks had a chance to complete.
-                pipeline.channel().eventLoop().submit(() -> {
+                pipeline.channel().executor().submit(() -> {
                     // NOOP
                 }).syncUninterruptibly();
                 Error error = errorRef.get();
@@ -1543,7 +1543,7 @@ public class DefaultChannelPipelineTest {
         };
 
         if (executeInEventLoop) {
-            pipeline.channel().eventLoop().execute(r);
+            pipeline.channel().executor().execute(r);
         } else {
             r.run();
         }

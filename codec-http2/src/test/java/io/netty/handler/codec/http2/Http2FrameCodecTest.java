@@ -224,7 +224,7 @@ public class Http2FrameCodecTest {
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
         AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        em.eventLoop().execute(() -> {
+        em.executor().execute(() -> {
             try {
                 // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
                 // where a stream is deregistered which in reality can happen in response to a RST.
@@ -545,7 +545,7 @@ public class Http2FrameCodecTest {
         int connectionWindowSizeBefore = localFlow.windowSize(connectionStream);
 
         AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             try {
                 // We only replenish the flow control window after the amount consumed drops below the following
                 // threshold. We make the threshold very "high" so that window updates will be sent when the delta is
@@ -728,7 +728,7 @@ public class Http2FrameCodecTest {
     public void streamIdentifiersExhausted() throws Exception {
         int maxServerStreamId = Integer.MAX_VALUE - 1;
 
-        channel.eventLoop().submit(() -> {
+        channel.executor().submit(() -> {
             assertNotNull(frameCodec.connection().local().createStream(maxServerStreamId, false));
             return null;
         }).sync();
@@ -807,7 +807,7 @@ public class Http2FrameCodecTest {
 
         final Set<Http2FrameStream> activeStreams = new HashSet<>();
         final AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             try {
                 frameCodec.forEachActiveStream(stream -> {
                     activeStreams.add(stream);

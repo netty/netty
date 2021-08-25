@@ -190,7 +190,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
         T channel = newNioChannel(wrapped);
         channel.register().syncUninterruptibly();
 
-        assertSame(wrapped, channel.eventLoop());
+        assertSame(wrapped, channel.executor());
         channel.close().syncUninterruptibly();
         eventLoopGroup.shutdownGracefully();
     }

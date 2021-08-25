@@ -186,7 +186,7 @@ public class LocalChannel extends AbstractChannel {
                 // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
                 // This ensures that if both channels are on the same event loop, the peer's channelInActive
                 // event is triggered *after* this peer's channelInActive event
-                EventLoop peerEventLoop = peer.eventLoop();
+                EventLoop peerEventLoop = peer.executor();
                 final boolean peerIsActive = peer.isActive();
                 try {
                     peerEventLoop.execute(() -> peer.tryClose(peerIsActive));
@@ -269,7 +269,7 @@ public class LocalChannel extends AbstractChannel {
             }
         } else {
             try {
-                eventLoop().execute(readTask);
+                executor().execute(readTask);
             } catch (Throwable cause) {
                 logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
                 close();
@@ -331,7 +331,7 @@ public class LocalChannel extends AbstractChannel {
 
     private void finishPeerRead(final LocalChannel peer) {
         // If the peer is also writing, then we must schedule the event on the event loop to preserve read order.
-        if (peer.eventLoop() == eventLoop() && !peer.writeInProgress) {
+        if (peer.executor() == executor() && !peer.writeInProgress) {
             finishPeerRead0(peer);
         } else {
             runFinishPeerReadTask(peer);
@@ -344,9 +344,9 @@ public class LocalChannel extends AbstractChannel {
         final Runnable finishPeerReadTask = () -> finishPeerRead0(peer);
         try {
             if (peer.writeInProgress) {
-                peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
+                peer.finishReadFuture = peer.executor().submit(finishPeerReadTask);
             } else {
-                peer.eventLoop().execute(finishPeerReadTask);
+                peer.executor().execute(finishPeerReadTask);
             }
         } catch (Throwable cause) {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
@@ -357,7 +357,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void releaseInboundBuffers() {
-        assert eventLoop() == null || eventLoop().inEventLoop();
+        assert executor() == null || executor().inEventLoop();
         readInProgress = false;
         Queue<Object> inboundBuffer = this.inboundBuffer;
         Object msg;
@@ -456,7 +456,7 @@ public class LocalChannel extends AbstractChannel {
                 // This ensures that if both channels are on the same event loop, the peer's channelActive
                 // event is triggered *after* this channel's channelRegistered event, so that this channel's
                 // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-                peer.eventLoop().execute(() -> {
+                peer.executor().execute(() -> {
                     Promise<Void> promise = peer.connectPromise;
 
                     // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
