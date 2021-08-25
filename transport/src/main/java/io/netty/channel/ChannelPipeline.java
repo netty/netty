@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -538,9 +537,4 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
-
-    /**
-     * Returns the {@link EventExecutor} which is used by all {@link ChannelHandler}s in the pipeline.
-     */
-    EventExecutor executor();
 }

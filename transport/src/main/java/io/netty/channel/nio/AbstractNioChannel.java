@@ -125,7 +125,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Deprecated
     protected void setReadPending(final boolean readPending) {
         if (isRegistered()) {
-            EventLoop eventLoop = eventLoop();
+            EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
                 setReadPending0(readPending);
             } else {
@@ -144,7 +144,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     protected final void clearReadPending() {
         if (isRegistered()) {
-            EventLoop eventLoop = eventLoop();
+            EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
                 clearReadPending0();
             } else {
@@ -237,7 +237,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                        connectTimeoutFuture = executor().schedule(() -> {
                             Promise<Void> connectPromise = AbstractNioChannel.this.connectPromise;
                             if (connectPromise != null && !connectPromise.isDone()
                                     && connectPromise.tryFailure(new ConnectTimeoutException(
@@ -305,7 +305,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
 
             try {
                 boolean wasActive = isActive();
@@ -348,12 +348,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-       eventLoop().unsafe().register(this);
+       executor().unsafe().register(this);
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        eventLoop().unsafe().deregister(this);
+        executor().unsafe().deregister(this);
     }
 
     @Override

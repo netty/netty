@@ -199,7 +199,7 @@ public class FlushConsolidationHandler implements ChannelHandler {
     private void scheduleFlush(final ChannelHandlerContext ctx) {
         if (nextScheduledFlush == null) {
             // Run as soon as possible, but still yield to give a chance for additional writes to enqueue.
-            nextScheduledFlush = ctx.channel().eventLoop().submit(flushTask);
+            nextScheduledFlush = ctx.channel().executor().submit(flushTask);
         }
     }
 

@@ -86,7 +86,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     /**
      * Return the {@link EventLoop} this {@link Channel} was registered to.
      */
-    EventLoop eventLoop();
+    EventLoop executor();
 
     /**
      * Returns the parent of this channel.
@@ -259,21 +259,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     default Channel flush() {
         pipeline().flush();
         return this;
-    }
-
-    @Override
-    default Promise<Void> newPromise() {
-        return eventLoop().newPromise();
-    }
-
-    @Override
-    default Future<Void> newSucceededFuture() {
-        return eventLoop().newSucceededFuture(null);
-    }
-
-    @Override
-    default Future<Void> newFailedFuture(Throwable cause) {
-        return eventLoop().newFailedFuture(cause);
     }
 
     /**

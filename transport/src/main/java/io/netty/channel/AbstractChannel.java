@@ -145,7 +145,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public EventLoop executor() {
         return eventLoop;
     }
 
@@ -492,7 +492,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         promise.setFailure(err);
                     } finally {
                         // Dispatch to the EventLoop
-                        eventLoop().execute(() ->
+                        executor().execute(() ->
                                 closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause));
                     }
                 });
@@ -850,7 +850,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
                 //
                 // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-                eventLoop().execute(task);
+                executor().execute(task);
             } catch (RejectedExecutionException e) {
                 logger.warn("Can't invoke task later as EventLoop rejected it", e);
             }
@@ -900,7 +900,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Sub-classes may override this method
      */
     protected void doRegister() throws Exception {
-        eventLoop().unsafe().register(this);
+        executor().unsafe().register(this);
     }
 
     /**
@@ -933,7 +933,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Sub-classes may override this method
      */
     protected void doDeregister() throws Exception {
-        eventLoop().unsafe().deregister(this);
+        executor().unsafe().deregister(this);
     }
 
     /**

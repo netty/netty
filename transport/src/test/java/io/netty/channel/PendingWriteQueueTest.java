@@ -132,7 +132,7 @@ public class PendingWriteQueueTest {
 
         final PendingWriteQueue queue = queueRef.get();
 
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             // Trigger channelWritabilityChanged() by adding a message that's larger than the high watermark.
             queue.add(msg, channel.newPromise());
         });
@@ -212,7 +212,7 @@ public class PendingWriteQueueTest {
         promise.addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
         Promise<Void> promise2 = channel.newPromise();
 
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             queue.add(1L, promise);
             queue.add(2L, promise2);
             queue.removeAndFailAll(new Exception());
@@ -244,7 +244,7 @@ public class PendingWriteQueueTest {
         });
         Promise<Void> promise2 = channel.newPromise();
 
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             queue.add(1L, promise);
             queue.add(2L, promise2);
             queue.removeAndWriteAll();
@@ -257,7 +257,7 @@ public class PendingWriteQueueTest {
         assertFalse(promise3.isDone());
         assertFalse(promise3.isSuccess());
 
-        channel.eventLoop().execute(queue::removeAndWriteAll);
+        channel.executor().execute(queue::removeAndWriteAll);
         assertTrue(promise3.isDone());
         assertTrue(promise3.isSuccess());
         channel.runPendingTasks();
@@ -284,7 +284,7 @@ public class PendingWriteQueueTest {
         });
         Promise<Void> promise2 = channel.newPromise();
         promise2.addListener(future -> failOrder.add(2));
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             queue.add(1L, promise);
             queue.add(2L, promise2);
             queue.removeAndFailAll(new Exception());
@@ -311,7 +311,7 @@ public class PendingWriteQueueTest {
         promise.addListener(future -> queue.removeAndWriteAll());
         Promise<Void> promise2 = channel.newPromise();
 
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             queue.add(1L, promise);
 
             queue.add(2L, promise2);
@@ -340,7 +340,7 @@ public class PendingWriteQueueTest {
 
         IllegalStateException ex = new IllegalStateException();
         Promise<Void> promise = channel.newPromise();
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             queue.add(1L, promise);
             queue.removeAndFailAll(ex);
         });

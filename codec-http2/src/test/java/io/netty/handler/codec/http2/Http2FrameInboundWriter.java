@@ -119,7 +119,7 @@ final class Http2FrameInboundWriter {
 
         @Override
         public EventExecutor executor() {
-            return channel.eventLoop();
+            return channel.executor();
         }
 
         @Override

@@ -36,7 +36,7 @@ public class FlushConsolidationHandlerTest {
     public void testFlushViaScheduledTask() {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount,  true);
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             // Flushes should not go through immediately, as they're scheduled as an async task
             channel.flush();
             assertEquals(0, flushCount.get());
@@ -51,7 +51,7 @@ public class FlushConsolidationHandlerTest {
     public void testFlushViaThresholdOutsideOfReadLoop() {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, true);
-        channel.eventLoop().execute(() -> {
+        channel.executor().execute(() -> {
             // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
             for (int i = 0; i < EXPLICIT_FLUSH_AFTER_FLUSHES; i++) {
                 channel.flush();

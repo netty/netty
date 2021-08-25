@@ -610,7 +610,7 @@ public final class ChannelOutboundBuffer {
             if (task == null) {
                 fireChannelWritabilityChangedTask = task = pipeline::fireChannelWritabilityChanged;
             }
-            channel.eventLoop().execute(task);
+            channel.executor().execute(task);
         } else {
             pipeline.fireChannelWritabilityChanged();
         }
@@ -655,7 +655,7 @@ public final class ChannelOutboundBuffer {
 
     void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
-            channel.eventLoop().execute(() -> close(cause, allowChannelOpen));
+            channel.executor().execute(() -> close(cause, allowChannelOpen));
             return;
         }
 

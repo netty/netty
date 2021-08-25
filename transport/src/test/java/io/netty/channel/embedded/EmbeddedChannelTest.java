@@ -125,7 +125,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() { });
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.eventLoop().schedule(latch::countDown, 1, TimeUnit.SECONDS);
+        ScheduledFuture future = ch.executor().schedule(latch::countDown, 1, TimeUnit.SECONDS);
         future.addListener(future1 -> latch.countDown());
         long next = ch.runScheduledPendingTasks();
         assertTrue(next > 0);
@@ -139,7 +139,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() { });
-        ScheduledFuture<?> future = ch.eventLoop().schedule(() -> { }, 1, TimeUnit.DAYS);
+        ScheduledFuture<?> future = ch.executor().schedule(() -> { }, 1, TimeUnit.DAYS);
         ch.finish();
         assertTrue(future.isCancelled());
     }

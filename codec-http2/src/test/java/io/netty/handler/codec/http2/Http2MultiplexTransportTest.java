@@ -222,7 +222,7 @@ public class Http2MultiplexTransportTest {
                                         ctx.write(new DefaultHttp2DataFrame(
                                                 Unpooled.copiedBuffer("Hello World",
                                                                       CharsetUtil.US_ASCII), true));
-                                        ctx.channel().eventLoop().execute(ctx::flush);
+                                        ctx.channel().executor().execute(ctx::flush);
                                     });
                                 }, 500, MILLISECONDS);
                             }

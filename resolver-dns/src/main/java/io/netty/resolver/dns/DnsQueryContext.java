@@ -156,7 +156,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         // Schedule a query timeout task if necessary.
         final long queryTimeoutMillis = parent.queryTimeoutMillis();
         if (queryTimeoutMillis > 0) {
-            timeoutFuture = parent.ch.eventLoop().schedule(() -> {
+            timeoutFuture = parent.ch.executor().schedule(() -> {
                 if (promise.isDone()) {
                     // Received a response before the query times out.
                     return;

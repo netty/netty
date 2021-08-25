@@ -414,7 +414,7 @@ abstract class DnsResolveContext<T> {
         }
         final Promise<Void> writePromise = parent.ch.newPromise();
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
-                parent.ch.eventLoop().newPromise();
+                parent.ch.executor().newPromise();
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
                 parent.query0(nameServerAddr, question, additionals, flush, writePromise, queryPromise);

@@ -302,7 +302,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             clearOpWrite();
 
             // Schedule flush again later so other tasks can be picked up in the meantime
-            eventLoop().execute(flushTask);
+            executor().execute(flushTask);
         }
     }
 

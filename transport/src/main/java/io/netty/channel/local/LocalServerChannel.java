@@ -112,10 +112,10 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     LocalChannel serve(final LocalChannel peer) {
         final LocalChannel child = newLocalChannel(peer);
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             serve0(child);
         } else {
-            eventLoop().execute(() -> serve0(child));
+            executor().execute(() -> serve0(child));
         }
         return child;
     }

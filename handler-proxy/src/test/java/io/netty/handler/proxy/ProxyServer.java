@@ -167,7 +167,7 @@ abstract class ProxyServer {
             boolean finished = handleProxyProtocol(ctx, msg);
             if (finished) {
                 this.finished = true;
-                Future<Channel> f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
+                Future<Channel> f = connectToDestination(ctx.channel().executor(), new BackendHandler(ctx));
                 f.addListener(future -> {
                     if (!future.isSuccess()) {
                         recordException(future.cause());
