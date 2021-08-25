@@ -32,10 +32,10 @@ jobs:
           - setup: linux-x86_64-java11
           - setup: linux-x86_64-java16
           - setup: linux-x86_64-java11-boringssl
-          - setuo: windows-x86_64-java11-boringssl
+          - setup: windows-x86_64-java11-boringssl
     steps:
       - name: Download Artifacts
-        uses: dawidd6/action-download-artifact@v2.11.0
+        uses: dawidd6/action-download-artifact@v2.14.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: ${{ github.event.workflow_run.workflow_id }}
@@ -44,7 +44,7 @@ jobs:
           # File location set in ci-pr.yml and must be coordinated.
           name: test-results-${{ matrix.setup }}
       - name: Publish Test Report
-        uses: scacap/action-surefire-report@v1.0.7
+        uses: scacap/action-surefire-report@v1.0.13
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           report_paths: '**/target/surefire-reports/TEST-*.xml'
