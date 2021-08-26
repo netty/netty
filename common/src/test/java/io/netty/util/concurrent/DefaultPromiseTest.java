@@ -38,6 +38,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static java.lang.Math.max;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -172,21 +173,21 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testCancellationExceptionIsReturnedAsCause() throws Exception {
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel(false));
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
         assertTrue(promise.isFailed());
@@ -194,8 +195,8 @@ public class DefaultPromiseTest {
 
     @Test
     public void testStackOverflowWithImmediateEventExecutorA() throws Exception {
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, true);
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, false);
     }
 
     @Test
@@ -216,8 +217,8 @@ public class DefaultPromiseTest {
 
     @Test
     public void testNoStackOverflowWithImmediateEventExecutorB() throws Exception {
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), INSTANCE, true);
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), INSTANCE, false);
     }
 
     @Test
@@ -354,7 +355,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalUncancellableCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -363,7 +364,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalSuccessCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -372,7 +373,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void setUncancellableGetNow() {
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         assertThrows(IllegalStateException.class, () -> promise.getNow());
         assertFalse(promise.isDone());
         assertTrue(promise.setUncancellable());
@@ -392,7 +393,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSync() throws InterruptedException {
         Exception exception = new Exception();
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.setFailure(exception);
         assertTrue(promise.isFailed());
 
@@ -406,7 +407,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwUncheckedSyncUninterruptibly() {
         Exception exception = new Exception();
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.setFailure(exception);
         assertTrue(promise.isFailed());
 
@@ -419,14 +420,14 @@ public class DefaultPromiseTest {
 
     @Test
     public void throwCancelled() throws InterruptedException {
-        DefaultPromise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.cancel(true);
         assertThrows(CancellationException.class, promise::sync);
     }
 
     @Test
     public void mustPassContextToContextListener() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         Object context = new Object();
         Object result = new Object();
         promise.addListener(context, (ctx, future) -> {
@@ -439,7 +440,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void mustPassNullContextToContextListener() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         Object result = new Object();
         promise.addListener(null, (ctx, future) -> {
             assertNull(ctx);
@@ -451,14 +452,14 @@ public class DefaultPromiseTest {
 
     @Test
     public void getNowOnUnfinishedPromiseMustThrow() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         assertThrows(IllegalStateException.class, () -> promise.getNow());
     }
 
     @SuppressWarnings("ThrowableNotThrown")
     @Test
     public void causeOnUnfinishedPromiseMustThrow() {
-        DefaultPromise<Object> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Object> promise = new DefaultPromise<>(INSTANCE);
         assertThrows(IllegalStateException.class, () -> promise.cause());
     }
 
@@ -601,7 +602,7 @@ public class DefaultPromiseTest {
 
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-        DefaultPromise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         promise.addListener(future ->
                 promise.addListener(future1 -> latch.countDown()));
         if (cause == null) {
@@ -629,12 +630,6 @@ public class DefaultPromiseTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS),
             "Should have notified " + expectedCount + " listeners");
-    }
-
-    private static final class TestEventExecutor extends SingleThreadEventExecutor {
-        TestEventExecutor() {
-            super(Executors.defaultThreadFactory());
-        }
     }
 
     private static RuntimeException fakeException() {
