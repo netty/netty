@@ -19,7 +19,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -144,7 +143,7 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     Promise<Void> promise = write.promise;
                     recycle(write, false);
-                    PromiseNotifier.cascade(ctx.write(msg), promise);
+                    ctx.write(msg).cascadeTo(promise);
                     write = next;
                 }
             }
@@ -221,7 +220,7 @@ public final class PendingWriteQueue {
         recycle(write, true);
 
         Future<Void> future = ctx.write(msg);
-        PromiseNotifier.cascade(future, promise);
+        future.cascadeTo(promise);
         return future;
     }
 

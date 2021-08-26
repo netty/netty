@@ -25,7 +25,6 @@ import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.StringUtil;
@@ -430,7 +429,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
 
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () -> PromiseNotifier.cascade(findAndInvokeBind(localAddress), promise), promise, null);
+        safeExecute(executor, () -> findAndInvokeBind(localAddress).cascadeTo(promise), promise, null);
         return promise;
     }
 
@@ -446,7 +445,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return findAndInvokeDeregister();
         }
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () -> PromiseNotifier.cascade(findAndInvokeDeregister(), promise), promise, null);
+        safeExecute(executor, () -> findAndInvokeDeregister().cascadeTo(promise), promise, null);
         return promise;
     }
     private Future<Void> findAndInvokeBind(SocketAddress localAddress) {
@@ -475,7 +474,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () ->
-                PromiseNotifier.cascade(findAndInvokeConnect(remoteAddress, localAddress), promise), promise, null);
+                findAndInvokeConnect(remoteAddress, localAddress).cascadeTo(promise), promise, null);
 
         return promise;
     }
@@ -509,8 +508,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return findAndInvokeDisconnect();
         }
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () ->
-                PromiseNotifier.cascade(findAndInvokeDisconnect(), promise), promise, null);
+        safeExecute(executor, () -> findAndInvokeDisconnect().cascadeTo(promise), promise, null);
         return promise;
     }
 
@@ -537,8 +535,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return findAndInvokeClose();
         }
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () ->
-                PromiseNotifier.cascade(findAndInvokeClose(), promise), promise, null);
+        safeExecute(executor, () -> findAndInvokeClose().cascadeTo(promise), promise, null);
         return promise;
     }
 
@@ -565,8 +562,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return findAndInvokeRegister();
         }
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () ->
-                PromiseNotifier.cascade(findAndInvokeRegister(), promise), promise, null);
+        safeExecute(executor, () -> findAndInvokeRegister().cascadeTo(promise), promise, null);
         return promise;
     }
 
@@ -912,7 +908,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 DefaultChannelHandlerContext next = findContext(ctx);
                 if (next == null) {
                     ReferenceCountUtil.release(msg);
-                    failRemoved(ctx).addListener(new PromiseNotifier<>(promise));
+                    failRemoved(ctx).cascadeTo(promise);
                     return;
                 }
                 write(next, msg, promise);
@@ -944,7 +940,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
 
         protected void write(DefaultChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            PromiseNotifier.cascade(ctx.invokeWrite(msg), promise);
+            ctx.invokeWrite(msg).cascadeTo(promise);
         }
     }
 

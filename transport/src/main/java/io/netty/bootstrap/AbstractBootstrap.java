@@ -26,7 +26,6 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -39,7 +38,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.netty.util.concurrent.PromiseNotifier.cascade;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -250,7 +248,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
             Promise<Void> promise = channel.newPromise();
-            cascade(true, promise, bindPromise, channel);
+            promise.map(v -> channel).cascadeTo(true, bindPromise);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -263,7 +261,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 } else {
                     Channel channel = future.getNow();
                     Promise<Void> promise = channel.newPromise();
-                    cascade(true, promise, bindPromise, channel);
+                    promise.map(v -> channel).cascadeTo(true, bindPromise);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
@@ -319,7 +317,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         // the pipeline in its channelRegistered() implementation.
         channel.executor().execute(() -> {
             if (regFuture.isSuccess()) {
-                PromiseNotifier.cascade(channel.bind(localAddress), promise)
+               channel.bind(localAddress).cascadeTo(promise)
                         .addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
             } else {
                 promise.setFailure(regFuture.cause());

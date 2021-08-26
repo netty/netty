@@ -23,7 +23,6 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
@@ -53,7 +52,7 @@ public class ResolveAddressHandler implements ChannelHandler {
                 if (cause != null) {
                     promise.setFailure(cause);
                 } else {
-                    ctx.connect(future.getNow(), localAddress).addListener(new PromiseNotifier<>(promise));
+                    ctx.connect(future.getNow(), localAddress).cascadeTo(promise);
                 }
                 ctx.pipeline().remove(ResolveAddressHandler.this);
             });

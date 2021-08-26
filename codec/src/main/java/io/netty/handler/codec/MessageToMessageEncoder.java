@@ -24,7 +24,6 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -102,7 +101,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                 } finally {
                     final int sizeMinusOne = out.size() - 1;
                     if (sizeMinusOne == 0) {
-                        PromiseNotifier.cascade(ctx.write(out.getUnsafe(0)), promise);
+                        ctx.write(out.getUnsafe(0)).cascadeTo(promise);
                     } else {
                         writePromiseCombiner(ctx, out, promise);
                     }

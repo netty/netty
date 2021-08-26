@@ -37,7 +37,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -345,7 +344,7 @@ public class EmbeddedChannelTest {
             @Override
             public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
                 Promise<Void> promise = ctx.newPromise();
-                ctx.executor().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
+                ctx.executor().execute(() -> ctx.write(msg).cascadeTo(promise));
                 return promise;
             }
         });
@@ -365,7 +364,7 @@ public class EmbeddedChannelTest {
             public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
                 Promise<Void> promise = ctx.newPromise();
                 ctx.executor().schedule(() -> {
-                    ctx.writeAndFlush(msg).addListener(new PromiseNotifier<>(promise));
+                    ctx.writeAndFlush(msg).cascadeTo(promise);
                 }, delay, TimeUnit.MILLISECONDS);
                 return promise;
             }

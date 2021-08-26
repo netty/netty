@@ -40,7 +40,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -793,12 +792,12 @@ public class SslHandler extends ByteToMessageDecoder {
                     final ByteBuf b = out;
                     out = null;
                     if (promise != null) {
-                        ctx.write(b).addListener(new PromiseNotifier<>(promise));
+                        ctx.write(b).cascadeTo(promise);
                     } else {
                         ctx.write(b);
                     }
                 } else if (promise != null) {
-                    ctx.write(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(promise));
+                    ctx.write(Unpooled.EMPTY_BUFFER).cascadeTo(promise);
                 }
                 // else out is not readable we can re-use it and so save an extra allocation
 
@@ -1885,7 +1884,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 //
                 // See https://github.com/netty/netty/issues/5931
                 Promise<Void> cascade = ctx.newPromise();
-                PromiseNotifier.cascade(false, cascade, promise);
+                cascade.cascadeTo(false, promise);
                 safeClose(ctx, closeNotifyPromise, cascade);
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
@@ -1980,7 +1979,7 @@ public class SslHandler extends ByteToMessageDecoder {
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
-            PromiseNotifier.cascade(oldHandshakePromise, newHandshakePromise);
+            oldHandshakePromise.cascadeTo(newHandshakePromise);
         } else {
             handshakePromise = newHandshakePromise;
             handshake(true);
@@ -2072,7 +2071,7 @@ public class SslHandler extends ByteToMessageDecoder {
             final ChannelHandlerContext ctx, final Future<Void> flushFuture,
             final Promise<Void> promise) {
         if (!ctx.channel().isActive()) {
-            ctx.close().addListener(new PromiseNotifier<>(promise));
+            ctx.close().cascadeTo(promise);
             return;
         }
 
@@ -2150,7 +2149,7 @@ public class SslHandler extends ByteToMessageDecoder {
         // IllegalStateException.
         // Also we not want to log if the notification happens as this is expected in some cases.
         // See https://github.com/netty/netty/issues/5598
-        PromiseNotifier.cascade(false, future, promise);
+        future.cascadeTo(false, promise);
     }
 
     /**

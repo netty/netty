@@ -21,7 +21,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.nio.channels.ClosedChannelException;
@@ -92,7 +91,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         flush(ctx);
         applyCloseSentTimeout(ctx);
         Promise<Void> promise = ctx.newPromise();
-        future.addListener(f -> ctx.close().addListener(new PromiseNotifier<>(promise)));
+        future.addListener(f -> ctx.close().cascadeTo(promise));
         return promise;
     }
 
@@ -105,7 +104,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         if (msg instanceof CloseWebSocketFrame) {
             Promise<Void> promise = ctx.newPromise();
             closeSent(promise);
-            ctx.write(msg).addListener(new PromiseNotifier<>(false, closeSent));
+            ctx.write(msg).cascadeTo(false, closeSent);
             return promise;
         }
         return ctx.write(msg);

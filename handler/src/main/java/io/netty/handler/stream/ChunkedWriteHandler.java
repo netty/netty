@@ -24,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -283,7 +282,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 requiresFlush = false;
             } else {
                 queue.remove();
-                ctx.write(pendingMessage).addListener(new PromiseNotifier<>(currentWrite.promise));
+                ctx.write(pendingMessage).cascadeTo(currentWrite.promise);
                 requiresFlush = true;
             }
 

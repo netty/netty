@@ -26,7 +26,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -101,7 +100,7 @@ public class HttpServerUpgradeHandlerTest {
                 assertTrue(inReadCall);
                 writeUpgradeMessage = true;
                 Promise<Void> promise = ctx.newPromise();
-                ctx.channel().executor().execute(() -> ctx.write(msg).addListener(new PromiseNotifier<>(promise)));
+                ctx.channel().executor().execute(() -> ctx.write(msg).cascadeTo(promise));
                 promise.addListener(f -> writeFlushed = true);
                 return promise;
             }

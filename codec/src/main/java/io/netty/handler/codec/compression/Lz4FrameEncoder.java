@@ -25,7 +25,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
@@ -348,7 +347,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             Promise<Void> promise = ctx.newPromise();
             executor.execute(() -> {
                 Future<Void> f = finishEncode(ctx());
-                PromiseNotifier.cascade(f, promise);
+                f.cascadeTo(promise);
             });
             return promise;
         }
@@ -361,12 +360,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             return ctx.close();
         }
         Promise<Void> promise = ctx.newPromise();
-        f.addListener(f1 ->
-                ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        f.addListener(f1 -> ctx.close().cascadeTo(false, promise));
         // Ensure the channel is closed even if the write operation completes in time.
-        ctx.executor().schedule(() -> {
-            ctx.close().addListener(new PromiseNotifier<>(false, promise));
-        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        ctx.executor().schedule(() -> ctx.close().cascadeTo(false, promise),
+                10, TimeUnit.SECONDS); // FIXME: Magic number
         return promise;
     }
 

@@ -25,6 +25,8 @@ import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FuturesTest {
@@ -211,5 +213,66 @@ class FuturesTest {
         assertFalse(strFut.await(100));
         mappingLatchExit.countDown();
         assertThat(strFut.get(5, SECONDS)).isEqualTo("42");
+    }
+
+    @Test
+    public void cascadeToNullPromise() {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Void> promise = new DefaultPromise<>(executor);
+        assertThrows(NullPointerException.class, () -> promise.cascadeTo(null));
+    }
+
+    @Test
+    public void cascadeToSuccess()  throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Integer> promise = new DefaultPromise<>(executor);
+        DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
+        promise.cascadeTo(promise2);
+        promise.setSuccess(1);
+        assertTrue(promise.isSuccess());
+        assertThat(promise2.get(1, SECONDS)).isEqualTo(1);
+    }
+
+    @Test
+    public void cascadeToFailure() throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Integer> promise = new DefaultPromise<>(executor);
+        DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
+        promise.cascadeTo(promise2);
+
+        Exception ex = new Exception();
+        promise.setFailure(ex);
+        assertTrue(promise.isFailed());
+        assertTrue(promise2.await(1, SECONDS));
+        assertTrue(promise2.isFailed());
+        assertSame(promise.cause(), promise2.cause());
+    }
+
+    @Test
+    public void cascadeToCancel() throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Integer> promise = new DefaultPromise<>(executor);
+        DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
+        promise.cascadeTo(promise2);
+
+        assertTrue(promise.cancel(false));
+        assertTrue(promise.isCancelled());
+        assertTrue(promise2.await(1, SECONDS));
+        assertTrue(promise2.isCancelled());
+    }
+
+    @Test
+    public void cascadeToCancelSecond() throws Exception {
+        TestEventExecutor executor = new TestEventExecutor();
+        DefaultPromise<Integer> promise = new DefaultPromise<>(executor);
+        DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
+        promise.cascadeTo(promise2);
+
+        assertTrue(promise2.cancel(false));
+        assertTrue(promise2.isCancelled());
+
+        //
+        assertTrue(promise.await(1, SECONDS));
+        assertTrue(promise2.isCancelled());
     }
 }

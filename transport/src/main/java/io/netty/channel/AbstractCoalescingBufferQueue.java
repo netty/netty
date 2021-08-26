@@ -21,7 +21,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -59,7 +58,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
     public final void addFirst(ByteBuf buf, Promise<Void> promise) {
-        addFirst(buf, new PromiseNotifier<Void>(promise));
+        addFirst(buf, f -> f.cascadeTo(promise));
     }
 
     private void addFirst(ByteBuf buf, FutureListener<Void> listener) {
@@ -86,7 +85,7 @@ public abstract class AbstractCoalescingBufferQueue {
     public final void add(ByteBuf buf, Promise<Void> promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
-        add(buf, new PromiseNotifier<Void>(promise));
+        add(buf, f -> f.cascadeTo(promise));
     }
 
     /**
@@ -254,7 +253,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     previousBuf = ((ByteBufConvertible) entry).asByteBuf();
                 } else if (entry instanceof Promise) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf).addListener(new PromiseNotifier<>((Promise<? super Void>) entry));
+                    ctx.write(previousBuf).cascadeTo((Promise<? super Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());
