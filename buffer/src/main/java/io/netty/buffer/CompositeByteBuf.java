@@ -374,7 +374,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         int readableBytes = 0;
         int capacity = capacity();
-        for (int i = 0; i < buffers.length; i++) {
+        for (int i = arrOffset; i < buffers.length; i++) {
             readableBytes += buffers[i].readableBytes();
 
             // Check if we would overflow.
