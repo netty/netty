@@ -375,7 +375,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int readableBytes = 0;
         int capacity = capacity();
         for (int i = arrOffset; i < buffers.length; i++) {
-            readableBytes += buffers[i].readableBytes();
+            ByteBuf b = buffers[i];
+            if (b == null) {
+                break;
+            }
+            readableBytes += b.readableBytes();
 
             // Check if we would overflow.
             // See https://github.com/netty/netty/issues/10194
