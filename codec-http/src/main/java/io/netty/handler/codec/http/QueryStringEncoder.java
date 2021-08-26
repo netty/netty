@@ -238,13 +238,13 @@ public class QueryStringEncoder {
      * unreserved characters do not need to be encoded, and include uppercase and lowercase
      * letters, decimal digits, hyphen, period, underscore, and tilde.
      * <p>
-     * unreserved  = ALPHA / DIGIT / "-" / "_" / "." / "*"
+     * unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~" / "*"
      *
      * @param ch the char to be judged whether it need to be encode
      * @return true or false
      */
     private static boolean dontNeedEncoding(char ch) {
         return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9'
-                || ch == '-' || ch == '_' || ch == '.' || ch == '*';
+                || ch == '-' || ch == '_' || ch == '.' || ch == '*' || ch == '~';
     }
 }
