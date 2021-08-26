@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -77,6 +78,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
+        when(eventLoop.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
 
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();
@@ -132,7 +134,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
-
+        when(eventLoop.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();
             return null;
