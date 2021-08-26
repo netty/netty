@@ -43,7 +43,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Check if the new size is not reaching the max limit allowed.
-     * The limit is always computed in term of bytes.
+     * The limit is always computed in terms of bytes.
      */
     void checkSize(long newSize) throws IOException;
 

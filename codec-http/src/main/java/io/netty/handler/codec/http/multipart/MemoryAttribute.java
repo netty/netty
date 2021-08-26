@@ -80,7 +80,12 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         int localsize = buffer.readableBytes();
-        checkSize(size + localsize);
+        try {
+            checkSize(size + localsize);
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (definedSize > 0 && definedSize < size + localsize) {
             definedSize = size + localsize;
         }

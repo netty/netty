@@ -122,7 +122,12 @@ public class MixedAttribute implements Attribute {
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
-            checkSize(attribute.length() + buffer.readableBytes());
+            try {
+                checkSize(attribute.length() + buffer.readableBytes());
+            } catch (IOException e) {
+                buffer.release();
+                throw e;
+            }
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
                         .getName(), attribute.definedLength(), baseDir, deleteOnExit);
@@ -199,7 +204,12 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        checkSize(buffer.readableBytes());
+        try {
+            checkSize(buffer.readableBytes());
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
