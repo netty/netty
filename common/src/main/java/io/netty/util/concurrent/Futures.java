@@ -26,30 +26,33 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Combinator operations on {@linkplain Future futures}.
+ * <p>
+ * Used for implementing {@link Future#map(Function)} and {@link Future#flatMap(Function)}
  *
  * @implNote The operations themselves are implemented as static inner classes instead of lambdas to aid debugging.
  */
-public final class Futures {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(Futures.class);
-    private static final PassThrough<?> PASS_THROUGH_CONSTANT = new PassThrough<Object>();
+final class Futures {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Futures.class);
+    private static final PassThrough<?> PASS_THROUGH = new PassThrough<Object>();
     private static final PropagateCancel PROPAGATE_CANCEL = new PropagateCancel();
 
     /**
      * Creates a new {@link Future} that will complete with the result of the given {@link Future} mapped through the
      * given mapper function.
      * <p>
-     * If the given future fails, then the returned future will fail as well, with the same exception.
-     * Cancellation of either future will cancel the other.
-     * If the mapper function throws, the returned future will fail, but the given future will be unaffected.
+     * If the given future fails, then the returned future will fail as well, with the same exception. Cancellation of
+     * either future will cancel the other. If the mapper function throws, the returned future will fail, but the given
+     * future will be unaffected.
      *
      * @param future The future whose result will flow to the returned future, through the mapping function.
-     * @param mapper The function that will convert the result of this future into the result of the returned future.
+     * @param mapper The function that will convert the result of the given future into the result of the returned
+     *               future.
      * @param <R>    The result type of the mapper function, and of the returned future.
-     * @return A new future instance that will complete with the mapped result of this future.
+     * @return A new future instance that will complete with the mapped result of the given future.
      */
     public static <V, R> Future<R> map(Future<V> future, Function<V, R> mapper) {
-        requireNonNull(future, "The future cannot be null.");
-        requireNonNull(mapper, "The mapper function cannot be null.");
+        requireNonNull(future, "future");
+        requireNonNull(mapper, "mapper");
         if (future.isFailed()) {
             @SuppressWarnings("unchecked") // Cast is safe because the result type is not used in failed futures.
             Future<R> failed = (Future<R>) future;
@@ -73,25 +76,26 @@ public final class Futures {
      * function was used with the {@link #map(Future, Function)} method, you would get back a {@code Future<Future<R>>}.
      * These nested futures are "flattened" into a {@code Future<R>} by this method.
      * <p>
-     * Effectively, this method behaves similar to this serial code, except asynchronously and with proper exception
-     * and cancellation handling:
+     * Effectively, this method behaves similar to this serial code, except asynchronously and with proper exception and
+     * cancellation handling:
      * <pre>{@code
      * V x = future.sync().getNow();
      * Future<R> y = mapper.apply(x);
      * R result = y.sync().getNow();
      * }</pre>
      * <p>
-     * If the given future fails, then the returned future will fail as well, with the same exception.
-     * Cancellation of either future will cancel the other.
-     * If the mapper function throws, the returned future will fail, but the given future will be unaffected.
+     * If the given future fails, then the returned future will fail as well, with the same exception. Cancellation of
+     * either future will cancel the other. If the mapper function throws, the returned future will fail, but the given
+     * future will be unaffected.
      *
-     * @param mapper The function that will convert the result of this future into the result of the returned future.
+     * @param mapper The function that will convert the result of the given future into the result of the returned
+     *               future.
      * @param <R>    The result type of the mapper function, and of the returned future.
-     * @return A new future instance that will complete with the mapped result of this future.
+     * @return A new future instance that will complete with the mapped result of the given future.
      */
     public static <V, R> Future<R> flatMap(Future<V> future, Function<V, Future<R>> mapper) {
-        requireNonNull(future, "The future cannot be null.");
-        requireNonNull(mapper, "The mapper function cannot be null.");
+        requireNonNull(future, "future");
+        requireNonNull(mapper, "mapper");
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new FlatMapper<>(promise, mapper));
         if (!future.isSuccess()) {
@@ -109,7 +113,7 @@ public final class Futures {
 
     @SuppressWarnings("unchecked")
     static <R> FutureContextListener<Promise<R>, Object> passThrough() {
-        return (FutureContextListener<Promise<R>, Object>) (FutureContextListener<?, ?>) PASS_THROUGH_CONSTANT;
+        return (FutureContextListener<Promise<R>, Object>) (FutureContextListener<?, ?>) PASS_THROUGH;
     }
 
     static <A, B> void propagateUncommonCompletion(Future<? extends A> completed, Promise<B> recipient) {
@@ -119,7 +123,7 @@ public final class Futures {
             recipient.cancel(false);
         } else {
             Throwable cause = completed.cause();
-            tryFailure(recipient, cause, LOGGER);
+            tryFailure(recipient, cause, logger);
         }
     }
 
@@ -144,7 +148,7 @@ public final class Futures {
                     R result = (R) completed.getNow();
                     recipient.trySuccess(result);
                 } catch (Throwable e) {
-                    tryFailure(recipient, e, LOGGER);
+                    tryFailure(recipient, e, logger);
                 }
             } else {
                 propagateUncommonCompletion(completed, recipient);
@@ -185,7 +189,7 @@ public final class Futures {
                     R mapped = mapper.apply(result);
                     recipient.trySuccess(mapped);
                 } catch (Throwable e) {
-                    tryFailure(recipient, e, LOGGER);
+                    tryFailure(recipient, e, logger);
                 }
             } else {
                 propagateUncommonCompletion(completed, recipient);
@@ -218,7 +222,7 @@ public final class Futures {
                         recipient.addListener(future, propagateCancel());
                     }
                 } catch (Throwable e) {
-                    tryFailure(recipient, e, LOGGER);
+                    tryFailure(recipient, e, logger);
                 }
             } else {
                 propagateUncommonCompletion(completed, recipient);
