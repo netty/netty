@@ -147,7 +147,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     }
 
     private void onQueryWriteCompletion(Future<? extends Void> writeFuture, Promise<Void> writePromise) {
-        if (!writeFuture.isSuccess()) {
+        if (writeFuture.isFailed()) {
             writePromise.setFailure(writeFuture.cause());
             tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
             return;

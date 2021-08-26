@@ -463,7 +463,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void handleHeaderFuture(Future<?> channelFuture, int streamId) {
-        if (!channelFuture.isSuccess()) {
+        if (channelFuture.isFailed()) {
             frameStreamToInitializeMap.remove(streamId);
         }
     }

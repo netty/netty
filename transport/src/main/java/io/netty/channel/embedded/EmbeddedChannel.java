@@ -586,7 +586,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void recordException(Future<?> future) {
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             recordException(future.cause());
         }
     }

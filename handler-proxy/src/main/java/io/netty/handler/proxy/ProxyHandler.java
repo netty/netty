@@ -62,7 +62,7 @@ public abstract class ProxyHandler implements ChannelHandler {
     private final Promise<Channel> connectPromise = new LazyPromise();
     private ScheduledFuture<?> connectTimeoutFuture;
     private final FutureListener<Void> writeListener = future -> {
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             setConnectFailure(future.cause());
         }
     };

@@ -301,7 +301,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         Channel channel = newChannel(loop);
 
         init(channel).addListener(future -> {
-            if (!future.isSuccess()) {
+            if (future.isFailed()) {
                 channel.unsafe().closeForcibly();
             }
         });

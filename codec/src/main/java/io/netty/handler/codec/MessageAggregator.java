@@ -225,7 +225,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 FutureContextListener<ChannelHandlerContext, Void> listener = continueResponseWriteListener;
                 if (listener == null) {
                     continueResponseWriteListener = listener = (context, future) -> {
-                        if (!future.isSuccess()) {
+                        if (future.isFailed()) {
                             context.fireExceptionCaught(future.cause());
                         }
                     };

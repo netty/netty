@@ -300,7 +300,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private static void handleEndOfInputFuture(Future<?> future, PendingWrite currentWrite) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             closeInput(input);
             currentWrite.fail(future.cause());
         } else {
@@ -314,7 +314,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private void handleFuture(Channel channel, Future<?> future, PendingWrite currentWrite, boolean resume) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             closeInput(input);
             currentWrite.fail(future.cause());
         } else {

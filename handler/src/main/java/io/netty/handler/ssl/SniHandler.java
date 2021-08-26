@@ -100,7 +100,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     @Override
     protected final void onLookupComplete(ChannelHandlerContext ctx,
                                           String hostname, Future<? extends SslContext> future) throws Exception {
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             final Throwable cause = future.cause();
             if (cause instanceof Error) {
                 throw (Error) cause;

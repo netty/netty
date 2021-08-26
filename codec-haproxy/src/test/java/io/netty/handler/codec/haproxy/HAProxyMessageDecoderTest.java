@@ -233,7 +233,7 @@ public class HAProxyMessageDecoderTest {
             // swallow this exception since we're just testing to be sure the channel was closed
         }
         boolean isComplete = closeFuture.awaitUninterruptibly(5000);
-        if (!isComplete || !closeFuture.isDone() || !closeFuture.isSuccess()) {
+        if (!isComplete || !closeFuture.isDone() || closeFuture.isFailed()) {
             fail("Expected channel close");
         }
     }

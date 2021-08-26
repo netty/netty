@@ -54,7 +54,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelActive();
         handshaker.handshake(ctx.channel()).addListener(future -> {
-            if (!future.isSuccess()) {
+            if (future.isFailed()) {
                 handshakePromise.tryFailure(future.cause());
                 ctx.fireExceptionCaught(future.cause());
             } else {

@@ -433,7 +433,7 @@ public class ParameterizedSslHandlerTest {
                             PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
 
                             handler.handshakeFuture().addListener(future -> {
-                                if (!future.isSuccess()) {
+                                if (future.isFailed()) {
                                     // Something bad happened during handshake fail the promise!
                                     serverPromise.tryFailure(future.cause());
                                 }

@@ -190,7 +190,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         Promise<Channel> resolveAndConnectPromise = new DefaultPromise<>(loop);
         if (regFuture.isDone()) {
-            if (!regFuture.isSuccess()) {
+            if (regFuture.isFailed()) {
                 return regFuture;
             }
             Channel channel = regFuture.getNow();

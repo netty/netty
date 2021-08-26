@@ -842,7 +842,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private void closeConnectionOnError(ChannelHandlerContext ctx, Future<?> future) {
-        if (!future.isSuccess()) {
+        if (future.isFailed()) {
             onConnectionError(ctx, true, future.cause(), null);
         }
     }
