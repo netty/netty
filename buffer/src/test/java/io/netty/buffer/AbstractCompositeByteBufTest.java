@@ -1643,6 +1643,47 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testOverflowWhileUseConstructorWithOffset() {
+        int capacity = 1024 * 1024; // 1MB
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
+            buffers.add(buffer.duplicate());
+        }
+        // Add one more
+        buffers.add(buffer.duplicate());
+
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    ByteBuf[] bufferArray = buffers.toArray(new ByteBuf[0]);
+                    new CompositeByteBuf(ALLOC, false, Integer.MAX_VALUE, bufferArray, 0);
+                }
+            });
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testNotOverflowWhileUseConstructorWithOffset() {
+        int capacity = 1024 * 1024; // 1MB
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
+            buffers.add(buffer.duplicate());
+        }
+        // Add one more
+        buffers.add(buffer.duplicate());
+
+        ByteBuf[] bufferArray = buffers.toArray(new ByteBuf[0]);
+        CompositeByteBuf compositeByteBuf =
+                new CompositeByteBuf(ALLOC, false, Integer.MAX_VALUE, bufferArray, bufferArray.length - 1);
+        compositeByteBuf.release();
+    }
+
+    @Test
     public void sliceOfCompositeBufferMustThrowISEAfterDiscardBytes() {
         CompositeByteBuf composite = compositeBuffer();
         composite.addComponent(true, buffer(8).writeZero(8));
