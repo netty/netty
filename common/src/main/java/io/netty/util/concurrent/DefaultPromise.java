@@ -31,8 +31,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> implements Promise<V> {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(DefaultPromise.class);
-    private static final InternalLogger REJECTED_EXECUTION_LOGGER =
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
+    private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
@@ -501,15 +501,15 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     private void notifyListeners0(DefaultFutureListeners listeners) {
-        listeners.notifyListeners(this, LOGGER);
+        listeners.notifyListeners(this, logger);
     }
 
     static <V> void notifyListener0(Future<V> future, FutureListener<? super V> l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
-            if (LOGGER.isWarnEnabled()) {
-                LOGGER.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
             }
         }
     }
@@ -652,7 +652,7 @@ public class DefaultPromise<V> implements Promise<V> {
         try {
             executor.execute(task);
         } catch (Throwable t) {
-            REJECTED_EXECUTION_LOGGER.error("Failed to submit a listener notification task. Event loop shut down?", t);
+            rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
         }
     }
 

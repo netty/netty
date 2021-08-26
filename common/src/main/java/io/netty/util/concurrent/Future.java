@@ -317,8 +317,8 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     }
 
     /**
-     * Creates a new {@link Future} that will complete with the result of this {@link Future} mapped through the given
-     * mapper function.
+     * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future} mapped
+     * through the given mapper function.
      * <p>
      * If this future fails, then the returned future will fail as well, with the same exception. Cancellation of either
      * future will cancel the other. If the mapper function throws, the returned future will fail, but this future will
@@ -333,8 +333,8 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     }
 
     /**
-     * Creates a new {@link Future} that will complete with the result of this {@link Future} flat-mapped through the
-     * given mapper function.
+     * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future}
+     * flat-mapped through the given mapper function.
      * <p>
      * The "flat" in "flat-map" means the given mapper function produces a result that itself is a future-of-R, yet this
      * method also returns a future-of-R, rather than a future-of-future-of-R. In other words, if the same mapper
