@@ -26,13 +26,17 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        ignore-if-missing: [false]
         include:
           - setup: linux-x86_64-java8
+            ignore-if-missing: true
           - setup: linux-x86_64-java11
           - setup: linux-x86_64-java16
           - setup: linux-x86_64-java11-boringssl
           - setup: windows-x86_64-java11-boringssl
+    continue-on-error: ${{ matrix.ignore-if-missing }}
     steps:
       - name: Download Artifacts
         uses: dawidd6/action-download-artifact@v2.14.1
