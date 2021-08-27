@@ -360,9 +360,9 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             return ctx.close();
         }
         Promise<Void> promise = ctx.newPromise();
-        f.addListener(f1 -> ctx.close().cascadeTo(false, promise));
+        f.addListener(f1 -> ctx.close().cascadeTo(promise));
         // Ensure the channel is closed even if the write operation completes in time.
-        ctx.executor().schedule(() -> ctx.close().cascadeTo(false, promise),
+        ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
                 10, TimeUnit.SECONDS); // FIXME: Magic number
         return promise;
     }

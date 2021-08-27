@@ -1884,7 +1884,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 //
                 // See https://github.com/netty/netty/issues/5931
                 Promise<Void> cascade = ctx.newPromise();
-                cascade.cascadeTo(false, promise);
+                cascade.cascadeTo(promise);
                 safeClose(ctx, closeNotifyPromise, cascade);
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
@@ -2149,7 +2149,7 @@ public class SslHandler extends ByteToMessageDecoder {
         // IllegalStateException.
         // Also we not want to log if the notification happens as this is expected in some cases.
         // See https://github.com/netty/netty/issues/5598
-        future.cascadeTo(false, promise);
+        future.cascadeTo(promise);
     }
 
     /**

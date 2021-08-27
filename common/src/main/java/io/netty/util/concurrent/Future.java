@@ -370,21 +370,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * @return          itself
      */
     default Future<V> cascadeTo(final Promise<? super V> promise) {
-        cascadeTo(true, promise);
-        return this;
-    }
-
-    /**
-     * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise}
-     * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
-     * the {@link Promise} is cancelled and vice-versa.
-     *
-     * @param logNotifyFailure  {@code true} if logging should be done in case notification fails.
-     * @param promise           the {@link Promise} which will be notified
-     * @return                  itself
-     */
-    default Future<V> cascadeTo(boolean logNotifyFailure, final Promise<? super V> promise) {
-        Futures.cascade(logNotifyFailure, this, promise);
+        Futures.cascade(this, promise);
         return this;
     }
 }

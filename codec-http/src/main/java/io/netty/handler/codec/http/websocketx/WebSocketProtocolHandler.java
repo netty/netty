@@ -104,7 +104,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         if (msg instanceof CloseWebSocketFrame) {
             Promise<Void> promise = ctx.newPromise();
             closeSent(promise);
-            ctx.write(msg).cascadeTo(false, closeSent);
+            ctx.write(msg).cascadeTo(closeSent);
             return promise;
         }
         return ctx.write(msg);

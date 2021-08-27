@@ -21,9 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
-import static io.netty.util.internal.PromiseNotificationUtil.tryCancel;
 import static io.netty.util.internal.PromiseNotificationUtil.tryFailure;
-import static io.netty.util.internal.PromiseNotificationUtil.trySuccess;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -125,7 +123,7 @@ final class Futures {
             recipient.cancel(false);
         } else {
             Throwable cause = completed.cause();
-            tryFailure(recipient, cause, logger);
+            recipient.tryFailure(cause);
         }
     }
 
@@ -237,66 +235,19 @@ final class Futures {
      * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
      * the {@link Promise} is cancelled and vice-versa.
      *
-     * @param logNotifyFailure  {@code true} if logging should be done in case notification fails.
      * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
      * @param promise           the {@link Promise} which will be notified
      * @param <V>               the type of the value.
      */
-    static <V> void cascade(boolean logNotifyFailure, final Future<V> future,
-                                        final Promise<? super V> promise) {
+    static <V> void cascade(final Future<V> future, final Promise<? super V> promise) {
         requireNonNull(future, "promise");
         requireNonNull(promise, "promise");
-        promise.addListener(future, PromiseNotifier::propagateCancel);
-        future.addListener(new PromiseNotifier<V>(logNotifyFailure, promise), PromiseNotifier::propagateComplete);
-    }
 
-    /**
-     * A {@link FutureListener} implementation which takes other {@link Promise}s
-     * and notifies them on completion.
-     *
-     * @param <V> the type of value returned by the future
-     */
-    private static final class PromiseNotifier<V> implements FutureListener<V> {
-        private final Promise<? super V> promise;
-        private final boolean logNotifyFailure;
-
-        /**
-         * Create a new instance.
-         *
-         * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
-         * @param promise  the {@link Promise} to notify once this {@link FutureListener} is notified.
-         */
-        PromiseNotifier(boolean logNotifyFailure, Promise<? super V> promise) {
-            this.promise = promise;
-            this.logNotifyFailure = logNotifyFailure;
+        if (!future.isSuccess()) {
+            // Propagate cancellation if future is either incomplete or failed.
+            // Failed means it could be cancelled, so that needs to be propagated.
+            promise.addListener(future, propagateCancel());
         }
-
-        static <V, F extends Future<?>> void propagateCancel(F target, Future<? extends V> source) {
-            if (source.isCancelled()) {
-                target.cancel(false);
-            }
-        }
-
-        static <V> void propagateComplete(PromiseNotifier<V> target, Future<? extends V> source) throws Exception {
-            if (target.promise.isCancelled() && source.isCancelled()) {
-                // Just return if we propagate a cancel from the promise to the future and both are notified already
-                return;
-            }
-            target.operationComplete(source);
-        }
-
-        @Override
-        public void operationComplete(Future<? extends V> future) throws Exception {
-            InternalLogger internalLogger = logNotifyFailure ? logger : null;
-            if (future.isSuccess()) {
-                V result = future.get();
-                trySuccess(promise, result, internalLogger);
-            } else if (future.isCancelled()) {
-                tryCancel(promise, internalLogger);
-            } else {
-                Throwable cause = future.cause();
-                tryFailure(promise, cause, internalLogger);
-            }
-        }
+        future.addListener(promise, passThrough());
     }
 }
