@@ -240,7 +240,7 @@ final class Futures {
      * @param <V>               the type of the value.
      */
     static <V> void cascade(final Future<V> future, final Promise<? super V> promise) {
-        requireNonNull(future, "promise");
+        requireNonNull(future, "future");
         requireNonNull(promise, "promise");
 
         if (!future.isSuccess()) {
