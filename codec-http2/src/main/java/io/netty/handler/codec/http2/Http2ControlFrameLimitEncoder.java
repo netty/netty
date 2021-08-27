@@ -49,32 +49,24 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
 
     @Override
     public Future<Void> writeSettingsAck(ChannelHandlerContext ctx) {
-        try {
-            FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
-            Future<Void> f = super.writeSettingsAck(ctx);
-            if (listener != null) {
-                f.addListener(listener);
-            }
-            return f;
-        } catch (Http2Exception e) {
-            return ctx.newFailedFuture(e);
+        FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+        Future<Void> f = super.writeSettingsAck(ctx);
+        if (listener != null) {
+            f.addListener(listener);
         }
+        return f;
     }
 
     @Override
     public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data) {
         // Only apply the limit to ping acks.
         if (ack) {
-            try {
-                FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
-                Future<Void> f = super.writePing(ctx, ack, data);
-                if (listener != null) {
-                    f.addListener(listener);
-                }
-                return f;
-            } catch (Http2Exception e) {
-                return ctx.newFailedFuture(e);
+            FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+            Future<Void> f = super.writePing(ctx, ack, data);
+            if (listener != null) {
+                f.addListener(listener);
             }
+            return f;
         }
         return super.writePing(ctx, ack, data);
     }
@@ -82,19 +74,15 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     @Override
     public Future<Void> writeRstStream(
             ChannelHandlerContext ctx, int streamId, long errorCode) {
-        try {
-            FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
-            Future<Void> f = super.writeRstStream(ctx, streamId, errorCode);
-            if (listener != null) {
-                f.addListener(listener);
-            }
-            return f;
-        } catch (Http2Exception e) {
-            return ctx.newFailedFuture(e);
+        FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+        Future<Void> f = super.writeRstStream(ctx, streamId, errorCode);
+        if (listener != null) {
+            f.addListener(listener);
         }
+        return f;
     }
 
-    private FutureListener<Void> handleOutstandingControlFrames(ChannelHandlerContext ctx) throws Http2Exception {
+    private FutureListener<Void> handleOutstandingControlFrames(ChannelHandlerContext ctx) {
         if (!limitReached) {
             if (outstandingControlFrames == maxOutstandingControlFrames) {
                 // Let's try to flush once as we may be able to flush some of the control frames.

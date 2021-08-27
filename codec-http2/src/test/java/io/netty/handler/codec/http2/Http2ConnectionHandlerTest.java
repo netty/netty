@@ -32,7 +32,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -170,7 +169,6 @@ public class Http2ConnectionHandlerTest {
         }).when(future).addListener(any(FutureListener.class));
         when(future.cause()).thenReturn(fakeException);
         when(channel.isActive()).thenReturn(true);
-        //when(future.isDone()).thenReturn(true);
         when(future.isFailed()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
         when(connection.remote()).thenReturn(remote);

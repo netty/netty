@@ -158,7 +158,7 @@ public class Http2ControlFrameLimitEncoderTest {
     private Promise<Void> handlePromise() {
         Promise<Void> p =  ImmediateEventExecutor.INSTANCE.newPromise();
         if (++numWrites == 2) {
-            return p.setSuccess(null);
+            p.setSuccess(null);
         }
         return p;
     }
