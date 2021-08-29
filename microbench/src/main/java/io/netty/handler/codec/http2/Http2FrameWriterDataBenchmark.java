@@ -24,7 +24,6 @@ import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -146,20 +145,19 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                     // Only the last frame is not retained. Until then, the outer finally must release.
                     ByteBuf frameHeader = header.slice(frameDataBytes, framePaddingBytes, lastFrame && endStream);
                     needToReleaseHeaders = !lastFrame;
-                    ctx.write(lastFrame ? frameHeader : frameHeader.retain())
-                            .addListener(new PromiseNotifier<>(promiseAggregator.newPromise()));
+                    ctx.write(lastFrame ? frameHeader : frameHeader.retain()).cascadeTo(promiseAggregator.newPromise());
 
                     // Write the frame data.
                     ByteBuf frameData = data.readSlice(frameDataBytes);
                     // Only the last frame is not retained. Until then, the outer finally must release.
                     needToReleaseData = !lastFrame;
                     ctx.write(lastFrame ? frameData : frameData.retain())
-                            .addListener(new PromiseNotifier<>(promiseAggregator.newPromise()));
+                            .cascadeTo(promiseAggregator.newPromise());
 
                     // Write the frame padding.
                     if (paddingBytes(framePaddingBytes) > 0) {
                         ctx.write(ZERO_BUFFER.slice(0, paddingBytes(framePaddingBytes)))
-                                .addListener(new PromiseNotifier<>(promiseAggregator.newPromise()));
+                                .cascadeTo(promiseAggregator.newPromise());
                     }
                 } while (!lastFrame);
             } catch (Throwable t) {

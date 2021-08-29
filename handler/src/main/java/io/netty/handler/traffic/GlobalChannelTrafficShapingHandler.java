@@ -24,7 +24,6 @@ import io.netty.util.Attribute;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -495,7 +494,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                         perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
                         perChannel.queueSize -= size;
                         queuesSize.addAndGet(-size);
-                        ctx.write(toSend.toSend).addListener(new PromiseNotifier<>(toSend.promise));
+                        ctx.write(toSend.toSend).cascadeTo(toSend.promise);
                     }
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
@@ -714,7 +713,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
                 perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
-                ctx.write(msg).addListener(new PromiseNotifier<>(promise));
+                ctx.write(msg).cascadeTo(promise);
                 perChannel.lastWriteTimestamp = now;
                 return;
             }
@@ -749,7 +748,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
                     perChannel.queueSize -= size;
                     queuesSize.addAndGet(-size);
-                    ctx.write(newToSend.toSend).addListener(new PromiseNotifier<>(newToSend.promise));
+                    ctx.write(newToSend.toSend).cascadeTo(newToSend.promise);
                     perChannel.lastWriteTimestamp = now;
                 } else {
                     perChannel.messagesQueue.addFirst(newToSend);

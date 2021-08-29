@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
@@ -164,7 +163,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             Promise<Void> p = ctx.newPromise();
             executor.execute(() -> {
                 Future<Void> f = finishEncode(ctx());
-                PromiseNotifier.cascade(f, p);
+                f.cascadeTo(p);
             });
             return p;
         }
@@ -262,11 +261,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return ctx.close();
         }
         Promise<Void> promise = ctx.newPromise();
-        f.addListener(f1 -> ctx.close().addListener(new PromiseNotifier<>(false, promise)));
+        f.addListener(f1 -> ctx.close().cascadeTo(promise));
         // Ensure the channel is closed even if the write operation completes in time.
-        ctx.executor().schedule(() -> {
-            ctx.close().addListener(new PromiseNotifier<>(false, promise));
-        }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+        ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
+                10, TimeUnit.SECONDS); // FIXME: Magic number
         return promise;
     }
 

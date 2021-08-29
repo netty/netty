@@ -27,7 +27,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -925,7 +924,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 if (promise == null) {
                     ctx.close();
                 } else {
-                    ctx.close().addListener(new PromiseNotifier<>(promise));
+                    ctx.close().cascadeTo(promise);
                 }
             } else if (promise != null) {
                 promise.setSuccess(null);

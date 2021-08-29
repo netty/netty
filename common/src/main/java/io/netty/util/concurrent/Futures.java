@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  */
 final class Futures {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Futures.class);
-    private static final PassThrough<?> PASS_THROUGH = new PassThrough<Object>();
+    private static final PassThrough<?> PASS_THROUGH = new PassThrough<>();
     private static final PropagateCancel PROPAGATE_CANCEL = new PropagateCancel();
 
     /**
@@ -123,7 +123,7 @@ final class Futures {
             recipient.cancel(false);
         } else {
             Throwable cause = completed.cause();
-            tryFailure(recipient, cause, logger);
+            recipient.tryFailure(cause);
         }
     }
 
@@ -228,5 +228,26 @@ final class Futures {
                 propagateUncommonCompletion(completed, recipient);
             }
         }
+    }
+
+    /**
+     * Link the {@link Future} and {@link Promise} such that if the {@link Future} completes the {@link Promise}
+     * will be notified. Cancellation is propagated both ways such that if the {@link Future} is cancelled
+     * the {@link Promise} is cancelled and vice-versa.
+     *
+     * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
+     * @param promise           the {@link Promise} which will be notified
+     * @param <V>               the type of the value.
+     */
+    static <V> void cascade(final Future<V> future, final Promise<? super V> promise) {
+        requireNonNull(future, "future");
+        requireNonNull(promise, "promise");
+
+        if (!future.isSuccess()) {
+            // Propagate cancellation if future is either incomplete or failed.
+            // Failed means it could be cancelled, so that needs to be propagated.
+            promise.addListener(future, propagateCancel());
+        }
+        future.addListener(promise, passThrough());
     }
 }

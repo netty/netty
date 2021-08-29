@@ -41,7 +41,6 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.Timeout;
@@ -430,7 +429,7 @@ public class ParameterizedSslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
+                            handler.sslCloseFuture().cascadeTo(serverPromise);
 
                             handler.handshakeFuture().addListener(future -> {
                                 if (future.isFailed()) {
@@ -466,7 +465,7 @@ public class ParameterizedSslHandlerTest {
 
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
-                            PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
+                            handler.sslCloseFuture().cascadeTo(clientPromise);
                             handler.handshakeFuture().addListener(future -> {
                                 if (future.isSuccess()) {
                                     closeSent.compareAndSet(false, true);

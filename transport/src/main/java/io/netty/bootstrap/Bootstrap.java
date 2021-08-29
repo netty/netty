@@ -36,7 +36,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static io.netty.util.concurrent.PromiseNotifier.cascade;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -268,7 +267,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 future = channel.connect(remoteAddress, localAddress);
             }
             future.addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
-            cascade(true, future, promise, channel);
+            future.map(v -> channel).cascadeTo(promise);
         });
     }
 

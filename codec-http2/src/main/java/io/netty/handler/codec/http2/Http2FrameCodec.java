@@ -31,7 +31,6 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -340,7 +339,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
                     unknownFrame.flags(), unknownFrame.content(), promise);
         } else if (!(msg instanceof Http2Frame)) {
-            ctx.write(msg).addListener(new PromiseNotifier<>(promise));
+            ctx.write(msg).cascadeTo(promise);
         } else {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new UnsupportedMessageTypeException(msg));
