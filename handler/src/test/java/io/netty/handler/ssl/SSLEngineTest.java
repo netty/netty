@@ -780,11 +780,11 @@ public abstract class SSLEngineTest {
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
     }
 
-    private void mySetupMutualAuth(final SSLEngineTestParam param, KeyManagerFactory serverKMF,
-                                   final File serverTrustManager,
-                                   KeyManagerFactory clientKMF, File clientTrustManager,
-                                   ClientAuth clientAuth, final boolean failureExpected,
-                                   final boolean serverInitEngine)
+    protected void mySetupMutualAuth(final SSLEngineTestParam param, KeyManagerFactory serverKMF,
+                                     final File serverTrustManager,
+                                     KeyManagerFactory clientKMF, File clientTrustManager,
+                                     ClientAuth clientAuth, final boolean failureExpected,
+                                     final boolean serverInitEngine)
             throws SSLException, InterruptedException {
         serverSslCtx =
                 wrapContext(param, SslContextBuilder.forServer(serverKMF)
@@ -908,7 +908,7 @@ public abstract class SSLEngineTest {
         clientChannel = ccf.channel();
     }
 
-    private static void rethrowIfNotNull(Throwable error) {
+    protected static void rethrowIfNotNull(Throwable error) {
         if (error != null) {
             throw new AssertionFailedError("Expected no error", error);
         }
