@@ -19,44 +19,38 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureContextListener;
 
 /**
- * {@link FutureContextListener} listeners that take a channel context, and listens to the result of a {@link Future}.
- * The result of the asynchronous {@link Channel} I/O operation is notified once this listener is added by calling
- * {@link Future#addListener(Object, FutureContextListener)} with the {@link Channel} as context.
+ * {@link FutureContextListener} listeners that take a context, and listens to the result of a {@link Future}.
+ * The result of the asynchronous {@link ChannelOutboundInvoker} I/O operation is notified once this listener is added
+ * by calling {@link Future#addListener(Object, FutureContextListener)} with the {@link ChannelOutboundInvoker} /
+ * {@link Channel} as context.
  */
-public enum ChannelFutureListeners implements FutureContextListener<Channel, Object> {
-    /**
-     * A {@link FutureContextListener} that closes the {@link Channel} which is associated with the specified {@link
-     * Future}.
-     */
-    CLOSE,
+public final class ChannelFutureListeners {
 
     /**
-     * A {@link FutureContextListener} that closes the {@link Channel} when the operation ended up with a failure or
-     * cancellation rather than a success.
+     * A {@link FutureContextListener} that closes the {@link ChannelOutboundInvoker} which is associated with
+     * the specified {@link Future}.
      */
-    CLOSE_ON_FAILURE,
+    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE = (c, f) -> c.close();
+
+    /**
+     * A {@link FutureContextListener} that closes the {@link ChannelOutboundInvoker} when the operation ended up with
+     * a failure or cancellation rather than a success.
+     */
+    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE_ON_FAILURE = (c, f) -> {
+        if (f.isFailed()) {
+            c.close();
+        }
+    };
 
     /**
      * A {@link FutureContextListener} that forwards the {@link Throwable} of the {@link Future} into the {@link
      * ChannelPipeline}. This mimics the old behavior of Netty 3.
      */
-    FIRE_EXCEPTION_ON_FAILURE;
-
-    @Override
-    public void operationComplete(Channel channel, Future<?> future) throws Exception {
-        switch (this) {
-        case CLOSE:
-            channel.close();
-            break;
-        case CLOSE_ON_FAILURE:
-            if (future.isFailed()) {
-                channel.close();
-            }
-            break;
-        case FIRE_EXCEPTION_ON_FAILURE:
-            if (future.isFailed()) {
-                channel.pipeline().fireExceptionCaught(future.cause());
-            }
+    public static final FutureContextListener<Channel, Object> FIRE_EXCEPTION_ON_FAILURE = (c, f) -> {
+        if (f.isFailed()) {
+            c.pipeline().fireExceptionCaught(f.cause());
         }
-    }
+    };
+
+    private ChannelFutureListeners() { }
 }
