@@ -133,7 +133,6 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     // Write trailing headers.
                     writeHeaders(ctx, encoder, currentStreamId, trailers, http2Trailers, true)
                             .cascadeTo(promiseAggregator.newPromise());
-
                 }
             }
         } catch (Throwable t) {
