@@ -244,7 +244,7 @@ public class CorsHandler implements ChannelHandler {
 
         Future<Void> future = ctx.writeAndFlush(response);
         if (!keepAlive) {
-            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            future.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 }

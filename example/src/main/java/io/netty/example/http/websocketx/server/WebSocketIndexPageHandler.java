@@ -101,7 +101,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
         if (!HttpUtil.isKeepAlive(req) || res.status().code() != 200) {
             // Tell the client we're going to close the connection.
             res.headers().set(CONNECTION, CLOSE);
-            ctx.writeAndFlush(res).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.writeAndFlush(res).addListener(ctx, ChannelFutureListeners.CLOSE);
         } else {
             if (req.protocolVersion().equals(HTTP_1_0)) {
                 res.headers().set(CONNECTION, KEEP_ALIVE);

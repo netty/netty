@@ -448,7 +448,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
                 closeMessage = new CloseWebSocketFrame(closeStatus, reasonText);
             }
-            ctx.writeAndFlush(closeMessage).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.writeAndFlush(closeMessage).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
         throw ex;
     }

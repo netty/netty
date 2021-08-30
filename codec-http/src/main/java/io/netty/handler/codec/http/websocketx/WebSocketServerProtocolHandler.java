@@ -241,7 +241,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 closeSent(promise);
                 handshaker.close(ctx, (CloseWebSocketFrame) frame).cascadeTo(promise);
             } else {
-                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx, ChannelFutureListeners.CLOSE);
             }
             return;
         }
@@ -258,7 +258,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cause instanceof WebSocketHandshakeException) {
             FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
-            ctx.channel().writeAndFlush(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.channel().writeAndFlush(response).addListener(ctx, ChannelFutureListeners.CLOSE);
         } else {
             ctx.fireExceptionCaught(cause);
             ctx.close();

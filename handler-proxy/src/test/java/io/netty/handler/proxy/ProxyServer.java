@@ -273,7 +273,7 @@ abstract class ProxyServer {
                     ctx.write(Unpooled.copiedBuffer("2\n", CharsetUtil.US_ASCII));
                 } else if ("C\n".equals(str)) {
                     ctx.write(Unpooled.copiedBuffer("3\n", CharsetUtil.US_ASCII))
-                       .addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                       .addListener(ctx, ChannelFutureListeners.CLOSE);
                 } else {
                     throw new IllegalStateException("unexpected message: " + str);
                 }

@@ -219,7 +219,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Decide whether to close the connection or not.
         if (!keepAlive) {
             // Close the connection when the whole content is written out.
-            lastContentFuture.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            lastContentFuture.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 
@@ -353,7 +353,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         if (!keepAlive) {
             // Close the connection as soon as the response is sent.
-            flushPromise.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            flushPromise.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 

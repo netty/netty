@@ -447,7 +447,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                            ctx.writeAndFlush(buf).addListener(ctx, ChannelFutureListeners.CLOSE);
                             serverInitializedLatch.countDown();
                         }
 

@@ -130,9 +130,9 @@ public class AutobahnServerHandler implements ChannelHandler {
         }
 
         // Send the response and close the connection if necessary.
-        Future<Void> f = ctx.channel().writeAndFlush(res);
+        Future<Void> f = ctx.writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            f.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 

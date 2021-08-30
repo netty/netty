@@ -438,16 +438,16 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         }
 
         // Write the response.
-        Future<Void> future = ctx.channel().writeAndFlush(response);
+        Future<Void> future = ctx.writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (!keepAlive) {
-            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            future.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(Level.WARNING, responseContent.toString(), cause);
-        ctx.channel().close();
+        ctx.close();
     }
 }

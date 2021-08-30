@@ -238,7 +238,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 Future<Void> future = ctx.writeAndFlush(continueResponse).addListener(ctx, listener);
 
                 if (closeAfterWrite) {
-                    future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                    future.addListener(ctx, ChannelFutureListeners.CLOSE);
                     return;
                 }
                 if (handlingOversizedMessage) {

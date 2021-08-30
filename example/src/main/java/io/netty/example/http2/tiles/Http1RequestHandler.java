@@ -60,7 +60,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
             } else {
                 // Tell the client we're going to close the connection.
                 response.headers().set(CONNECTION, CLOSE);
-                ctx.writeAndFlush(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                ctx.writeAndFlush(response).addListener(ctx, ChannelFutureListeners.CLOSE);
             }
         }, latency, TimeUnit.MILLISECONDS);
     }

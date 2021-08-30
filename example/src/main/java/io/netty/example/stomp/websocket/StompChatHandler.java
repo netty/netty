@@ -175,7 +175,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
 
         StompFrame receiptFrame = new DefaultStompFrame(StompCommand.RECEIPT);
         receiptFrame.headers().set(RECEIPT_ID, receiptId);
-        ctx.writeAndFlush(receiptFrame).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+        ctx.writeAndFlush(receiptFrame).addListener(ctx, ChannelFutureListeners.CLOSE);
     }
 
     private static void sendErrorFrame(String message, String description, ChannelHandlerContext ctx) {
@@ -186,7 +186,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
             errorFrame.content().writeCharSequence(description, CharsetUtil.UTF_8);
         }
 
-        ctx.writeAndFlush(errorFrame).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+        ctx.writeAndFlush(errorFrame).addListener(ctx, ChannelFutureListeners.CLOSE);
     }
 
     private static StompFrame transformToMessage(StompFrame sendFrame, StompSubscription subscription) {
