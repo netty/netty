@@ -35,8 +35,8 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -556,7 +556,6 @@ public class Http2ConnectionRoundtripTest {
         SECOND_WITH_TRAILERS
     }
 
-    /*
     @Test
     public void writeOfEmptyReleasedBufferSingleBufferQueuedInFlowControllerShouldFail() throws Exception {
         writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SINGLE_END_OF_STREAM);
@@ -577,18 +576,16 @@ public class Http2ConnectionRoundtripTest {
         writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SECOND_WITH_TRAILERS);
     }
 
-     */
-
     private void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
-        Promise<Void> promise = newPromise();
+        Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false);
             ByteBuf emptyBuf = Unpooled.buffer();
             emptyBuf.release();
-            Future<Void> future;
+            final Future<Void> future;
             switch (mode) {
                 case SINGLE_END_OF_STREAM:
                     future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, true);
@@ -611,8 +608,8 @@ public class Http2ConnectionRoundtripTest {
                 default:
                     throw new Error();
             }
-            PromiseNotifier.cascade(future, promise);
             http2Client.flush(ctx());
+            future.cascadeTo(promise);
         });
 
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
@@ -651,9 +648,8 @@ public class Http2ConnectionRoundtripTest {
             });
 
             http2Client.encoder().flowController().initialWindowSize(4);
-            PromiseNotifier.cascade(
-                    http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false),
-                    dataPromise);
+            http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false)
+                    .cascadeTo(dataPromise);
             assertTrue(http2Client.encoder().flowController()
                     .hasFlowControlled(http2Client.connection().stream(3)));
 

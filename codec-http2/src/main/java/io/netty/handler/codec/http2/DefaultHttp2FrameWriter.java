@@ -241,7 +241,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Use a try/finally here in case the data has been released before calling this method. This is not
             // necessary above because we internally allocate frameHeader.
             try {
-                if (data != null) {
+                if (data != null &&
+                        // Check if the data was released already.
+                        data.refCnt() > 0) {
                     data.release();
                 }
             } finally {
