@@ -69,8 +69,15 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
     }
 
     @Disabled("Possible Conscrypt bug")
+    @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         // Skip
         // https://github.com/google/conscrypt/issues/851
+    }
+
+    @Disabled("Not supported")
+    @Override
+    public void testRSASSAPSS(SSLEngineTestParam param) {
+        // skip
     }
 }

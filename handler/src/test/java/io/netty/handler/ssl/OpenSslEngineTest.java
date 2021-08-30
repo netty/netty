@@ -1567,32 +1567,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
+    @Override
     public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
-        char[] password = "password".toCharArray();
-
-        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("rsaValidations-server-keystore.p12"), password);
-
-        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("rsaValidation-user-certs.p12"), password);
-
-        final KeyManagerFactory serverKeyManagerFactory =
-                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        serverKeyManagerFactory.init(serverKeyStore, password);
-        final KeyManagerFactory clientKeyManagerFactory =
-                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        clientKeyManagerFactory.init(clientKeyStore, password);
-
-        File commonChain = ResourcesUtil.getFile(getClass(), "rsapss-ca-cert.cert");
-        ClientAuth auth = ClientAuth.REQUIRE;
-
-        mySetupMutualAuth(param, serverKeyManagerFactory, commonChain, clientKeyManagerFactory, commonChain,
-                auth, false, true);
-
-        assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
-        rethrowIfNotNull(clientException);
-        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
-        rethrowIfNotNull(serverException);
+        super.testRSASSAPSS(param);
     }
 }
