@@ -59,7 +59,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
         try {
             doResolve(inetHost, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }
@@ -77,7 +77,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
         try {
             doResolveAll(inetHost, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }

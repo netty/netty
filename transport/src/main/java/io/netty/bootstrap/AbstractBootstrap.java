@@ -243,12 +243,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             return regFuture;
         }
 
-        Promise<Channel> bindPromise = new DefaultPromise<>(loop);
+        Promise<Channel> bindPromise = loop.newPromise();
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
             Promise<Void> promise = channel.newPromise();
-            promise.map(v -> channel).cascadeTo(bindPromise);
+            promise.toFuture().map(v -> channel).cascadeTo(bindPromise);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -261,12 +261,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 } else {
                     Channel channel = future.getNow();
                     Promise<Void> promise = channel.newPromise();
-                    promise.map(v -> channel).cascadeTo(bindPromise);
+                    promise.toFuture().map(v -> channel).cascadeTo(bindPromise);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
         }
-        return bindPromise;
+        return bindPromise.toFuture();
     }
 
     final Future<Channel> initAndRegister(EventLoop loop) {
@@ -274,10 +274,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         try {
             channel = newChannel(loop);
         } catch (Throwable t) {
-            return DefaultPromise.newFailedPromise(loop, t);
+            return loop.newFailedFuture(t);
         }
 
-        Promise<Channel> promise = new DefaultPromise<>(loop);
+        Promise<Channel> promise = loop.newPromise();
         loop.execute(() -> init(channel).addListener(future -> {
             if (future.isSuccess()) {
                 // TODO eventually I think we'd like to be able to either pass the generic promise down,
@@ -291,7 +291,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             }
         }));
 
-        return promise;
+        return promise.toFuture();
     }
 
     final Channel initWithoutRegister() throws Exception {

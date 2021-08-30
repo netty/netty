@@ -809,7 +809,7 @@ public class LocalChannelTest {
             cc.connect(sc.localAddress()).sync();
             Future<Void> f = ref.get().sync();
 
-            assertPromise.syncUninterruptibly();
+            assertPromise.toFuture().syncUninterruptibly();
             assertTrue(f.isSuccess());
         } finally {
             closeChannel(cc);

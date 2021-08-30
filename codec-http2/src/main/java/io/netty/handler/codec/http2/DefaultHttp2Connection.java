@@ -123,7 +123,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (closePromise == promise) {
                 // Do nothing
             } else {
-                closePromise.addListener(new UnaryPromiseNotifier<>(promise));
+                closePromise.toFuture().addListener(new UnaryPromiseNotifier<>(promise));
             }
         } else {
             closePromise = promise;

@@ -242,7 +242,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 in.remove();
             }
             return 1;
-        } else if (flushedAmount == 0) {
+        }
+        if (flushedAmount == 0) {
             validateFileRegion(region, offset);
         }
         return WRITE_STATUS_SNDBUF_FULL;
@@ -437,7 +438,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
 
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -458,7 +459,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 loop.execute(() -> shutdownInput0(promise));
             }
         }
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -474,7 +475,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } else {
             shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
-        return promise;
+        return promise.toFuture();
     }
 
     private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {

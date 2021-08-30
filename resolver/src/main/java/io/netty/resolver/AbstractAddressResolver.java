@@ -104,7 +104,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<T> promise = executor().newPromise();
             doResolve(cast, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -131,7 +131,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolve(cast, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }
@@ -156,7 +156,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<List<T>> promise = executor().newPromise();
             doResolveAll(cast, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -183,7 +183,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolveAll(cast, promise);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }

@@ -35,6 +35,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -151,7 +152,7 @@ public class CipherSuiteCanaryTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                serverPromise.cancel(true);
+                                serverPromise.cancel();
                                 ctx.fireChannelInactive();
                             }
 
@@ -187,7 +188,7 @@ public class CipherSuiteCanaryTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                    clientPromise.cancel(true);
+                                    clientPromise.cancel();
                                     ctx.fireChannelInactive();
                                 }
 
@@ -213,11 +214,14 @@ public class CipherSuiteCanaryTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                               .syncUninterruptibly();
 
-                        assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
-                        assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");
+                        Future<Object> clientFuture = clientPromise.toFuture();
+                        Future<Object> serverFuture = serverPromise.toFuture();
 
-                        clientPromise.sync();
-                        serverPromise.sync();
+                        assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
+                        assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
+
+                        clientFuture.sync();
+                        serverFuture.sync();
                     } finally {
                         client.close().sync();
                     }
@@ -260,19 +264,15 @@ public class CipherSuiteCanaryTest {
         List<Object[]> dst = new ArrayList<>();
         SslProvider[] sslProviders = SslProvider.values();
 
-        for (int i = 0; i < sslProviders.length; i++) {
-            SslProvider serverSslProvider = sslProviders[i];
-
-            for (int j = 0; j < sslProviders.length; j++) {
-                SslProvider clientSslProvider = sslProviders[j];
-
+        for (SslProvider serverSslProvider : sslProviders) {
+            for (SslProvider clientSslProvider : sslProviders) {
                 if ((serverSslProvider != SslProvider.JDK || clientSslProvider != SslProvider.JDK)
-                        && !OpenSsl.isAvailable()) {
+                    && !OpenSsl.isAvailable()) {
                     continue;
                 }
 
-                dst.add(new Object[]{serverSslProvider, clientSslProvider, rfcCipherName, true});
-                dst.add(new Object[]{serverSslProvider, clientSslProvider, rfcCipherName, false});
+                dst.add(new Object[] { serverSslProvider, clientSslProvider, rfcCipherName, true });
+                dst.add(new Object[] { serverSslProvider, clientSslProvider, rfcCipherName, false });
             }
         }
 

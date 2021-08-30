@@ -203,7 +203,7 @@ abstract class DnsResolveContext<T> {
             final int initialSearchDomainIdx = startWithoutSearchDomain ? 0 : 1;
 
             final Promise<List<T>> searchDomainPromise = parent.executor().newPromise();
-            searchDomainPromise.addListener(new FutureListener<List<T>>() {
+            searchDomainPromise.toFuture().addListener(new FutureListener<List<T>>() {
                 private int searchDomainIdx = initialSearchDomainIdx;
                 @Override
                 public void operationComplete(Future<? extends List<T>> future) {
@@ -220,7 +220,7 @@ abstract class DnsResolveContext<T> {
                             promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
-                            newPromise.addListener(this);
+                            newPromise.toFuture().addListener(this);
                             doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], newPromise);
                         } else if (!startWithoutSearchDomain) {
                             internalResolve(hostname, promise);
@@ -421,7 +421,7 @@ abstract class DnsResolveContext<T> {
 
         queriesInProgress.add(f);
 
-        queryLifecycleObserver.queryWritten(nameServerAddr, writePromise);
+        queryLifecycleObserver.queryWritten(nameServerAddr, writePromise.toFuture());
 
         f.addListener(future -> {
             queriesInProgress.remove(future);
@@ -475,7 +475,7 @@ abstract class DnsResolveContext<T> {
         queriesInProgress.add(resolveFuture);
 
         Promise<List<InetAddress>> resolverPromise = parent.executor().newPromise();
-        resolverPromise.addListener(future -> {
+        resolverPromise.toFuture().addListener(future -> {
             // Remove placeholder.
             queriesInProgress.remove(resolveFuture);
 

@@ -165,7 +165,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     Future<Channel> init(Channel channel) {
-        Promise<Channel> promise = new DefaultPromise<>(channel.executor());
+        Promise<Channel> promise = channel.executor().newPromise();
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -191,7 +191,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 });
             }
         });
-        return promise;
+        return promise.toFuture();
     }
 
     @Override

@@ -78,7 +78,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                                  ChannelHandler handler) {
         this.name = requireNonNull(name, "name");
         this.pipeline = pipeline;
-        this.executionMask = mask(handler.getClass());
+        executionMask = mask(handler.getClass());
         this.handler = handler;
     }
 
@@ -430,7 +430,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () -> findAndInvokeBind(localAddress).cascadeTo(promise), promise, null);
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -446,7 +446,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () -> findAndInvokeDeregister().cascadeTo(promise), promise, null);
-        return promise;
+        return promise.toFuture();
     }
     private Future<Void> findAndInvokeBind(SocketAddress localAddress) {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_BIND);
@@ -476,7 +476,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         safeExecute(executor, () ->
                 findAndInvokeConnect(remoteAddress, localAddress).cascadeTo(promise), promise, null);
 
-        return promise;
+        return promise.toFuture();
     }
 
     private Future<Void> findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
@@ -509,7 +509,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () -> findAndInvokeDisconnect().cascadeTo(promise), promise, null);
-        return promise;
+        return promise.toFuture();
     }
 
     private Future<Void> findAndInvokeDisconnect() {
@@ -536,7 +536,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () -> findAndInvokeClose().cascadeTo(promise), promise, null);
-        return promise;
+        return promise.toFuture();
     }
 
     private Future<Void> findAndInvokeClose() {
@@ -563,7 +563,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         Promise<Void> promise  = newPromise();
         safeExecute(executor, () -> findAndInvokeRegister().cascadeTo(promise), promise, null);
-        return promise;
+        return promise.toFuture();
     }
 
     private Future<Void> findAndInvokeRegister() {
@@ -647,7 +647,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             Tasks tasks = invokeTasks();
             Promise<Void> promise = newPromise();
-            promise.addListener(channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
+            promise.toFuture().addListener(channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
             // If flush throws we want to at least propagate the exception through the ChannelPipeline
             // as otherwise the user will not be made aware of the failure at all.
             safeExecute(executor, tasks.invokeFlushTask, promise, null);
@@ -712,7 +712,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 // See https://github.com/netty/netty/issues/8343.
                 task.cancel();
             }
-            return promise;
+            return promise.toFuture();
         }
     }
 
@@ -820,8 +820,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             }
         }
 
-        this.prev = null;
-        this.next = null;
+        prev = null;
+        next = null;
     }
 
     @Override

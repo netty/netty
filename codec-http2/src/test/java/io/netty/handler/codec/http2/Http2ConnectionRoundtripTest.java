@@ -150,8 +150,8 @@ public class Http2ConnectionRoundtripTest {
         doAnswer(invocationOnMock -> {
             ChannelHandlerContext ctx = invocationOnMock.getArgument(0);
             http2Server.encoder().writeHeaders(ctx,
-                    (Integer) invocationOnMock.getArgument(1),
-                    (Http2Headers) invocationOnMock.getArgument(2),
+                    invocationOnMock.getArgument(1),
+                    invocationOnMock.getArgument(2),
                     0,
                     false);
             http2Server.flush(ctx);
@@ -615,7 +615,7 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                promise.get();
+                promise.toFuture().get();
             }
         });
         assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
@@ -668,11 +668,11 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                dataPromise.get();
+                dataPromise.toFuture().get();
             }
         });
         assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
-        assertPromise.sync();
+        assertPromise.toFuture().sync();
     }
 
     @Test
@@ -1092,10 +1092,6 @@ public class Http2ConnectionRoundtripTest {
 
     private Promise<Void> newPromise() {
         return ctx().newPromise();
-    }
-
-    private Promise<Void> serverNewPromise() {
-        return serverCtx().newPromise();
     }
 
     private static Http2Headers dummyHeaders() {

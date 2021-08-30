@@ -63,8 +63,9 @@ final class Futures {
         }
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new Mapper<>(promise, mapper));
-        promise.addListener(future, propagateCancel());
-        return promise;
+        Future<R> mappedFuture = promise.toFuture();
+        mappedFuture.addListener(future, propagateCancel());
+        return mappedFuture;
     }
 
     /**
@@ -98,12 +99,13 @@ final class Futures {
         requireNonNull(mapper, "mapper");
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new FlatMapper<>(promise, mapper));
+        Future<R> mappedFuture = promise.toFuture();
         if (!future.isSuccess()) {
             // Propagate cancellation if future is either incomplete or failed.
             // Failed means it could be cancelled, so that needs to be propagated.
-            promise.addListener(future, propagateCancel());
+            mappedFuture.addListener(future, propagateCancel());
         }
-        return promise;
+        return mappedFuture;
     }
 
     @SuppressWarnings("unchecked")
@@ -120,7 +122,7 @@ final class Futures {
         if (completed.isCancelled()) {
             // Don't check or log if cancellation propagation fails.
             // Propagation goes both ways, which means at least one future will already be cancelled here.
-            recipient.cancel(false);
+            recipient.cancel();
         } else {
             Throwable cause = completed.cause();
             recipient.tryFailure(cause);
@@ -219,7 +221,7 @@ final class Futures {
                         propagateUncommonCompletion(future, recipient);
                     } else {
                         future.addListener(recipient, passThrough());
-                        recipient.addListener(future, propagateCancel());
+                        recipient.toFuture().addListener(future, propagateCancel());
                     }
                 } catch (Throwable e) {
                     tryFailure(recipient, e, logger);
@@ -246,7 +248,7 @@ final class Futures {
         if (!future.isSuccess()) {
             // Propagate cancellation if future is either incomplete or failed.
             // Failed means it could be cancelled, so that needs to be propagated.
-            promise.addListener(future, propagateCancel());
+            promise.toFuture().addListener(future, propagateCancel());
         }
         future.addListener(promise, passThrough());
     }

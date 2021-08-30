@@ -101,8 +101,8 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             cb.connect(sc.localAddress()).addListener(listener);
         }
 
-        clientDonePromise.sync();
-        serverDonePromise.sync();
+        clientDonePromise.toFuture().sync();
+        serverDonePromise.toFuture().sync();
         sc.close().sync();
 
         if (globalException.get() != null && !(globalException.get() instanceof IOException)) {

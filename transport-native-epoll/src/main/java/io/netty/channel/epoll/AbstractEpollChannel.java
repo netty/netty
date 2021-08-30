@@ -609,7 +609,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(future -> {
+                    promise.toFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);

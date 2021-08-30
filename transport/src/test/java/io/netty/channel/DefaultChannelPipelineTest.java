@@ -62,7 +62,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultChannelPipelineTest {
 
@@ -730,10 +729,10 @@ public class DefaultChannelPipelineTest {
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addFirst(handler);
-        handler.addedPromise.syncUninterruptibly();
+        handler.addedFuture.syncUninterruptibly();
         pipeline.channel().register();
         pipeline.remove(handler);
-        handler.removedPromise.syncUninterruptibly();
+        handler.removedFuture.syncUninterruptibly();
 
         pipeline.channel().close().syncUninterruptibly();
     }
@@ -747,7 +746,7 @@ public class DefaultChannelPipelineTest {
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addFirst(handler);
-        handler.addedPromise.syncUninterruptibly();
+        handler.addedFuture.syncUninterruptibly();
         pipeline.channel().register();
         pipeline.replace(handler, null, new ChannelHandlerAdapter() {
             @Override
@@ -755,7 +754,7 @@ public class DefaultChannelPipelineTest {
                 latch.countDown();
             }
         });
-        handler.removedPromise.syncUninterruptibly();
+        handler.removedFuture.syncUninterruptibly();
         latch.await();
 
         pipeline.channel().close().syncUninterruptibly();
@@ -878,7 +877,7 @@ public class DefaultChannelPipelineTest {
             }
 
             void validate() {
-                validationPromise.syncUninterruptibly();
+                validationPromise.toFuture().syncUninterruptibly();
                 validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             }
         }
@@ -1029,7 +1028,7 @@ public class DefaultChannelPipelineTest {
                 // This event must be captured by the added handler.
                 pipeline.fireUserEventTriggered(event);
             });
-            assertSame(event, promise.syncUninterruptibly().getNow());
+            assertSame(event, promise.toFuture().syncUninterruptibly().getNow());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
         }
@@ -1569,13 +1568,15 @@ public class DefaultChannelPipelineTest {
     }
 
     private static final class CallbackCheckHandler extends ChannelHandlerAdapter {
-        final Promise<Boolean> addedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
-        final Promise<Boolean> removedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
+        private final Promise<Boolean> addedHandlerPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        private final Promise<Boolean> removedHandlerPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        final Future<Boolean> addedHandler = addedHandlerPromise.toFuture();
+        final Future<Boolean> removedHandler = removedHandlerPromise.toFuture();
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            if (!addedHandler.trySuccess(true)) {
+            if (!addedHandlerPromise.trySuccess(true)) {
                 error.set(new AssertionError("handlerAdded(...) called multiple times: " + ctx.name()));
             } else if (removedHandler.isDone() && removedHandler.getNow() == Boolean.TRUE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
@@ -1584,7 +1585,7 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            if (!removedHandler.trySuccess(true)) {
+            if (!removedHandlerPromise.trySuccess(true)) {
                 error.set(new AssertionError("handlerRemoved(...) called multiple times: " + ctx.name()));
             } else if (addedHandler.isDone() && addedHandler.getNow() == Boolean.FALSE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
@@ -1594,13 +1595,17 @@ public class DefaultChannelPipelineTest {
 
     private static final class CheckEventExecutorHandler extends ChannelHandlerAdapter {
         final EventExecutor executor;
-        final Promise<Void> addedPromise;
-        final Promise<Void> removedPromise;
+        final Future<Void> addedFuture;
+        final Future<Void> removedFuture;
+        private final Promise<Void> addedPromise;
+        private final Promise<Void> removedPromise;
 
         CheckEventExecutorHandler(EventExecutor executor) {
             this.executor = executor;
             addedPromise = executor.newPromise();
+            addedFuture = addedPromise.toFuture();
             removedPromise = executor.newPromise();
+            removedFuture = removedPromise.toFuture();
         }
 
         @Override

@@ -247,7 +247,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(future -> {
+                    promise.toFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);
@@ -344,16 +344,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             return selectionKey != null && selectionKey.isValid()
                     && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
         }
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-       executor().unsafe().register(this);
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        executor().unsafe().deregister(this);
     }
 
     @Override

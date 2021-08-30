@@ -169,7 +169,7 @@ public class SingleThreadEventExecutorTest {
                     promise.setFailure(cause);
                 }
             });
-            promise.syncUninterruptibly();
+            promise.toFuture().syncUninterruptibly();
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }

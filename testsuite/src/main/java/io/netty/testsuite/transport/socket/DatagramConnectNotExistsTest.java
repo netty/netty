@@ -69,7 +69,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             assertTrue(datagramChannel.isActive());
             datagramChannel.writeAndFlush(
                     Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
+            assertTrue(promise.toFuture().syncUninterruptibly().getNow() instanceof PortUnreachableException);
         } finally {
             if (datagramChannel != null) {
                 datagramChannel.close();

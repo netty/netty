@@ -121,7 +121,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
         entry = bufAndListenerPairs.peek();
         if (entry instanceof FutureListener) {
-            aggregatePromise.addListener((FutureListener<Void>) entry);
+            aggregatePromise.toFuture().addListener((FutureListener<Void>) entry);
             bufAndListenerPairs.poll();
         }
         return result;
@@ -159,7 +159,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     break;
                 }
                 if (entry instanceof FutureListener) {
-                    aggregatePromise.addListener((FutureListener<Void>) entry);
+                    aggregatePromise.toFuture().addListener((FutureListener<Void>) entry);
                     continue;
                 }
                 entryBuffer = (ByteBuf) entry;

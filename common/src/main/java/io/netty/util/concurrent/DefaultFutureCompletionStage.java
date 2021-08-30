@@ -201,7 +201,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 promise.setFailure(cause);
             }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     private static <U, V> void thenApplyAsync0(Promise<U> promise, V value, Function<? super V, ? extends U> fn) {
@@ -234,7 +234,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 promise.setFailure(cause);
             }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     private static <U, V> void thenAcceptAsync0(Promise<U> promise, V value, Consumer<? super V> action) {
@@ -299,7 +299,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 applyAndNotify(promise, value2, value1, fn);
             }
         }, otherExecutor(executor));
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     private Executor otherExecutor(Executor executor) {
@@ -342,7 +342,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         };
         whenCompleteAsync(consumer, executor);
         other.whenCompleteAsync(consumer, otherExecutor(executor));
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     @Override
@@ -363,7 +363,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         };
         whenCompleteAsync(consumer, executor);
         other.whenCompleteAsync(consumer, otherExecutor(executor));
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     @Override
@@ -384,7 +384,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
         };
         whenCompleteAsync(consumer, executor);
         other.whenCompleteAsync(consumer, otherExecutor(executor));
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     @Override
@@ -407,7 +407,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                promise.setFailure(cause);
            }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     private static <V, U> void thenComposeAsync0(
@@ -449,7 +449,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 promise.setSuccess(result);
             }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     @Override
@@ -466,7 +466,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 safeExecute(executor, () -> whenCompleteAsync0(promise, f, action), promise);
             }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     private static <V> void whenCompleteAsync0(
@@ -501,7 +501,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                 safeExecute(executor, () -> handleAsync0(promise, f, fn), promise);
             }
         });
-        return promise.asStage();
+        return promise.toFuture().asStage();
     }
 
     @SuppressWarnings("unchecked")

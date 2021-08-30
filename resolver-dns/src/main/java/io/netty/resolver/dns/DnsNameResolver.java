@@ -483,7 +483,7 @@ public class DnsNameResolver extends InetNameResolver {
         });
         b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(maxPayloadSize));
 
-        channelFuture = responseHandler.channelActivePromise;
+        channelFuture = responseHandler.channelActivePromise.toFuture();
         try {
             ch = b.createUnregistered();
             Future<Void> future = localAddress == null ? ch.register() : ch.bind(localAddress);
@@ -731,7 +731,7 @@ public class DnsNameResolver extends InetNameResolver {
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolve(inetHost, additionalsArray, promise, resolveCache);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }
@@ -764,7 +764,7 @@ public class DnsNameResolver extends InetNameResolver {
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolveAll(inetHost, additionalsArray, promise, resolveCache);
-            return promise;
+            return promise.toFuture();
         } catch (Exception e) {
             return promise.setFailure(e);
         }
@@ -858,7 +858,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                 if (!result.isEmpty()) {
                     trySuccess(promise, result);
-                    return promise;
+                    return promise.toFuture();
                 }
             }
         }
@@ -868,7 +868,7 @@ public class DnsNameResolver extends InetNameResolver {
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs, maxQueriesPerResolve)
                 .resolve(promise);
-        return promise;
+        return promise.toFuture();
     }
 
     private static DnsRecord[] toArray(Iterable<DnsRecord> additionals, boolean validateType) {
@@ -994,7 +994,7 @@ public class DnsNameResolver extends InetNameResolver {
                                    DnsCache resolveCache, boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
         doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
-        allPromise.addListener(future -> {
+        allPromise.toFuture().addListener(future -> {
             if (future.isSuccess()) {
                 trySuccess(promise, future.getNow().get(0));
             } else {
@@ -1225,7 +1225,7 @@ public class DnsNameResolver extends InetNameResolver {
         try {
             new DatagramDnsQueryContext(this, nameServerAddr, question, additionals, castPromise)
                     .query(flush, writePromise);
-            return castPromise;
+            return castPromise.toFuture();
         } catch (Exception e) {
             return castPromise.setFailure(e);
         }
@@ -1330,7 +1330,7 @@ public class DnsNameResolver extends InetNameResolver {
                     }
                 });
 
-                promise.addListener(addressEnvelopeFuture -> {
+                promise.toFuture().addListener(addressEnvelopeFuture -> {
                     channel.close();
 
                     if (addressEnvelopeFuture.isSuccess()) {

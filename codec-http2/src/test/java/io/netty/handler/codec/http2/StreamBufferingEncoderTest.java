@@ -25,7 +25,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -545,9 +544,7 @@ public class StreamBufferingEncoderTest {
                 ReferenceCountUtil.safeRelease(a);
             }
 
-            Promise<Void> future = newPromise();
-            future.setSuccess(null);
-            return future;
+            return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
         };
     }
 
@@ -557,16 +554,16 @@ public class StreamBufferingEncoderTest {
             public Future<Void> answer(InvocationOnMock invocation) throws Throwable {
                 for (Object a : invocation.getArguments()) {
                     if (a instanceof Promise) {
-                        return (Future<Void>) a;
+                        return ((Promise<Void>) a).toFuture();
                     }
                 }
-                return newPromise();
+                return newPromise().toFuture();
             }
         };
     }
 
     private static Promise<Void> newPromise() {
-        return new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        return ImmediateEventExecutor.INSTANCE.newPromise();
     }
 
     private static ByteBuf data() {

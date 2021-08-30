@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -55,7 +54,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         Channel cc = cb.connect(sc.localAddress()).get();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
-        serverHandler.channelFuture.sync();
+        serverHandler.channelFuture.toFuture().sync();
 
         // and then close all sockets.
         sc.close().sync();
@@ -73,7 +72,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
         private ByteBuf buf;
-        private final Promise<Channel> channelFuture = new DefaultPromise<>(executor);
+        private final Promise<Channel> channelFuture = executor.newPromise();
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {

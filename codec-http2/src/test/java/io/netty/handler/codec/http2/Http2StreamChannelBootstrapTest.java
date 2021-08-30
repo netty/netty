@@ -101,10 +101,10 @@ public class Http2StreamChannelBootstrapTest {
             ExecutionException exception = assertThrows(ExecutionException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
-                    promise.get(3, SECONDS);
+                    promise.toFuture().get(3, SECONDS);
                 }
             });
-            assertThat(exception.getCause(), IsInstanceOf.<Throwable>instanceOf(ClosedChannelException.class));
+            assertThat(exception.getCause(), IsInstanceOf.instanceOf(ClosedChannelException.class));
         } finally {
             safeClose(clientChannel);
             safeClose(serverConnectedChannel);

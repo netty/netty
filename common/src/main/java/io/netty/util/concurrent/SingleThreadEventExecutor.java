@@ -546,7 +546,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         gracefulShutdownTimeout = unit.toNanos(timeout);
 
         if (ensureThreadStarted(oldState)) {
-            return terminationFuture;
+            return terminationFuture.toFuture();
         }
 
         if (wakeup) {
@@ -561,7 +561,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public final Future<?> terminationFuture() {
-        return terminationFuture;
+        return terminationFuture.toFuture();
     }
 
     @Override

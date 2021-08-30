@@ -139,7 +139,7 @@ public class SniClientTest {
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).get();
-            assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
+            assertEquals(sniHostName, promise.toFuture().syncUninterruptibly().getNow());
 
             // After we are done with handshaking getHandshakeSession() should return null.
             handler.handshakeFuture().syncUninterruptibly();

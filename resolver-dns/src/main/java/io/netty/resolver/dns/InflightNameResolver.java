@@ -61,26 +61,27 @@ final class InflightNameResolver<T> implements NameResolver<T> {
     }
 
     @Override
-    public Promise<T> resolve(String inetHost, Promise<T> promise) {
+    public Future<T> resolve(String inetHost, Promise<T> promise) {
         return resolve(resolvesInProgress, inetHost, promise, false);
     }
 
     @Override
-    public Promise<List<T>> resolveAll(String inetHost, Promise<List<T>> promise) {
+    public Future<List<T>> resolveAll(String inetHost, Promise<List<T>> promise) {
         return resolve(resolveAllsInProgress, inetHost, promise, true);
     }
 
-    private <U> Promise<U> resolve(
+    private <U> Future<U> resolve(
             final ConcurrentMap<String, Promise<U>> resolveMap,
             final String inetHost, final Promise<U> promise, boolean resolveAll) {
 
         final Promise<U> earlyPromise = resolveMap.putIfAbsent(inetHost, promise);
         if (earlyPromise != null) {
             // Name resolution for the specified inetHost is in progress already.
-            if (earlyPromise.isDone()) {
-                transferResult(earlyPromise, promise);
+            Future<U> earlyFuture = promise.toFuture();
+            if (earlyFuture.isDone()) {
+                transferResult(earlyFuture, promise);
             } else {
-                earlyPromise.addListener(f -> transferResult(f, promise));
+                earlyFuture.addListener(f -> transferResult(f, promise));
             }
         } else {
             try {
@@ -97,12 +98,12 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 if (promise.isDone()) {
                     resolveMap.remove(inetHost);
                 } else {
-                    promise.addListener(f -> resolveMap.remove(inetHost));
+                    promise.toFuture().addListener(f -> resolveMap.remove(inetHost));
                 }
             }
         }
 
-        return promise;
+        return promise.toFuture();
     }
 
     private static <T> void transferResult(Future<? extends T> src, Promise<T> dst) {

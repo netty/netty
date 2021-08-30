@@ -78,7 +78,7 @@ public class SocketConnectTest extends AbstractSocketTest {
             assertLocalAddress((InetSocketAddress) clientChannel.localAddress());
             assertNotNull(clientChannel.remoteAddress());
 
-            assertLocalAddress(localAddressPromise.get());
+            assertLocalAddress(localAddressPromise.toFuture().get());
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().syncUninterruptibly();

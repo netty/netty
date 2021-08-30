@@ -239,7 +239,7 @@ public class OpenSslPrivateKeyMethodTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) {
-                                serverPromise.cancel(true);
+                                serverPromise.cancel();
                                 ctx.fireChannelInactive();
                             }
 
@@ -275,7 +275,7 @@ public class OpenSslPrivateKeyMethodTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    clientPromise.cancel(true);
+                                    clientPromise.cancel();
                                     ctx.fireChannelInactive();
                                 }
 
@@ -300,11 +300,13 @@ public class OpenSslPrivateKeyMethodTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                                 .syncUninterruptibly();
 
-                        assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
-                        assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");
+                        Future<Object> clientFuture = clientPromise.toFuture();
+                        Future<Object> serverFuture = serverPromise.toFuture();
+                        assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
+                        assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
 
-                        clientPromise.sync();
-                        serverPromise.sync();
+                        clientFuture.sync();
+                        serverFuture.sync();
                         assertTrue(signCalled.get());
                     } finally {
                         client.close().sync();
@@ -442,7 +444,7 @@ public class OpenSslPrivateKeyMethodTest {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise;
+            return promise.toFuture();
         }
 
         @Override
@@ -470,7 +472,7 @@ public class OpenSslPrivateKeyMethodTest {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise;
+            return promise.toFuture();
         }
     }
 }

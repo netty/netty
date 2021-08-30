@@ -64,7 +64,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         id = parent.queryContextManager.add(this);
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
-        promise.addListener(this);
+        promise.toFuture().addListener(this);
 
         if (parent.isOptResourceEnabled()) {
             optResource = new AbstractDnsOptPseudoRrRecord(parent.maxPayloadSize(), 0, 0) {

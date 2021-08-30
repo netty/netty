@@ -54,8 +54,8 @@ import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.util.concurrent.DefaultPromise.newSuccessfulPromise;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -194,7 +194,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.newFailedFuture(any(Throwable.class)))
                 .thenAnswer(invocationOnMock ->
                         DefaultPromise.newFailedPromise(executor, invocationOnMock.getArgument(0)));
-        when(ctx.newSucceededFuture()).thenReturn(DefaultPromise.newSuccessfulPromise(executor, null));
+        when(ctx.newSucceededFuture()).thenReturn(newSuccessfulPromise(executor, (Void) null).toFuture());
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
@@ -204,9 +204,9 @@ public class Http2ConnectionHandlerTest {
             return null;
         }).when(ctx).fireChannelRead(any());
         doAnswer((Answer<Future<Void>>) in ->
-                DefaultPromise.newSuccessfulPromise(executor, null)).when(ctx).write(any());
+                newSuccessfulPromise(executor, (Void) null).toFuture()).when(ctx).write(any());
         doAnswer((Answer<Future<Void>>) in ->
-                DefaultPromise.newSuccessfulPromise(executor, null)).when(ctx).close();
+                newSuccessfulPromise(executor, (Void) null).toFuture()).when(ctx).close();
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {

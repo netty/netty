@@ -368,7 +368,7 @@ public final class NioDatagramChannel
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -427,7 +427,7 @@ public final class NioDatagramChannel
             promise.setFailure(e);
         }
 
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -443,7 +443,7 @@ public final class NioDatagramChannel
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
+        return promise.toFuture();
     }
 
     @Override
@@ -497,8 +497,7 @@ public final class NioDatagramChannel
             }
         }
 
-        promise.setSuccess(null);
-        return promise;
+        return promise.setSuccess(null);
     }
 
     /**
@@ -538,8 +537,7 @@ public final class NioDatagramChannel
                 }
             }
         }
-        promise.setSuccess(null);
-        return promise;
+        return promise.setSuccess(null);
     }
 
     /**
@@ -564,7 +562,7 @@ public final class NioDatagramChannel
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
+        return promise.toFuture();
     }
 
     void clearReadPending0() {

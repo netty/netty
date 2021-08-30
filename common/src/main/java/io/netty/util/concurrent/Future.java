@@ -163,6 +163,24 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     boolean isFailed();
 
     /**
+     * Return {@code true} if this future has been {@linkplain #cancel(boolean) cancelled}.
+     *
+     * @return {@code true} if this future has been cancelled, otherwise {@code false}.
+     */
+    @Override
+    boolean isCancelled();
+
+    /**
+     * Return {@code true} if this future has been completed either {@linkplain Promise#setSuccess(Object)
+     * successfully}, {@linkplain Promise#setFailure(Throwable) unsuccessfully}, or through
+     * {@linkplain #cancel(boolean) cancellation}.
+     *
+     * @return {@code true} if this future has completed, otherwise {@code false}.
+     */
+    @Override
+    boolean isDone();
+
+    /**
      * returns {@code true} if and only if the operation can be cancelled via {@link #cancel(boolean)}.
      */
     boolean isCancellable();

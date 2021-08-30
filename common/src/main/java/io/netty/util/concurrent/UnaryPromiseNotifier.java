@@ -39,7 +39,7 @@ public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
             }
         } else if (completedFuture.isCancelled()) {
-            if (!promise.cancel(false)) {
+            if (!promise.cancel()) {
                 logger.warn("Failed to cancel a promise because it is done already: {}", promise);
             }
         } else {

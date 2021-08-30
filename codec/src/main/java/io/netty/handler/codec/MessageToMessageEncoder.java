@@ -106,7 +106,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                         writePromiseCombiner(ctx, out, promise);
                     }
                 }
-                return promise;
+                return promise.toFuture();
             } else {
                 return ctx.write(msg);
             }

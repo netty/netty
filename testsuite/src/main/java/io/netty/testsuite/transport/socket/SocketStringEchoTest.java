@@ -111,8 +111,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             cc.writeAndFlush(element + delimiter);
         }
 
-        ch.donePromise.sync();
-        sh.donePromise.sync();
+        ch.donePromise.toFuture().sync();
+        sh.donePromise.toFuture().sync();
         sh.channel.close().sync();
         ch.channel.close().sync();
         sc.close().sync();
