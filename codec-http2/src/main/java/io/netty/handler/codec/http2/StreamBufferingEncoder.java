@@ -154,40 +154,41 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                     int padding, boolean endStream, Promise<Void> promise) {
+                                     int padding, boolean endStream) {
         return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
-                false, padding, endStream, promise);
+                false, padding, endStream);
     }
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                      int streamDependency, short weight, boolean exclusive,
-                                     int padding, boolean endOfStream, Promise<Void> promise) {
+                                     int padding, boolean endOfStream) {
         if (closed) {
-            return promise.setFailure(new Http2ChannelClosedException());
+            return ctx.newFailedFuture(new Http2ChannelClosedException());
         }
         if (isExistingStream(streamId) || canCreateStream()) {
             return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endOfStream, promise);
+                    exclusive, padding, endOfStream);
         }
         if (goAwayDetail != null) {
-            return promise.setFailure(new Http2GoAwayException(goAwayDetail));
+            return ctx.newFailedFuture(new Http2GoAwayException(goAwayDetail));
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
         if (pendingStream == null) {
             pendingStream = new PendingStream(ctx, streamId);
             pendingStreams.put(streamId, pendingStream);
         }
+        Promise<Void> promise = ctx.newPromise();
+
         pendingStream.frames.add(new HeadersFrame(headers, streamDependency, weight, exclusive,
                 padding, endOfStream, promise));
         return promise;
     }
 
     @Override
-    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-                                       Promise<Void> promise) {
+    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode) {
         if (isExistingStream(streamId)) {
-            return super.writeRstStream(ctx, streamId, errorCode, promise);
+            return super.writeRstStream(ctx, streamId, errorCode);
         }
         // Since the delegate doesn't know about any buffered streams we have to handle cancellation
         // of the promises and releasing of the ByteBufs here.
@@ -198,27 +199,27 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             // about the stream anymore and thus there is not point in failing the promises and invoking
             // error handling routines.
             stream.close(null);
-            promise.setSuccess(null);
+            return ctx.newSucceededFuture();
         } else {
-            promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
+            return ctx.newFailedFuture(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
-        return promise;
     }
 
     @Override
     public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                  int padding, boolean endOfStream, Promise<Void> promise) {
+                                  int padding, boolean endOfStream) {
         if (isExistingStream(streamId)) {
-            return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
+            return super.writeData(ctx, streamId, data, padding, endOfStream);
         }
         PendingStream pendingStream = pendingStreams.get(streamId);
         if (pendingStream != null) {
+            Promise<Void> promise = ctx.newPromise();
             pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
+            return promise;
         } else {
             ReferenceCountUtil.safeRelease(data);
-            promise.setFailure(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
+            return ctx.newFailedFuture(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
-        return promise;
     }
 
     @Override
@@ -352,7 +353,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream, promise);
+            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream)
+                    .cascadeTo(promise);
         }
     }
 
@@ -376,7 +378,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeData(ctx, streamId, data, padding, endOfStream, promise);
+            writeData(ctx, streamId, data, padding, endOfStream).cascadeTo(promise);
         }
     }
 }

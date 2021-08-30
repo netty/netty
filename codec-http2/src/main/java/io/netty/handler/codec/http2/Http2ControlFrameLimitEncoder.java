@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -49,38 +48,41 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     }
 
     @Override
-    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
-        Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
-        if (newPromise == null) {
-            return promise;
+    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx) {
+        FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+        Future<Void> f = super.writeSettingsAck(ctx);
+        if (listener != null) {
+            f.addListener(listener);
         }
-        return super.writeSettingsAck(ctx, newPromise);
+        return f;
     }
 
     @Override
-    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
+    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data) {
         // Only apply the limit to ping acks.
         if (ack) {
-            Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
-            if (newPromise == null) {
-                return promise;
+            FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+            Future<Void> f = super.writePing(ctx, ack, data);
+            if (listener != null) {
+                f.addListener(listener);
             }
-            return super.writePing(ctx, ack, data, newPromise);
+            return f;
         }
-        return super.writePing(ctx, ack, data, promise);
+        return super.writePing(ctx, ack, data);
     }
 
     @Override
     public Future<Void> writeRstStream(
-            ChannelHandlerContext ctx, int streamId, long errorCode, Promise<Void> promise) {
-        Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
-        if (newPromise == null) {
-            return promise;
+            ChannelHandlerContext ctx, int streamId, long errorCode) {
+        FutureListener<Void> listener = handleOutstandingControlFrames(ctx);
+        Future<Void> f = super.writeRstStream(ctx, streamId, errorCode);
+        if (listener != null) {
+            f.addListener(listener);
         }
-        return super.writeRstStream(ctx, streamId, errorCode, newPromise);
+        return f;
     }
 
-    private Promise<Void> handleOutstandingControlFrames(ChannelHandlerContext ctx, Promise<Void> promise) {
+    private FutureListener<Void> handleOutstandingControlFrames(ChannelHandlerContext ctx) {
         if (!limitReached) {
             if (outstandingControlFrames == maxOutstandingControlFrames) {
                 // Let's try to flush once as we may be able to flush some of the control frames.
@@ -96,13 +98,14 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
                 // First notify the Http2LifecycleManager and then close the connection.
                 lifecycleManager.onError(ctx, true, exception);
                 ctx.close();
+                return null;
             }
             outstandingControlFrames++;
 
             // We did not reach the limit yet, add the listener to decrement the number of outstanding control frames
             // once the promise was completed
-            promise.addListener(outstandingControlFramesListener);
+            return outstandingControlFramesListener;
         }
-        return promise;
+        return null;
     }
 }

@@ -20,10 +20,8 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +48,6 @@ public class DefaultHttp2FrameWriterTest {
 
     private ByteBuf expectedOutbound;
 
-    private Promise<Void> promise;
-
     private Http2HeadersEncoder http2HeadersEncoder;
 
     @Mock
@@ -76,8 +72,6 @@ public class DefaultHttp2FrameWriterTest {
 
         expectedOutbound = Unpooled.EMPTY_BUFFER;
 
-        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-
         Answer<Object> answer = var1 -> {
             Object msg = var1.getArgument(0);
             if (msg instanceof ByteBuf) {
@@ -90,6 +84,7 @@ public class DefaultHttp2FrameWriterTest {
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+        when(ctx.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
     }
 
     @AfterEach
@@ -105,7 +100,7 @@ public class DefaultHttp2FrameWriterTest {
         Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
-        frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise);
+        frameWriter.writeHeaders(ctx, streamId, headers, 0, true);
 
         byte[] expectedPayload = headerPayload(streamId, headers);
         byte[] expectedFrameBytes = {
@@ -124,7 +119,7 @@ public class DefaultHttp2FrameWriterTest {
         Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
-        frameWriter.writeHeaders(ctx, streamId, headers, 5, true, promise);
+        frameWriter.writeHeaders(ctx, streamId, headers, 5, true);
 
         byte[] expectedPayload = headerPayload(streamId, headers, (byte) 4);
         byte[] expectedFrameBytes = {
@@ -143,7 +138,7 @@ public class DefaultHttp2FrameWriterTest {
         Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
-        frameWriter.writeHeaders(ctx, streamId, headers, 0, false, promise);
+        frameWriter.writeHeaders(ctx, streamId, headers, 0, false);
 
         byte[] expectedPayload = headerPayload(streamId, headers);
         byte[] expectedFrameBytes = {
@@ -170,7 +165,7 @@ public class DefaultHttp2FrameWriterTest {
         http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
         frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
         frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
-        frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise);
+        frameWriter.writeHeaders(ctx, streamId, headers, 0, true);
 
         byte[] expectedPayload = headerPayload(streamId, headers);
 
@@ -211,7 +206,7 @@ public class DefaultHttp2FrameWriterTest {
         http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
         frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
         frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
-        frameWriter.writeHeaders(ctx, streamId, headers, 5, true, promise);
+        frameWriter.writeHeaders(ctx, streamId, headers, 5, true);
 
         byte[] expectedPayload = buildLargeHeaderPayload(streamId, headers, (byte) 4,
                 Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
@@ -245,7 +240,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @Test
     public void writeFrameZeroPayload() throws Exception {
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
+        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER);
 
         byte[] expectedFrameBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, // payload length
@@ -264,7 +259,7 @@ public class DefaultHttp2FrameWriterTest {
 
         // will auto release after frameWriter.writeFrame succeed
         ByteBuf payloadByteBuf = Unpooled.wrappedBuffer(payload);
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf, promise);
+        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf);
 
         byte[] expectedFrameHeaderBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length
@@ -279,7 +274,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writePriority() {
         frameWriter.writePriority(
-            ctx, /* streamId= */ 1, /* dependencyId= */ 2, /* weight= */ (short) 256, /* exclusive= */ true, promise);
+            ctx, /* streamId= */ 1, /* dependencyId= */ 2, /* weight= */ (short) 256, /* exclusive= */ true);
 
         expectedOutbound = Unpooled.copiedBuffer(new byte[] {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
@@ -295,7 +290,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writePriorityDefaults() {
         frameWriter.writePriority(
-            ctx, /* streamId= */ 1, /* dependencyId= */ 0, /* weight= */ (short) 16, /* exclusive= */ false, promise);
+            ctx, /* streamId= */ 1, /* dependencyId= */ 0, /* weight= */ (short) 16, /* exclusive= */ false);
 
         expectedOutbound = Unpooled.copiedBuffer(new byte[] {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5

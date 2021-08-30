@@ -169,7 +169,7 @@ public abstract class WebSocketServerHandshaker {
      *              The {@link Future} which is notified once the opening handshake completes
      */
     public Future<Void> handshake(Channel channel, FullHttpRequest req) {
-        return handshake(channel, req, null, channel.newPromise());
+        return handshake(channel, req, null);
     }
 
     /**
@@ -183,13 +183,10 @@ public abstract class WebSocketServerHandshaker {
      *            HTTP Request
      * @param responseHeaders
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
-     * @param promise
-     *            the {@link Promise} to be notified when the opening handshake is done
      * @return future
      *            the {@link Future} which is notified when the opening handshake is done
      */
-    public final Future<Void> handshake(Channel channel, FullHttpRequest req,
-                                            HttpHeaders responseHeaders, final Promise<Void> promise) {
+    public final Future<Void> handshake(Channel channel, FullHttpRequest req, HttpHeaders responseHeaders) {
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
@@ -208,9 +205,8 @@ public abstract class WebSocketServerHandshaker {
             // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
-                promise.setFailure(
+                return channel.newFailedFuture(
                         new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
-                return promise;
             }
             p.addBefore(ctx.name(), "wsencoder", newWebSocketEncoder());
             p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
@@ -221,16 +217,12 @@ public abstract class WebSocketServerHandshaker {
             encoderName = p.context(HttpResponseEncoder.class).name();
             p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
-        channel.writeAndFlush(response).addListener(channel, (ch, future) -> {
+        return channel.writeAndFlush(response).addListener(channel, (ch, future) -> {
             if (future.isSuccess()) {
                 ChannelPipeline p1 = ch.pipeline();
                 p1.remove(encoderName);
-                promise.setSuccess(null);
-            } else {
-                promise.setFailure(future.cause());
             }
         });
-        return promise;
     }
 
     /**
@@ -245,7 +237,7 @@ public abstract class WebSocketServerHandshaker {
      *              The {@link Future} which is notified once the opening handshake completes
      */
     public Future<Void> handshake(Channel channel, HttpRequest req) {
-        return handshake(channel, req, null, channel.newPromise());
+        return handshake(channel, req, null);
     }
 
     /**
@@ -259,16 +251,14 @@ public abstract class WebSocketServerHandshaker {
      *            HTTP Request
      * @param responseHeaders
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
-     * @param promise
-     *            the {@link Promise} to be notified when the opening handshake is done
      * @return future
      *            the {@link Future} which is notified when the opening handshake is done
      */
     public final Future<Void> handshake(final Channel channel, HttpRequest req,
-                                         final HttpHeaders responseHeaders, final Promise<Void> promise) {
+                                         final HttpHeaders responseHeaders) {
 
         if (req instanceof FullHttpRequest) {
-            return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
+            return handshake(channel, (FullHttpRequest) req, responseHeaders);
         }
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
@@ -279,11 +269,12 @@ public abstract class WebSocketServerHandshaker {
             // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
-                promise.setFailure(
+                return channel.newFailedFuture(
                         new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
-                return promise;
             }
         }
+
+        Promise<Void> promise = channel.newPromise();
         // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
         // enough for the websockets handshake payload.
         //
@@ -295,7 +286,7 @@ public abstract class WebSocketServerHandshaker {
             protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
                 // Remove ourself and do the actual handshake
                 ctx.pipeline().remove(this);
-                handshake(channel, msg, responseHeaders, promise);
+                handshake(channel, msg, responseHeaders);
             }
 
             @Override

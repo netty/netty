@@ -106,17 +106,16 @@ public class StreamBufferingEncoderTest {
         when(writer.configuration()).thenReturn(configuration);
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
-                any(Promise.class))).thenAnswer(successAnswer());
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class))).thenAnswer(
+        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean()))
+                .thenAnswer(successAnswer());
+        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong())).thenAnswer(
                 successAnswer());
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(Promise.class)))
+        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
                 .thenAnswer(successAnswer());
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
-            anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(noopAnswer());
+            anyInt(), anyBoolean())).thenAnswer(noopAnswer());
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
-            anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(), any(Promise.class)))
+            anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean()))
             .thenAnswer(noopAnswer());
 
         connection = new DefaultHttp2Connection(false);
@@ -138,6 +137,13 @@ public class StreamBufferingEncoderTest {
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(executor.inEventLoop()).thenReturn(true);
         doAnswer((Answer<Promise<Void>>) invocation -> newPromise()).when(ctx).newPromise();
+        doAnswer((Answer<Future<Void>>) invocation -> ImmediateEventExecutor.INSTANCE.newSucceededFuture(null))
+                .when(ctx).newSucceededFuture();
+
+        doAnswer((Answer<Future<Void>>) invocation ->
+                ImmediateEventExecutor.INSTANCE.newFailedFuture(invocation.getArgument(0)))
+                .when(ctx).newFailedFuture(any(Throwable.class));
+
         when(ctx.executor()).thenReturn(executor);
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
@@ -159,34 +165,34 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void multipleWritesToActiveStream() {
-        encoder.writeSettingsAck(ctx, newPromise());
-        encoderWriteHeaders(3, newPromise());
+        encoder.writeSettingsAck(ctx);
+        encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
         ByteBuf data = data();
         final int expectedBytes = data.readableBytes() * 3;
-        encoder.writeData(ctx, 3, data, 0, false, newPromise());
-        encoder.writeData(ctx, 3, data(), 0, false, newPromise());
-        encoder.writeData(ctx, 3, data(), 0, false, newPromise());
-        encoderWriteHeaders(3, newPromise());
+        encoder.writeData(ctx, 3, data, 0, false);
+        encoder.writeData(ctx, 3, data(), 0, false);
+        encoder.writeData(ctx, 3, data(), 0, false);
+        encoderWriteHeaders(3);
 
         writeVerifyWriteHeaders(times(1), 3);
         // Contiguous data writes are coalesced
         ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(writer, times(1)).writeData(any(ChannelHandlerContext.class), eq(3),
-                bufCaptor.capture(), eq(0), eq(false), any(Promise.class));
+                bufCaptor.capture(), eq(0), eq(false));
         assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());
     }
 
     @Test
     public void ensureCanCreateNextStreamWhenStreamCloses() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
 
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
 
         // This one gets buffered.
-        encoderWriteHeaders(5, newPromise());
+        encoderWriteHeaders(5);
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
@@ -206,45 +212,44 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void alternatingWritesToActiveAndBufferedStreams() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
 
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
 
-        encoderWriteHeaders(5, newPromise());
+        encoderWriteHeaders(5);
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, false, newPromise());
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, false);
         writeVerifyWriteHeaders(times(1), 3);
-        encoder.writeData(ctx, 5, EMPTY_BUFFER, 0, false, newPromise());
+        encoder.writeData(ctx, 5, EMPTY_BUFFER, 0, false);
         verify(writer, never())
-                .writeData(eq(ctx), eq(5), any(ByteBuf.class), eq(0), eq(false), eq(newPromise()));
+                .writeData(eq(ctx), eq(5), any(ByteBuf.class), eq(0), eq(false));
     }
 
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
         connection.goAwayReceived(1, 8, EMPTY_BUFFER);
 
-        Promise<Void> promise = newPromise();
-        encoderWriteHeaders(3, promise);
+        Future<Void> future = encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
-        assertTrue(promise.isDone());
-        assertFalse(promise.isSuccess());
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
     }
 
     @Test
     public void receivingGoAwayFailsBufferedStreams() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(5);
 
         int streamId = 3;
         List<Future<Void>> futures = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
-            futures.add(encoderWriteHeaders(streamId, newPromise()));
+            futures.add(encoderWriteHeaders(streamId));
             streamId += 2;
         }
         assertEquals(5, connection.numActiveStreams());
@@ -266,11 +271,11 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
-        Future<Void> f = encoderWriteHeaders(5, newPromise());
+        Future<Void> f = encoderWriteHeaders(5);
 
         assertTrue(f.awaitUninterruptibly().cause() instanceof Http2GoAwayException);
         assertEquals(0, encoder.numBufferedStreams());
@@ -278,40 +283,41 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void sendingGoAwayShouldNotFailStreams() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
 
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
-              anyBoolean(), any(Promise.class))).thenAnswer(successAnswer());
+              anyBoolean())).thenAnswer(successAnswer());
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
-              anyShort(), anyBoolean(), anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(successAnswer());
+              anyShort(), anyBoolean(), anyInt(), anyBoolean())).thenAnswer(successAnswer());
 
-        Future<Void> f1 = encoderWriteHeaders(3, newPromise());
+        Future<Void> f1 = encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
-        Future<Void> f2 = encoderWriteHeaders(5, newPromise());
+        Future<Void> f2 = encoderWriteHeaders(5);
         assertEquals(1, encoder.numBufferedStreams());
-        Future<Void> f3 = encoderWriteHeaders(7, newPromise());
+        Future<Void> f3 = encoderWriteHeaders(7);
         assertEquals(2, encoder.numBufferedStreams());
 
         ByteBuf empty = Unpooled.buffer(0);
-        encoder.writeGoAway(ctx, 3, CANCEL.code(), empty, newPromise());
+        encoder.writeGoAway(ctx, 3, CANCEL.code(), empty);
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(2, encoder.numBufferedStreams());
-        assertFalse(f1.isDone());
+        // As the first stream did exists the first future should be done.
+        assertTrue(f1.isDone());
         assertFalse(f2.isDone());
         assertFalse(f3.isDone());
     }
 
     @Test
     public void endStreamDoesNotFailBufferedStream() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
 
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, true, newPromise());
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, true);
 
         assertEquals(0, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
@@ -319,7 +325,7 @@ public class StreamBufferingEncoderTest {
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 1.
         setMaxConcurrentStreams(1);
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
@@ -328,61 +334,60 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void rstStreamClosesBufferedStream() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
 
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         assertEquals(1, encoder.numBufferedStreams());
 
-        Promise<Void> rstStreamPromise = newPromise();
-        encoder.writeRstStream(ctx, 3, CANCEL.code(), rstStreamPromise);
-        assertTrue(rstStreamPromise.isSuccess());
+        Future<Void> rstStreamFuture = encoder.writeRstStream(ctx, 3, CANCEL.code());
+        assertTrue(rstStreamFuture.isSuccess());
         assertEquals(0, encoder.numBufferedStreams());
     }
 
     @Test
     public void bufferUntilActiveStreamsAreReset() throws Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
 
-        encoderWriteHeaders(3, newPromise());
+        encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
-        encoderWriteHeaders(5, newPromise());
+        encoderWriteHeaders(5);
         assertEquals(1, encoder.numBufferedStreams());
-        encoderWriteHeaders(7, newPromise());
+        encoderWriteHeaders(7);
         assertEquals(2, encoder.numBufferedStreams());
 
         writeVerifyWriteHeaders(times(1), 3);
         writeVerifyWriteHeaders(never(), 5);
         writeVerifyWriteHeaders(never(), 7);
 
-        encoder.writeRstStream(ctx, 3, CANCEL.code(), newPromise());
+        encoder.writeRstStream(ctx, 3, CANCEL.code());
         connection.remote().flowController().writePendingBytes();
         writeVerifyWriteHeaders(times(1), 5);
         writeVerifyWriteHeaders(never(), 7);
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeRstStream(ctx, 5, CANCEL.code(), newPromise());
+        encoder.writeRstStream(ctx, 5, CANCEL.code());
         connection.remote().flowController().writePendingBytes();
         writeVerifyWriteHeaders(times(1), 7);
         assertEquals(1, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
 
-        encoder.writeRstStream(ctx, 7, CANCEL.code(), newPromise());
+        encoder.writeRstStream(ctx, 7, CANCEL.code());
         assertEquals(0, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
     }
 
     @Test
     public void bufferUntilMaxStreamsIncreased() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(2);
 
-        encoderWriteHeaders(3, newPromise());
-        encoderWriteHeaders(5, newPromise());
-        encoderWriteHeaders(7, newPromise());
-        encoderWriteHeaders(9, newPromise());
+        encoderWriteHeaders(3);
+        encoderWriteHeaders(5);
+        encoderWriteHeaders(7);
+        encoderWriteHeaders(9);
         assertEquals(2, encoder.numBufferedStreams());
 
         writeVerifyWriteHeaders(times(1), 3);
@@ -393,13 +398,13 @@ public class StreamBufferingEncoderTest {
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 5.
         setMaxConcurrentStreams(5);
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
 
         assertEquals(0, encoder.numBufferedStreams());
         writeVerifyWriteHeaders(times(1), 7);
         writeVerifyWriteHeaders(times(1), 9);
 
-        encoderWriteHeaders(11, newPromise());
+        encoderWriteHeaders(11);
 
         writeVerifyWriteHeaders(times(1), 11);
 
@@ -411,7 +416,7 @@ public class StreamBufferingEncoderTest {
         int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
         int numStreams = initialLimit * 2;
         for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
-            encoderWriteHeaders(nextStreamId, newPromise());
+            encoderWriteHeaders(nextStreamId);
             if (ix < initialLimit) {
                 writeVerifyWriteHeaders(times(1), nextStreamId);
             } else {
@@ -432,7 +437,7 @@ public class StreamBufferingEncoderTest {
         int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
         int numStreams = initialLimit * 2;
         for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
-            encoderWriteHeaders(nextStreamId, newPromise());
+            encoderWriteHeaders(nextStreamId);
             if (ix < initialLimit) {
                 writeVerifyWriteHeaders(times(1), nextStreamId);
             } else {
@@ -452,13 +457,13 @@ public class StreamBufferingEncoderTest {
     public void exhaustedStreamsDoNotBuffer() throws Http2Exception {
         // Write the highest possible stream ID for the client.
         // This will cause the next stream ID to be negative.
-        encoderWriteHeaders(Integer.MAX_VALUE, newPromise());
+        encoderWriteHeaders(Integer.MAX_VALUE);
 
         // Disallow any further streams.
         setMaxConcurrentStreams(0);
 
         // Simulate numeric overflow for the next stream ID.
-        Future<Void> f = encoderWriteHeaders(-1, newPromise());
+        Future<Void> f = encoderWriteHeaders(-1);
 
         // Verify that the write fails.
         assertNotNull(f.awaitUninterruptibly().cause());
@@ -466,18 +471,17 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void closedBufferedStreamReleasesByteBuf() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
         ByteBuf data = mock(ByteBuf.class);
-        Future<Void> f1 = encoderWriteHeaders(3, newPromise());
+        Future<Void> f1 = encoderWriteHeaders(3);
         assertEquals(1, encoder.numBufferedStreams());
-        Future<Void> f2 = encoder.writeData(ctx, 3, data, 0, false, newPromise());
+        Future<Void> f2 = encoder.writeData(ctx, 3, data, 0, false);
 
-        Promise<Void> rstPromise = mock(Promise.class);
-        encoder.writeRstStream(ctx, 3, CANCEL.code(), rstPromise);
+        Future<Void> rstFuture = encoder.writeRstStream(ctx, 3, CANCEL.code());
 
         assertEquals(0, encoder.numBufferedStreams());
-        verify(rstPromise).setSuccess(null);
+        assertTrue(rstFuture.isSuccess());
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
         verify(data).release();
@@ -485,12 +489,12 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void closeShouldCancelAllBufferedStreams() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         connection.local().maxActiveStreams(0);
 
-        Future<Void> f1 = encoderWriteHeaders(3, newPromise());
-        Future<Void> f2 = encoderWriteHeaders(5, newPromise());
-        Future<Void> f3 = encoderWriteHeaders(7, newPromise());
+        Future<Void> f1 = encoderWriteHeaders(3);
+        Future<Void> f2 = encoderWriteHeaders(5);
+        Future<Void> f3 = encoderWriteHeaders(7);
 
         encoder.close();
         assertNotNull(f1.awaitUninterruptibly().cause());
@@ -500,10 +504,10 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void headersAfterCloseShouldImmediatelyFail() {
-        encoder.writeSettingsAck(ctx, newPromise());
+        encoder.writeSettingsAck(ctx);
         encoder.close();
 
-        Future<Void> f = encoderWriteHeaders(3, newPromise());
+        Future<Void> f = encoderWriteHeaders(3);
         assertNotNull(f.cause());
     }
 
@@ -517,12 +521,13 @@ public class StreamBufferingEncoderTest {
         }
     }
 
-    private Future<Void> encoderWriteHeaders(int streamId, Promise<Void> promise) {
-        encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
-                             false, 0, false, promise);
+    private Future<Void> encoderWriteHeaders(int streamId) {
+        Future<Void> future =
+                encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
+                             false, 0, false);
         try {
             encoder.flowController().writePendingBytes();
-            return promise;
+            return future;
         } catch (Http2Exception e) {
             throw new RuntimeException(e);
         }
@@ -531,7 +536,7 @@ public class StreamBufferingEncoderTest {
     private void writeVerifyWriteHeaders(VerificationMode mode, int streamId) {
         verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
                                           eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0),
-                                          eq(false), any(Promise.class));
+                                          eq(false));
     }
 
     private static Answer<Future<Void>> successAnswer() {

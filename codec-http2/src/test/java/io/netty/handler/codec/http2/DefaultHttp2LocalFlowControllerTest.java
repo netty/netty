@@ -417,17 +417,16 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     private void verifyWindowUpdateSent(int streamId, int windowSizeIncrement) {
-        verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement), eq(promise));
+        verify(frameWriter).writeWindowUpdate(eq(ctx), eq(streamId), eq(windowSizeIncrement));
     }
 
     private void verifyWindowUpdateNotSent(int streamId) {
-        verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt(), eq(promise));
+        verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt());
     }
 
     @SuppressWarnings("unchecked")
     private void verifyWindowUpdateNotSent() {
-        verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(),
-                any(Promise.class));
+        verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt());
     }
 
     private int window(int streamId) {

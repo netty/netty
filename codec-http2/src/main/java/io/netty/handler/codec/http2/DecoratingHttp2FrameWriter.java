@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import static java.util.Objects.requireNonNull;
@@ -35,73 +34,70 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                                  boolean endStream, Promise<Void> promise) {
-        return delegate.writeData(ctx, streamId, data, padding, endStream, promise);
+                                  boolean endStream) {
+        return delegate.writeData(ctx, streamId, data, padding, endStream);
     }
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                                     boolean endStream, Promise<Void> promise) {
-        return delegate.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+                                     boolean endStream) {
+        return delegate.writeHeaders(ctx, streamId, headers, padding, endStream);
     }
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                      int streamDependency, short weight, boolean exclusive, int padding,
-                                     boolean endStream, Promise<Void> promise) {
+                                     boolean endStream) {
         return delegate
-                .writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream, promise);
+                .writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
     }
 
     @Override
     public Future<Void> writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
-                                      boolean exclusive, Promise<Void> promise) {
-        return delegate.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
+                                      boolean exclusive) {
+        return delegate.writePriority(ctx, streamId, streamDependency, weight, exclusive);
     }
 
     @Override
-    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-                                       Promise<Void> promise) {
-        return delegate.writeRstStream(ctx, streamId, errorCode, promise);
+    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode) {
+        return delegate.writeRstStream(ctx, streamId, errorCode);
     }
 
     @Override
-    public Future<Void> writeSettings(ChannelHandlerContext ctx, Http2Settings settings, Promise<Void> promise) {
-        return delegate.writeSettings(ctx, settings, promise);
+    public Future<Void> writeSettings(ChannelHandlerContext ctx, Http2Settings settings) {
+        return delegate.writeSettings(ctx, settings);
     }
 
     @Override
-    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
-        return delegate.writeSettingsAck(ctx, promise);
+    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx) {
+        return delegate.writeSettingsAck(ctx);
     }
 
     @Override
-    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
-        return delegate.writePing(ctx, ack, data, promise);
+    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data) {
+        return delegate.writePing(ctx, ack, data);
     }
 
     @Override
     public Future<Void> writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                                         Http2Headers headers, int padding, Promise<Void> promise) {
-        return delegate.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
+                                         Http2Headers headers, int padding) {
+        return delegate.writePushPromise(ctx, streamId, promisedStreamId, headers, padding);
     }
 
     @Override
-    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
-                                     Promise<Void> promise) {
-        return delegate.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
+        return delegate.writeGoAway(ctx, lastStreamId, errorCode, debugData);
     }
 
     @Override
-    public Future<Void> writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
-                                          Promise<Void> promise) {
-        return delegate.writeWindowUpdate(ctx, streamId, windowSizeIncrement, promise);
+    public Future<Void> writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement) {
+        return delegate.writeWindowUpdate(ctx, streamId, windowSizeIncrement);
     }
 
     @Override
     public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                                   ByteBuf payload, Promise<Void> promise) {
-        return delegate.writeFrame(ctx, frameType, streamId, flags, payload, promise);
+                                   ByteBuf payload) {
+        return delegate.writeFrame(ctx, frameType, streamId, flags, payload);
     }
 
     @Override

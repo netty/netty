@@ -602,17 +602,8 @@ public class SslHandler extends ByteToMessageDecoder {
      * {@link ChannelHandlerContext#close()}
      */
     public Future<Void> closeOutbound() {
-        return closeOutbound(ctx.newPromise());
-    }
-
-    /**
-     * Sends an SSL {@code close_notify} message to the specified channel and
-     * destroys the underlying {@link SSLEngine}. This will <strong>not</strong> close the underlying
-     * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
-     * {@link ChannelHandlerContext#close()}
-     */
-    public Future<Void> closeOutbound(final Promise<Void> promise) {
         final ChannelHandlerContext ctx = this.ctx;
+        Promise<Void> promise = ctx.newPromise();
         if (ctx.executor().inEventLoop()) {
             closeOutbound0(promise);
         } else {

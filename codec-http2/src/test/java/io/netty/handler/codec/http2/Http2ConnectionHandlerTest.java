@@ -55,8 +55,10 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -157,7 +159,7 @@ public class Http2ConnectionHandlerTest {
             buf.release();
             return future;
         }).when(frameWriter).writeGoAway(
-                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class), any(Promise.class));
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
         doAnswer((Answer<Future<Void>>) invocation -> {
             Object o = invocation.getArguments()[0];
             if (o instanceof FutureListener) {
@@ -167,6 +169,7 @@ public class Http2ConnectionHandlerTest {
         }).when(future).addListener(any(FutureListener.class));
         when(future.cause()).thenReturn(fakeException);
         when(channel.isActive()).thenReturn(true);
+        when(future.isFailed()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
         when(connection.remote()).thenReturn(remote);
         when(remote.flowController()).thenReturn(remoteFlowController);
@@ -185,10 +188,13 @@ public class Http2ConnectionHandlerTest {
         when(connection.goAwaySent(anyInt(), anyLong(), any(ByteBuf.class))).thenReturn(true);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(encoder.writeSettings(any(ChannelHandlerContext.class),
-                any(Http2Settings.class), eq(promise))).thenReturn(future);
+                any(Http2Settings.class))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
-        when(ctx.newSucceededFuture()).thenReturn(future);
+        when(ctx.newFailedFuture(any(Throwable.class)))
+                .thenAnswer(invocationOnMock ->
+                        DefaultPromise.newFailedPromise(executor, invocationOnMock.getArgument(0)));
+        when(ctx.newSucceededFuture()).thenReturn(DefaultPromise.newSuccessfulPromise(executor, null));
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
@@ -254,7 +260,7 @@ public class Http2ConnectionHandlerTest {
         final Answer<Object> verifier = in -> {
             assertEquals(in.getArgument(0), evt);  // sanity check...
             verify(ctx).write(eq(connectionPrefaceBuf()));
-            verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class), any(Promise.class));
+            verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class));
             verified.set(true);
             return null;
         };
@@ -292,7 +298,7 @@ public class Http2ConnectionHandlerTest {
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class),
-                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
+                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture());
         assertEquals(0, captor.getValue().refCnt());
     }
 
@@ -303,7 +309,7 @@ public class Http2ConnectionHandlerTest {
         handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
-                eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
+                eq(PROTOCOL_ERROR.code()), captor.capture());
         assertEquals(0, captor.getValue().refCnt());
         assertTrue(goAwayDebugCap.contains("/path"));
     }
@@ -319,7 +325,7 @@ public class Http2ConnectionHandlerTest {
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter, atLeastOnce()).writeGoAway(any(ChannelHandlerContext.class),
-                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
+                eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture());
         assertEquals(0, captor.getValue().refCnt());
     }
 
@@ -373,7 +379,7 @@ public class Http2ConnectionHandlerTest {
         handler.exceptionCaught(ctx, e);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
-                captor.capture(), eq(promise));
+                captor.capture());
         captor.getValue().release();
     }
 
@@ -389,16 +395,16 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-                eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+                eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         ArgumentCaptor<Http2Headers> captor = ArgumentCaptor.forClass(Http2Headers.class);
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
-                captor.capture(), eq(padding), eq(true), eq(promise));
+                captor.capture(), eq(padding), eq(true));
         Http2Headers headers = captor.getValue();
         assertEquals(HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText(), headers.status());
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code());
     }
 
     @Test
@@ -413,13 +419,13 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
-            any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+            any(Http2Headers.class), eq(padding), eq(true));
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code());
     }
 
     @Test
@@ -434,13 +440,13 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-                eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+                eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
-                any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+                any(Http2Headers.class), eq(padding), eq(true));
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code());
     }
 
     @Test
@@ -448,7 +454,7 @@ public class Http2ConnectionHandlerTest {
         final CountDownLatch latch = new CountDownLatch(1);
         handler = new Http2ConnectionHandler(decoder, encoder, new Http2Settings()) {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                     latch.countDown();
                 }
@@ -470,13 +476,13 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(true);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
-            any(Http2Headers.class), eq(padding), eq(true), eq(promise));
+            any(Http2Headers.class), eq(padding), eq(true));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code());
     }
 
     @Test
@@ -494,14 +500,14 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(remote).createStream(STREAM_ID, true);
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
-            any(Http2Headers.class), eq(padding), eq(true), eq(promise));
+            any(Http2Headers.class), eq(padding), eq(true));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code());
     }
 
     @Test
@@ -518,9 +524,9 @@ public class Http2ConnectionHandlerTest {
     public void writeRstOnNonExistantStreamShouldSucceed() throws Exception {
         handler = newHandler();
         when(frameWriter.writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID),
-                                        eq(STREAM_CLOSED.code()), eq(promise))).thenReturn(future);
-        handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
-        verify(frameWriter).writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(STREAM_CLOSED.code()), eq(promise));
+                                        eq(STREAM_CLOSED.code()))).thenReturn(future);
+        handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code());
+        verify(frameWriter).writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(STREAM_CLOSED.code()));
     }
 
     @Test
@@ -528,21 +534,21 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         when(stream.id()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-                anyLong(), any(Promise.class))).thenReturn(future);
+                anyLong())).thenReturn(future);
         when(stream.state()).thenReturn(CLOSED);
         when(stream.isHeadersSent()).thenReturn(true);
         // The stream is "closed" but is still known about by the connection (connection().stream(..)
         // will return the stream). We should still write a RST_STREAM frame in this scenario.
-        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
-        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(Promise.class));
+        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code());
+        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong());
     }
 
     @Test
     public void writeRstOnIdleStreamShouldNotWriteButStillSucceed() throws Exception {
         handler = newHandler();
         when(stream.state()).thenReturn(IDLE);
-        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
-        verify(frameWriter, never()).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(Promise.class));
+        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code());
+        verify(frameWriter, never()).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong());
         verify(stream).close();
     }
 
@@ -585,11 +591,10 @@ public class Http2ConnectionHandlerTest {
             return null;
         }).when(future).addListener(any(FutureListener.class));
         handler = newHandler();
-        handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
+        handler.goAway(ctx, STREAM_ID, errorCode, data);
 
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data),
-                eq(promise));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
         verify(ctx).close();
         assertEquals(0, data.refCnt());
     }
@@ -600,13 +605,12 @@ public class Http2ConnectionHandlerTest {
         ByteBuf data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-        handler.goAway(ctx, STREAM_ID + 2, errorCode, data.retain(), promise);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), eq(data),
-                eq(promise));
+        handler.goAway(ctx, STREAM_ID + 2, errorCode, data.retain());
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), eq(data));
         verify(connection).goAwaySent(eq(STREAM_ID + 2), eq(errorCode), eq(data));
         promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        handler.goAway(ctx, STREAM_ID, errorCode, data, promise);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        handler.goAway(ctx, STREAM_ID, errorCode, data);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
         assertEquals(0, data.refCnt());
     }
@@ -617,20 +621,24 @@ public class Http2ConnectionHandlerTest {
         ByteBuf data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-        handler.goAway(ctx, STREAM_ID, errorCode, data.retain(), promise);
+        Future<Void> future = handler.goAway(ctx, STREAM_ID, errorCode, data.retain());
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
         // The frameWriter is only mocked, so it should not have interacted with the promise.
-        assertFalse(promise.isDone());
+        assertFalse(future.isDone());
 
         when(connection.goAwaySent()).thenReturn(true);
         when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
+
+        Exception ex = new IllegalStateException();
         doAnswer((Answer<Boolean>) invocationOnMock -> {
-            throw new IllegalStateException();
+            throw ex;
         }).when(connection).goAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
-        handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
-        assertTrue(promise.isDone());
-        assertFalse(promise.isSuccess());
+        Future<Void> future2 = handler.goAway(ctx, STREAM_ID + 2, errorCode, data);
+        assertTrue(future2.isDone());
+        assertFalse(future2.isSuccess());
+        assertSame(ex, future2.cause());
+
         assertEquals(0, data.refCnt());
         verifyNoMoreInteractions(frameWriter);
     }
@@ -657,9 +665,8 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(false);
         handler.channelInactive(ctx);
         verify(frameWriter, never()).writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                                 any(ByteBuf.class), any(Promise.class));
-        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                                    any(Promise.class));
+                                                 any(ByteBuf.class));
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
     @Test
@@ -729,22 +736,14 @@ public class Http2ConnectionHandlerTest {
             return stream;
         });
         when(stream.isResetSent()).then((Answer<Boolean>) invocationOnMock -> resetSent.get());
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(Promise.class)))
-                .then((Answer<Future<Void>>) invocationOnMock -> {
-                    Promise<Void> promise = invocationOnMock.getArgument(3);
-                    return promise.setSuccess(null);
-                });
+        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID), anyLong()))
+                .thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
 
-        Promise<Void> promise =
-                new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        final Promise<Void> promise2 =
-                new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(future -> handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2));
-
-        handler.resetStream(ctx, STREAM_ID, CANCEL.code(), promise);
-        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(Promise.class));
-        assertTrue(promise.isSuccess());
-        assertTrue(promise2.isSuccess());
+        Future<Void> f1 = handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code());
+        Future<Void> f2 = handler.resetStream(ctx, STREAM_ID, CANCEL.code());
+        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong());
+        assertTrue(f1.isSuccess());
+        assertTrue(f2.isSuccess());
     }
 
     private static ByteBuf dummyData() {

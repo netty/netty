@@ -143,12 +143,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
 
     @Override
     public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-                                  final boolean endOfStream, Promise<Void> promise) {
+                                  final boolean endOfStream) {
         final Http2Stream stream = connection().stream(streamId);
         final EmbeddedChannel channel = stream == null ? null : (EmbeddedChannel) stream.getProperty(propertyKey);
         if (channel == null) {
             // The compressor may be null if no compatible encoding type was found in this stream's headers
-            return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
+            return super.writeData(ctx, streamId, data, padding, endOfStream);
         }
 
         try {
@@ -161,13 +161,13 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                         buf = nextReadableBuf(channel);
                     }
                     return super.writeData(ctx, streamId, buf == null ? Unpooled.EMPTY_BUFFER : buf, padding,
-                            true, promise);
+                            true);
                 }
                 // END_STREAM is not set and the assumption is data is still forthcoming.
-                promise.setSuccess(null);
-                return promise;
+                return ctx.newSucceededFuture();
             }
 
+            Promise<Void> promise = ctx.newPromise();
             PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
             for (;;) {
                 ByteBuf nextBuf = nextReadableBuf(channel);
@@ -177,9 +177,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     compressedEndOfStream = nextBuf == null;
                 }
 
-                Promise<Void> bufPromise = ctx.newPromise();
-                combiner.add(bufPromise);
-                super.writeData(ctx, streamId, buf, padding, compressedEndOfStream, bufPromise);
+                Future<Void> future = super.writeData(ctx, streamId, buf, padding, compressedEndOfStream);
+                combiner.add(future);
                 if (nextBuf == null) {
                     break;
                 }
@@ -188,56 +187,54 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 buf = nextBuf;
             }
             combiner.finish(promise);
+            return promise;
         } catch (Throwable cause) {
-            promise.tryFailure(cause);
+            return ctx.newFailedFuture(cause);
         } finally {
             if (endOfStream) {
                 cleanup(stream, channel);
             }
         }
-        return promise;
     }
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream, Promise<Void> promise) {
+            boolean endStream) {
         try {
             // Determine if compression is required and sanitize the headers.
             EmbeddedChannel compressor = newCompressor(ctx, headers, endStream);
 
             // Write the headers and create the stream object.
-            Future<Void> future = super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+            Future<Void> future = super.writeHeaders(ctx, streamId, headers, padding, endStream);
 
             // After the stream object has been created, then attach the compressor as a property for data compression.
             bindCompressorToStream(compressor, streamId);
 
             return future;
         } catch (Throwable e) {
-            promise.tryFailure(e);
+            return ctx.newFailedFuture(e);
         }
-        return promise;
     }
 
     @Override
     public Future<Void> writeHeaders(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
             final int streamDependency, final short weight, final boolean exclusive, final int padding,
-            final boolean endOfStream, final Promise<Void> promise) {
+            final boolean endOfStream) {
         try {
             // Determine if compression is required and sanitize the headers.
             EmbeddedChannel compressor = newCompressor(ctx, headers, endOfStream);
 
             // Write the headers and create the stream object.
             Future<Void> future = super.writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive,
-                                                      padding, endOfStream, promise);
+                                                      padding, endOfStream);
 
             // After the stream object has been created, then attach the compressor as a property for data compression.
             bindCompressorToStream(compressor, streamId);
 
             return future;
         } catch (Throwable e) {
-            promise.tryFailure(e);
+            return ctx.newFailedFuture(e);
         }
-        return promise;
     }
 
     /**

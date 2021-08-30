@@ -61,9 +61,8 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
     /**
      * Writes the given data to the internal {@link Http2FrameWriter} without performing any
      * state checks on the connection/stream.
-     * @return
      */
     @Override
     Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                            Http2Flags flags, ByteBuf payload, Promise<Void> promise);
+                            Http2Flags flags, ByteBuf payload);
 }

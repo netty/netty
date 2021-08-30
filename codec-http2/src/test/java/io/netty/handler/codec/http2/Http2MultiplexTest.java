@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
@@ -49,7 +50,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
@@ -110,7 +110,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2Settings settings = new Http2Settings().initialWindowSize(initialRemoteStreamWindow);
         frameInboundWriter.writeInboundSettings(settings);
 
-        verify(frameWriter).writeSettingsAck(any(ChannelHandlerContext.class), anyChannelPromise());
+        verify(frameWriter).writeSettingsAck(any(ChannelHandlerContext.class));
 
         frameInboundWriter.writeInboundSettingsAck();
 
@@ -121,7 +121,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // Handshake
         verify(frameWriter).writeSettings(any(ChannelHandlerContext.class),
-                anyHttp2Settings(), anyChannelPromise());
+                anyHttp2Settings());
     }
 
     @AfterEach
@@ -151,7 +151,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         verify(frameWriter).writeFrame(any(ChannelHandlerContext.class), eq((byte) 99), eqStreamId(childChannel),
-                any(Http2Flags.class), any(ByteBuf.class), any(Promise.class));
+                any(Http2Flags.class), any(ByteBuf.class));
     }
 
     private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
@@ -552,14 +552,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         childChannel.close();
         verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class),
-                eqStreamId(childChannel), eq(Http2Error.CANCEL.code()), anyChannelPromise());
+                eqStreamId(childChannel), eq(Http2Error.CANCEL.code()));
     }
 
     @Test
     public void outboundStreamShouldNotWriteResetFrameOnClose_IfStreamDidntExist() {
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
-                any(Http2Headers.class), anyInt(), anyBoolean(),
-                any(Promise.class))).thenAnswer(new Answer<Future<Void>>() {
+                any(Http2Headers.class), anyInt(), anyBoolean())).thenAnswer(new Answer<Future<Void>>() {
 
             private boolean headersWritten;
             @Override
@@ -568,9 +567,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 // refuses to allocate a new stream due to having received a GOAWAY.
                 if (!headersWritten) {
                     headersWritten = true;
-                    return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(new Exception("boom"));
+                    return ImmediateEventExecutor.INSTANCE.newFailedFuture(new Exception("boom"));
                 }
-                return ((Promise<Void>) invocationOnMock.getArgument(5)).setSuccess(null);
+                return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
             }
         });
 
@@ -587,7 +586,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.close();
         // The channel was never active so we should not generate a RST frame.
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
-                eqStreamId(childChannel), anyLong(), anyChannelPromise());
+                eqStreamId(childChannel), anyLong());
 
         assertTrue(parentChannel.outboundMessages().isEmpty());
     }
@@ -603,7 +602,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // A RST_STREAM frame should NOT be emitted, as we received a RST_STREAM.
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), eqStreamId(channel),
-                anyLong(), anyChannelPromise());
+                anyLong());
     }
 
     @Test
@@ -633,11 +632,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
-                eq(headers), anyInt(), anyBoolean(),
-                any(Promise.class))).thenAnswer(invocationOnMock -> {
-            return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(
-                        new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed"));
-        });
+                eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock ->
+            ImmediateEventExecutor.INSTANCE.newFailedFuture(
+                        new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed")));
         final Future<Void> future = childChannel.writeAndFlush(
                 new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
 
@@ -680,7 +677,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // An active outbound stream should emit a RST_STREAM frame.
         verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eqStreamId(childChannel),
-                anyLong(), anyChannelPromise());
+                anyLong());
 
         assertFalse(childChannel.isOpen());
         assertFalse(childChannel.isActive());
@@ -698,10 +695,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
-               eq(headers), anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(invocationOnMock -> {
-               return ((Promise<Void>) invocationOnMock.getArgument(5)).setFailure(
-                       new Http2NoMoreStreamIdsException());
-        });
+               eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock ->
+               ImmediateEventExecutor.INSTANCE.newFailedFuture(new Http2NoMoreStreamIdsException()));
 
         final Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         parentChannel.flush();
@@ -782,9 +777,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
-                eq(headers), anyInt(), anyBoolean(),
-                any(Promise.class))).thenAnswer(invocationOnMock -> {
-            Promise<Void> promise = invocationOnMock.getArgument(5);
+                eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock -> {
+            Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
             writePromises.offer(promise);
             return promise;
         });
@@ -1305,7 +1299,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(flushSniffer.checkFlush());
 
         verify(frameWriter, never())
-                .writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(), anyChannelPromise());
+                .writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt());
         // only the first one was read because it was legacy auto-read behavior.
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
         assertFalse(flushSniffer.checkFlush());
@@ -1317,15 +1311,15 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // connection will collect the bytes and decide not to send a wire level frame until more are consumed.
         assertTrue(flushSniffer.checkFlush());
         verify(frameWriter, never())
-                .writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(), anyChannelPromise());
+                .writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt());
 
         // Call read one more time which should trigger the writing of the flow control update.
         childChannel.read();
         verify(frameWriter)
-                .writeWindowUpdate(any(ChannelHandlerContext.class), eq(0), eq(32 * 1024), anyChannelPromise());
+                .writeWindowUpdate(any(ChannelHandlerContext.class), eq(0), eq(32 * 1024));
         verify(frameWriter)
                 .writeWindowUpdate(any(ChannelHandlerContext.class), eq(childChannel.stream().id()),
-                        eq(32 * 1024), anyChannelPromise());
+                        eq(32 * 1024));
         assertTrue(flushSniffer.checkFlush());
     }
 

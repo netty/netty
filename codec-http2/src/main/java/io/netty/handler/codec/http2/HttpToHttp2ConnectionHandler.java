@@ -106,7 +106,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
                 writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers,
-                        endStream, promiseAggregator);
+                        endStream).cascadeTo(promiseAggregator.newPromise());
             }
 
             if (!endStream && msg instanceof HttpContent) {
@@ -125,12 +125,14 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 // Write the data
                 final ByteBuf content = ((HttpContent) msg).content();
                 endStream = isLastContent && trailers.isEmpty();
-                encoder.writeData(ctx, currentStreamId, content, 0, endStream, promiseAggregator.newPromise());
+                encoder.writeData(ctx, currentStreamId, content, 0, endStream)
+                        .cascadeTo(promiseAggregator.newPromise());
                 release = false;
 
                 if (!trailers.isEmpty()) {
                     // Write trailing headers.
-                    writeHeaders(ctx, encoder, currentStreamId, trailers, http2Trailers, true, promiseAggregator);
+                    writeHeaders(ctx, encoder, currentStreamId, trailers, http2Trailers, true)
+                            .cascadeTo(promiseAggregator.newPromise());
                 }
             }
         } catch (Throwable t) {
@@ -145,14 +147,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         return promise;
     }
 
-    private static void writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
-                                     HttpHeaders headers, Http2Headers http2Headers, boolean endStream,
-                                     SimpleChannelPromiseAggregator promiseAggregator) {
+    private static Future<Void> writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
+                                     HttpHeaders headers, Http2Headers http2Headers, boolean endStream) {
         int dependencyId = headers.getInt(
                 HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
         short weight = headers.getShort(
                 HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
-        encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false,
-                0, endStream, promiseAggregator.newPromise());
+        return encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false,
+                0, endStream);
     }
 }

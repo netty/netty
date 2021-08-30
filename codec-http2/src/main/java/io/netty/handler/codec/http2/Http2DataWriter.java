@@ -37,9 +37,8 @@ public interface Http2DataWriter {
      *                A 256 byte padding is encoded as the pad length field with value 255 and 255 padding bytes
      *                appended to the end of the frame.
      * @param endStream indicates if this is the last frame to be sent for the stream.
-     * @param promise the promise for the write.
      * @return the future for the write.
      */
     Future<Void> writeData(ChannelHandlerContext ctx, int streamId,
-                     ByteBuf data, int padding, boolean endStream, Promise<Void> promise);
+                     ByteBuf data, int padding, boolean endStream);
 }
