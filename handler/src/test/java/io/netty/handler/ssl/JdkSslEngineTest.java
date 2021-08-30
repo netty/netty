@@ -317,12 +317,16 @@ public class JdkSslEngineTest extends SSLEngineTest {
         testEnablingAnAlreadyDisabledSslProtocol(param, new String[]{}, new String[]{ SslProtocols.TLS_v1_2 });
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
