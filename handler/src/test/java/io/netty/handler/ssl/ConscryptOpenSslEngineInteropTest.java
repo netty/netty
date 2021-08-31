@@ -65,14 +65,18 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         return null;
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("TODO: Make this work with Conscrypt")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param) {
         super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("TODO: Make this work with Conscrypt")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param) {
         super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(param);
     }
@@ -83,6 +87,8 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -90,6 +96,8 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -97,6 +105,8 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -104,18 +114,24 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionAfterHandshakeKeyManagerFactory(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactory(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -128,12 +144,16 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithKeyManager(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager(SSLEngineTestParam param) throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
@@ -147,18 +167,24 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         // Not supported by conscrypt
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCache(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCache(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheTimeout(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());

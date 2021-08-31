@@ -19,6 +19,8 @@ import java.security.Provider;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLSessionContext;
 
@@ -48,15 +50,19 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
         return Java8SslTestUtils.conscryptProvider();
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("TODO: Make this work with Conscrypt")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("TODO: Make this work with Conscrypt")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {
         super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(param);
@@ -68,6 +74,8 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("Ignore due bug in Conscrypt")
     @Override
     public void testHandshakeSession(SSLEngineTestParam param) throws Exception {
@@ -80,6 +88,8 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
         // Not supported by conscrypt
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("Possible Conscrypt bug")
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) {

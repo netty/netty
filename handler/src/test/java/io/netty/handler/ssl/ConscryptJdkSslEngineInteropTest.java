@@ -19,6 +19,8 @@ import java.security.Provider;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLSessionContext;
 
@@ -49,18 +51,24 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
         return Java8SslTestUtils.conscryptProvider();
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
