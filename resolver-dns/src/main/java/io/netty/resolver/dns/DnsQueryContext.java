@@ -26,7 +26,6 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -48,7 +47,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     private final InetSocketAddress nameServerAddr;
 
     private final boolean recursionDesired;
-    private volatile ScheduledFuture<?> timeoutFuture;
+    private volatile Future<?> timeoutFuture;
 
     DnsQueryContext(DnsNameResolver parent,
                     InetSocketAddress nameServerAddr,
@@ -146,7 +145,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         }
     }
 
-    private void onQueryWriteCompletion(Future<? extends Void> writeFuture, Promise<Void> writePromise) {
+    private void onQueryWriteCompletion(Future<?> writeFuture, Promise<Void> writePromise) {
         if (writeFuture.isFailed()) {
             writePromise.setFailure(writeFuture.cause());
             tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
@@ -215,7 +214,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     @Override
     public void operationComplete(Future<? extends AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
         // Cancel the timeout task.
-        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+        final Future<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture != null) {
             this.timeoutFuture = null;
             timeoutFuture.cancel(false);

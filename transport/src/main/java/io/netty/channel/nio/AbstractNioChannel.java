@@ -26,6 +26,7 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,7 +37,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -58,7 +58,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * connection attempts will fail.
      */
     private Promise<Void> connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
     /**
@@ -460,7 +460,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             connectPromise = null;
         }
 
-        ScheduledFuture<?> future = connectTimeoutFuture;
+        Future<?> future = connectTimeoutFuture;
         if (future != null) {
             future.cancel(false);
             connectTimeoutFuture = null;

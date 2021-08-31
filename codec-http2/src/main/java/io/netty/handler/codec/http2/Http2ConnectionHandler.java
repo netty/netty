@@ -881,7 +881,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private static final class ClosingChannelFutureListener implements FutureListener<Object> {
         private final ChannelHandlerContext ctx;
         private final Promise<Void> promise;
-        private final ScheduledFuture<?> timeoutTask;
+        private final Future<?> timeoutTask;
         private boolean closed;
 
         ClosingChannelFutureListener(ChannelHandlerContext ctx, Promise<Void> promise) {

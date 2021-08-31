@@ -20,7 +20,6 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalHandler;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -47,7 +46,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
         @Param({ "100", "1000", "10000", "100000" })
         int num;
 
-        final List<ScheduledFuture<Void>> futures = new ArrayList<>();
+        final List<Future<Void>> futures = new ArrayList<>();
 
         @Setup(Level.Invocation)
         public void reset() {

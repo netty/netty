@@ -23,7 +23,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
@@ -191,7 +190,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
         WriteTimeoutTask prev;
         WriteTimeoutTask next;
 
-        ScheduledFuture<?> scheduledFuture;
+        Future<?> scheduledFuture;
         WriteTimeoutTask(ChannelHandlerContext ctx, Future<Void> future) {
             this.ctx = ctx;
             this.future = future;

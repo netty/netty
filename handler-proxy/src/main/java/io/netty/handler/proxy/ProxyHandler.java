@@ -26,7 +26,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -60,7 +59,7 @@ public abstract class ProxyHandler implements ChannelHandler {
     private boolean suppressChannelReadComplete;
     private boolean flushedPrematurely;
     private final Promise<Channel> connectPromise = new LazyPromise();
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private final FutureListener<Void> writeListener = future -> {
         if (future.isFailed()) {
             setConnectFailure(future.cause());

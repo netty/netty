@@ -15,7 +15,21 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -24,22 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -124,7 +122,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() { });
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.executor().schedule(latch::countDown, 1, TimeUnit.SECONDS);
+        Future future = ch.executor().schedule(latch::countDown, 1, TimeUnit.SECONDS);
         future.addListener(future1 -> latch.countDown());
         long next = ch.runScheduledPendingTasks();
         assertTrue(next > 0);
@@ -138,7 +136,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() { });
-        ScheduledFuture<?> future = ch.executor().schedule(() -> { }, 1, TimeUnit.DAYS);
+        Future<?> future = ch.executor().schedule(() -> { }, 1, TimeUnit.DAYS);
         ch.finish();
         assertTrue(future.isCancelled());
     }

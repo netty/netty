@@ -34,6 +34,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
@@ -45,7 +46,6 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -59,7 +59,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
      * connection attempts will fail.
      */
     private Promise<Void> connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
     private KQueueRegistration registration;
 

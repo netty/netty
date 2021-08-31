@@ -30,7 +30,6 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
@@ -45,7 +44,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     private Channel serverChan;
     private Channel chan;
     private ByteBuf abyte;
-    private ScheduledFuture<?> future;
+    private Future<?> future;
 
     @Setup
     public void setup() throws Exception {

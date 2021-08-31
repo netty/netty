@@ -16,6 +16,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +28,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -39,48 +40,14 @@ import static java.util.Collections.singletonList;
  * @param <E>
  */
 abstract class Cache<E> {
-    private static final AtomicReferenceFieldUpdater<Cache.Entries, ScheduledFuture> FUTURE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(Cache.Entries.class, ScheduledFuture.class, "expirationFuture");
+    private static final AtomicReferenceFieldUpdater<Cache.Entries, FutureAndDelay> FUTURE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(Cache.Entries.class, FutureAndDelay.class, "expirationFuture");
 
-    private static final ScheduledFuture<?> CANCELLED = new ScheduledFuture<Object>() {
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            return false;
-        }
-
-        @Override
-        public long getDelay(TimeUnit unit) {
-            // We ignore unit and always return the minimum value to ensure the TTL of the cancelled marker is
-            // the smallest.
-            return Long.MIN_VALUE;
-        }
-
-        @Override
-        public int compareTo(Delayed o) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return true;
-        }
-
-        @Override
-        public boolean isDone() {
-            return true;
-        }
-
-        @Override
-        public Object get() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Object get(long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-    };
+    private static final Future<?> CANCELLED_FUTURE = ImmediateEventExecutor.INSTANCE.newPromise();
+    static {
+        CANCELLED_FUTURE.cancel(false);
+    }
+    private static final FutureAndDelay CANCELLED = new FutureAndDelay(CANCELLED_FUTURE, Integer.MIN_VALUE);
 
     // Two years are supported by all our EventLoop implementations and so safe to use as maximum.
     // See also: https://github.com/netty/netty/commit/b47fb817991b42ec8808c7d26538f3f2464e1fa6
@@ -163,7 +130,7 @@ abstract class Cache<E> {
 
         private final String hostname;
         // Needs to be package-private to be able to access it via the AtomicReferenceFieldUpdater
-        volatile ScheduledFuture<?> expirationFuture;
+        volatile FutureAndDelay expirationFuture;
 
         Entries(String hostname) {
             super(Collections.emptyList());
@@ -235,18 +202,18 @@ abstract class Cache<E> {
                 // We currently don't calculate a new TTL when we need to retry the CAS as we don't expect this to
                 // be invoked very concurrently and also we use SECONDS anyway. If this ever becomes a problem
                 // we can reconsider.
-                ScheduledFuture<?> oldFuture = FUTURE_UPDATER.get(this);
+                FutureAndDelay oldFuture = FUTURE_UPDATER.get(this);
                 if (oldFuture == null || oldFuture.getDelay(TimeUnit.SECONDS) > ttl) {
-                    ScheduledFuture<?> newFuture = loop.schedule(this, ttl, TimeUnit.SECONDS);
+                    Future<?> newFuture = loop.schedule(this, ttl, TimeUnit.SECONDS);
                     // It is possible that
                     // 1. task will fire in between this line, or
                     // 2. multiple timers may be set if there is concurrency
                     // (1) Shouldn't be a problem because we will fail the CAS and then the next loop will see CANCELLED
                     //     so the ttl will not be less, and we will bail out of the loop.
                     // (2) This is a trade-off to avoid concurrency resulting in contention on a synchronized block.
-                    if (FUTURE_UPDATER.compareAndSet(this, oldFuture, newFuture)) {
+                    if (FUTURE_UPDATER.compareAndSet(this, oldFuture, new FutureAndDelay(newFuture, ttl))) {
                         if (oldFuture != null) {
-                            oldFuture.cancel(true);
+                            oldFuture.cancel();
                         }
                         break;
                     } else {
@@ -265,9 +232,9 @@ abstract class Cache<E> {
                 return false;
             }
 
-            ScheduledFuture<?> expirationFuture = FUTURE_UPDATER.getAndSet(this, CANCELLED);
+            FutureAndDelay expirationFuture = FUTURE_UPDATER.getAndSet(this, CANCELLED);
             if (expirationFuture != null) {
-                expirationFuture.cancel(false);
+                expirationFuture.cancel();
             }
 
             return true;
@@ -287,6 +254,30 @@ abstract class Cache<E> {
             resolveCache.remove(hostname, this);
 
             clearAndCancel();
+        }
+    }
+
+    private static class FutureAndDelay implements Delayed {
+        final Future<?> future;
+        final long deadlineNanos;
+
+        private FutureAndDelay(Future<?> future, int ttl) {
+            this.future = future;
+            deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(ttl);
+        }
+
+        void cancel() {
+            future.cancel(false);
+        }
+
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return unit.convert(deadlineNanos - System.nanoTime(), TimeUnit.NANOSECONDS);
+        }
+
+        @Override
+        public int compareTo(Delayed other) {
+            return Long.compare(deadlineNanos, other.getDelay(TimeUnit.NANOSECONDS));
         }
     }
 }

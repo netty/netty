@@ -15,9 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -25,6 +22,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static java.util.Objects.requireNonNull;
 
 
 /**
