@@ -384,6 +384,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/
+     * e9f59a55f5b56999d0e609a73aa8f1b450878a0c/include/quiche.h#L384">quiche_conn_is_timed_out</a>.
+     */
+    static native boolean quiche_conn_is_timed_out(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L361">quiche_conn_stats</a>.
      * The implementation relies on all fields of
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L340">quiche_stats</a> being numerical.

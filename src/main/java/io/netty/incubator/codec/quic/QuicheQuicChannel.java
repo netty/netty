@@ -133,6 +133,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final int OPEN = 1;
     private static final int ACTIVE = 2;
     private volatile int state;
+    private volatile boolean timedOut;
     private volatile String traceId;
     private volatile QuicheQuicConnection connection;
     private volatile QuicConnectionAddress remoteIdAddr;
@@ -178,6 +179,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return timedOut;
     }
 
     @Override
@@ -333,6 +339,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             connection = null;
             state = CLOSED;
+            timedOut = Quiche.quiche_conn_is_timed_out(conn.address());
 
             closeStreams();
 

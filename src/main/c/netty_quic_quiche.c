@@ -395,6 +395,10 @@ static jboolean netty_quiche_conn_is_closed(JNIEnv* env, jclass clazz, jlong con
     return quiche_conn_is_closed((quiche_conn *) conn) == true ? JNI_TRUE : JNI_FALSE;
 }
 
+static jboolean netty_quiche_conn_is_timed_out(JNIEnv* env, jclass clazz, jlong conn) {
+    return quiche_conn_is_timed_out((quiche_conn *) conn) == true ? JNI_TRUE : JNI_FALSE;
+}
+
 static jlongArray netty_quiche_conn_stats(JNIEnv* env, jclass clazz, jlong conn) {
     quiche_stats stats = {0,0,0,0,0,0};
     quiche_conn_stats((quiche_conn *) conn, &stats);
@@ -697,6 +701,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_is_established", "(J)Z", (void *) netty_quiche_conn_is_established },
   { "quiche_conn_is_in_early_data", "(J)Z", (void *) netty_quiche_conn_is_in_early_data },
   { "quiche_conn_is_closed", "(J)Z", (void *) netty_quiche_conn_is_closed },
+  { "quiche_conn_is_timed_out", "(J)Z", (void *) netty_quiche_conn_is_timed_out },
   { "quiche_conn_stats", "(J)[J", (void *) netty_quiche_conn_stats },
   { "quiche_conn_timeout_as_nanos", "(J)J", (void *) netty_quiche_conn_timeout_as_nanos },
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quiche_conn_on_timeout },

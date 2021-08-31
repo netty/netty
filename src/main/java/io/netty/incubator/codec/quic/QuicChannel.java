@@ -166,6 +166,13 @@ public interface QuicChannel extends Channel {
     long peerAllowedStreams(QuicStreamType type);
 
     /**
+     * Returns {@code true} if the connection was closed because of idle timeout.
+     *
+     * @return {@code true} if the connection was closed because of idle timeout, {@code false}.
+     */
+    boolean isTimedOut();
+
+    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
