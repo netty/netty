@@ -117,24 +117,26 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
-            return promise.setFailure(new UnsupportedAddressTypeException());
+            promise.setFailure(new UnsupportedAddressTypeException());
+            return promise.toFuture();
         }
 
         if (isResolved(address)) {
             // Resolved already; no need to perform a lookup
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            return promise.setSuccess(cast);
+            promise.setSuccess(cast);
+            return promise.toFuture();
         }
 
         try {
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolve(cast, promise);
-            return promise.toFuture();
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     @Override
@@ -169,24 +171,26 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
-            return promise.setFailure(new UnsupportedAddressTypeException());
+            promise.setFailure(new UnsupportedAddressTypeException());
+            return promise.toFuture();
         }
 
         if (isResolved(address)) {
             // Resolved already; no need to perform a lookup
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            return promise.setSuccess(Collections.singletonList(cast));
+            promise.setSuccess(Collections.singletonList(cast));
+            return promise.toFuture();
         }
 
         try {
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolveAll(cast, promise);
-            return promise.toFuture();
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     /**

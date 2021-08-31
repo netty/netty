@@ -731,10 +731,10 @@ public class DnsNameResolver extends InetNameResolver {
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolve(inetHost, additionalsArray, promise, resolveCache);
-            return promise.toFuture();
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     /**
@@ -764,10 +764,10 @@ public class DnsNameResolver extends InetNameResolver {
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolveAll(inetHost, additionalsArray, promise, resolveCache);
-            return promise.toFuture();
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     @Override
@@ -1225,10 +1225,10 @@ public class DnsNameResolver extends InetNameResolver {
         try {
             new DatagramDnsQueryContext(this, nameServerAddr, question, additionals, castPromise)
                     .query(flush, writePromise);
-            return castPromise.toFuture();
         } catch (Exception e) {
-            return castPromise.setFailure(e);
+            castPromise.setFailure(e);
         }
+        return castPromise.toFuture();
     }
 
     @SuppressWarnings("unchecked")

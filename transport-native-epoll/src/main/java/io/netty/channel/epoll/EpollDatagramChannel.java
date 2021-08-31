@@ -149,7 +149,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             }
             return joinGroup(multicastAddress, iface, null, promise);
         } catch (IOException e) {
-            return promise.setFailure(e);
+            return promise.setFailure(e).toFuture();
         }
     }
 
@@ -181,10 +181,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
-            return promise.setSuccess(null);
+            promise.setSuccess(null);
         } catch (IOException e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     @Override
@@ -198,7 +199,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
         } catch (IOException e) {
-            return promise.setFailure(e);
+            return promise.setFailure(e).toFuture();
         }
     }
 
@@ -230,10 +231,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
-            return promise.setSuccess(null);
+            promise.setSuccess(null);
         } catch (IOException e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     @Override
@@ -250,7 +252,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
-        return promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        return promise.toFuture();
     }
 
     @Override
@@ -267,8 +270,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     NetworkInterface.getByInetAddress(localAddress().getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.toFuture();
     }
 
     @Override

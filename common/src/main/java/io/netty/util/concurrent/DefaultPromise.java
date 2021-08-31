@@ -123,7 +123,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     @Override
-    public Future<V> setSuccess(V result) {
+    public Promise<V> setSuccess(V result) {
         if (setSuccess0(result)) {
             return this;
         }
@@ -136,7 +136,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     @Override
-    public Future<V> setFailure(Throwable cause) {
+    public Promise<V> setFailure(Throwable cause) {
         if (setFailure0(cause)) {
             return this;
         }

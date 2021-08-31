@@ -106,7 +106,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             }
             return joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
-            return promise.setFailure(e);
+            return promise.setFailure(e).toFuture();
         }
     }
 
@@ -151,7 +151,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
         } catch (SocketException e) {
-            return promise.setFailure(e);
+            return promise.setFailure(e).toFuture();
         }
     }
 
@@ -181,7 +181,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
-        return promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        return promise.toFuture();
     }
 
     @Override
@@ -198,7 +199,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
-        return promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        return promise.toFuture();
     }
 
     @Override
@@ -215,7 +217,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                     NetworkInterface.getByInetAddress(localAddress().getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
-            return promise.setFailure(e);
+            return promise.setFailure(e).toFuture();
         }
     }
 

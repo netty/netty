@@ -497,7 +497,8 @@ public final class NioDatagramChannel
             }
         }
 
-        return promise.setSuccess(null);
+        promise.setSuccess(null);
+        return promise.toFuture();
     }
 
     /**
@@ -537,7 +538,8 @@ public final class NioDatagramChannel
                 }
             }
         }
-        return promise.setSuccess(null);
+        promise.setSuccess(null);
+        return promise.toFuture();
     }
 
     /**

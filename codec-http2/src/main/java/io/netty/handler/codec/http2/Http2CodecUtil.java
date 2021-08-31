@@ -319,7 +319,7 @@ public final class Http2CodecUtil {
          * because that may be expected.
          */
         @Override
-        public Future<Void> setFailure(Throwable cause) {
+        public Promise<Void> setFailure(Throwable cause) {
             if (allowFailure()) {
                 ++doneCount;
                 setAggregateFailure(cause);
@@ -331,7 +331,7 @@ public final class Http2CodecUtil {
         }
 
         @Override
-        public Future<Void> setSuccess(Void result) {
+        public Promise<Void> setSuccess(Void result) {
             if (awaitingPromises()) {
                 ++doneCount;
                 if (allPromisesDone()) {

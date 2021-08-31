@@ -79,7 +79,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public final Future<V> setFailure(Throwable cause) {
+    public final Promise<V> setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
 
@@ -98,7 +98,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public final Future<V> setSuccess(V result) {
+    public final Promise<V> setSuccess(V result) {
         throw new IllegalStateException();
     }
 

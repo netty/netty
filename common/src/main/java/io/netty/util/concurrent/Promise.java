@@ -22,47 +22,47 @@ import java.util.concurrent.CancellationException;
  */
 public interface Promise<V> {
     /**
-     * Marks this future as a success and notifies all listeners.
+     * Marks this promise as a success and notifies all listeners attached to the {@linkplain #toFuture() future}.
      * <p>
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    Future<V> setSuccess(V result);
+    Promise<V> setSuccess(V result);
 
     /**
      * Marks this future as a success and notifies all listeners.
      *
-     * @return {@code true} if and only if successfully marked this future as a success. Otherwise {@code false} because
-     * this future is already marked as either a success or a failure.
+     * @return {@code true} if and only if successfully marked this promise as a success.
+     * Otherwise {@code false} because this promise is already marked as either a success or a failure.
      */
     boolean trySuccess(V result);
 
     /**
-     * Marks this future as a failure and notifies all listeners.
+     * Marks this promise as a failure and notifies all listeners attached to the {@linkplain #toFuture() future}.
      * <p>
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    Future<V> setFailure(Throwable cause);
+    Promise<V> setFailure(Throwable cause);
 
     /**
-     * Marks this future as a failure and notifies all listeners.
+     * Marks this promise as a failure and notifies all listeners.
      *
-     * @return {@code true} if and only if successfully marked this future as a failure. Otherwise {@code false} because
-     * this future is already marked as either a success or a failure.
+     * @return {@code true} if and only if successfully marked this promise as a failure.
+     * Otherwise {@code false} because this promise is already marked as either a success or a failure.
      */
     boolean tryFailure(Throwable cause);
 
     /**
-     * Make this future impossible to cancel.
+     * Make this promise impossible to cancel.
      *
-     * @return {@code true} if and only if successfully marked this future as uncancellable, or it is already done
-     * without being cancelled. Otherwise {@code false} if this future has been cancelled already.
+     * @return {@code true} if and only if successfully marked this promise as uncancellable, or it is already done
+     * without being cancelled. Otherwise {@code false} if this promise has been cancelled already.
      */
     boolean setUncancellable();
 
     /**
      * Cancel this promise, unless it has already been completed.
      * <p>
-     * A cancelled promise is considered to be {@linkplain Future#isFailed() failed}.
+     * A cancelled promise is considered to be {@linkplain #isFailed() failed}.
      * <p>
      * If the cancellation was successful it will fail associated futures with a {@link CancellationException}.
      * <p>

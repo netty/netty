@@ -965,12 +965,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public Future<Void> setSuccess(Void result) {
+        public Promise<Void> setSuccess(Void result) {
             throw new IllegalStateException();
         }
 
         @Override
-        public Future<Void> setFailure(Throwable cause) {
+        public Promise<Void> setFailure(Throwable cause) {
             throw new IllegalStateException();
         }
 
