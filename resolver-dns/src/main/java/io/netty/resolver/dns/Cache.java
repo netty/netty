@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
@@ -257,12 +258,12 @@ abstract class Cache<E> {
         }
     }
 
-    private static class FutureAndDelay implements Delayed {
+    private static final class FutureAndDelay implements Delayed {
         final Future<?> future;
         final long deadlineNanos;
 
         private FutureAndDelay(Future<?> future, int ttl) {
-            this.future = future;
+            this.future = Objects.requireNonNull(future, "future");
             deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(ttl);
         }
 
@@ -278,6 +279,18 @@ abstract class Cache<E> {
         @Override
         public int compareTo(Delayed other) {
             return Long.compare(deadlineNanos, other.getDelay(TimeUnit.NANOSECONDS));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof FutureAndDelay && compareTo((FutureAndDelay) o) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = future.hashCode();
+            result = 31 * result + (int) (deadlineNanos ^ deadlineNanos >>> 32);
+            return result;
         }
     }
 }
