@@ -2102,7 +2102,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
+        final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (localHandshakePromise.isDone()) {
@@ -2153,7 +2153,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture;
+        final Future<?> timeoutFuture;
         if (!flushFuture.isDone()) {
             long closeNotifyTimeout = closeNotifyFlushTimeoutMillis;
             if (closeNotifyTimeout > 0) {
@@ -2189,7 +2189,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // See https://github.com/netty/netty/issues/2358
                     addCloseListener(ctx.close(ctx.newPromise()), promise);
                 } else {
-                    final ScheduledFuture<?> closeNotifyReadTimeoutFuture;
+                    final Future<?> closeNotifyReadTimeoutFuture;
 
                     if (!sslClosePromise.isDone()) {
                         closeNotifyReadTimeoutFuture = ctx.executor().schedule(new Runnable() {

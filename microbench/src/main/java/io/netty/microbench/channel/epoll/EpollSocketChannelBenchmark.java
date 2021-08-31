@@ -27,12 +27,13 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import io.netty.util.concurrent.Future;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
+
+import java.util.concurrent.TimeUnit;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     private static final Runnable runnable = new Runnable() {
@@ -44,7 +45,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     private Channel serverChan;
     private Channel chan;
     private ByteBuf abyte;
-    private ScheduledFuture<?> future;
+    private Future<?> future;
 
     @Setup
     public void setup() throws Exception {

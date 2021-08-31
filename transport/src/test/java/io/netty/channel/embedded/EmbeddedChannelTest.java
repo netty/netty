@@ -15,25 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -51,7 +32,24 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ScheduledFuture;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmbeddedChannelTest {
 
@@ -134,7 +132,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.eventLoop().schedule(new Runnable() {
+        Future future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
@@ -158,7 +156,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-        ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
+        Future<?> future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() { }
         }, 1, TimeUnit.DAYS);

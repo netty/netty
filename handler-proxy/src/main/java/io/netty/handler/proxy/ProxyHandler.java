@@ -27,7 +27,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -60,7 +59,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private boolean suppressChannelReadComplete;
     private boolean flushedPrematurely;
     private final LazyChannelPromise connectPromise = new LazyChannelPromise();
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private final ChannelFutureListener writeListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
