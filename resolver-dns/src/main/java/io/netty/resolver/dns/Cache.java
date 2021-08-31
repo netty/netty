@@ -16,8 +16,12 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.FutureCompletionStage;
+import io.netty.util.concurrent.FutureContextListener;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,12 +30,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import static java.util.Collections.singletonList;
 
@@ -44,10 +50,132 @@ abstract class Cache<E> {
     private static final AtomicReferenceFieldUpdater<Cache.Entries, FutureAndDelay> FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(Cache.Entries.class, FutureAndDelay.class, "expirationFuture");
 
-    private static final Future<?> CANCELLED_FUTURE = ImmediateEventExecutor.INSTANCE.newPromise();
-    static {
-        CANCELLED_FUTURE.cancel(false);
-    }
+    private static final Future<?> CANCELLED_FUTURE = new Future<Object>() {
+        @Override
+        public boolean isSuccess() {
+            return false;
+        }
+
+        @Override
+        public boolean isFailed() {
+            return true;
+        }
+
+        @Override
+        public boolean isCancellable() {
+            return false;
+        }
+
+        @Override
+        public Throwable cause() {
+            return new CancellationException();
+        }
+
+        @Override
+        public Future<Object> addListener(FutureListener<? super Object> listener) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <C> Future<Object> addListener(C context, FutureContextListener<? super C, ? super Object> listener) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<Object> sync() throws InterruptedException {
+            return this;
+        }
+
+        @Override
+        public Future<Object> syncUninterruptibly() {
+            return this;
+        }
+
+        @Override
+        public Future<Object> await() throws InterruptedException {
+            return this;
+        }
+
+        @Override
+        public Future<Object> awaitUninterruptibly() {
+            return this;
+        }
+
+        @Override
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            return true;
+        }
+
+        @Override
+        public boolean await(long timeoutMillis) throws InterruptedException {
+            return true;
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
+            return true;
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeoutMillis) {
+            return true;
+        }
+
+        @Override
+        public Object getNow() {
+            return null;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        @Override
+        public EventExecutor executor() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return true;
+        }
+
+        @Override
+        public boolean isDone() {
+            return true;
+        }
+
+        @Override
+        public Object get() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object get(long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FutureCompletionStage<Object> asStage() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <R> Future<R> map(Function<Object, R> mapper) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <R> Future<R> flatMap(Function<Object, Future<R>> mapper) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<Object> cascadeTo(Promise<? super Object> promise) {
+            throw new UnsupportedOperationException();
+        }
+    };
     private static final FutureAndDelay CANCELLED = new FutureAndDelay(CANCELLED_FUTURE, Integer.MIN_VALUE);
 
     // Two years are supported by all our EventLoop implementations and so safe to use as maximum.
