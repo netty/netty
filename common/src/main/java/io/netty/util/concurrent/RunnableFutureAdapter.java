@@ -33,7 +33,7 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     RunnableFutureAdapter(Promise<V> promise, Callable<V> task) {
         this.promise = requireNonNull(promise, "promise");
         this.task = requireNonNull(task, "task");
-        future = promise.toFuture();
+        future = promise.asFuture();
     }
 
     @Override

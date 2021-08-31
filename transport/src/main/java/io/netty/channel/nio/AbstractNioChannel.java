@@ -247,7 +247,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.toFuture().addListener(future -> {
+                    promise.asFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);

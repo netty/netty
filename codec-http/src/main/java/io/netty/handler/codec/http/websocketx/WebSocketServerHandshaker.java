@@ -311,7 +311,7 @@ public abstract class WebSocketServerHandshaker {
         } catch (Throwable cause) {
             promise.setFailure(cause);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     /**

@@ -209,7 +209,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 }
             });
         }
-        return resolveAndConnectPromise.toFuture();
+        return resolveAndConnectPromise.asFuture();
     }
 
     private void doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,

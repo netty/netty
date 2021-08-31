@@ -165,7 +165,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 Future<Void> f = finishEncode(ctx());
                 f.cascadeTo(p);
             });
-            return p.toFuture();
+            return p.asFuture();
         }
     }
 
@@ -265,7 +265,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         // Ensure the channel is closed even if the write operation completes in time.
         ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
                 10, TimeUnit.SECONDS); // FIXME: Magic number
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private Future<Void> finishEncode(final ChannelHandlerContext ctx) {

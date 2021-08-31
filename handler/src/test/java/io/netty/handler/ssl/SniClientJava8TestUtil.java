@@ -152,7 +152,7 @@ final class SniClientJava8TestUtil {
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).get();
 
-            promise.toFuture().syncUninterruptibly();
+            promise.asFuture().syncUninterruptibly();
             sslHandler.handshakeFuture().syncUninterruptibly();
         } catch (CompletionException e) {
             throw e.getCause();

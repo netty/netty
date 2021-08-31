@@ -54,7 +54,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         Channel cc = cb.connect(sc.localAddress()).get();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
-        serverHandler.channelFuture.toFuture().sync();
+        serverHandler.channelFuture.asFuture().sync();
 
         // and then close all sockets.
         sc.close().sync();

@@ -48,7 +48,7 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
                                    long deadlineNanos, long periodNanos) {
         this.executor = requireNonNull(executor, "executor");
         this.promise = requireNonNull(promise, "promise");
-        future = promise.toFuture();
+        future = promise.asFuture();
         this.callable = requireNonNull(callable, "callable");
         this.deadlineNanos = deadlineNanos;
         this.periodNanos = periodNanos;

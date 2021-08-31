@@ -626,7 +626,7 @@ public class Http2FrameCodecTest {
         Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(data).stream(stream));
         assertTrue(f.isSuccess());
 
-        listenerExecuted.toFuture().syncUninterruptibly();
+        listenerExecuted.asFuture().syncUninterruptibly();
         assertTrue(listenerExecuted.isSuccess());
     }
 

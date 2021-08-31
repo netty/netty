@@ -454,7 +454,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         ctx.flush();
         Promise<Void> promise = ctx.newPromise();
         doGracefulShutdown(ctx, f, promise);
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private FutureListener<Object> newClosingChannelFutureListener(

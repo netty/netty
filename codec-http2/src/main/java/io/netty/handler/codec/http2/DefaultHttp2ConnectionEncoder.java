@@ -143,7 +143,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         // Hand control of the frame to the flow controller.
         flowController().addFlowControlled(stream,
                 new FlowControlledData(stream, data, padding, endOfStream, promise, ctx.channel()));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -266,7 +266,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, hasPriority, streamDependency,
                                 weight, exclusive, padding, true, promise));
-                return promise.toFuture();
+                return promise.asFuture();
             }
         } catch (Throwable t) {
             lifecycleManager.onError(ctx, true, t);
@@ -479,7 +479,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         // queue and it is not end of stream yet. Just complete their promises by getting the buffer
                         // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
                         Promise<Void> writePromise = ctx.newPromise();
-                        writePromise.toFuture().addListener(this);
+                        writePromise.asFuture().addListener(this);
                         ctx.write(queue.remove(0, writePromise)).cascadeTo(writePromise);
                     }
                     return;
@@ -493,7 +493,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Determine how much data to write.
             int writableData = min(queuedData, allowedBytes);
             Promise<Void> writePromise = ctx.newPromise();
-            writePromise.toFuture().addListener(this);
+            writePromise.asFuture().addListener(this);
             ByteBuf toWrite = queue.remove(writableData, writePromise);
             dataSize = queue.readableBytes();
 
@@ -572,7 +572,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
             // The code is currently requiring adding this listener before writing, in order to call onError() before
             // closeStreamLocal().
-            promise.toFuture().addListener(this);
+            promise.asFuture().addListener(this);
 
             Future<Void> f = sendHeaders(frameWriter, ctx, stream.id(), headers, hasPriority, streamDependency,
                                          weight, exclusive, padding, endOfStream);
@@ -612,7 +612,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         @Override
         public void writeComplete() {
             if (endOfStream) {
-                lifecycleManager.closeStreamLocal(stream, promise.toFuture());
+                lifecycleManager.closeStreamLocal(stream, promise.asFuture());
             }
         }
 

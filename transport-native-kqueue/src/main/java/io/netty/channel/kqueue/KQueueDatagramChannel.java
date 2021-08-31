@@ -106,7 +106,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             }
             return joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
-            return promise.setFailure(e).toFuture();
+            return promise.setFailure(e).asFuture();
         }
     }
 
@@ -137,7 +137,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -151,7 +151,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
         } catch (SocketException e) {
-            return promise.setFailure(e).toFuture();
+            return promise.setFailure(e).asFuture();
         }
     }
 
@@ -182,7 +182,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -200,7 +200,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -217,7 +217,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                     NetworkInterface.getByInetAddress(localAddress().getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
-            return promise.setFailure(e).toFuture();
+            return promise.setFailure(e).asFuture();
         }
     }
 

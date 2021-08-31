@@ -209,7 +209,7 @@ public class PendingWriteQueueTest {
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         Promise<Void> promise = channel.newPromise();
-        promise.toFuture().addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
+        promise.asFuture().addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
         Promise<Void> promise2 = channel.newPromise();
 
         channel.executor().execute(() -> {
@@ -239,7 +239,7 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
-        promise.toFuture().addListener(future -> {
+        promise.asFuture().addListener(future -> {
             queue.add(3L, promise3);
         });
         Promise<Void> promise2 = channel.newPromise();
@@ -277,13 +277,13 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
-        promise3.toFuture().addListener(future -> failOrder.add(3));
-        promise.toFuture().addListener(future -> {
+        promise3.asFuture().addListener(future -> failOrder.add(3));
+        promise.asFuture().addListener(future -> {
             failOrder.add(1);
             queue.add(3L, promise3);
         });
         Promise<Void> promise2 = channel.newPromise();
-        promise2.toFuture().addListener(future -> failOrder.add(2));
+        promise2.asFuture().addListener(future -> failOrder.add(2));
         channel.executor().execute(() -> {
             queue.add(1L, promise);
             queue.add(2L, promise2);
@@ -308,7 +308,7 @@ public class PendingWriteQueueTest {
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         Promise<Void> promise = channel.newPromise();
-        promise.toFuture().addListener(future -> queue.removeAndWriteAll());
+        promise.asFuture().addListener(future -> queue.removeAndWriteAll());
         Promise<Void> promise2 = channel.newPromise();
 
         channel.executor().execute(() -> {
@@ -365,7 +365,7 @@ public class PendingWriteQueueTest {
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());
             assertNotNull(queue.current());
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override

@@ -86,13 +86,13 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return ctx.close();
         }
         final Future<Void> future = closeSent == null ?
-                write(ctx, new CloseWebSocketFrame(closeStatus)) : closeSent.toFuture();
+                write(ctx, new CloseWebSocketFrame(closeStatus)) : closeSent.asFuture();
 
         flush(ctx);
         applyCloseSentTimeout(ctx);
         Promise<Void> promise = ctx.newPromise();
         future.addListener(f -> ctx.close().cascadeTo(promise));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -105,7 +105,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             Promise<Void> promise = ctx.newPromise();
             closeSent(promise);
             ctx.write(msg).cascadeTo(closeSent);
-            return promise.toFuture();
+            return promise.asFuture();
         }
         return ctx.write(msg);
     }
@@ -125,7 +125,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        closeSent.toFuture().addListener(future -> timeoutTask.cancel(false));
+        closeSent.asFuture().addListener(future -> timeoutTask.cancel(false));
     }
 
     /**

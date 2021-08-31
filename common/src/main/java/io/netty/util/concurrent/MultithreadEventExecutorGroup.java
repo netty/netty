@@ -232,7 +232,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     @Override
     public final Future<?> terminationFuture() {
-        return terminationFuture.toFuture();
+        return terminationFuture.asFuture();
     }
 
     @Override

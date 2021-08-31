@@ -410,7 +410,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -426,7 +426,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             loop.execute(() -> shutdownInput0(promise));
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private void shutdownInput0(Promise<Void> promise) {
@@ -452,7 +452,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {

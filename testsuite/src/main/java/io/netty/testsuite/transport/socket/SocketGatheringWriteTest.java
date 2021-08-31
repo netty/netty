@@ -151,7 +151,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             throw t;
         }
 
-        serverDonePromise.toFuture().sync();
+        serverDonePromise.asFuture().sync();
         sh.channel.close().sync();
         ch.channel.close().sync();
         sc.close().sync();

@@ -291,7 +291,7 @@ public final class Http2CodecUtil {
             if (!doneAllocating) {
                 doneAllocating = true;
                 if (doneCount == expectedCount || expectedCount == 0) {
-                    return setPromise().toFuture();
+                    return setPromise().asFuture();
                 }
             }
             return this;

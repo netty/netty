@@ -208,6 +208,6 @@ public interface FutureCompletionStage<V> extends CompletionStage<V> {
                 promise.setSuccess(v);
             }
         });
-        return promise.toFuture().asStage();
+        return promise.asFuture().asStage();
     }
 }

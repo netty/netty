@@ -117,7 +117,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.toFuture().addListener(f -> timeoutFuture.cancel(false));
+        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel(false));
     }
 
     /**
@@ -126,6 +126,6 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
      * @return current handshake future
      */
     Future<Void> getHandshakeFuture() {
-        return handshakePromise.toFuture();
+        return handshakePromise.asFuture();
     }
 }

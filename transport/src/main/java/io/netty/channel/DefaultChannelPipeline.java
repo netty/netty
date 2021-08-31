@@ -1044,7 +1044,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelHandlerContext ctx, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().bind(localAddress, promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
@@ -1053,35 +1053,35 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 SocketAddress remoteAddress, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().connect(remoteAddress, localAddress, promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> disconnect(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().disconnect(promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> close(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().close(promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> register(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().register(promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> deregister(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().deregister(promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
@@ -1093,7 +1093,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().write(msg, promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override

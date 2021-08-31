@@ -214,8 +214,8 @@ public class CipherSuiteCanaryTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                               .syncUninterruptibly();
 
-                        Future<Object> clientFuture = clientPromise.toFuture();
-                        Future<Object> serverFuture = serverPromise.toFuture();
+                        Future<Object> clientFuture = clientPromise.asFuture();
+                        Future<Object> serverFuture = serverPromise.asFuture();
 
                         assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
                         assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");

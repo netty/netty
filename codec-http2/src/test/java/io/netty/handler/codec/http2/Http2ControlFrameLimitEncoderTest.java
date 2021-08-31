@@ -100,23 +100,23 @@ public class Http2ControlFrameLimitEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
 
         when(writer.writeRstStream(eq(ctx), anyInt(), anyLong()))
-                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise().toFuture());
+                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise().asFuture());
         when(writer.writeSettingsAck(any(ChannelHandlerContext.class)))
-                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise().toFuture());
+                .thenAnswer((Answer<Future<Void>>) invocationOnMock -> handlePromise().asFuture());
         when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong()))
                 .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
                     Promise<Void> promise = handlePromise();
                     if (invocationOnMock.getArgument(1) == Boolean.FALSE) {
                         promise.trySuccess(null);
                     }
-                    return promise.toFuture();
+                    return promise.asFuture();
                 });
         when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
                 .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
                     ReferenceCountUtil.release(invocationOnMock.getArgument(3));
                     Promise<Void> promise =  ImmediateEventExecutor.INSTANCE.newPromise();
                     goAwayPromises.offer(promise);
-                    return promise.toFuture();
+                    return promise.asFuture();
                 });
         Http2Connection connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));

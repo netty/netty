@@ -343,7 +343,7 @@ public class EmbeddedChannelTest {
             public Future<Void> write(final ChannelHandlerContext ctx, final Object msg) {
                 Promise<Void> promise = ctx.newPromise();
                 ctx.executor().execute(() -> ctx.write(msg).cascadeTo(promise));
-                return promise.toFuture();
+                return promise.asFuture();
             }
         });
         Object msg = new Object();
@@ -364,7 +364,7 @@ public class EmbeddedChannelTest {
                 ctx.executor().schedule(() -> {
                     ctx.writeAndFlush(msg).cascadeTo(promise);
                 }, delay, TimeUnit.MILLISECONDS);
-                return promise.toFuture();
+                return promise.asFuture();
             }
         });
         Object msg = new Object();

@@ -42,7 +42,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         if (message instanceof Socks4CommandRequest) {
             final Socks4CommandRequest request = (Socks4CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
-            promise.toFuture().addListener(future -> {
+            promise.asFuture().addListener(future -> {
                 final Channel outboundChannel = future.getNow();
                 if (future.isSuccess()) {
                     Future<Void> responseFuture = ctx.channel().writeAndFlush(
@@ -81,7 +81,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         } else if (message instanceof Socks5CommandRequest) {
             final Socks5CommandRequest request = (Socks5CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
-            promise.toFuture().addListener(future -> {
+            promise.asFuture().addListener(future -> {
                 final Channel outboundChannel = future.getNow();
                 if (future.isSuccess()) {
                     Future<Void> responseFuture =

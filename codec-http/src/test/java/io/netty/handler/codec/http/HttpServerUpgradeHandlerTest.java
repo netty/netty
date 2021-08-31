@@ -101,7 +101,7 @@ public class HttpServerUpgradeHandlerTest {
                 writeUpgradeMessage = true;
                 Promise<Void> promise = ctx.newPromise();
                 ctx.channel().executor().execute(() -> ctx.write(msg).cascadeTo(promise));
-                Future<Void> future = promise.toFuture();
+                Future<Void> future = promise.asFuture();
                 return future.addListener(f -> writeFlushed = true);
             }
         };

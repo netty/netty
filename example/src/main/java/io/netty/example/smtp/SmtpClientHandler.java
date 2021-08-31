@@ -85,6 +85,6 @@ public class SmtpClientHandler extends SimpleChannelInboundHandler<SmtpResponse>
                 throw new RuntimeException("Still waiting for the past response");
             }
         }
-        return promise.toFuture().asStage();
+        return promise.asFuture().asStage();
     }
 }

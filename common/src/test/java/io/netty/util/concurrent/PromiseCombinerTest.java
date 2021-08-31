@@ -38,8 +38,8 @@ public class PromiseCombinerTest {
         p1 = INSTANCE.newPromise();
         p2 = INSTANCE.newPromise();
         p3 = INSTANCE.newPromise();
-        f1 = p1.toFuture();
-        f2 = p2.toFuture();
+        f1 = p1.asFuture();
+        f2 = p2.asFuture();
         combiner = new PromiseCombiner(INSTANCE);
     }
 
@@ -145,7 +145,7 @@ public class PromiseCombinerTest {
         EventExecutor executor = new SingleThreadEventExecutor();
         combiner = new PromiseCombiner(executor);
 
-        Future<?> future = executor.newPromise().toFuture();
+        Future<?> future = executor.newPromise().asFuture();
 
         try {
             combiner.add(future);

@@ -563,12 +563,12 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);
-                return promise.toFuture();
+                return promise.asFuture();
             }
         }
         // to maintain order of write
         submitWrite(ctx, msg, size, 0, now, promise);
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Deprecated

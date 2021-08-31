@@ -158,7 +158,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     @Override
-    public Future<V> toFuture() {
+    public Future<V> asFuture() {
         return this;
     }
 

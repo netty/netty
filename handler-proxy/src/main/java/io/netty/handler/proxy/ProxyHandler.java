@@ -109,7 +109,7 @@ public abstract class ProxyHandler implements ChannelHandler {
      * or the connection attempt has failed.
      */
     public final Future<Channel> connectFuture() {
-        return connectPromise.toFuture();
+        return connectPromise.asFuture();
     }
 
     /**
@@ -396,7 +396,7 @@ public abstract class ProxyHandler implements ChannelHandler {
         }
         Promise<Void> promise = ctx.newPromise();
         addPendingWrite(ctx, msg, promise);
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override

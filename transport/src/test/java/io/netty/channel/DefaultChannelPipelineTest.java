@@ -877,7 +877,7 @@ public class DefaultChannelPipelineTest {
             }
 
             void validate() {
-                validationPromise.toFuture().syncUninterruptibly();
+                validationPromise.asFuture().syncUninterruptibly();
                 validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             }
         }
@@ -1028,7 +1028,7 @@ public class DefaultChannelPipelineTest {
                 // This event must be captured by the added handler.
                 pipeline.fireUserEventTriggered(event);
             });
-            assertSame(event, promise.toFuture().syncUninterruptibly().getNow());
+            assertSame(event, promise.asFuture().syncUninterruptibly().getNow());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
         }
@@ -1570,8 +1570,8 @@ public class DefaultChannelPipelineTest {
     private static final class CallbackCheckHandler extends ChannelHandlerAdapter {
         private final Promise<Boolean> addedHandlerPromise = ImmediateEventExecutor.INSTANCE.newPromise();
         private final Promise<Boolean> removedHandlerPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-        final Future<Boolean> addedHandler = addedHandlerPromise.toFuture();
-        final Future<Boolean> removedHandler = removedHandlerPromise.toFuture();
+        final Future<Boolean> addedHandler = addedHandlerPromise.asFuture();
+        final Future<Boolean> removedHandler = removedHandlerPromise.asFuture();
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
         @Override
@@ -1603,9 +1603,9 @@ public class DefaultChannelPipelineTest {
         CheckEventExecutorHandler(EventExecutor executor) {
             this.executor = executor;
             addedPromise = executor.newPromise();
-            addedFuture = addedPromise.toFuture();
+            addedFuture = addedPromise.asFuture();
             removedPromise = executor.newPromise();
-            removedFuture = removedPromise.toFuture();
+            removedFuture = removedPromise.asFuture();
         }
 
         @Override

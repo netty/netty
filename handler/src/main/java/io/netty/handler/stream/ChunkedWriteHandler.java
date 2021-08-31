@@ -116,7 +116,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         Promise<Void> promise = ctx.newPromise();
         queue.add(new PendingWrite(msg, promise));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override

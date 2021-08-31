@@ -615,7 +615,7 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                promise.toFuture().get();
+                promise.asFuture().get();
             }
         });
         assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
@@ -668,11 +668,11 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                dataPromise.toFuture().get();
+                dataPromise.asFuture().get();
             }
         });
         assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
-        assertPromise.toFuture().sync();
+        assertPromise.asFuture().sync();
     }
 
     @Test

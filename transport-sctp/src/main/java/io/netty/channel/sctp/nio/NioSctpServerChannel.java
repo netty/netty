@@ -172,7 +172,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         } else {
             executor().execute(() -> bindAddress(localAddress, promise));
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -192,7 +192,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         } else {
             executor().execute(() -> unbindAddress(localAddress, promise));
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     // Unnecessary stuff

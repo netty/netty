@@ -104,7 +104,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<T> promise = executor().newPromise();
             doResolve(cast, promise);
-            return promise.toFuture();
+            return promise.asFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -118,7 +118,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
         if (!isSupported(address)) {
             // Address type not supported by the resolver
             promise.setFailure(new UnsupportedAddressTypeException());
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         if (isResolved(address)) {
@@ -126,7 +126,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             promise.setSuccess(cast);
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         try {
@@ -136,7 +136,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
         } catch (Exception e) {
             promise.setFailure(e);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -158,7 +158,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<List<T>> promise = executor().newPromise();
             doResolveAll(cast, promise);
-            return promise.toFuture();
+            return promise.asFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -172,7 +172,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
         if (!isSupported(address)) {
             // Address type not supported by the resolver
             promise.setFailure(new UnsupportedAddressTypeException());
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         if (isResolved(address)) {
@@ -180,7 +180,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             promise.setSuccess(Collections.singletonList(cast));
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         try {
@@ -190,7 +190,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
         } catch (Exception e) {
             promise.setFailure(e);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     /**

@@ -300,8 +300,8 @@ public class OpenSslPrivateKeyMethodTest {
                         client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
                                 .syncUninterruptibly();
 
-                        Future<Object> clientFuture = clientPromise.toFuture();
-                        Future<Object> serverFuture = serverPromise.toFuture();
+                        Future<Object> clientFuture = clientPromise.asFuture();
+                        Future<Object> serverFuture = serverPromise.asFuture();
                         assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
                         assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
 
@@ -444,7 +444,7 @@ public class OpenSslPrivateKeyMethodTest {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         @Override
@@ -472,7 +472,7 @@ public class OpenSslPrivateKeyMethodTest {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise.toFuture();
+            return promise.asFuture();
         }
     }
 }

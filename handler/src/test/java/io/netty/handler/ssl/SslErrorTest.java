@@ -185,7 +185,7 @@ public class SslErrorTest {
                         }
                     }).connect(serverChannel.localAddress()).get();
             // Block until we received the correct exception
-            promise.toFuture().syncUninterruptibly();
+            promise.asFuture().syncUninterruptibly();
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().syncUninterruptibly();

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SocketUtils;
@@ -248,7 +247,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             // At this point we know that the registration was complete and successful.
             Channel channel = regFuture.getNow();
             Promise<Void> promise = channel.newPromise();
-            promise.toFuture().map(v -> channel).cascadeTo(bindPromise);
+            promise.asFuture().map(v -> channel).cascadeTo(bindPromise);
             doBind0(regFuture, channel, localAddress, promise);
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -261,12 +260,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 } else {
                     Channel channel = future.getNow();
                     Promise<Void> promise = channel.newPromise();
-                    promise.toFuture().map(v -> channel).cascadeTo(bindPromise);
+                    promise.asFuture().map(v -> channel).cascadeTo(bindPromise);
                     doBind0(regFuture, channel, localAddress, promise);
                 }
             });
         }
-        return bindPromise.toFuture();
+        return bindPromise.asFuture();
     }
 
     final Future<Channel> initAndRegister(EventLoop loop) {
@@ -291,7 +290,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             }
         }));
 
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     final Channel initWithoutRegister() throws Exception {

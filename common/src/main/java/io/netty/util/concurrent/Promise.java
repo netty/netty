@@ -22,7 +22,7 @@ import java.util.concurrent.CancellationException;
  */
 public interface Promise<V> {
     /**
-     * Marks this promise as a success and notifies all listeners attached to the {@linkplain #toFuture() future}.
+     * Marks this promise as a success and notifies all listeners attached to the {@linkplain #asFuture() future}.
      * <p>
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
@@ -37,7 +37,7 @@ public interface Promise<V> {
     boolean trySuccess(V result);
 
     /**
-     * Marks this promise as a failure and notifies all listeners attached to the {@linkplain #toFuture() future}.
+     * Marks this promise as a failure and notifies all listeners attached to the {@linkplain #asFuture() future}.
      * <p>
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
@@ -124,11 +124,12 @@ public interface Promise<V> {
     Throwable cause();
 
     /**
-     * Produce a {@link Future} that will be completed upon completion of this promise.
+     * Return the {@link Future} instance is associated with this promsie.
+     * This future will be completed upon completion of this promise.
      *
      * @return A future instance associated with this promise.
      */
-    Future<V> toFuture();
+    Future<V> asFuture();
 
     /**
      * Returns the {@link EventExecutor} that is tied to this {@link Promise}.

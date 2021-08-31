@@ -254,7 +254,7 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).get();
 
-            donePromise.toFuture().sync();
+            donePromise.asFuture().sync();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -355,7 +355,7 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).get();
 
-            promise.toFuture().syncUninterruptibly();
+            promise.asFuture().syncUninterruptibly();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -479,8 +479,8 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).get();
 
-            serverPromise.toFuture().awaitUninterruptibly();
-            clientPromise.toFuture().awaitUninterruptibly();
+            serverPromise.asFuture().awaitUninterruptibly();
+            clientPromise.asFuture().awaitUninterruptibly();
 
             // Server always received the close_notify as the client triggers the close sequence.
             assertTrue(serverPromise.isSuccess());

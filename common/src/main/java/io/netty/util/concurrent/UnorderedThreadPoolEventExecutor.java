@@ -99,13 +99,13 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return DefaultPromise.newSuccessfulPromise(this, result).toFuture();
+        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
         Promise<V> promise = DefaultPromise.newFailedPromise(this, cause);
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -141,7 +141,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     public Future<?> terminationFuture() {
-        return terminationFuture.toFuture();
+        return terminationFuture.asFuture();
     }
 
     @Override

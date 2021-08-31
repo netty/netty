@@ -128,7 +128,7 @@ public final class Http2StreamChannelBootstrap {
         } catch (Throwable cause) {
             promise.setFailure(cause);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @SuppressWarnings("deprecation")

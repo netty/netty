@@ -167,7 +167,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise.toFuture();
+            return promise.asFuture();
         }
     }
 

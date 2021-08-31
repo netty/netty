@@ -554,10 +554,10 @@ public class StreamBufferingEncoderTest {
             public Future<Void> answer(InvocationOnMock invocation) throws Throwable {
                 for (Object a : invocation.getArguments()) {
                     if (a instanceof Promise) {
-                        return ((Promise<Void>) a).toFuture();
+                        return ((Promise<Void>) a).asFuture();
                     }
                 }
-                return newPromise().toFuture();
+                return newPromise().asFuture();
             }
         };
     }

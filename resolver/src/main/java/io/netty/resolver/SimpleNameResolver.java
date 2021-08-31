@@ -62,7 +62,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
         } catch (Exception e) {
             promise.setFailure(e);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -80,7 +80,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
         } catch (Exception e) {
             promise.setFailure(e);
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     /**

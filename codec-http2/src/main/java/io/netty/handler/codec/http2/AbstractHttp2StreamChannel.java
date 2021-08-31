@@ -334,7 +334,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public Future<Void> closeFuture() {
-        return closePromise.toFuture();
+        return closePromise.asFuture();
     }
 
     @Override

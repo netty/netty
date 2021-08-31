@@ -194,7 +194,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.newFailedFuture(any(Throwable.class)))
                 .thenAnswer(invocationOnMock ->
                         DefaultPromise.newFailedPromise(executor, invocationOnMock.getArgument(0)));
-        when(ctx.newSucceededFuture()).thenReturn(newSuccessfulPromise(executor, (Void) null).toFuture());
+        when(ctx.newSucceededFuture()).thenReturn(newSuccessfulPromise(executor, (Void) null).asFuture());
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
@@ -204,9 +204,9 @@ public class Http2ConnectionHandlerTest {
             return null;
         }).when(ctx).fireChannelRead(any());
         doAnswer((Answer<Future<Void>>) in ->
-                newSuccessfulPromise(executor, (Void) null).toFuture()).when(ctx).write(any());
+                newSuccessfulPromise(executor, (Void) null).asFuture()).when(ctx).write(any());
         doAnswer((Answer<Future<Void>>) in ->
-                newSuccessfulPromise(executor, (Void) null).toFuture()).when(ctx).close();
+                newSuccessfulPromise(executor, (Void) null).asFuture()).when(ctx).close();
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {

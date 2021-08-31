@@ -56,7 +56,7 @@ public class ResolveAddressHandler implements ChannelHandler {
                 }
                 ctx.pipeline().remove(this);
             });
-            return promise.toFuture();
+            return promise.asFuture();
         } else {
             Future<Void> f = ctx.connect(remoteAddress, localAddress);
             ctx.pipeline().remove(this);

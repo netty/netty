@@ -129,7 +129,7 @@ public class SslHandlerTest {
                          if (((ByteBuf) msg).isReadable()) {
                              Promise<Void> promise = ctx.newPromise();
                              writesToFail.add(promise);
-                             return promise.toFuture();
+                             return promise.asFuture();
                          }
                      }
                      return ctx.newSucceededFuture();
@@ -493,8 +493,8 @@ public class SslHandlerTest {
             sc = serverBootstrap.bind(new InetSocketAddress(0)).get();
             cc = bootstrap.connect(sc.localAddress()).get();
 
-            serverPromise.toFuture().syncUninterruptibly();
-            clientPromise.toFuture().syncUninterruptibly();
+            serverPromise.asFuture().syncUninterruptibly();
+            clientPromise.asFuture().syncUninterruptibly();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();

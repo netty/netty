@@ -591,7 +591,7 @@ public class SslHandler extends ByteToMessageDecoder {
      *         The {@link Future} for the most recent {@linkplain #renegotiate() TLS renegotiation} otherwise.
      */
     public Future<Channel> handshakeFuture() {
-        return handshakePromise.toFuture();
+        return handshakePromise.asFuture();
     }
 
     /**
@@ -608,7 +608,7 @@ public class SslHandler extends ByteToMessageDecoder {
         } else {
             ctx.executor().execute(() -> closeOutbound0(promise));
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private void closeOutbound0(Promise<Void> promise) {
@@ -631,7 +631,7 @@ public class SslHandler extends ByteToMessageDecoder {
      * @see SSLEngine
      */
     public Future<Channel> sslCloseFuture() {
-        return sslClosePromise.toFuture();
+        return sslClosePromise.asFuture();
     }
 
     @Override
@@ -700,7 +700,7 @@ public class SslHandler extends ByteToMessageDecoder {
         } else {
             Promise<Void> promise = ctx.newPromise();
             pendingUnencryptedWrites.add(((ByteBufConvertible) msg).asByteBuf(), promise);
-            return promise.toFuture();
+            return promise.asFuture();
         }
     }
 
@@ -1874,14 +1874,14 @@ public class SslHandler extends ByteToMessageDecoder {
                 //
                 // See https://github.com/netty/netty/issues/5931
                 Promise<Void> cascade = ctx.newPromise();
-                cascade.toFuture().cascadeTo(promise);
-                safeClose(ctx, closeNotifyPromise.toFuture(), cascade);
+                cascade.asFuture().cascadeTo(promise);
+                safeClose(ctx, closeNotifyPromise.asFuture(), cascade);
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
                 sslCloseFuture().addListener(future -> promise.setSuccess(null));
             }
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private void flush(ChannelHandlerContext ctx, Promise<Void> promise) {
@@ -1957,11 +1957,11 @@ public class SslHandler extends ByteToMessageDecoder {
         EventExecutor executor = ctx.executor();
         if (!executor.inEventLoop()) {
             executor.execute(() -> renegotiateOnEventLoop(promise));
-            return promise.toFuture();
+            return promise.asFuture();
         }
 
         renegotiateOnEventLoop(promise);
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private void renegotiateOnEventLoop(final Promise<Channel> newHandshakePromise) {
@@ -2038,7 +2038,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.toFuture().addListener(f -> timeoutFuture.cancel(false));
+        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel(false));
     }
 
     private void forceFlush(ChannelHandlerContext ctx) {

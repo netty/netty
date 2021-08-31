@@ -728,7 +728,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
         // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
         Promise<Void> p = childChannel.newPromise();
-        p.toFuture().addListener(childChannel, (channel, future) -> {
+        p.asFuture().addListener(childChannel, (channel, future) -> {
             channelOpen.set(channel.isOpen());
             channelActive.set(channel.isActive());
         });
@@ -971,7 +971,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Promise<Void> promise = childChannel.newPromise();
         childChannel.unsafe().close(promise);
-        promise.toFuture().syncUninterruptibly();
+        promise.asFuture().syncUninterruptibly();
         childChannel.closeFuture().syncUninterruptibly();
     }
 

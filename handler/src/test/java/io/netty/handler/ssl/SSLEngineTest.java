@@ -1094,7 +1094,7 @@ public abstract class SSLEngineTest {
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.get();
-        return clientWritePromise.toFuture();
+        return clientWritePromise.asFuture();
     }
 
     private void mySetupMutualAuth(SSLEngineTestParam param, File keyFile, File crtFile, String keyPassword)
@@ -2000,7 +2000,7 @@ public abstract class SSLEngineTest {
 
         }).connect(serverChannel.localAddress()).get();
 
-        promise.toFuture().syncUninterruptibly();
+        promise.asFuture().syncUninterruptibly();
 
         serverCert.delete();
         clientCert.delete();
@@ -4029,7 +4029,7 @@ public abstract class SSLEngineTest {
             out.write(1);
             out.flush();
 
-            Future<SecretKey> future = promise.toFuture();
+            Future<SecretKey> future = promise.asFuture();
             assertTrue(future.await(10, TimeUnit.SECONDS));
             SecretKey key = future.get();
             assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");

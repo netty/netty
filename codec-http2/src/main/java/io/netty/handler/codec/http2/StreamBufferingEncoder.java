@@ -182,7 +182,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         pendingStream.frames.add(new HeadersFrame(headers, streamDependency, weight, exclusive,
                 padding, endOfStream, promise));
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     @Override
@@ -215,7 +215,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         if (pendingStream != null) {
             Promise<Void> promise = ctx.newPromise();
             pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
-            return promise.toFuture();
+            return promise.asFuture();
         } else {
             ReferenceCountUtil.safeRelease(data);
             return ctx.newFailedFuture(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));

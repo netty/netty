@@ -63,7 +63,7 @@ final class Futures {
         }
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new Mapper<>(promise, mapper));
-        Future<R> mappedFuture = promise.toFuture();
+        Future<R> mappedFuture = promise.asFuture();
         mappedFuture.addListener(future, propagateCancel());
         return mappedFuture;
     }
@@ -99,7 +99,7 @@ final class Futures {
         requireNonNull(mapper, "mapper");
         Promise<R> promise = future.executor().newPromise();
         future.addListener(new FlatMapper<>(promise, mapper));
-        Future<R> mappedFuture = promise.toFuture();
+        Future<R> mappedFuture = promise.asFuture();
         if (!future.isSuccess()) {
             // Propagate cancellation if future is either incomplete or failed.
             // Failed means it could be cancelled, so that needs to be propagated.
@@ -221,7 +221,7 @@ final class Futures {
                         propagateUncommonCompletion(future, recipient);
                     } else {
                         future.addListener(recipient, passThrough());
-                        recipient.toFuture().addListener(future, propagateCancel());
+                        recipient.asFuture().addListener(future, propagateCancel());
                     }
                 } catch (Throwable e) {
                     tryFailure(recipient, e, logger);
@@ -248,7 +248,7 @@ final class Futures {
         if (!future.isSuccess()) {
             // Propagate cancellation if future is either incomplete or failed.
             // Failed means it could be cancelled, so that needs to be propagated.
-            promise.toFuture().addListener(future, propagateCancel());
+            promise.asFuture().addListener(future, propagateCancel());
         }
         future.addListener(promise, passThrough());
     }

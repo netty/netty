@@ -144,7 +144,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             }
             promiseAggregator.doneAllocatingPromises();
         }
-        return promise.toFuture();
+        return promise.asFuture();
     }
 
     private static Future<Void> writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,

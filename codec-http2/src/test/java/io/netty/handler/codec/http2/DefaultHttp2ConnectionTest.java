@@ -155,7 +155,7 @@ public class DefaultHttp2ConnectionTest {
         final Promise<Void> promise = group.next().newPromise();
         final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
         client.forEachActiveStream(stream -> {
-            promise.toFuture().addListener(future -> {
+            promise.asFuture().addListener(future -> {
                 latch.countDown();
             });
             client.close(promise);
@@ -184,7 +184,7 @@ public class DefaultHttp2ConnectionTest {
                 return true;
             });
         } catch (Http2Exception ignored) {
-            promise.toFuture().addListener(future -> {
+            promise.asFuture().addListener(future -> {
                 latch.countDown();
             });
             client.close(promise);
@@ -634,7 +634,7 @@ public class DefaultHttp2ConnectionTest {
     private void testRemoveAllStreams() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = group.next().newPromise();
-        promise.toFuture().addListener(future -> {
+        promise.asFuture().addListener(future -> {
             latch.countDown();
         });
         client.close(promise);
