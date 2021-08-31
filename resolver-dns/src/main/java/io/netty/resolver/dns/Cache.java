@@ -52,6 +52,11 @@ abstract class Cache<E> {
 
     private static final Future<?> CANCELLED_FUTURE = new Future<Object>() {
         @Override
+        public boolean cancel() {
+            return cancel(false);
+        }
+
+        @Override
         public boolean isSuccess() {
             return false;
         }
