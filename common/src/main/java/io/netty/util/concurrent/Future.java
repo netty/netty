@@ -281,6 +281,13 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
     }
 
     /**
+     * Returns a {@link java.util.concurrent.Future JDK Future that reflects the state of this {@link Future}.
+     */
+    default java.util.concurrent.Future<V> asJdkFuture() {
+        return new DefaultFutureCompletionStage<>(this);
+    }
+
+    /**
      * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future} mapped
      * through the given mapper function.
      * <p>

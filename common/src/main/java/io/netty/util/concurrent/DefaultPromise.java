@@ -668,6 +668,15 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
 
     @Override
     public FutureCompletionStage<V> asStage() {
+        return getFutureStageAdaptor();
+    }
+
+    @Override
+    public java.util.concurrent.Future<V> asJdkFuture() {
+        return getFutureStageAdaptor();
+    }
+
+    private DefaultFutureCompletionStage<V> getFutureStageAdaptor() {
         DefaultFutureCompletionStage<V> stageAdapter = stage;
         if (stageAdapter == null) {
             stage = stageAdapter = new DefaultFutureCompletionStage<>(this);
