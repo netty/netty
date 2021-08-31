@@ -782,11 +782,11 @@ public abstract class SSLEngineTest {
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
     }
 
-    private void mySetupMutualAuth(final SSLEngineTestParam param, KeyManagerFactory serverKMF,
-                                   final File serverTrustManager,
-                                   KeyManagerFactory clientKMF, File clientTrustManager,
-                                   ClientAuth clientAuth, final boolean failureExpected,
-                                   final boolean serverInitEngine)
+    protected void mySetupMutualAuth(final SSLEngineTestParam param, KeyManagerFactory serverKMF,
+                                     final File serverTrustManager,
+                                     KeyManagerFactory clientKMF, File clientTrustManager,
+                                     ClientAuth clientAuth, final boolean failureExpected,
+                                     final boolean serverInitEngine)
             throws Exception {
         serverSslCtx =
                 wrapContext(param, SslContextBuilder.forServer(serverKMF)
@@ -911,7 +911,7 @@ public abstract class SSLEngineTest {
         clientChannel = ccf.get();
     }
 
-    private static void rethrowIfNotNull(Throwable error) {
+    protected static void rethrowIfNotNull(Throwable error) {
         if (error != null) {
             throw new AssertionFailedError("Expected no error", error);
         }
@@ -4162,6 +4162,36 @@ public abstract class SSLEngineTest {
                 SslUtils.arrayContains(clientProtocols, SslProtocols.TLS_v1_3));
         assertEquals(SslProvider.isTlsv13EnabledByDefault(sslServerProvider(), serverSslContextProvider()),
                 SslUtils.arrayContains(serverProtocols, SslProtocols.TLS_v1_3));
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        char[] password = "password".toCharArray();
+
+        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
+        serverKeyStore.load(getClass().getResourceAsStream("rsaValidations-server-keystore.p12"), password);
+
+        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
+        clientKeyStore.load(getClass().getResourceAsStream("rsaValidation-user-certs.p12"), password);
+
+        final KeyManagerFactory serverKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        serverKeyManagerFactory.init(serverKeyStore, password);
+        final KeyManagerFactory clientKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        clientKeyManagerFactory.init(clientKeyStore, password);
+
+        File commonChain = ResourcesUtil.getFile(getClass(), "rsapss-ca-cert.cert");
+        ClientAuth auth = ClientAuth.REQUIRE;
+
+        mySetupMutualAuth(param, serverKeyManagerFactory, commonChain, clientKeyManagerFactory, commonChain,
+                auth, false, true);
+
+        assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
+        rethrowIfNotNull(clientException);
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+        rethrowIfNotNull(serverException);
     }
 
     protected SSLEngine wrapEngine(SSLEngine engine) {

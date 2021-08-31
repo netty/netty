@@ -24,7 +24,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
-
 import io.netty.util.internal.PlatformDependent;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
@@ -1557,5 +1556,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     protected boolean isSessionMaybeReused(SSLEngine engine) {
         return unwrapEngine(engine).isSessionReused();
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Override
+    public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testRSASSAPSS(param);
     }
 }

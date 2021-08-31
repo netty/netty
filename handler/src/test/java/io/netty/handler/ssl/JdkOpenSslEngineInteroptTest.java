@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
@@ -190,6 +192,14 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheSize(param);
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Override
+    public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testRSASSAPSS(param);
     }
 
     @Override
