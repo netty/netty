@@ -39,6 +39,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -49,7 +50,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -64,7 +64,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * connection attempts will fail.
      */
     private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
     private volatile SocketAddress local;
@@ -160,7 +160,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 connectPromise = null;
             }
 
-            ScheduledFuture<?> future = connectTimeoutFuture;
+            Future<?> future = connectTimeoutFuture;
             if (future != null) {
                 future.cancel(false);
                 connectTimeoutFuture = null;

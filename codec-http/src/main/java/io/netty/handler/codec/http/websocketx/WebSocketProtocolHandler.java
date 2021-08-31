@@ -23,8 +23,8 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.PromiseNotifier;
-import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -128,7 +128,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
 
-        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(new Runnable() {
+        final Future<?> timeoutTask = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!closeSent.isDone()) {
