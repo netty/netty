@@ -62,76 +62,98 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
         return SslProvider.OPENSSL;
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthSameCerts(SSLEngineTestParam param) throws Throwable {
         super.testMutualAuthSameCerts(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthDiffCerts(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCerts(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthDiffCertsServerFailure(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCertsServerFailure(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthDiffCertsClientFailure(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCertsClientFailure(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(param);
     }
 
-    @Override
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionAfterHandshakeKeyManagerFactory(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -150,24 +172,32 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testHandshakeSession(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testHandshakeSession(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithKeyManager(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager(SSLEngineTestParam param) throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
@@ -176,18 +206,24 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
         super.testSessionLocalWhenNonMutualWithoutKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCache(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCache(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheTimeout(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());

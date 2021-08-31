@@ -21,6 +21,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.crypto.Cipher;
 import java.security.Security;
@@ -79,11 +81,15 @@ public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
         assertNull(Security.getProvider(AmazonCorrettoCryptoProvider.PROVIDER_NAME));
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param) {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param) {

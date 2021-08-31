@@ -1401,12 +1401,16 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithKeyManager(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager(SSLEngineTestParam param) throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
@@ -1521,6 +1525,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return context;
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCache(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
@@ -1529,12 +1535,16 @@ public class OpenSslEngineTest extends SSLEngineTest {
         assertSessionContext(serverSslCtx);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheTimeout(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());

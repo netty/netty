@@ -61,18 +61,24 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         return SslProvider.JDK;
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -80,6 +86,8 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -87,6 +95,8 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -94,6 +104,8 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
@@ -106,24 +118,32 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testHandshakeSession(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testHandshakeSession(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithKeyManager(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager(SSLEngineTestParam param) throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
@@ -132,18 +152,24 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
         super.testSessionLocalWhenNonMutualWithoutKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCache(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCache(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheTimeout(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());

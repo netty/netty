@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLSessionContext;
 import java.security.Provider;
@@ -53,11 +55,15 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
         return Java8SslTestUtils.conscryptProvider();
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param) {
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param) {
@@ -68,6 +74,8 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
         // Not supported by conscrypt
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Disabled("Possible Conscrypt bug")
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
