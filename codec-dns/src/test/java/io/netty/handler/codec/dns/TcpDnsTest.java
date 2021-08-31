@@ -44,6 +44,7 @@ public class TcpDnsTest {
         DnsQuery readQuery = channel.readInbound();
         assertThat(readQuery, is(query));
         assertThat(readQuery.recordAt(DnsSection.QUESTION).name(), is(query.recordAt(DnsSection.QUESTION).name()));
+        readQuery.release();
         assertFalse(channel.finish());
     }
 
