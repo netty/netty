@@ -51,7 +51,7 @@ public class HttpNativeServerHandler extends SimpleChannelInboundHandler<HttpObj
             response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
             if (!keepAlive) {
-                ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
             } else {
                 response.headers().set(CONNECTION, KEEP_ALIVE);
                 ctx.write(response);

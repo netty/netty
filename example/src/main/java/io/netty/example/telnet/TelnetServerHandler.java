@@ -59,7 +59,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
         if (close) {
-            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            future.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 

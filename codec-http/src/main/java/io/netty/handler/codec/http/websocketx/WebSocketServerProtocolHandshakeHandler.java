@@ -125,9 +125,9 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-        Future<Void> f = ctx.channel().writeAndFlush(res);
+        Future<Void> f = ctx.writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            f.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 

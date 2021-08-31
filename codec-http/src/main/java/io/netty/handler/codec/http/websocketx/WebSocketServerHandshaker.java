@@ -332,7 +332,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
-        return close0(channel, channel, frame);
+        return close0(channel, frame);
     }
 
     /**
@@ -345,11 +345,11 @@ public abstract class WebSocketServerHandshaker {
      */
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         requireNonNull(ctx, "ctx");
-        return close0(ctx, ctx.channel(), frame);
+        return close0(ctx, frame);
     }
 
-    private static Future<Void> close0(ChannelOutboundInvoker invoker, Channel channel, CloseWebSocketFrame frame) {
-        return invoker.writeAndFlush(frame).addListener(channel, ChannelFutureListeners.CLOSE);
+    private static Future<Void> close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame) {
+        return invoker.writeAndFlush(frame).addListener(invoker, ChannelFutureListeners.CLOSE);
     }
 
     /**

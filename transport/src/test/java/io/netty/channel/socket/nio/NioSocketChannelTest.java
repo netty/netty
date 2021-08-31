@@ -80,7 +80,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576))
-                                   .addListener(ctx.channel(), ChannelFutureListeners.CLOSE));
+                                   .addListener(ctx, ChannelFutureListeners.CLOSE));
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));
                     ctx.flush();
                     futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));

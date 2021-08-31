@@ -87,7 +87,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
         boolean shouldClose = msg instanceof LastHttpContent && !shouldKeepAlive();
         Future<Void> future = ctx.write(msg);
         if (shouldClose) {
-            future.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            future.addListener(ctx, ChannelFutureListeners.CLOSE);
         }
         return future;
     }

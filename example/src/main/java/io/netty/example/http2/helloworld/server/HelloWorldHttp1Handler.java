@@ -70,7 +70,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         } else {
             // Tell the client we're going to close the connection.
             response.headers().set(CONNECTION, CLOSE);
-            ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
     }
 

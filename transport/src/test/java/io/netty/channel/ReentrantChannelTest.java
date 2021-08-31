@@ -228,7 +228,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
             @Override
             public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
-                Future<Void> f = ctx.write(msg).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                Future<Void> f = ctx.write(msg).addListener(ctx, ChannelFutureListeners.CLOSE);
                 ctx.channel().flush();
                 return f;
             }

@@ -92,7 +92,7 @@ public class Utf8FrameValidator implements ChannelHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof CorruptedFrameException && ctx.channel().isOpen()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
         ctx.fireExceptionCaught(cause);
     }

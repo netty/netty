@@ -34,6 +34,6 @@ public class OkResponseHandler extends SimpleChannelInboundHandler<Object> {
         final FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         response.headers().set("custom-response-header", "Some value");
-        ctx.writeAndFlush(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+        ctx.writeAndFlush(response).addListener(ctx, ChannelFutureListeners.CLOSE);
     }
 }

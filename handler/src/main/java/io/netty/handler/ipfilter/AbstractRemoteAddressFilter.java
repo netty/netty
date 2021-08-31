@@ -65,7 +65,7 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
             } else {
                 Future<Void> rejectedFuture = channelRejected(ctx, remoteAddress);
                 if (rejectedFuture != null && !rejectedFuture.isDone()) {
-                    rejectedFuture.addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+                    rejectedFuture.addListener(ctx, ChannelFutureListeners.CLOSE);
                 } else {
                     ctx.close();
                 }

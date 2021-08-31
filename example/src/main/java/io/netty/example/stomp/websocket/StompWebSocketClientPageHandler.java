@@ -136,7 +136,7 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
             ctx.write(response);
         } else {
             response.headers().set(CONNECTION, CLOSE);
-            ctx.write(response).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
+            ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
 
         if (autoFlush) {
