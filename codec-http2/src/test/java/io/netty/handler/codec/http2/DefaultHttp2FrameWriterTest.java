@@ -176,7 +176,7 @@ public class DefaultHttp2FrameWriterTest {
             (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id
             (byte) 0x01, (byte) 0x00, // padding
         };
-        ByteBuf expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes);
+        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes);
         assertEquals(expectedOutbound, outbound);
     }
 
