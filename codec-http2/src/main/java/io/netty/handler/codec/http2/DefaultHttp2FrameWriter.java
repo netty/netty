@@ -219,7 +219,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     ctx.write(frameHeader2, promiseAggregator.newPromise());
 
                     // Write the payload.
-                    if (frameDataBytes != 0 && data != null) { // Make sure Data is not null
+                    if (data != null) { // Make sure Data is not null
                         if (remainingData == 0) {
                             ByteBuf lastFrame = data.readSlice(frameDataBytes);
                             data = null;

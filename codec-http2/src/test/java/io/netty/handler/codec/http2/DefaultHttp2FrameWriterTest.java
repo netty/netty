@@ -160,6 +160,26 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(expectedOutbound, outbound);
     }
 
+    @Test
+    public void writeEmptyDataWithPadding() {
+        int streamId = 1;
+
+        ByteBuf payloadByteBuf = Unpooled.buffer();
+        frameWriter.writeData(ctx, streamId, payloadByteBuf, 2, true, promise);
+
+        assertEquals(0, payloadByteBuf.refCnt());
+
+        byte[] expectedFrameBytes = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x02, // payload length
+            (byte) 0x00, // payload type
+            (byte) 0x09, // flags
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id
+            (byte) 0x01, (byte) 0x00, // padding
+        };
+        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes);
+        assertEquals(expectedOutbound, outbound);
+    }
+
     /**
      * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize()}
      * the remaining headers will be sent in a CONTINUATION frame
