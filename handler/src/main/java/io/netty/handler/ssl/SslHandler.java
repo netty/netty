@@ -59,7 +59,6 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -2022,7 +2021,7 @@ public class SslHandler extends ByteToMessageDecoder {
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(() -> {
+        Future<?> timeoutFuture = ctx.executor().schedule(() -> {
             if (localHandshakePromise.isDone()) {
                 return;
             }
@@ -2066,7 +2065,7 @@ public class SslHandler extends ByteToMessageDecoder {
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture;
+        Future<?> timeoutFuture;
         if (!flushFuture.isDone()) {
             long closeNotifyTimeout = closeNotifyFlushTimeoutMillis;
             if (closeNotifyTimeout > 0) {
@@ -2101,7 +2100,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     promise.trySuccess(null);
                 }
             } else {
-                final ScheduledFuture<?> closeNotifyReadTimeoutFuture;
+                Future<?> closeNotifyReadTimeoutFuture;
 
                 if (!sslClosePromise.isDone()) {
                     closeNotifyReadTimeoutFuture = ctx.executor().schedule(() -> {

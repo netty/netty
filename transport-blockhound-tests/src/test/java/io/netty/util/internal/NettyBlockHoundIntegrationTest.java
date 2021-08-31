@@ -45,7 +45,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
 import org.hamcrest.Matchers;
@@ -141,7 +140,7 @@ public class NettyBlockHoundIntegrationTest {
 
     private static void testEventExecutorTakeTask(EventExecutor eventExecutor) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
-        ScheduledFuture<?> f = eventExecutor.schedule(latch::countDown, 10, TimeUnit.MILLISECONDS);
+        Future<?> f = eventExecutor.schedule(latch::countDown, 10, TimeUnit.MILLISECONDS);
         f.sync();
         latch.await();
     }

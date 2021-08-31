@@ -21,7 +21,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeUnit;
@@ -119,7 +118,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
 
-        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(() -> {
+        Future<?> timeoutTask = ctx.executor().schedule(() -> {
             if (!closeSent.isDone()) {
                 closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
             }
