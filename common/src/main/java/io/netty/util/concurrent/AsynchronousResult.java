@@ -23,7 +23,7 @@ import java.util.concurrent.CancellationException;
  * This interface is used as the super-interface of {@link Promise} and {@link Future}, and these should generally be
  * used instead.
  */
-public interface AsynchronousResult<V> {
+interface AsynchronousResult<V> {
     /**
      * Cancel this asynchronous operation, unless it has already been completed.
      * <p>

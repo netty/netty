@@ -58,7 +58,7 @@ public interface Promise<V> extends AsynchronousResult<V> {
     boolean setUncancellable();
 
     /**
-     * Return the {@link Future} instance is associated with this promsie.
+     * Return the {@link Future} instance is associated with this promise.
      * This future will be completed upon completion of this promise.
      *
      * @return A future instance associated with this promise.

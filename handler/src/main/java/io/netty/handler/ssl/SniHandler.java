@@ -163,11 +163,10 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             final SslContext context;
             try {
                 context = mapping.map(input);
-                promise.setSuccess(context);
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                return promise.setFailure(cause).asFuture();
             }
-            return promise.asFuture();
+            return promise.setSuccess(context).asFuture();
         }
     }
 
