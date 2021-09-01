@@ -85,25 +85,25 @@ public class MixedFileUpload implements FileUpload {
         if (fileUpload instanceof MemoryFileUpload) {
             try {
                 checkSize(fileUpload.length() + buffer.readableBytes());
+                if (fileUpload.length() + buffer.readableBytes() > limitSize) {
+                    DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+                            .getName(), fileUpload.getFilename(), fileUpload
+                            .getContentType(), fileUpload
+                            .getContentTransferEncoding(), fileUpload.getCharset(),
+                            definedSize, baseDir, deleteOnExit);
+                    diskFileUpload.setMaxSize(maxSize);
+                    ByteBuf data = fileUpload.getByteBuf();
+                    if (data != null && data.isReadable()) {
+                        diskFileUpload.addContent(data.retain(), false);
+                    }
+                    // release old upload
+                    fileUpload.release();
+
+                    fileUpload = diskFileUpload;
+                }
             } catch (IOException e) {
                 buffer.release();
                 throw e;
-            }
-            if (fileUpload.length() + buffer.readableBytes() > limitSize) {
-                DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
-                        .getName(), fileUpload.getFilename(), fileUpload
-                        .getContentType(), fileUpload
-                        .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize, baseDir, deleteOnExit);
-                diskFileUpload.setMaxSize(maxSize);
-                ByteBuf data = fileUpload.getByteBuf();
-                if (data != null && data.isReadable()) {
-                    diskFileUpload.addContent(data.retain(), false);
-                }
-                // release old upload
-                fileUpload.release();
-
-                fileUpload = diskFileUpload;
             }
         }
         fileUpload.addContent(buffer, last);

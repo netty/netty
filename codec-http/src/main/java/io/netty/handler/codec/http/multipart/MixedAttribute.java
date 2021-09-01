@@ -124,19 +124,19 @@ public class MixedAttribute implements Attribute {
         if (attribute instanceof MemoryAttribute) {
             try {
                 checkSize(attribute.length() + buffer.readableBytes());
+                if (attribute.length() + buffer.readableBytes() > limitSize) {
+                    DiskAttribute diskAttribute = new DiskAttribute(attribute
+                            .getName(), attribute.definedLength(), baseDir, deleteOnExit);
+                    diskAttribute.setMaxSize(maxSize);
+                    if (((MemoryAttribute) attribute).getByteBuf() != null) {
+                        diskAttribute.addContent(((MemoryAttribute) attribute)
+                            .getByteBuf(), false);
+                    }
+                    attribute = diskAttribute;
+                }
             } catch (IOException e) {
                 buffer.release();
                 throw e;
-            }
-            if (attribute.length() + buffer.readableBytes() > limitSize) {
-                DiskAttribute diskAttribute = new DiskAttribute(attribute
-                        .getName(), attribute.definedLength(), baseDir, deleteOnExit);
-                diskAttribute.setMaxSize(maxSize);
-                if (((MemoryAttribute) attribute).getByteBuf() != null) {
-                    diskAttribute.addContent(((MemoryAttribute) attribute)
-                        .getByteBuf(), false);
-                }
-                attribute = diskAttribute;
             }
         }
         attribute.addContent(buffer, last);
