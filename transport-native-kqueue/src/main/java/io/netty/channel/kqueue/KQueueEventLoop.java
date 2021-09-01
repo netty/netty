@@ -298,7 +298,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                     eventList.realloc(false);
                 }
             } catch (Error e) {
-                throw (Error) e;
+                throw e;
             } catch (Throwable t) {
                 handleLoopException(t);
             } finally {
@@ -311,7 +311,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                         }
                     }
                 } catch (Error e) {
-                    throw (Error) e;
+                    throw e;
                 } catch (Throwable t) {
                     handleLoopException(t);
                 }

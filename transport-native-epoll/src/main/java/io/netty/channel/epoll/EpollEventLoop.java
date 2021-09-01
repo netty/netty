@@ -391,7 +391,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     events.increase();
                 }
             } catch (Error e) {
-                throw (Error) e;
+                throw e;
             } catch (Throwable t) {
                 handleLoopException(t);
             } finally {
@@ -404,7 +404,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         }
                     }
                 } catch (Error e) {
-                    throw (Error) e;
+                    throw e;
                 } catch (Throwable t) {
                     handleLoopException(t);
                 }
