@@ -571,7 +571,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx,
             Throwable cause, Http2Exception.StreamException streamException) {
-        // We log here for debugging purposes. This exception will be propagated to the upper layers trough other ways:
+        // We log here for debugging purposes. This exception will be propagated to the upper layers through other ways:
         // - fireExceptionCaught
         // - fireUserEventTriggered(Http2ResetFrame), see Http2MultiplexHandler#channelRead(...)
         // - by failing write promise
