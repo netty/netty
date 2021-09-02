@@ -93,22 +93,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public <V> Promise<V> newPromise() {
-        return new DefaultPromise<>(this);
-    }
-
-    @Override
-    public <V> Future<V> newSucceededFuture(V result) {
-        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
-    }
-
-    @Override
-    public <V> Future<V> newFailedFuture(Throwable cause) {
-        Promise<V> promise = DefaultPromise.newFailedPromise(this, cause);
-        return promise.asFuture();
-    }
-
-    @Override
     public boolean isShuttingDown() {
         return isShutdown();
     }

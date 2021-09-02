@@ -26,7 +26,6 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -54,7 +53,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.util.concurrent.DefaultPromise.newSuccessfulPromise;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -141,7 +139,7 @@ public class Http2ConnectionHandlerTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         when(channel.metadata()).thenReturn(new ChannelMetadata(false));
         DefaultChannelConfig config = new DefaultChannelConfig(channel);
@@ -193,8 +191,8 @@ public class Http2ConnectionHandlerTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newFailedFuture(any(Throwable.class)))
                 .thenAnswer(invocationOnMock ->
-                        DefaultPromise.newFailedPromise(executor, invocationOnMock.getArgument(0)));
-        when(ctx.newSucceededFuture()).thenReturn(newSuccessfulPromise(executor, (Void) null).asFuture());
+                        ImmediateEventExecutor.INSTANCE.newFailedFuture(invocationOnMock.getArgument(0)));
+        when(ctx.newSucceededFuture()).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
@@ -204,9 +202,9 @@ public class Http2ConnectionHandlerTest {
             return null;
         }).when(ctx).fireChannelRead(any());
         doAnswer((Answer<Future<Void>>) in ->
-                newSuccessfulPromise(executor, (Void) null).asFuture()).when(ctx).write(any());
+                ImmediateEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).write(any());
         doAnswer((Answer<Future<Void>>) in ->
-                newSuccessfulPromise(executor, (Void) null).asFuture()).when(ctx).close();
+                ImmediateEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).close();
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
@@ -608,7 +606,7 @@ public class Http2ConnectionHandlerTest {
         handler.goAway(ctx, STREAM_ID + 2, errorCode, data.retain());
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), eq(data));
         verify(connection).goAwaySent(eq(STREAM_ID + 2), eq(errorCode), eq(data));
-        promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise = ImmediateEventExecutor.INSTANCE.newPromise();
         handler.goAway(ctx, STREAM_ID, errorCode, data);
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));

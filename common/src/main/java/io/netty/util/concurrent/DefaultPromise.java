@@ -69,7 +69,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     /**
      * Creates a new unfulfilled promise.
      *
-     * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
+     * This constructor is only meant to be used by sub-classes.
      *
      * @param executor
      *        The {@link EventExecutor} which is used to notify the promise once it is complete.
@@ -77,7 +77,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
      *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
      *        depth exceeds a threshold.
      */
-    public DefaultPromise(EventExecutor executor) {
+    protected DefaultPromise(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
         stage = new DefaultFutureCompletionStage<>(this);
     }
@@ -92,7 +92,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
      *        depth exceeds a threshold.
      * @param result The result of the successful promise.
      */
-    public static <V> Promise<V> newSuccessfulPromise(EventExecutor executor, V result) {
+    static <V> Promise<V> newSuccessfulPromise(EventExecutor executor, V result) {
         return new DefaultPromise<>(executor, result);
     }
 
@@ -106,7 +106,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
      *        depth exceeds a threshold.
      * @param cause The {@link Throwable} that caused the failure of the returned promise.
      */
-    public static <V> Promise<V> newFailedPromise(EventExecutor executor, Throwable cause) {
+    static <V> Promise<V> newFailedPromise(EventExecutor executor, Throwable cause) {
         return new DefaultPromise<>(cause, executor);
     }
 

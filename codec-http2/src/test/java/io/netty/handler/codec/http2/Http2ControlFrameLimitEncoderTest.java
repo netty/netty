@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -264,6 +263,6 @@ public class Http2ControlFrameLimitEncoderTest {
     }
 
     private static Promise<Void> newPromise() {
-        return new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        return ImmediateEventExecutor.INSTANCE.newPromise();
     }
 }

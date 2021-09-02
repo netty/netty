@@ -44,19 +44,25 @@ public interface EventExecutor extends EventExecutorGroup {
     /**
      * Return a new {@link Promise}.
      */
-    <V> Promise<V> newPromise();
+    default <V> Promise<V> newPromise() {
+        return new DefaultPromise<>(this);
+    }
 
     /**
      * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    <V> Future<V> newSucceededFuture(V result);
+    default <V> Future<V> newSucceededFuture(V result) {
+        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
+    }
 
     /**
      * Create a new {@link Future} which is marked as failed already. So {@link Future#isSuccess()}
      * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    <V> Future<V> newFailedFuture(Throwable cause);
+    default <V> Future<V> newFailedFuture(Throwable cause) {
+        return DefaultPromise.<V>newFailedPromise(this, cause).asFuture();
+    }
 }

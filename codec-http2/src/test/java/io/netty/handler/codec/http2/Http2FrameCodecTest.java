@@ -35,7 +35,6 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -613,7 +612,7 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertFalse(isStreamIdValid(stream.id()));
 
-        final Promise<Void> listenerExecuted = new DefaultPromise<>(GlobalEventExecutor.INSTANCE);
+        final Promise<Void> listenerExecuted = GlobalEventExecutor.INSTANCE.newPromise();
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
                .addListener(future -> {

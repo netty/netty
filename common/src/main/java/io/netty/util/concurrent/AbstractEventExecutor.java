@@ -76,24 +76,13 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public <V> Promise<V> newPromise() {
-        return new DefaultPromise<>(this);
-    }
-
-    @Override
     public <V> Future<V> newSucceededFuture(V result) {
         if (result == null) {
             @SuppressWarnings("unchecked")
             Future<V> f = (Future<V>) successfulVoidFuture;
             return f;
         }
-        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
-    }
-
-    @Override
-    public <V> Future<V> newFailedFuture(Throwable cause) {
-        Promise<V> promise = DefaultPromise.newFailedPromise(this, cause);
-        return promise.asFuture();
+        return EventExecutor.super.newSucceededFuture(result);
     }
 
     @Override
