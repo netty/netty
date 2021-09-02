@@ -83,22 +83,27 @@ public class MixedFileUpload implements FileUpload {
     public void addContent(ByteBuf buffer, boolean last)
             throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
-            checkSize(fileUpload.length() + buffer.readableBytes());
-            if (fileUpload.length() + buffer.readableBytes() > limitSize) {
-                DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
-                        .getName(), fileUpload.getFilename(), fileUpload
-                        .getContentType(), fileUpload
-                        .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize, baseDir, deleteOnExit);
-                diskFileUpload.setMaxSize(maxSize);
-                ByteBuf data = fileUpload.getByteBuf();
-                if (data != null && data.isReadable()) {
-                    diskFileUpload.addContent(data.retain(), false);
-                }
-                // release old upload
-                fileUpload.release();
+            try {
+                checkSize(fileUpload.length() + buffer.readableBytes());
+                if (fileUpload.length() + buffer.readableBytes() > limitSize) {
+                    DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+                            .getName(), fileUpload.getFilename(), fileUpload
+                            .getContentType(), fileUpload
+                            .getContentTransferEncoding(), fileUpload.getCharset(),
+                            definedSize, baseDir, deleteOnExit);
+                    diskFileUpload.setMaxSize(maxSize);
+                    ByteBuf data = fileUpload.getByteBuf();
+                    if (data != null && data.isReadable()) {
+                        diskFileUpload.addContent(data.retain(), false);
+                    }
+                    // release old upload
+                    fileUpload.release();
 
-                fileUpload = diskFileUpload;
+                    fileUpload = diskFileUpload;
+                }
+            } catch (IOException e) {
+                buffer.release();
+                throw e;
             }
         }
         fileUpload.addContent(buffer, last);
@@ -181,7 +186,12 @@ public class MixedFileUpload implements FileUpload {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        checkSize(buffer.readableBytes());
+        try {
+            checkSize(buffer.readableBytes());
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
                 FileUpload memoryUpload = fileUpload;
