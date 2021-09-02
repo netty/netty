@@ -38,7 +38,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     private final Collection<EventExecutor> selfCollection = Collections.singleton(this);
     private final Future<?> successfulVoidFuture = DefaultPromise.newSuccessfulPromise(this, null).asFuture();
 
-
     @Override
     public final boolean inEventLoop() {
         return inEventLoop(Thread.currentThread());
