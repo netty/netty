@@ -27,8 +27,8 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -145,7 +145,7 @@ public class Http2StreamChannelBootstrapTest {
         when(ctx.executor()).thenReturn(executor);
         when(ctx.handler()).thenReturn(handler);
 
-        Promise<Http2StreamChannel> promise = new DefaultPromise<>(mock(EventExecutor.class));
+        Promise<Http2StreamChannel> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         bootstrap.open0(ctx, promise);
         assertThat(promise.isDone(), is(true));
         assertThat(promise.cause(), is(instanceOf(IllegalStateException.class)));
