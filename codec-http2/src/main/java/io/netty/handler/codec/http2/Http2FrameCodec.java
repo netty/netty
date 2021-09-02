@@ -33,7 +33,6 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.UnstableApi;
-import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -41,6 +40,7 @@ import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
@@ -569,14 +569,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    private void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
-                                           Http2Exception.StreamException streamException) {
-        // It is normal to hit a race condition where we still receive frames for a stream that this
-        // peer has deemed closed, such as if this peer sends a RST(CANCEL) to discard the request.
-        // Since this is likely to be normal we log at DEBUG level.
-        InternalLogLevel level =
-                streamException.error() == Http2Error.STREAM_CLOSED ? InternalLogLevel.DEBUG : InternalLogLevel.WARN;
-        LOG.log(level, "Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
+    private static void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx,
+            Throwable cause, Http2Exception.StreamException streamException) {
+        // We log here for debugging purposes. This exception will be propagated to the upper layers through other ways:
+        // - fireExceptionCaught
+        // - fireUserEventTriggered(Http2ResetFrame), see Http2MultiplexHandler#channelRead(...)
+        // - by failing write promise
+        // Receiver of the error is responsible for correct handling of this exception.
+        LOG.log(DEBUG, "Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override
