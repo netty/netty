@@ -23,11 +23,11 @@ import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.Executors.callable;
 
 /**
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
@@ -59,7 +59,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     static long deadlineNanos(long delay) {
         long deadlineNanos = nanoTime() + delay;
         // Guard against overflow
-        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
+        return deadlineNanos < 0? Long.MAX_VALUE : deadlineNanos;
     }
 
     PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue() {
@@ -78,7 +78,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Cancel all scheduled tasks.
-     *
+     * <p>
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final void cancelScheduledTasks() {
@@ -91,7 +91,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         final RunnableScheduledFutureNode<?>[] scheduledTasks =
                 scheduledTaskQueue.toArray(EMPTY_RUNNABLE_SCHEDULED_FUTURE_NODES);
 
-        for (RunnableScheduledFutureNode<?> task: scheduledTasks) {
+        for (RunnableScheduledFutureNode<?> task : scheduledTasks) {
             task.cancel();
         }
 
@@ -106,16 +106,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
-     * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
-     * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
-     *
+     * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}. You should use {@link
+     * #nanoTime()} to retrieve the correct {@code nanoTime}.
+     * <p>
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final RunnableScheduledFuture<?> pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
         Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null? null : scheduledTaskQueue.peek();
         if (scheduledTask == null) {
             return null;
         }
@@ -129,12 +129,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Return the nanoseconds when the next scheduled task is ready to be run or {@code -1} if no task is scheduled.
-     *
+     * <p>
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final long nextScheduledTaskNano() {
         Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null? null : scheduledTaskQueue.peek();
         if (scheduledTask == null) {
             return -1;
         }
@@ -151,13 +151,13 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Returns {@code true} if a scheduled task is ready for processing.
-     *
+     * <p>
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final boolean hasScheduledTasks() {
         assert inEventLoop();
         Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null? null : scheduledTaskQueue.peek();
         return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
     }
 
@@ -168,8 +168,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (delay < 0) {
             delay = 0;
         }
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.callable(command),
-                deadlineNanos(unit.toNanos(delay)), 0);
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(
+                callable(command), deadlineNanos(unit.toNanos(delay)), 0);
         return schedule(task);
     }
 
@@ -197,8 +197,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     String.format("period: %d (expected: > 0)", period));
         }
 
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
-                deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(
+                callable(command, (Void) null), deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
         return schedule(task);
     }
 
@@ -215,8 +215,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     String.format("delay: %d (expected: > 0)", delay));
         }
 
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
-                deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(
+                callable(command, (Void) null), deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));
         return schedule(task);
     }
 
@@ -252,9 +252,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Callable}.
-     *
-     * This can be used if you want to override {@link #newScheduledTaskFor(Callable, long, long)} and return a different
-     * {@link RunnableFuture}.
+     * <p>
+     * This can be used if you want to override {@link #newScheduledTaskFor(Callable, long, long)} and return a
+     * different {@link RunnableFuture}.
      */
     protected static <V> RunnableScheduledFuture<V> newRunnableScheduledFuture(
             AbstractScheduledEventExecutor executor, Promise<V> promise, Callable<V> task,
@@ -270,7 +270,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return newRunnableScheduledFuture(this, newPromise(), callable, deadlineNanos, period);
     }
 
-    interface RunnableScheduledFutureNode<V> extends PriorityQueueNode, RunnableScheduledFuture<V> { }
+    interface RunnableScheduledFutureNode<V> extends PriorityQueueNode, RunnableScheduledFuture<V> {
+    }
 
     private static final class DefaultRunnableScheduledFutureNode<V> implements RunnableScheduledFutureNode<V> {
         private final RunnableScheduledFuture<V> future;
@@ -307,8 +308,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public <C> RunnableScheduledFuture<V> addListener(C context,
-                                                          FutureContextListener<? super C, ? super V> listener) {
+        public <C> RunnableScheduledFuture<V> addListener(
+                C context, FutureContextListener<? super C, ? super V> listener) {
             future.addListener(context, listener);
             return this;
         }
