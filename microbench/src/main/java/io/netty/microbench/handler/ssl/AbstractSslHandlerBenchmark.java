@@ -17,6 +17,7 @@ package io.netty.microbench.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.ssl.SslContext;
@@ -164,7 +165,12 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     private static final class SslThroughputBenchmarkHandlerContext extends
             EmbeddedChannelWriteAccumulatingHandlerContext {
         SslThroughputBenchmarkHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                                    ByteToMessageDecoder.Cumulator writeCumulator) {
+                                             ByteToMessageDecoder.Cumulator writeCumulator) {
+            super(alloc, handler, writeCumulator);
+        }
+
+        SslThroughputBenchmarkHandlerContext(BufferAllocator alloc, ChannelHandler handler,
+                                             ByteToMessageDecoder.Cumulator writeCumulator) {
             super(alloc, handler, writeCumulator);
         }
 

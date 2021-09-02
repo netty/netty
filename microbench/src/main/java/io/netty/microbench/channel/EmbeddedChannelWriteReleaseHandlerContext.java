@@ -15,6 +15,7 @@
 package io.netty.microbench.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
@@ -26,6 +27,14 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     }
 
     protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
+            EmbeddedChannel channel) {
+        super(alloc, handler, channel);
+    }
+    protected EmbeddedChannelWriteReleaseHandlerContext(BufferAllocator alloc, ChannelHandler handler) {
+        this(alloc, handler, new EmbeddedChannel());
+    }
+
+    protected EmbeddedChannelWriteReleaseHandlerContext(BufferAllocator alloc, ChannelHandler handler,
             EmbeddedChannel channel) {
         super(alloc, handler, channel);
     }

@@ -18,6 +18,7 @@ package io.netty.channel;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -129,6 +130,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ByteBufAllocator alloc() {
         return channel().config().getAllocator();
+    }
+
+    @Override
+    public BufferAllocator bufferAllocator() {
+        return channel().config().getBufferAllocator();
     }
 
     @Override

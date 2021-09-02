@@ -16,6 +16,7 @@ package io.netty.microbench.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -28,13 +29,25 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
     private final ByteToMessageDecoder.Cumulator cumulator;
 
     protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                                          ByteToMessageDecoder.Cumulator writeCumulator) {
+                                                             ByteToMessageDecoder.Cumulator writeCumulator) {
         this(alloc, handler, writeCumulator, new EmbeddedChannel());
     }
 
     protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                                          ByteToMessageDecoder.Cumulator writeCumulator,
-                                                          EmbeddedChannel channel) {
+                                                             ByteToMessageDecoder.Cumulator writeCumulator,
+                                                             EmbeddedChannel channel) {
+        super(alloc, handler, channel);
+        cumulator = requireNonNull(writeCumulator, "writeCumulator");
+    }
+
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
+                                                             ByteToMessageDecoder.Cumulator writeCumulator) {
+        this(alloc, handler, writeCumulator, new EmbeddedChannel());
+    }
+
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
+                                                             ByteToMessageDecoder.Cumulator writeCumulator,
+                                                             EmbeddedChannel channel) {
         super(alloc, handler, channel);
         cumulator = requireNonNull(writeCumulator, "writeCumulator");
     }

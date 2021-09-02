@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
@@ -624,6 +625,11 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         @Override
         public ByteBufAllocator alloc() {
             return ctx.alloc();
+        }
+
+        @Override
+        public BufferAllocator bufferAllocator() {
+            return ctx.bufferAllocator();
         }
 
         @Override
