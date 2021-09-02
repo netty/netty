@@ -82,7 +82,7 @@ public final class MqttMessageFactory {
             case AUTH:
                 //Having MqttReasonCodeAndPropertiesVariableHeader
                 return new MqttMessage(mqttFixedHeader,
-                        (MqttReasonCodeAndPropertiesVariableHeader) variableHeader);
+                        variableHeader);
 
             default:
                 throw new IllegalArgumentException("unknown message type: " + mqttFixedHeader.messageType());
