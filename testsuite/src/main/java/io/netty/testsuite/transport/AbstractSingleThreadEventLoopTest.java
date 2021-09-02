@@ -41,11 +41,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 public abstract class AbstractSingleThreadEventLoopTest {
 
     @Test
-    @SuppressWarnings("deprecation")
     public void shutdownBeforeStart() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
         assertFalse(group.awaitTermination(2, TimeUnit.MILLISECONDS));
-        group.shutdown();
+        group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         assertTrue(group.awaitTermination(200, TimeUnit.MILLISECONDS));
     }
 

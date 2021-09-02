@@ -987,7 +987,7 @@ abstract class DnsResolveContext<T> {
                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = i.next();
                 i.remove();
 
-                f.cancel(false);
+                f.cancel();
             }
         }
 

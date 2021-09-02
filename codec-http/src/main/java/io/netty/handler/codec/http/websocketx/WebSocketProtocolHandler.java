@@ -125,7 +125,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        closeSent.asFuture().addListener(future -> timeoutTask.cancel(false));
+        closeSent.asFuture().addListener(future -> timeoutTask.cancel());
     }
 
     /**

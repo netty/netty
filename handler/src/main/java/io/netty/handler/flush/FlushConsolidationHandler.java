@@ -205,7 +205,7 @@ public class FlushConsolidationHandler implements ChannelHandler {
 
     private void cancelScheduledFlush() {
         if (nextScheduledFlush != null) {
-            nextScheduledFlush.cancel(false);
+            nextScheduledFlush.cancel();
             nextScheduledFlush = null;
         }
     }

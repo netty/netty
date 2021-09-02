@@ -150,8 +150,7 @@ import java.util.function.Function;
  * }
  * </pre>
  */
-@SuppressWarnings("ClassNameSameAsAncestorName")
-public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousResult<V> {
+public interface Future<V> extends AsynchronousResult<V> {
     /**
      * Adds the specified listener to this future. The specified listener is notified when this future is {@linkplain
      * #isDone() done}. If this future is already completed, the specified listener is notified immediately.
@@ -235,15 +234,6 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
      */
     boolean awaitUninterruptibly(long timeoutMillis);
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * If the cancellation was successful it will fail the future with a {@link CancellationException}.
-     */
-    @Override
-    boolean cancel(boolean mayInterruptIfRunning);
-
-    @Override
     default V get() throws InterruptedException, ExecutionException {
         await();
 
@@ -257,7 +247,6 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
         throw new ExecutionException(cause);
     }
 
-    @Override
     default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (await(timeout, unit)) {
             Throwable cause = cause();

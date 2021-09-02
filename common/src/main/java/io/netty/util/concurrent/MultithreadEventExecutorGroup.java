@@ -236,14 +236,6 @@ public class MultithreadEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    @Deprecated
-    public final void shutdown() {
-        for (EventExecutor l: children) {
-            l.shutdown();
-        }
-    }
-
-    @Override
     public final boolean isShuttingDown() {
         for (EventExecutor l: children) {
             if (!l.isShuttingDown()) {

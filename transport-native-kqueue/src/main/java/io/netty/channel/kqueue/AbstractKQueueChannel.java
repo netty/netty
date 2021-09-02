@@ -563,7 +563,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     promise.asFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
-                                connectTimeoutFuture.cancel(false);
+                                connectTimeoutFuture.cancel();
                             }
                             connectPromise = null;
                             close(newPromise());
@@ -635,7 +635,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                     // See https://github.com/netty/netty/issues/1770
                     if (connectTimeoutFuture != null) {
-                        connectTimeoutFuture.cancel(false);
+                        connectTimeoutFuture.cancel();
                     }
                     connectPromise = null;
                 }

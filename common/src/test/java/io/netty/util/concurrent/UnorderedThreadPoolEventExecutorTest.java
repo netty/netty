@@ -65,7 +65,7 @@ public class UnorderedThreadPoolEventExecutorTest {
         try {
             latch.await();
         } finally {
-            future.cancel(true);
+            future.cancel();
             executor.shutdownGracefully();
         }
     }

@@ -53,7 +53,7 @@ abstract class Cache<E> {
     private static final Future<?> CANCELLED_FUTURE = new Future<Object>() {
         @Override
         public boolean cancel() {
-            return cancel(false);
+            return false;
         }
 
         @Override
@@ -129,11 +129,6 @@ abstract class Cache<E> {
         @Override
         public Object getNow() {
             return null;
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            return false;
         }
 
         @Override
@@ -352,7 +347,7 @@ abstract class Cache<E> {
                         break;
                     } else {
                         // There was something else scheduled in the meantime... Cancel and try again.
-                        newFuture.cancel(true);
+                        newFuture.cancel();
                     }
                 } else {
                     break;
@@ -401,7 +396,7 @@ abstract class Cache<E> {
         }
 
         void cancel() {
-            future.cancel(false);
+            future.cancel();
         }
 
         @Override

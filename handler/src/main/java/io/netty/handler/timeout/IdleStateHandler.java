@@ -348,15 +348,15 @@ public class IdleStateHandler implements ChannelHandler {
         state = 2;
 
         if (readerIdleTimeout != null) {
-            readerIdleTimeout.cancel(false);
+            readerIdleTimeout.cancel();
             readerIdleTimeout = null;
         }
         if (writerIdleTimeout != null) {
-            writerIdleTimeout.cancel(false);
+            writerIdleTimeout.cancel();
             writerIdleTimeout = null;
         }
         if (allIdleTimeout != null) {
-            allIdleTimeout.cancel(false);
+            allIdleTimeout.cancel();
             allIdleTimeout = null;
         }
     }

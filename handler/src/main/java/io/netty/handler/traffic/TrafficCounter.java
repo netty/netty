@@ -15,11 +15,13 @@
  */
 package io.netty.handler.traffic;
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -148,7 +150,7 @@ public class TrafficCounter {
     /**
      * Executor that will run the monitor
      */
-    final ScheduledExecutorService executor;
+    final EventExecutorGroup executor;
     /**
      * Monitor created once in start()
      */
@@ -156,7 +158,7 @@ public class TrafficCounter {
     /**
      * used in stop() to cancel the timer
      */
-    volatile ScheduledFuture<?> scheduledFuture;
+    volatile Future<?> scheduledFuture;
 
     /**
      * Is Monitor active
@@ -211,7 +213,7 @@ public class TrafficCounter {
             trafficShapingHandler.doAccounting(this);
         }
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel();
         }
     }
 
@@ -252,7 +254,7 @@ public class TrafficCounter {
      * @param checkInterval
      *            the checkInterval in millisecond between two computations.
      */
-    public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
+    public TrafficCounter(EventExecutor executor, String name, long checkInterval) {
         requireNonNull(name, "name");
 
         trafficShapingHandler = null;
@@ -277,7 +279,7 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(
-            AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
+            AbstractTrafficShapingHandler trafficShapingHandler, EventExecutorGroup executor,
             String name, long checkInterval) {
         this.name = requireNonNull(name, "name");
         this.trafficShapingHandler = checkNotNullWithIAE(trafficShapingHandler, "trafficShapingHandler");
@@ -304,13 +306,12 @@ public class TrafficCounter {
     public void configure(long newCheckInterval) {
         long newInterval = newCheckInterval / 10 * 10;
         if (checkInterval.getAndSet(newInterval) != newInterval) {
+            stop();
             if (newInterval <= 0) {
-                stop();
                 // No more active monitoring
                 lastTime.set(milliSecondFromNano());
             } else {
                 // Restart
-                stop();
                 start();
             }
         }

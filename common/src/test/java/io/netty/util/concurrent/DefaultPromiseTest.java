@@ -90,10 +90,6 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public void shutdown() {
-        }
-
-        @Override
         public boolean isShutdown() {
             return false;
         }
@@ -109,22 +105,22 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
+        public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                          TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
@@ -145,7 +141,7 @@ public class DefaultPromiseTest {
         EventExecutor executor = new RejectingEventExecutor();
 
         DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertTrue(promise.isCancelled());
     }
 
@@ -174,21 +170,21 @@ public class DefaultPromiseTest {
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testCancellationExceptionIsReturnedAsCause() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
         assertTrue(promise.isFailed());
     }
@@ -421,7 +417,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwCancelled() throws InterruptedException {
         DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
-        promise.cancel(true);
+        promise.cancel();
         assertThrows(CancellationException.class, promise::sync);
     }
 

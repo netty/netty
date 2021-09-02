@@ -58,11 +58,11 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         Channel cc = cb.connect(sc.localAddress()).get();
 
         Future<Void> f = cc.write(a);
-        assertTrue(f.cancel(false));
+        assertTrue(f.cancel());
         cc.writeAndFlush(b);
         cc.write(c);
         Future<Void> f2 = cc.write(d);
-        assertTrue(f2.cancel(false));
+        assertTrue(f2.cancel());
         cc.writeAndFlush(e);
 
         while (sh.counter < 3) {

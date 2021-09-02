@@ -250,7 +250,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     promise.asFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
-                                connectTimeoutFuture.cancel(false);
+                                connectTimeoutFuture.cancel();
                             }
                             connectPromise = null;
                             close(newPromise());
@@ -317,7 +317,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
                 if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel(false);
+                    connectTimeoutFuture.cancel();
                 }
                 connectPromise = null;
             }
@@ -452,7 +452,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         Future<?> future = connectTimeoutFuture;
         if (future != null) {
-            future.cancel(false);
+            future.cancel();
             connectTimeoutFuture = null;
         }
     }

@@ -41,7 +41,7 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         assertFalse(future.awaitUninterruptibly(1000));
-        assertTrue(future.cancel(true));
+        assertTrue(future.cancel());
         group.shutdownGracefully();
     }
 

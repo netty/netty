@@ -18,8 +18,7 @@ package io.netty.util.concurrent;
 /**
  * A combination of {@link java.util.concurrent.RunnableFuture} and {@link Future}.
  */
-@SuppressWarnings("ClassNameSameAsAncestorName")
-public interface RunnableFuture<V> extends java.util.concurrent.RunnableFuture<V>, Future<V> {
+public interface RunnableFuture<V> extends Runnable, Future<V> {
 
     @Override
     RunnableFuture<V> addListener(FutureListener<? super V> listener);

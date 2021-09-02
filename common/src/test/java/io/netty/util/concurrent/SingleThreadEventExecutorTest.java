@@ -17,10 +17,7 @@ package io.netty.util.concurrent;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -97,82 +94,6 @@ public class SingleThreadEventExecutorTest {
         assertEquals(thread.isDaemon(), threadProperties.isDaemon());
         assertTrue(threadProperties.stackTrace().length > 0);
         executor.shutdownGracefully();
-    }
-
-    @Test
-    public void testInvokeAnyInEventLoop() throws Throwable {
-        assertTimeoutPreemptively(ofSeconds(3), () -> {
-            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(true, false));
-            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
-        });
-    }
-
-    @Test
-    public void testInvokeAnyInEventLoopWithTimeout() throws Throwable {
-        assertTimeoutPreemptively(ofSeconds(3), () -> {
-            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(true, true));
-            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
-        });
-    }
-
-    @Test
-    public void testInvokeAllInEventLoop() throws Throwable {
-        assertTimeoutPreemptively(ofSeconds(3), () -> {
-            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(false, false));
-            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
-        });
-    }
-
-    @Test
-    public void testInvokeAllInEventLoopWithTimeout() throws Throwable {
-        assertTimeoutPreemptively(ofSeconds(3), () -> {
-            var exception = assertThrows(CompletionException.class, () -> testInvokeInEventLoop(false, true));
-            assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
-        });
-    }
-
-    private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
-            @Override
-            protected void run() {
-                while (!confirmShutdown()) {
-                    Runnable task = takeTask();
-                    if (task != null) {
-                        task.run();
-                    }
-                }
-            }
-        };
-        try {
-            final Promise<Void> promise = executor.newPromise();
-            executor.execute(() -> {
-                try {
-                    Set<Callable<Boolean>> set = Collections.singleton(() -> {
-                        promise.setFailure(new AssertionError("Should never execute the Callable"));
-                        return Boolean.TRUE;
-                    });
-                    if (any) {
-                        if (timeout) {
-                            executor.invokeAny(set, 10, TimeUnit.SECONDS);
-                        } else {
-                            executor.invokeAny(set);
-                        }
-                    } else {
-                        if (timeout) {
-                            executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                        } else {
-                            executor.invokeAll(set);
-                        }
-                    }
-                    promise.setFailure(new AssertionError("Should never reach here"));
-                } catch (Throwable cause) {
-                    promise.setFailure(cause);
-                }
-            });
-            promise.asFuture().syncUninterruptibly();
-        } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        }
     }
 
     @Test
@@ -266,7 +187,7 @@ public class SingleThreadEventExecutorTest {
 
             //add scheduled task
             TestRunnable scheduledTask = new TestRunnable();
-            ScheduledFuture<?> f = executor.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
+            Future<?> f = executor.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
 
             //add task
             TestRunnable afterTask = new TestRunnable();
@@ -300,7 +221,7 @@ public class SingleThreadEventExecutorTest {
         assertTimeoutPreemptively(ofSeconds(5), () -> {
             //add scheduled task
             TestRunnable t = new TestRunnable();
-            final ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
+            Future<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
 
             //ensure always has at least one task in taskQueue
             //check if scheduled tasks are triggered

@@ -348,7 +348,7 @@ public abstract class ProxyHandler implements ChannelHandler {
 
     private void cancelConnectTimeoutFuture() {
         if (connectTimeoutFuture != null) {
-            connectTimeoutFuture.cancel(false);
+            connectTimeoutFuture.cancel();
             connectTimeoutFuture = null;
         }
     }

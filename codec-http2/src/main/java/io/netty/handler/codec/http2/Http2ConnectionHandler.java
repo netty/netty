@@ -27,7 +27,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -900,7 +899,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         @Override
         public void operationComplete(Future<?> sentGoAwayFuture) {
             if (timeoutTask != null) {
-                timeoutTask.cancel(false);
+                timeoutTask.cancel();
             }
             doClose();
         }

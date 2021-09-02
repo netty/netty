@@ -126,7 +126,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     public void tearDown() throws Exception {
         chan.close().sync();
         serverChan.close().sync();
-        future.cancel(true);
+        future.cancel();
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         abyte.release();
     }

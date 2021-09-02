@@ -217,7 +217,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         final Future<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture != null) {
             this.timeoutFuture = null;
-            timeoutFuture.cancel(false);
+            timeoutFuture.cancel();
         }
 
         // Remove the id from the manager as soon as the query completes. This may be because of success, failure or

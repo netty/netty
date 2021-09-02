@@ -18,7 +18,10 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.List;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -36,25 +39,28 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  *
  * <strong>Because it provides no ordering care should be taken when using it!</strong>
  */
-public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolExecutor implements EventExecutor {
+@SuppressWarnings("unchecked")
+public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
+    private final InnerScheduledThreadPoolExecutor executor;
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}
      * using {@link DefaultThreadFactory}.
      */
     public UnorderedThreadPoolEventExecutor(int corePoolSize) {
-        this(corePoolSize, new DefaultThreadFactory(UnorderedThreadPoolEventExecutor.class));
+        DefaultThreadFactory threadFactory = new DefaultThreadFactory(UnorderedThreadPoolEventExecutor.class);
+        executor = new InnerScheduledThreadPoolExecutor(this, corePoolSize, threadFactory);
     }
 
     /**
      * See {@link ScheduledThreadPoolExecutor#ScheduledThreadPoolExecutor(int, ThreadFactory)}
      */
     public UnorderedThreadPoolEventExecutor(int corePoolSize, ThreadFactory threadFactory) {
-        super(corePoolSize, threadFactory);
+        executor = new InnerScheduledThreadPoolExecutor(this, corePoolSize, threadFactory);
     }
 
     /**
@@ -62,7 +68,8 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
      * ThreadFactory, java.util.concurrent.RejectedExecutionHandler)} using {@link DefaultThreadFactory}.
      */
     public UnorderedThreadPoolEventExecutor(int corePoolSize, RejectedExecutionHandler handler) {
-        this(corePoolSize, new DefaultThreadFactory(UnorderedThreadPoolEventExecutor.class), handler);
+        DefaultThreadFactory threadFactory = new DefaultThreadFactory(UnorderedThreadPoolEventExecutor.class);
+        executor = new InnerScheduledThreadPoolExecutor(this, corePoolSize, threadFactory, handler);
     }
 
     /**
@@ -70,7 +77,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
      */
     public UnorderedThreadPoolEventExecutor(int corePoolSize, ThreadFactory threadFactory,
                                             RejectedExecutionHandler handler) {
-        super(corePoolSize, threadFactory, handler);
+        executor = new InnerScheduledThreadPoolExecutor(this, corePoolSize, threadFactory, handler);
     }
 
     @Override
@@ -84,23 +91,25 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public List<Runnable> shutdownNow() {
-        List<Runnable> tasks = super.shutdownNow();
-        terminationFuture.trySuccess(null);
-        return tasks;
+    public boolean isShutdown() {
+        return executor.isShutdown();
     }
 
     @Override
-    public void shutdown() {
-        super.shutdown();
-        terminationFuture.trySuccess(null);
+    public boolean isTerminated() {
+        return executor.isTerminated();
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        return executor.awaitTermination(timeout, unit);
     }
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         // TODO: At the moment this just calls shutdown but we may be able to do something more smart here which
         //       respects the quietPeriod and timeout.
-        shutdown();
+        executor.shutdown();
         return terminationFuture();
     }
 
@@ -110,68 +119,69 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
-        return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<>(this, runnable, task);
+    public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        return (Future<?>) executor.schedule(command, delay, unit);
     }
 
     @Override
-    protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<>(this, callable, task);
+    public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        return (Future<V>) executor.schedule(callable, delay, unit);
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return (ScheduledFuture<?>) super.schedule(command, delay, unit);
+    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        return (Future<?>) executor.scheduleAtFixedRate(command, initialDelay, period, unit);
     }
 
     @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return (ScheduledFuture<V>) super.schedule(callable, delay, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return (ScheduledFuture<?>) super.scheduleAtFixedRate(command, initialDelay, period, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return (ScheduledFuture<?>) super.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        return (Future<?>) executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
     }
 
     @Override
     public Future<?> submit(Runnable task) {
-        return (Future<?>) super.submit(task);
+        return (Future<?>) executor.submit(task);
     }
 
     @Override
     public <T> Future<T> submit(Runnable task, T result) {
-        return (Future<T>) super.submit(task, result);
+        return (Future<T>) executor.submit(task, result);
     }
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return (Future<T>) super.submit(task);
+        return (Future<T>) executor.submit(task);
     }
 
     @Override
     public void execute(Runnable command) {
-        super.schedule(new NonNotifyRunnable(command), 0, NANOSECONDS);
+        executor.schedule(new NonNotifyRunnable(command), 0, NANOSECONDS);
     }
 
+    /**
+     * Return the task queue of the underlying {@link java.util.concurrent.Executor} instance.
+     * <p>
+     * Visible for testing.
+     *
+     * @return The task queue of this executor.
+     */
+    BlockingQueue<Runnable> getQueue() {
+        return executor.getQueue();
+    }
+
+    /**
+     * Note: this class has a natural ordering that is inconsistent with equals.
+     */
     private static final class RunnableScheduledFutureTask<V> extends PromiseTask<V>
-            implements RunnableScheduledFuture<V>, ScheduledFuture<V> {
+            implements RunnableScheduledFuture<V> {
         private final RunnableScheduledFuture<V> future;
 
-        RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable,
-                                           RunnableScheduledFuture<V> future) {
+        RunnableScheduledFutureTask(EventExecutor executor, Runnable runnable, RunnableScheduledFuture<V> future) {
             super(executor, runnable, null);
             this.future = future;
         }
 
-        RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable,
-                                           RunnableScheduledFuture<V> future) {
+        RunnableScheduledFutureTask(EventExecutor executor, Callable<V> callable, RunnableScheduledFuture<V> future) {
             super(executor, callable);
             this.future = future;
         }
@@ -226,6 +236,32 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         @Override
         public void run() {
             task.run();
+        }
+    }
+
+    private static class InnerScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor {
+        private final EventExecutor eventExecutor;
+
+        InnerScheduledThreadPoolExecutor(EventExecutor eventExecutor, int corePoolSize, ThreadFactory threadFactory) {
+            super(corePoolSize, threadFactory);
+            this.eventExecutor = eventExecutor;
+        }
+
+        InnerScheduledThreadPoolExecutor(EventExecutor eventExecutor, int corePoolSize, ThreadFactory threadFactory,
+                                                RejectedExecutionHandler handler) {
+            super(corePoolSize, threadFactory, handler);
+            this.eventExecutor = eventExecutor;
+        }
+
+        @Override
+        protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
+            return runnable instanceof NonNotifyRunnable ?
+                    task : new RunnableScheduledFutureTask<>(eventExecutor, runnable, task);
+        }
+
+        @Override
+        protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
+            return new RunnableScheduledFutureTask<>(eventExecutor, callable, task);
         }
     }
 }

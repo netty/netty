@@ -166,7 +166,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
             Future<?> future = connectTimeoutFuture;
             if (future != null) {
-                future.cancel(false);
+                future.cancel();
                 connectTimeoutFuture = null;
             }
 
@@ -612,7 +612,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     promise.asFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
-                                connectTimeoutFuture.cancel(false);
+                                connectTimeoutFuture.cancel();
                             }
                             connectPromise = null;
                             close(newPromise());
@@ -684,7 +684,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                     // See https://github.com/netty/netty/issues/1770
                     if (connectTimeoutFuture != null) {
-                        connectTimeoutFuture.cancel(false);
+                        connectTimeoutFuture.cancel();
                     }
                     connectPromise = null;
                 }

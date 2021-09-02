@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -95,14 +94,12 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void shutdownBeforeStart() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
         assertRejection(loopA);
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void shutdownAfterStart() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         loopA.execute(latch::countDown);
@@ -111,7 +108,7 @@ public class SingleThreadEventLoopTest {
         latch.await();
 
         // Request the event loop thread to stop.
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
         assertRejection(loopA);
 
         assertTrue(loopA.isShutdown());
@@ -165,7 +162,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(() -> {
+        Future<?> f = loopA.scheduleAtFixedRate(() -> {
             timestamps.add(System.nanoTime());
             try {
                 Thread.sleep(50);
@@ -175,13 +172,13 @@ public class SingleThreadEventLoopTest {
             allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
-        assertTrue(f.cancel(true));
+        assertTrue(f.cancel());
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
         // Check if the task was run without a lag.
         Long firstTimestamp = null;
-        int cnt = 0;
+        long cnt = 0;
         for (Long t: timestamps) {
             if (firstTimestamp == null) {
                 firstTimestamp = t;
@@ -212,7 +209,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(() -> {
+        Future<?> f = loopA.scheduleAtFixedRate(() -> {
             boolean empty = timestamps.isEmpty();
             timestamps.add(System.nanoTime());
             if (empty) {
@@ -225,7 +222,7 @@ public class SingleThreadEventLoopTest {
             allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
-        assertTrue(f.cancel(true));
+        assertTrue(f.cancel());
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
@@ -265,7 +262,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 3;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(() -> {
+        Future<?> f = loopA.scheduleWithFixedDelay(() -> {
             timestamps.add(System.nanoTime());
             try {
                 Thread.sleep(51);
@@ -275,7 +272,7 @@ public class SingleThreadEventLoopTest {
             allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
-        assertTrue(f.cancel(true));
+        assertTrue(f.cancel());
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
@@ -294,7 +291,6 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void shutdownWithPendingTasks() throws Exception {
         final int NUM_TASKS = 3;
         final AtomicInteger ranTasks = new AtomicInteger();
@@ -321,7 +317,7 @@ public class SingleThreadEventLoopTest {
         assertEquals(1, ranTasks.get());
 
         // Shut down the event loop to test if the other tasks are run before termination.
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 
         // Let the other tasks run.
         latch.countDown();
@@ -337,9 +333,8 @@ public class SingleThreadEventLoopTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -367,9 +362,8 @@ public class SingleThreadEventLoopTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown2() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
 
@@ -462,17 +456,14 @@ public class SingleThreadEventLoopTest {
 
         @Override
         protected void run() {
-            for (;;) {
+            do {
                 Runnable task = takeTask();
                 if (task != null) {
                     task.run();
                     updateLastExecutionTime();
                 }
 
-                if (confirmShutdown()) {
-                    break;
-                }
-            }
+            } while (!confirmShutdown());
         }
 
         @Override
@@ -504,7 +495,7 @@ public class SingleThreadEventLoopTest {
 
         @Override
         protected void run() {
-            for (;;) {
+            do {
                 try {
                     Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
                 } catch (InterruptedException e) {
@@ -513,10 +504,7 @@ public class SingleThreadEventLoopTest {
 
                 runAllTasks(Integer.MAX_VALUE);
 
-                if (confirmShutdown()) {
-                    break;
-                }
-            }
+            } while (!confirmShutdown());
         }
 
         @Override

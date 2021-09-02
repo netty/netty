@@ -19,14 +19,12 @@ import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.openjdk.jmh.annotations.Fork;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import org.openjdk.jmh.annotations.Fork;
 
 /**
  * This harness facilitates the sharing of an executor between JMH and Netty and
@@ -97,12 +95,6 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        @Deprecated
-        public void shutdown() {
-            executor.shutdown();
-        }
-
-        @Override
         public boolean isShuttingDown() {
             return executor.isShuttingDown();
         }
@@ -138,22 +130,22 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
             return executor.schedule(command, delay, unit);
         }
 
         @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
             return executor.schedule(callable, delay, unit);
         }
 
         @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
             return executor.scheduleAtFixedRate(command, initialDelay, period, unit);
         }
 
         @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(
+        public Future<?> scheduleWithFixedDelay(
                 Runnable command, long initialDelay, long delay, TimeUnit unit) {
             return executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
         }

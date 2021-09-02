@@ -15,8 +15,6 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
@@ -24,11 +22,12 @@ import io.netty.util.internal.PriorityQueueNode;
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
@@ -93,7 +92,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 scheduledTaskQueue.toArray(EMPTY_RUNNABLE_SCHEDULED_FUTURE_NODES);
 
         for (RunnableScheduledFutureNode<?> task: scheduledTasks) {
-            task.cancel(false);
+            task.cancel();
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
@@ -163,7 +162,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+    public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (delay < 0) {
@@ -175,7 +174,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
         requireNonNull(callable, "callable");
         requireNonNull(unit, "unit");
         if (delay < 0) {
@@ -186,7 +185,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (initialDelay < 0) {
@@ -204,7 +203,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (initialDelay < 0) {
@@ -224,7 +223,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     /**
      * Add the {@link RunnableScheduledFuture} for execution.
      */
-    protected final <V> ScheduledFuture<V> schedule(final RunnableScheduledFuture<V> task) {
+    protected final <V> Future<V> schedule(final RunnableScheduledFuture<V> task) {
         if (inEventLoop()) {
             add0(task);
         } else {
@@ -254,7 +253,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     /**
      * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Callable}.
      *
-     * This can be used if you want to override {@link #newTaskFor(Callable)} and return a different
+     * This can be used if you want to override {@link #newScheduledTaskFor(Callable, long, long)} and return a different
      * {@link RunnableFuture}.
      */
     protected static <V> RunnableScheduledFuture<V> newRunnableScheduledFuture(
@@ -335,8 +334,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            return future.cancel(mayInterruptIfRunning);
+        public boolean cancel() {
+            return future.cancel();
         }
 
         @Override
@@ -360,12 +359,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public long getDelay(TimeUnit unit) {
-            return future.getDelay(unit);
-        }
-
-        @Override
-        public int compareTo(Delayed o) {
+        public int compareTo(RunnableScheduledFuture<?> o) {
             return future.compareTo(o);
         }
 
@@ -391,11 +385,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         public RunnableFuture<V> awaitUninterruptibly() {
             future.awaitUninterruptibly();
             return this;
-        }
-
-        @Override
-        public boolean cancel() {
-            return cancel(false);
         }
 
         @Override

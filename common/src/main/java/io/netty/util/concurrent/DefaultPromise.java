@@ -384,14 +384,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
 
     @Override
     public boolean cancel() {
-        return cancel(false);
-    }
-
-    /**
-     * @param mayInterruptIfRunning this value has no effect in this implementation.
-     */
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
                 notifyListeners();

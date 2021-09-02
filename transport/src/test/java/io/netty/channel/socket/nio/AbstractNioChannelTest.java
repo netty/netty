@@ -23,7 +23,6 @@ import io.netty.channel.nio.AbstractNioChannel;
 import io.netty.channel.nio.NioHandler;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -108,6 +107,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
                 this.eventLoop = eventLoop;
             }
 
+            @Override
             @Test
             public EventLoop next() {
                 return this;
@@ -116,11 +116,6 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             @Override
             public Unsafe unsafe() {
                 return eventLoop.unsafe();
-            }
-
-            @Override
-            public void shutdown() {
-                eventLoop.shutdown();
             }
 
             @Override
@@ -164,23 +159,23 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             }
 
             @Override
-            public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
                 return eventLoop.schedule(command, delay, unit);
             }
 
             @Override
-            public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
                 return eventLoop.schedule(callable, delay, unit);
             }
 
             @Override
-            public ScheduledFuture<?> scheduleAtFixedRate(
+            public Future<?> scheduleAtFixedRate(
                     Runnable command, long initialDelay, long period, TimeUnit unit) {
                 return eventLoop.scheduleAtFixedRate(command, initialDelay, period, unit);
             }
 
             @Override
-            public ScheduledFuture<?> scheduleWithFixedDelay(
+            public Future<?> scheduleWithFixedDelay(
                     Runnable command, long initialDelay, long delay, TimeUnit unit) {
                 return eventLoop.scheduleWithFixedDelay(command, initialDelay, delay, unit);
             }

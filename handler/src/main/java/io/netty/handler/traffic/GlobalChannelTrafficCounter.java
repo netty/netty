@@ -15,12 +15,12 @@
  */
 package io.netty.handler.traffic;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
-
 import io.netty.handler.traffic.GlobalChannelTrafficShapingHandler.PerChannel;
+import io.netty.util.concurrent.EventExecutorGroup;
 
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * Version for {@link GlobalChannelTrafficShapingHandler}.
@@ -36,7 +36,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
      * @param checkInterval the checkInterval in millisecond between two computations.
      */
     public GlobalChannelTrafficCounter(GlobalChannelTrafficShapingHandler trafficShapingHandler,
-            ScheduledExecutorService executor, String name, long checkInterval) {
+                                       EventExecutorGroup executor, String name, long checkInterval) {
         super(trafficShapingHandler, executor, name, checkInterval);
         checkNotNullWithIAE(executor, "executor");
     }
@@ -111,7 +111,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
         resetAccounting(milliSecondFromNano());
         trafficShapingHandler.doAccounting(this);
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel();
         }
     }
 

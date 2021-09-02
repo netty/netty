@@ -137,7 +137,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        if (future.cancel(true)) {
+        if (future.cancel()) {
             assertThat(future.isCancelled()).isTrue();
         } else {
             // Cancellation not supported by the transport.

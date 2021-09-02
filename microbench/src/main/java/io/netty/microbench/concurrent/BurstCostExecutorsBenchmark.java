@@ -23,8 +23,14 @@ import io.netty.channel.kqueue.KQueueHandler;
 import io.netty.channel.nio.NioHandler;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -38,17 +44,12 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -60,18 +61,17 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
      * This executor is useful as the best burst latency performer because it won't go to sleep and won't be hit by the
      * cost of being awaken on both offer/consumer side.
      */
-    private static final class SpinExecutorService implements ExecutorService {
-
+    private static final class SpinExecutorService implements EventExecutorGroup {
         private static final Runnable POISON_PILL = () -> {
         };
         private final Queue<Runnable> tasks;
         private final AtomicBoolean poisoned = new AtomicBoolean();
         private final Thread executorThread;
+        private final Promise<Object> terminationFuture = ImmediateEventExecutor.INSTANCE.newPromise();
 
         SpinExecutorService(int maxTasks) {
             tasks = PlatformDependent.newFixedMpscQueue(maxTasks);
             executorThread = new Thread(() -> {
-                final Queue<Runnable> tasks = SpinExecutorService.this.tasks;
                 Runnable task;
                 while ((task = tasks.poll()) != POISON_PILL) {
                     if (task != null) {
@@ -83,22 +83,8 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public void shutdown() {
-            if (poisoned.compareAndSet(false, true)) {
-                while (!tasks.offer(POISON_PILL)) {
-                    // Just try again
-                }
-                try {
-                    executorThread.join();
-                } catch (InterruptedException e) {
-                    //We're quite trusty :)
-                }
-            }
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            throw new UnsupportedOperationException();
+        public boolean isShuttingDown() {
+            return poisoned.get();
         }
 
         @Override
@@ -122,6 +108,26 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
+        public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public <T> Future<T> submit(Runnable task, T result) {
             throw new UnsupportedOperationException();
         }
@@ -132,34 +138,47 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-                throws InterruptedException, ExecutionException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException, ExecutionException, TimeoutException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public void execute(Runnable command) {
             if (!tasks.offer(command)) {
                 throw new RejectedExecutionException(
                         "If that happens, there is something wrong with the available capacity/burst size");
             }
+        }
+
+        @Override
+        public Future<?> shutdownGracefully() {
+            if (poisoned.compareAndSet(false, true)) {
+                while (!tasks.offer(POISON_PILL)) {
+                    // Just try again
+                }
+                try {
+                    executorThread.join();
+                } catch (InterruptedException e) {
+                    //We're quite trusty :)
+                }
+            }
+            terminationFuture.trySuccess(null);
+            return terminationFuture.asFuture();
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            return shutdownGracefully();
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            return terminationFuture.asFuture();
+        }
+
+        @Override
+        public EventExecutor next() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Iterator<EventExecutor> iterator() {
+            return Collections.emptyIterator();
         }
     }
 
@@ -179,8 +198,8 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
     @Param({ "0", "10" })
     private int work;
 
-    private ExecutorService executor;
-    private ExecutorService executorToShutdown;
+    private EventExecutorGroup executor;
+    private EventExecutorGroup executorToShutdown;
 
     @Setup
     public void setup() {
@@ -199,7 +218,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             executorToShutdown = executor;
             break;
         case juc:
-            executor = Executors.newSingleThreadScheduledExecutor();
+            executor = new UnorderedThreadPoolEventExecutor(1);
             executorToShutdown = executor;
             break;
         case nioEventLoop:
@@ -230,7 +249,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
 
     @TearDown
     public void tearDown() {
-        executorToShutdown.shutdown();
+        executorToShutdown.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
     }
 
     @State(Scope.Thread)
@@ -255,7 +274,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
                     //benchmark is focusing on executors with a single threaded consumer:
                     //it would reduce the cost on consumer side while allowing to focus just
                     //to the threads hand-off/wake-up cost
-                    DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
+                    DONE_UPDATER.lazySet(this, completed + 1);
                 };
             } else {
                 completeTask = () -> {
@@ -263,7 +282,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
                     //benchmark is focusing on executors with a single threaded consumer:
                     //it would reduce the cost on consumer side while allowing to focus just
                     //to the threads hand-off/wake-up cost
-                    DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
+                    DONE_UPDATER.lazySet(this, completed + 1);
                 };
             }
         }
@@ -283,7 +302,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
          */
         public int spinWaitCompletionOf(int value) {
             while (true) {
-                final int lastRead = this.completed;
+                final int lastRead = completed;
                 if (lastRead >= value) {
                     return lastRead;
                 }
@@ -313,7 +332,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
     }
 
     private int executeBurst(final PerThreadState state) {
-        final ExecutorService executor = this.executor;
+        final EventExecutorGroup executor = this.executor;
         final int burstLength = this.burstLength;
         final Runnable completeTask = state.completeTask;
         for (int i = 0; i < burstLength; i++) {

@@ -38,11 +38,7 @@ public class GlobalEventExecutorTest {
     @BeforeEach
     public void setUp() throws Exception {
         // Wait until the global executor is stopped (just in case there is a task running due to previous test cases)
-        for (;;) {
-            if (e.thread == null || !e.thread.isAlive()) {
-                break;
-            }
-
+        while (e.thread != null && e.thread.isAlive()) {
             Thread.sleep(50);
         }
     }
@@ -76,7 +72,7 @@ public class GlobalEventExecutorTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testScheduledTasks() throws Exception {
         TestRunnable task = new TestRunnable(0);
-        ScheduledFuture<?> f = e.schedule(task, 1500, TimeUnit.MILLISECONDS);
+        Future<?> f = e.schedule(task, 1500, TimeUnit.MILLISECONDS);
         f.sync();
         assertThat(task.ran.get(), is(true));
 
@@ -115,7 +111,7 @@ public class GlobalEventExecutorTest {
 
         //add scheduled task
         TestRunnable scheduledTask = new TestRunnable(0);
-        ScheduledFuture<?> f = e.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
+        Future<?> f = e.schedule(scheduledTask , 1500, TimeUnit.MILLISECONDS);
 
         //add task
         TestRunnable afterTask = new TestRunnable(0);
@@ -134,7 +130,7 @@ public class GlobalEventExecutorTest {
         //for https://github.com/netty/netty/issues/1614
         //add scheduled task
         TestRunnable t = new TestRunnable(0);
-        final ScheduledFuture<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
+        Future<?> f = e.schedule(t, 1500, TimeUnit.MILLISECONDS);
 
         //ensure always has at least one task in taskQueue
         //check if scheduled tasks are triggered
