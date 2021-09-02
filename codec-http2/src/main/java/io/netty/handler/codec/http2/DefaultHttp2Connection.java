@@ -898,7 +898,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                         Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
             }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
-            if (isReserved ? numStreams >= maxStreams : !canOpenStream()) {
+            if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {
                 throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint: " +
                         (isReserved ? maxStreams : maxActiveStreams));
             }
