@@ -39,6 +39,11 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     private final Future<?> successfulVoidFuture = DefaultPromise.newSuccessfulPromise(this, null).asFuture();
 
     @Override
+    public EventExecutor next() {
+        return this;
+    }
+
+    @Override
     public final boolean inEventLoop() {
         return inEventLoop(Thread.currentThread());
     }
