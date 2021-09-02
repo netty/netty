@@ -126,7 +126,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         final long newDefinedSize = size + buffer.readableBytes();
-        checkSize(newDefinedSize);
+        try {
+            checkSize(newDefinedSize);
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (definedSize > 0 && definedSize < newDefinedSize) {
             definedSize = newDefinedSize;
         }

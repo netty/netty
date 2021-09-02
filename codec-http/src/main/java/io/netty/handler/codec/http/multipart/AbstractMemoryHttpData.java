@@ -50,8 +50,14 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     public void setContent(ByteBuf buffer) throws IOException {
         ObjectUtil.checkNotNull(buffer, "buffer");
         long localsize = buffer.readableBytes();
-        checkSize(localsize);
+        try {
+            checkSize(localsize);
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (definedSize > 0 && definedSize < localsize) {
+            buffer.release();
             throw new IOException("Out of size: " + localsize + " > " +
                     definedSize);
         }
@@ -99,8 +105,14 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throws IOException {
         if (buffer != null) {
             long localsize = buffer.readableBytes();
-            checkSize(size + localsize);
+            try {
+                checkSize(size + localsize);
+            } catch (IOException e) {
+                buffer.release();
+                throw e;
+            }
             if (definedSize > 0 && definedSize < size + localsize) {
+                buffer.release();
                 throw new IOException("Out of size: " + (size + localsize) +
                         " > " + definedSize);
             }

@@ -122,16 +122,21 @@ public class MixedAttribute implements Attribute {
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
-            checkSize(attribute.length() + buffer.readableBytes());
-            if (attribute.length() + buffer.readableBytes() > limitSize) {
-                DiskAttribute diskAttribute = new DiskAttribute(attribute
-                        .getName(), attribute.definedLength(), baseDir, deleteOnExit);
-                diskAttribute.setMaxSize(maxSize);
-                if (((MemoryAttribute) attribute).getByteBuf() != null) {
-                    diskAttribute.addContent(((MemoryAttribute) attribute)
-                        .getByteBuf(), false);
+            try {
+                checkSize(attribute.length() + buffer.readableBytes());
+                if (attribute.length() + buffer.readableBytes() > limitSize) {
+                    DiskAttribute diskAttribute = new DiskAttribute(attribute
+                            .getName(), attribute.definedLength(), baseDir, deleteOnExit);
+                    diskAttribute.setMaxSize(maxSize);
+                    if (((MemoryAttribute) attribute).getByteBuf() != null) {
+                        diskAttribute.addContent(((MemoryAttribute) attribute)
+                            .getByteBuf(), false);
+                    }
+                    attribute = diskAttribute;
                 }
-                attribute = diskAttribute;
+            } catch (IOException e) {
+                buffer.release();
+                throw e;
             }
         }
         attribute.addContent(buffer, last);
@@ -199,7 +204,12 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        checkSize(buffer.readableBytes());
+        try {
+            checkSize(buffer.readableBytes());
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk

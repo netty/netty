@@ -43,12 +43,13 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Check if the new size is not reaching the max limit allowed.
-     * The limit is always computed in term of bytes.
+     * The limit is always computed in terms of bytes.
      */
     void checkSize(long newSize) throws IOException;
 
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
+     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer
      *            must be not null
@@ -58,6 +59,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Add the content from the ChannelBuffer
+     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer
      *            must be not null except if last is set to False
