@@ -28,7 +28,6 @@ import io.netty.channel.ReflectiveServerChannelFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
@@ -165,7 +164,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     Future<Channel> init(Channel channel) {
-        Promise<Channel> promise = new DefaultPromise<>(channel.executor());
+        Promise<Channel> promise = channel.executor().newPromise();
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -191,7 +190,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 });
             }
         });
-        return promise;
+        return promise.asFuture();
     }
 
     @Override

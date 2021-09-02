@@ -3138,7 +3138,7 @@ public class DnsNameResolverTest {
         final TestDnsServer dnsServer1 = new TestDnsServer(Collections.emptySet()) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
-                promise.cancel(true);
+                promise.cancel();
                 return message;
             }
         };

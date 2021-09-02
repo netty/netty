@@ -29,7 +29,7 @@ public final class PromiseNotificationUtil {
      * Try to cancel the {@link Promise} and log if {@code logger} is not {@code null} in case this fails.
      */
     public static void tryCancel(Promise<?> p, InternalLogger logger) {
-        if (!p.cancel(false) && logger != null) {
+        if (!p.cancel() && logger != null) {
             Throwable err = p.cause();
             if (err == null) {
                 logger.warn("Failed to cancel promise because it has succeeded already: {}", p);

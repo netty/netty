@@ -100,7 +100,7 @@ public class OcspClientExample {
                 Channel channel = bootstrap.connect(host, 443).get();
 
                 try {
-                    FullHttpResponse response = promise.get();
+                    FullHttpResponse response = promise.asFuture().get();
                     ReferenceCountUtil.release(response);
                 } finally {
                     channel.close();

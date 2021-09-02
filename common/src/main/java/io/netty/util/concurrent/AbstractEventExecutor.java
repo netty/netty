@@ -36,7 +36,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 
     private final Collection<EventExecutor> selfCollection = Collections.singleton(this);
-    private final Future<?> successfulVoidFuture = DefaultPromise.newSuccessfulPromise(this, null);
+    private final Future<?> successfulVoidFuture = DefaultPromise.newSuccessfulPromise(this, null).asFuture();
 
     @Override
     public EventExecutor next() {
@@ -87,12 +87,13 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
             Future<V> f = (Future<V>) successfulVoidFuture;
             return f;
         }
-        return DefaultPromise.newSuccessfulPromise(this, result);
+        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return DefaultPromise.newFailedPromise(this, cause);
+        Promise<V> promise = DefaultPromise.newFailedPromise(this, cause);
+        return promise.asFuture();
     }
 
     @Override

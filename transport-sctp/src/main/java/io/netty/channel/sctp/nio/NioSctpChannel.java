@@ -352,7 +352,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         } else {
             executor().execute(() -> bindAddress(localAddress, promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     @Override
@@ -372,7 +372,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         } else {
             executor().execute(() -> unbindAddress(localAddress, promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private final class NioSctpChannelConfig extends DefaultSctpChannelConfig {

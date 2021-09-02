@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.util.concurrent.DefaultPromise.newSuccessfulPromise;
 import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +38,7 @@ class FuturesTest {
     }
 
     @Test
-    public void mapMustApplyMapperFunctionOnSuccededFuture() {
+    public void mapMustApplyMapperFunctionOnSucceededFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(42);
         assertThat(promise.map(i -> i.toString()).getNow()).isEqualTo("42");
@@ -108,16 +107,16 @@ class FuturesTest {
     @Test
     public void flatMapMustApplyMapperFunctionWhenFutureSucceeds() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString()));
         promise.setSuccess(42);
         assertThat(strFut.getNow()).isEqualTo("42");
     }
 
     @Test
-    public void flatMapMustApplyMapperFunctionOnSuccededFuture() {
+    public void flatMapMustApplyMapperFunctionOnSucceededFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         promise.setSuccess(42);
-        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).getNow()).isEqualTo("42");
+        assertThat(promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString())).getNow()).isEqualTo("42");
     }
 
     @Test
@@ -125,7 +124,7 @@ class FuturesTest {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Exception cause = new Exception("boom");
         promise.setFailure(cause);
-        assertThat(promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString())).cause()).isSameAs(cause);
+        assertThat(promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString())).cause()).isSameAs(cause);
     }
 
     @Test
@@ -136,7 +135,7 @@ class FuturesTest {
         AtomicInteger counter = new AtomicInteger();
         assertThat(promise.flatMap(i -> {
             counter.getAndIncrement();
-            return newSuccessfulPromise(INSTANCE, i.toString());
+            return INSTANCE.newSucceededFuture(i.toString());
         }).cause()).isSameAs(cause);
         assertThat(counter.get()).isZero();
     }
@@ -165,7 +164,7 @@ class FuturesTest {
     @Test
     public void cancelOnFutureFromFlatMapMustCancelOriginalFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString()));
         strFut.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
@@ -174,7 +173,7 @@ class FuturesTest {
     @Test
     public void cancelOnOriginalFutureMustCancelFutureFromFlatMap() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
-        Future<String> strFut = promise.flatMap(i -> newSuccessfulPromise(INSTANCE, i.toString()));
+        Future<String> strFut = promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString()));
         promise.cancel(false);
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());

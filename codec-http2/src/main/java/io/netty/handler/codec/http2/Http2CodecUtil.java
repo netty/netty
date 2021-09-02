@@ -23,6 +23,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
@@ -284,13 +285,13 @@ public final class Http2CodecUtil {
         /**
          * Signify that no more {@link #newPromise()} allocations will be made.
          * The aggregation can not be successful until this method is called.
-         * @return The promise that is the aggregation of all promises allocated with {@link #newPromise()}.
+         * @return The {@link Future} that is the aggregation of all promises allocated with {@link #newPromise()}.
          */
-        public Promise<Void> doneAllocatingPromises() {
+        public Future<Void> doneAllocatingPromises() {
             if (!doneAllocating) {
                 doneAllocating = true;
                 if (doneCount == expectedCount || expectedCount == 0) {
-                    return setPromise();
+                    return setPromise().asFuture();
                 }
             }
             return this;
@@ -323,7 +324,7 @@ public final class Http2CodecUtil {
                 ++doneCount;
                 setAggregateFailure(cause);
                 if (allPromisesDone()) {
-                    return setPromise();
+                    setPromise();
                 }
             }
             return this;
@@ -369,11 +370,12 @@ public final class Http2CodecUtil {
         private Promise<Void> setPromise() {
             if (aggregateFailure == null) {
                 promise.setSuccess(null);
-                return super.setSuccess(null);
+                super.setSuccess(null);
             } else {
                 promise.setFailure(aggregateFailure);
-                return super.setFailure(aggregateFailure);
+                super.setFailure(aggregateFailure);
             }
+            return this;
         }
 
         private boolean tryPromise() {

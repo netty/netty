@@ -128,7 +128,7 @@ public final class Http2StreamChannelBootstrap {
         } catch (Throwable cause) {
             promise.setFailure(cause);
         }
-        return promise;
+        return promise.asFuture();
     }
 
     @SuppressWarnings("deprecation")
@@ -189,7 +189,7 @@ public final class Http2StreamChannelBootstrap {
             if (future1.isSuccess()) {
                 promise.setSuccess(streamChannel);
             } else if (future1.isCancelled()) {
-                promise.cancel(false);
+                promise.cancel();
             } else {
                 if (streamChannel.isRegistered()) {
                     streamChannel.close();

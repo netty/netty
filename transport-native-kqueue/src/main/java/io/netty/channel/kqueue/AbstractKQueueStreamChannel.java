@@ -224,7 +224,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 in.remove();
             }
             return 1;
-        } else if (flushedAmount == 0) {
+        }
+        if (flushedAmount == 0) {
             validateFileRegion(region, offset);
         }
         return WRITE_STATUS_SNDBUF_FULL;
@@ -409,7 +410,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     @Override
@@ -425,7 +426,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             loop.execute(() -> shutdownInput0(promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private void shutdownInput0(Promise<Void> promise) {
@@ -451,7 +452,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {

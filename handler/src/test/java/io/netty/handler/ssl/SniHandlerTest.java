@@ -537,7 +537,7 @@ public class SniHandlerTest {
                             } finally {
                                 if (!success) {
                                     ReferenceCountUtil.safeRelease(sslContext);
-                                    releasePromise.cancel(true);
+                                    releasePromise.cancel();
                                 }
                             }
                         }
@@ -569,7 +569,7 @@ public class SniHandlerTest {
 
                     // The client disconnects
                     cc.close().syncUninterruptibly();
-                    if (!releasePromise.awaitUninterruptibly(10L, TimeUnit.SECONDS)) {
+                    if (!releasePromise.asFuture().awaitUninterruptibly(10L, TimeUnit.SECONDS)) {
                         throw new IllegalStateException("It doesn't seem #replaceHandler() got called.");
                     }
 

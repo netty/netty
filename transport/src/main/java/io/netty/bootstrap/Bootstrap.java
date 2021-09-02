@@ -26,7 +26,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
@@ -187,7 +186,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         EventLoop loop = group.next();
         final Future<Channel> regFuture = initAndRegister(loop);
 
-        Promise<Channel> resolveAndConnectPromise = new DefaultPromise<>(loop);
+        Promise<Channel> resolveAndConnectPromise = loop.newPromise();
         if (regFuture.isDone()) {
             if (regFuture.isFailed()) {
                 return regFuture;
@@ -210,7 +209,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
                 }
             });
         }
-        return resolveAndConnectPromise;
+        return resolveAndConnectPromise.asFuture();
     }
 
     private void doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
@@ -280,7 +279,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
 
         p.addLast(config.handler());
 
-        return DefaultPromise.newSuccessfulPromise(channel.executor(), channel);
+        return channel.executor().newSucceededFuture(channel);
     }
 
     @Override

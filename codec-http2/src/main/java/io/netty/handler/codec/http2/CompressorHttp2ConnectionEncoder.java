@@ -187,7 +187,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 buf = nextBuf;
             }
             combiner.finish(promise);
-            return promise;
+            return promise.asFuture();
         } catch (Throwable cause) {
             return ctx.newFailedFuture(cause);
         } finally {

@@ -75,7 +75,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
                 throw new RuntimeException(writeFuture.cause());
             }
             Promise<Void> promise = entry.getValue().getValue();
-            if (!promise.awaitUninterruptibly(timeout, unit)) {
+            if (!promise.asFuture().awaitUninterruptibly(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting for response on stream id " + entry.getKey());
             }
             if (promise.isFailed()) {

@@ -15,11 +15,8 @@
  */
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
@@ -41,6 +38,8 @@ import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -78,7 +77,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     public DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
-        succeededFuture = DefaultPromise.newSuccessfulPromise(channel.executor(), null);
+        succeededFuture = channel.executor().newSucceededFuture(null);
 
         tail = new DefaultChannelHandlerContext(this, TAIL_NAME, TAIL_HANDLER);
         head = new DefaultChannelHandlerContext(this, HEAD_NAME, HEAD_HANDLER);
@@ -890,7 +889,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Promise<Void> newPromise() {
-        return new DefaultPromise<>(executor());
+        return executor().newPromise();
     }
 
     @Override
@@ -900,7 +899,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Future<Void> newFailedFuture(Throwable cause) {
-        return DefaultPromise.newFailedPromise(executor(), cause);
+        return executor().newFailedFuture(cause);
     }
 
     /**
@@ -1045,7 +1044,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelHandlerContext ctx, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().bind(localAddress, promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
@@ -1054,35 +1053,35 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 SocketAddress remoteAddress, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().connect(remoteAddress, localAddress, promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> disconnect(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().disconnect(promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> close(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().close(promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> register(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().register(promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
         public Future<Void> deregister(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().deregister(promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override
@@ -1094,7 +1093,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().write(msg, promise);
-            return promise;
+            return promise.asFuture();
         }
 
         @Override

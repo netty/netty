@@ -104,7 +104,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<T> promise = executor().newPromise();
             doResolve(cast, promise);
-            return promise;
+            return promise.asFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -117,24 +117,26 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
-            return promise.setFailure(new UnsupportedAddressTypeException());
+            promise.setFailure(new UnsupportedAddressTypeException());
+            return promise.asFuture();
         }
 
         if (isResolved(address)) {
             // Resolved already; no need to perform a lookup
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            return promise.setSuccess(cast);
+            promise.setSuccess(cast);
+            return promise.asFuture();
         }
 
         try {
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolve(cast, promise);
-            return promise;
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.asFuture();
     }
 
     @Override
@@ -156,7 +158,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
             final T cast = (T) address;
             final Promise<List<T>> promise = executor().newPromise();
             doResolveAll(cast, promise);
-            return promise;
+            return promise.asFuture();
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }
@@ -169,24 +171,26 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
 
         if (!isSupported(address)) {
             // Address type not supported by the resolver
-            return promise.setFailure(new UnsupportedAddressTypeException());
+            promise.setFailure(new UnsupportedAddressTypeException());
+            return promise.asFuture();
         }
 
         if (isResolved(address)) {
             // Resolved already; no need to perform a lookup
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            return promise.setSuccess(Collections.singletonList(cast));
+            promise.setSuccess(Collections.singletonList(cast));
+            return promise.asFuture();
         }
 
         try {
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
             doResolveAll(cast, promise);
-            return promise;
         } catch (Exception e) {
-            return promise.setFailure(e);
+            promise.setFailure(e);
         }
+        return promise.asFuture();
     }
 
     /**

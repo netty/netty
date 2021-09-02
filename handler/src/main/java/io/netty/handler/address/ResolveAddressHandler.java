@@ -23,9 +23,9 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * {@link ChannelHandler} which will resolve the {@link SocketAddress} that is passed to
@@ -38,7 +38,7 @@ public class ResolveAddressHandler implements ChannelHandler {
     private final AddressResolverGroup<? extends SocketAddress> resolverGroup;
 
     public ResolveAddressHandler(AddressResolverGroup<? extends SocketAddress> resolverGroup) {
-        this.resolverGroup = ObjectUtil.checkNotNull(resolverGroup, "resolverGroup");
+        this.resolverGroup = Objects.requireNonNull(resolverGroup, "resolverGroup");
     }
 
     @Override
@@ -54,9 +54,9 @@ public class ResolveAddressHandler implements ChannelHandler {
                 } else {
                     ctx.connect(future.getNow(), localAddress).cascadeTo(promise);
                 }
-                ctx.pipeline().remove(ResolveAddressHandler.this);
+                ctx.pipeline().remove(this);
             });
-            return promise;
+            return promise.asFuture();
         } else {
             Future<Void> f = ctx.connect(remoteAddress, localAddress);
             ctx.pipeline().remove(this);

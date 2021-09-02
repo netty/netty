@@ -40,7 +40,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -55,7 +54,6 @@ import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 public class HttpProxyHandlerTest {
@@ -252,11 +250,10 @@ public class HttpProxyHandlerTest {
                                            boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
-        Promise<Void> promise = mock(Promise.class);
-        verifyNoMoreInteractions(promise);
+        Future<Void> future = mock(Future.class);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class))).thenReturn(promise);
+        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class))).thenReturn(future);
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),

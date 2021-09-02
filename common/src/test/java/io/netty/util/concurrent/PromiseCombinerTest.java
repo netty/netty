@@ -17,46 +17,30 @@ package io.netty.util.concurrent;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
+import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class PromiseCombinerTest {
-    @Mock
     private Promise<Void> p1;
-    private FutureListener<Void> l1;
-    private final FutureListenerConsumer l1Consumer = new FutureListenerConsumer() {
-        @Override
-        public void accept(FutureListener<Void> listener) {
-            l1 = listener;
-        }
-    };
-    @Mock
+    private Future<Void> f1;
     private Promise<Void> p2;
-    private FutureListener<Void> l2;
-    private final FutureListenerConsumer l2Consumer = new FutureListenerConsumer() {
-        @Override
-        public void accept(FutureListener<Void> listener) {
-            l2 = listener;
-        }
-    };
-    @Mock
+    private Future<Void> f2;
     private Promise<Void> p3;
     private PromiseCombiner combiner;
 
     @BeforeEach
     public void setup() {
-        MockitoAnnotations.initMocks(this);
-        combiner = new PromiseCombiner(ImmediateEventExecutor.INSTANCE);
+        p1 = INSTANCE.newPromise();
+        p2 = INSTANCE.newPromise();
+        p3 = INSTANCE.newPromise();
+        f1 = p1.asFuture();
+        f2 = p2.asFuture();
+        combiner = new PromiseCombiner(INSTANCE);
     }
 
     @Test
@@ -68,13 +52,15 @@ public class PromiseCombinerTest {
             // expected
         }
         combiner.finish(p1);
-        verify(p1).trySuccess(null);
+        assertTrue(p1.isSuccess());
+        assertThat(p1.getNow()).isNull();
     }
 
     @Test
     public void testNullAggregatePromise() {
         combiner.finish(p1);
-        verify(p1).trySuccess(null);
+        assertTrue(p1.isSuccess());
+        assertThat(p1.getNow()).isNull();
     }
 
     @Test
@@ -90,13 +76,13 @@ public class PromiseCombinerTest {
     @Test
     public void testAddAfterFinish() {
         combiner.finish(p1);
-        assertThrows(IllegalStateException.class, () -> combiner.add(p2));
+        assertThrows(IllegalStateException.class, () -> combiner.add(f2));
     }
 
     @Test
     public void testAddAllAfterFinish() {
         combiner.finish(p1);
-        assertThrows(IllegalStateException.class, () -> combiner.addAll(p2));
+        assertThrows(IllegalStateException.class, () -> combiner.addAll(f2));
     }
 
     @Test
@@ -107,65 +93,59 @@ public class PromiseCombinerTest {
 
     @Test
     public void testAddAllSuccess() throws Exception {
-        mockSuccessPromise(p1, l1Consumer);
-        mockSuccessPromise(p2, l2Consumer);
-        combiner.addAll(p1, p2);
+        p1.setSuccess(null);
+        combiner.addAll(f1, f2);
         combiner.finish(p3);
-        l1.operationComplete(p1);
-        verifyNotCompleted(p3);
-        l2.operationComplete(p2);
-        verifySuccess(p3);
+        assertFalse(p3.isDone());
+        p2.setSuccess(null);
+        assertTrue(p3.isDone());
+        assertTrue(p3.isSuccess());
     }
 
     @Test
     public void testAddSuccess() throws Exception {
-        mockSuccessPromise(p1, l1Consumer);
-        mockSuccessPromise(p2, l2Consumer);
-        combiner.add(p1);
-        l1.operationComplete(p1);
-        combiner.add(p2);
-        l2.operationComplete(p2);
-        verifyNotCompleted(p3);
+        p1.setSuccess(null);
+        p2.setSuccess(null);
+        combiner.add(f1);
+        combiner.add(f2);
+        assertFalse(p3.isDone());
         combiner.finish(p3);
-        verifySuccess(p3);
+        assertTrue(p3.isSuccess());
     }
 
     @Test
     public void testAddAllFail() throws Exception {
         RuntimeException e1 = new RuntimeException("fake exception 1");
         RuntimeException e2 = new RuntimeException("fake exception 2");
-        mockFailedPromise(p1, e1, l1Consumer);
-        mockFailedPromise(p2, e2, l2Consumer);
-        combiner.addAll(p1, p2);
+        combiner.addAll(f1, f2);
         combiner.finish(p3);
-        l1.operationComplete(p1);
-        verifyNotCompleted(p3);
-        l2.operationComplete(p2);
-        verifyFail(p3, e1);
+        p1.setFailure(e1);
+        assertFalse(p3.isDone());
+        p2.setFailure(e2);
+        assertTrue(p3.isFailed());
+        assertThat(p3.cause()).isSameAs(e1);
     }
 
     @Test
     public void testAddFail() throws Exception {
         RuntimeException e1 = new RuntimeException("fake exception 1");
         RuntimeException e2 = new RuntimeException("fake exception 2");
-        mockFailedPromise(p1, e1, l1Consumer);
-        mockFailedPromise(p2, e2, l2Consumer);
-        combiner.add(p1);
-        l1.operationComplete(p1);
-        combiner.add(p2);
-        l2.operationComplete(p2);
-        verifyNotCompleted(p3);
+        combiner.add(f1);
+        p1.setFailure(e1);
+        combiner.add(f2);
+        p2.setFailure(e2);
+        assertFalse(p3.isDone());
         combiner.finish(p3);
-        verifyFail(p3, e1);
+        assertTrue(p3.isFailed());
+        assertThat(p3.cause()).isSameAs(e1);
     }
 
     @Test
     public void testEventExecutor() {
-        EventExecutor executor = mock(EventExecutor.class);
-        when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new SingleThreadEventExecutor();
         combiner = new PromiseCombiner(executor);
 
-        Future<?> future = mock(Future.class);
+        Future<?> future = executor.newPromise().asFuture();
 
         try {
             combiner.add(future);
@@ -181,54 +161,12 @@ public class PromiseCombinerTest {
             // expected
         }
 
-        @SuppressWarnings("unchecked")
-        Promise<Void> promise = (Promise<Void>) mock(Promise.class);
+        Promise<Void> promise = executor.newPromise();
         try {
             combiner.finish(promise);
             fail();
         } catch (IllegalStateException expected) {
             // expected
         }
-    }
-
-    private static void verifyFail(Promise<Void> p, Throwable cause) {
-        verify(p).tryFailure(eq(cause));
-    }
-
-    private static void verifySuccess(Promise<Void> p) {
-        verify(p).trySuccess(null);
-    }
-
-    private static void verifyNotCompleted(Promise<Void> p) {
-        verify(p, never()).trySuccess(any(Void.class));
-        verify(p, never()).tryFailure(any(Throwable.class));
-        verify(p, never()).setSuccess(any(Void.class));
-        verify(p, never()).setFailure(any(Throwable.class));
-    }
-
-    private static void mockSuccessPromise(Promise<Void> p, FutureListenerConsumer consumer) {
-        when(p.isDone()).thenReturn(true);
-        when(p.isSuccess()).thenReturn(true);
-        mockListener(p, consumer);
-    }
-
-    private static void mockFailedPromise(Promise<Void> p, Throwable cause, FutureListenerConsumer consumer) {
-        when(p.isDone()).thenReturn(true);
-        when(p.isSuccess()).thenReturn(false);
-        when(p.isFailed()).thenReturn(true);
-        when(p.cause()).thenReturn(cause);
-        mockListener(p, consumer);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void mockListener(final Promise<Void> p, final FutureListenerConsumer consumer) {
-        doAnswer(invocation -> {
-            consumer.accept(invocation.getArgument(0));
-            return p;
-        }).when(p).addListener(any(FutureListener.class));
-    }
-
-    interface FutureListenerConsumer {
-        void accept(FutureListener<Void> listener);
     }
 }

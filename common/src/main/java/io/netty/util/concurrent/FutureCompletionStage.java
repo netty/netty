@@ -28,7 +28,7 @@ import java.util.function.Function;
 
 /**
  * A {@link CompletionStage} that provides the same threading semantics and guarantees as the underlying
- * {@link io.netty.util.concurrent.Future}, which means that all the callbacks will be executed by {@link #executor()}
+ * {@link Future}, which means that all the callbacks will be executed by {@link #executor()}
  * if not specified otherwise (by calling the corresponding *Async methods).
  *
  * Please be aware that {@link FutureCompletionStage#toCompletableFuture()} is not supported and so will throw
@@ -188,7 +188,7 @@ public interface FutureCompletionStage<V> extends CompletionStage<V> {
     static <U> FutureCompletionStage<U> toFutureCompletionStage(CompletionStage<U> stage, EventExecutor executor) {
         Objects.requireNonNull(stage, "stage");
         Objects.requireNonNull(executor, "executor");
-        if (stage instanceof FutureCompletionStage && ((FutureCompletionStage) stage).executor() == executor) {
+        if (stage instanceof FutureCompletionStage && ((FutureCompletionStage<?>) stage).executor() == executor) {
             return (FutureCompletionStage<U>) stage;
         }
 
@@ -208,6 +208,6 @@ public interface FutureCompletionStage<V> extends CompletionStage<V> {
                 promise.setSuccess(v);
             }
         });
-        return promise.asStage();
+        return promise.asFuture().asStage();
     }
 }

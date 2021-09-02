@@ -591,7 +591,7 @@ public class SslHandler extends ByteToMessageDecoder {
      *         The {@link Future} for the most recent {@linkplain #renegotiate() TLS renegotiation} otherwise.
      */
     public Future<Channel> handshakeFuture() {
-        return handshakePromise;
+        return handshakePromise.asFuture();
     }
 
     /**
@@ -608,7 +608,7 @@ public class SslHandler extends ByteToMessageDecoder {
         } else {
             ctx.executor().execute(() -> closeOutbound0(promise));
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private void closeOutbound0(Promise<Void> promise) {
@@ -631,7 +631,7 @@ public class SslHandler extends ByteToMessageDecoder {
      * @see SSLEngine
      */
     public Future<Channel> sslCloseFuture() {
-        return sslClosePromise;
+        return sslClosePromise.asFuture();
     }
 
     @Override
@@ -700,7 +700,7 @@ public class SslHandler extends ByteToMessageDecoder {
         } else {
             Promise<Void> promise = ctx.newPromise();
             pendingUnencryptedWrites.add(((ByteBufConvertible) msg).asByteBuf(), promise);
-            return promise;
+            return promise.asFuture();
         }
     }
 
@@ -1874,14 +1874,14 @@ public class SslHandler extends ByteToMessageDecoder {
                 //
                 // See https://github.com/netty/netty/issues/5931
                 Promise<Void> cascade = ctx.newPromise();
-                cascade.cascadeTo(promise);
-                safeClose(ctx, closeNotifyPromise, cascade);
+                cascade.asFuture().cascadeTo(promise);
+                safeClose(ctx, closeNotifyPromise.asFuture(), cascade);
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
-                sslClosePromise.addListener(future -> promise.setSuccess(null));
+                sslCloseFuture().addListener(future -> promise.setSuccess(null));
             }
         }
-        return promise;
+        return promise.asFuture();
     }
 
     private void flush(ChannelHandlerContext ctx, Promise<Void> promise) {
@@ -1957,15 +1957,15 @@ public class SslHandler extends ByteToMessageDecoder {
         EventExecutor executor = ctx.executor();
         if (!executor.inEventLoop()) {
             executor.execute(() -> renegotiateOnEventLoop(promise));
-            return promise;
+            return promise.asFuture();
         }
 
         renegotiateOnEventLoop(promise);
-        return promise;
+        return promise.asFuture();
     }
 
     private void renegotiateOnEventLoop(final Promise<Channel> newHandshakePromise) {
-        final Promise<Channel> oldHandshakePromise = handshakePromise;
+        Future<Channel> oldHandshakePromise = handshakeFuture();
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
@@ -2038,7 +2038,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener(f -> timeoutFuture.cancel(false));
+        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel(false));
     }
 
     private void forceFlush(ChannelHandlerContext ctx) {
@@ -2102,9 +2102,11 @@ public class SslHandler extends ByteToMessageDecoder {
             } else {
                 Future<?> closeNotifyReadTimeoutFuture;
 
-                if (!sslClosePromise.isDone()) {
+                Future<Channel> closeFuture = sslCloseFuture();
+
+                if (!closeFuture.isDone()) {
                     closeNotifyReadTimeoutFuture = ctx.executor().schedule(() -> {
-                        if (!sslClosePromise.isDone()) {
+                        if (!closeFuture.isDone()) {
                             logger.debug(
                                     "{} did not receive close_notify in {}ms; force-closing the connection.",
                                     ctx.channel(), closeNotifyReadTimeout);
@@ -2117,8 +2119,8 @@ public class SslHandler extends ByteToMessageDecoder {
                     closeNotifyReadTimeoutFuture = null;
                 }
 
-                // Do the close once the we received the close_notify.
-                sslClosePromise.addListener(future -> {
+                // Do the close once we received the close_notify.
+                closeFuture.addListener(future -> {
                     if (closeNotifyReadTimeoutFuture != null) {
                         closeNotifyReadTimeoutFuture.cancel(false);
                     }

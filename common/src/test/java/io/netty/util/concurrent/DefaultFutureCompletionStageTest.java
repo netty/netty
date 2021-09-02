@@ -79,7 +79,7 @@ public class DefaultFutureCompletionStageTest {
     public void testSameExecutorAndFuture() {
         EventExecutor executor = executor();
         Promise<Boolean> promise = executor.newPromise();
-        FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise);
+        FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise.asFuture());
         assertSame(executor, stage.executor());
         assertSame(promise, stage.future());
     }
@@ -88,7 +88,7 @@ public class DefaultFutureCompletionStageTest {
     public void testThrowsUnsupportedOperationException() {
         EventExecutor executor = executor();
         Promise<Boolean> promise = executor.newPromise();
-        FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise);
+        FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise.asFuture());
         assertThrows(UnsupportedOperationException.class, () -> stage.toCompletableFuture());
     }
 
@@ -766,7 +766,7 @@ public class DefaultFutureCompletionStageTest {
         // may use different threads.
         for (int i = 0; i < 1000; i++) {
             Promise<Boolean> promise = executor.newPromise();
-            FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise);
+            FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(promise.asFuture());
             CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
 
             Future<Integer> f = fn.apply(stage, completableFuture).future();

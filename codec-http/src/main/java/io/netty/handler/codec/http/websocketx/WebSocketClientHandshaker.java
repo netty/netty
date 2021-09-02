@@ -268,7 +268,7 @@ public abstract class WebSocketClientHandshaker {
                 promise.setFailure(future.cause());
             }
         });
-        return promise;
+        return promise.asFuture();
     }
 
     /**
@@ -432,7 +432,7 @@ public abstract class WebSocketClientHandshaker {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise;
+            return promise.asFuture();
         }
     }
 

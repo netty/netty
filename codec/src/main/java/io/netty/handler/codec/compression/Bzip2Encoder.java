@@ -183,7 +183,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                 Future<Void> f = finishEncode(ctx());
                 f.cascadeTo(promise);
             });
-            return promise;
+            return promise.asFuture();
         }
     }
 
@@ -198,7 +198,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         // Ensure the channel is closed even if the write operation completes in time.
         ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
                 10, TimeUnit.SECONDS); // FIXME: Magic number
-        return promise;
+        return promise.asFuture();
     }
 
     private Future<Void> finishEncode(final ChannelHandlerContext ctx) {

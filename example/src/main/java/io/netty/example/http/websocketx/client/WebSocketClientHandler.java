@@ -61,7 +61,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     public Future<Void> handshakeFuture() {
-        return handshakeFuture;
+        return handshakeFuture.asFuture();
     }
 
     @Override

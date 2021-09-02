@@ -151,30 +151,7 @@ import java.util.function.Function;
  * </pre>
  */
 @SuppressWarnings("ClassNameSameAsAncestorName")
-public interface Future<V> extends java.util.concurrent.Future<V> {
-    /**
-     * Returns {@code true} if and only if the operation was completed successfully.
-     */
-    boolean isSuccess();
-
-    /**
-     * Returns {@code true} if and only if the operation was completed and failed.
-     */
-    boolean isFailed();
-
-    /**
-     * returns {@code true} if and only if the operation can be cancelled via {@link #cancel(boolean)}.
-     */
-    boolean isCancellable();
-
-    /**
-     * Returns the cause of the failed I/O operation if the I/O operation has failed.
-     *
-     * @return the cause of the failure. {@code null} if succeeded.
-     * @throws IllegalStateException if this {@code Future} has not completed yet.
-     */
-    Throwable cause();
-
+public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousResult<V> {
     /**
      * Adds the specified listener to this future. The specified listener is notified when this future is {@linkplain
      * #isDone() done}. If this future is already completed, the specified listener is notified immediately.
@@ -259,25 +236,12 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     boolean awaitUninterruptibly(long timeoutMillis);
 
     /**
-     * Return the result without blocking. If the future is not done yet this will throw {@link IllegalStateException}.
-     * <p>
-     *
-     * @throws IllegalStateException if this {@code Future} has not completed yet.
-     */
-    V getNow();
-
-    /**
      * {@inheritDoc}
      * <p>
      * If the cancellation was successful it will fail the future with a {@link CancellationException}.
      */
     @Override
     boolean cancel(boolean mayInterruptIfRunning);
-
-    /**
-     * Returns the {@link EventExecutor} that is tied to this {@link Future}.
-     */
-    EventExecutor executor();
 
     @Override
     default V get() throws InterruptedException, ExecutionException {

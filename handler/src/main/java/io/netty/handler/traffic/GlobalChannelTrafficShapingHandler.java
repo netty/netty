@@ -684,13 +684,13 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 }
                 Promise<Void> promise = ctx.newPromise();
                 submitWrite(ctx, msg, size, wait, now, promise);
-                return promise;
+                return promise.asFuture();
             }
         }
         Promise<Void> promise = ctx.newPromise();
         // to maintain order of write
         submitWrite(ctx, msg, size, 0, now, promise);
-        return promise;
+        return promise.asFuture();
     }
 
     @Override

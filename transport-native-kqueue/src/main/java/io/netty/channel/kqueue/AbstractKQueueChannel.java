@@ -560,7 +560,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(future -> {
+                    promise.asFuture().addListener(future -> {
                         if (future.isCancelled()) {
                             if (connectTimeoutFuture != null) {
                                 connectTimeoutFuture.cancel(false);

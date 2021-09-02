@@ -334,7 +334,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public Future<Void> closeFuture() {
-        return closePromise;
+        return closePromise.asFuture();
     }
 
     @Override
@@ -514,7 +514,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     promise.setSuccess(null);
                 } else  {
                     // This means close() was called before so we just register a listener and return
-                    closePromise.addListener(promise, (p, future) -> p.setSuccess(null));
+                    closeFuture().addListener(promise, (p, future) -> p.setSuccess(null));
                 }
                 return;
             }

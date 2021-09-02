@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 import java.util.Objects;
@@ -158,6 +157,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener(f -> timeoutFuture.cancel(false));
+        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel(false));
     }
 }

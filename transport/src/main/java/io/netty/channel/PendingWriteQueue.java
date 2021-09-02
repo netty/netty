@@ -152,7 +152,7 @@ public final class PendingWriteQueue {
             p.setFailure(cause);
         }
         assertEmpty();
-        return p;
+        return p.asFuture();
     }
 
     /**

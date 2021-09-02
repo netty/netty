@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> implements Promise<V> {
+public class DefaultPromise<V> implements Promise<V>, Future<V> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
@@ -158,6 +158,11 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
+    public Future<V> asFuture() {
+        return this;
+    }
+
+    @Override
     public boolean isSuccess() {
         Object result = this.result;
         return result != null && result != UNCANCELLABLE && !(result instanceof CauseHolder);
@@ -212,7 +217,7 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListener(FutureListener<? super V> listener) {
+    public Future<V> addListener(FutureListener<? super V> listener) {
         requireNonNull(listener, "listener");
 
         addListener0(listener, null);
@@ -224,7 +229,7 @@ public class DefaultPromise<V> implements Promise<V> {
     }
 
     @Override
-    public <C> Promise<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
+    public <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
         requireNonNull(listener, "listener");
 
         addListener0(listener, context == null ? NULL_CONTEXT : context);
@@ -375,6 +380,11 @@ public class DefaultPromise<V> implements Promise<V> {
             throw (CancellationException) cause;
         }
         throw new ExecutionException(cause);
+    }
+
+    @Override
+    public boolean cancel() {
+        return cancel(false);
     }
 
     /**

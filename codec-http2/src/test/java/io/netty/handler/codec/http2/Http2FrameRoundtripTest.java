@@ -99,7 +99,7 @@ public class Http2FrameRoundtripTest {
         when(ctx.executor()).thenReturn(executor);
         when(ctx.channel()).thenReturn(channel);
         doAnswer((Answer<Future<Void>>) in ->
-                DefaultPromise.newSuccessfulPromise(executor, null)).when(ctx).write(any());
+                DefaultPromise.newSuccessfulPromise(executor, (Void) null).asFuture()).when(ctx).write(any());
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
         doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
         doAnswer((Answer<Promise<Void>>) invocation ->
@@ -110,7 +110,7 @@ public class Http2FrameRoundtripTest {
     }
 
     @AfterEach
-    public void teardown() {
+    public void tearDown() {
         try {
             // Release all of the buffers.
             for (ByteBuf buf : needReleasing) {

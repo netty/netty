@@ -41,12 +41,14 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
 
     private final AbstractScheduledEventExecutor executor;
     private final Promise<V> promise;
+    private final Future<V> future;
     private final Callable<V> callable;
 
     RunnableScheduledFutureAdapter(AbstractScheduledEventExecutor executor, Promise<V> promise, Callable<V> callable,
                                    long deadlineNanos, long periodNanos) {
         this.executor = requireNonNull(executor, "executor");
         this.promise = requireNonNull(promise, "promise");
+        future = promise.asFuture();
         this.callable = requireNonNull(callable, "callable");
         this.deadlineNanos = deadlineNanos;
         this.periodNanos = periodNanos;
@@ -133,11 +135,16 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        boolean canceled = promise.cancel(mayInterruptIfRunning);
+        boolean canceled = future.cancel(mayInterruptIfRunning);
         if (canceled) {
             executor.removeScheduled(this);
         }
         return canceled;
+    }
+
+    @Override
+    public boolean cancel() {
+        return cancel(false);
     }
 
     @Override
@@ -162,58 +169,58 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
 
     @Override
     public RunnableScheduledFuture<V> addListener(FutureListener<? super V> listener) {
-        promise.addListener(listener);
+        future.addListener(listener);
         return this;
     }
 
     @Override
     public <C> RunnableScheduledFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener) {
-        promise.addListener(context, listener);
+        future.addListener(context, listener);
         return this;
     }
 
     @Override
     public RunnableScheduledFuture<V> sync() throws InterruptedException {
-        promise.sync();
+        future.sync();
         return this;
     }
 
     @Override
     public RunnableScheduledFuture<V> syncUninterruptibly() {
-        promise.syncUninterruptibly();
+        future.syncUninterruptibly();
         return this;
     }
 
     @Override
     public RunnableScheduledFuture<V> await() throws InterruptedException {
-        promise.await();
+        future.await();
         return this;
     }
 
     @Override
     public RunnableScheduledFuture<V> awaitUninterruptibly() {
-        promise.awaitUninterruptibly();
+        future.awaitUninterruptibly();
         return this;
     }
 
     @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        return promise.await(timeout, unit);
+        return future.await(timeout, unit);
     }
 
     @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
-        return promise.await(timeoutMillis);
+        return future.await(timeoutMillis);
     }
 
     @Override
     public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-        return promise.awaitUninterruptibly(timeout, unit);
+        return future.awaitUninterruptibly(timeout, unit);
     }
 
     @Override
     public boolean awaitUninterruptibly(long timeoutMillis) {
-        return promise.awaitUninterruptibly(timeoutMillis);
+        return future.awaitUninterruptibly(timeoutMillis);
     }
 
     @Override
@@ -228,7 +235,7 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
 
     @Override
     public boolean isCancelled() {
-        return promise.isCancelled();
+        return future.isCancelled();
     }
 
     @Override
@@ -238,12 +245,12 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
 
     @Override
     public V get() throws InterruptedException, ExecutionException {
-        return promise.get();
+        return future.get();
     }
 
     @Override
     public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return promise.get(timeout, unit);
+        return future.get(timeout, unit);
     }
 
     @Override

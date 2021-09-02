@@ -116,7 +116,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
         Promise<Void> promise = ctx.newPromise();
         queue.add(new PendingWrite(msg, promise));
-        return promise;
+        return promise.asFuture();
     }
 
     @Override
@@ -150,10 +150,8 @@ public class ChunkedWriteHandler implements ChannelHandler {
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
                 boolean endOfInput;
-                long inputLength;
                 try {
                     endOfInput = in.isEndOfInput();
-                    inputLength = in.length();
                     closeInput(in);
                 } catch (Exception e) {
                     closeInput(in);
@@ -299,14 +297,10 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private static void handleEndOfInputFuture(Future<?> future, PendingWrite currentWrite) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
+        closeInput(input);
         if (future.isFailed()) {
-            closeInput(input);
             currentWrite.fail(future.cause());
         } else {
-            // read state of the input in local variables before closing it
-            long inputProgress = input.progress();
-            long inputLength = input.length();
-            closeInput(input);
             currentWrite.success();
         }
     }
