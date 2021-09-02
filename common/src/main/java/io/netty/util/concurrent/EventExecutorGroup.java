@@ -15,11 +15,18 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static io.netty.util.concurrent.AbstractEventExecutor.DEFAULT_SHUTDOWN_QUIET_PERIOD;
+import static io.netty.util.concurrent.AbstractEventExecutor.DEFAULT_SHUTDOWN_TIMEOUT;
 
 /**
  * The {@link EventExecutorGroup} is responsible for providing the {@link EventExecutor}'s to use
@@ -40,7 +47,9 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      *
      * @return the {@link #terminationFuture()}
      */
-    Future<?> shutdownGracefully();
+    default Future<?> shutdownGracefully() {
+        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
+    }
 
     /**
      * Signals this executor that the caller wants the executor to be shut down.  Once this method is called,
@@ -76,7 +85,10 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      */
     @Override
     @Deprecated
-    List<Runnable> shutdownNow();
+    default List<Runnable> shutdownNow() {
+        shutdown();
+        return Collections.emptyList();
+    }
 
     /**
      * Returns one of the {@link EventExecutor}s managed by this {@link EventExecutorGroup}.
@@ -87,23 +99,65 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     Iterator<EventExecutor> iterator();
 
     @Override
-    Future<?> submit(Runnable task);
+    default Future<?> submit(Runnable task) {
+        return next().submit(task);
+    }
 
     @Override
-    <T> Future<T> submit(Runnable task, T result);
+    default <T> Future<T> submit(Runnable task, T result) {
+        return next().submit(task, result);
+    }
 
     @Override
-    <T> Future<T> submit(Callable<T> task);
+    default <T> Future<T> submit(Callable<T> task) {
+        return next().submit(task);
+    }
 
     @Override
-    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
+    default ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        return next().schedule(command, delay, unit);
+    }
 
     @Override
-    <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit);
+    default <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        return next().schedule(callable, delay, unit);
+    }
 
     @Override
-    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit);
+    default ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        return next().scheduleAtFixedRate(command, initialDelay, period, unit);
+    }
 
     @Override
-    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
+    default ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        return next().scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    }
+
+    @Override
+    default <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException {
+        return next().invokeAll(tasks);
+    }
+
+    @Override
+    default <T> List<java.util.concurrent.Future<T>> invokeAll(
+            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+        return next().invokeAll(tasks, timeout, unit);
+    }
+
+    @Override
+    default <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+        return next().invokeAny(tasks);
+    }
+
+    @Override
+    default <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        return next().invokeAny(tasks, timeout, unit);
+    }
+
+    @Override
+    default void execute(Runnable command) {
+        next().execute(command);
+    }
 }

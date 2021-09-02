@@ -26,6 +26,11 @@ import io.netty.util.concurrent.OrderedEventExecutor;
  */
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
 
+    @Override
+    default EventLoop next() {
+        return this;
+    }
+
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */

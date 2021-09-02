@@ -168,11 +168,6 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public final EventLoop next() {
-        return this;
-    }
-
-    @Override
     protected final boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
     }

@@ -33,12 +33,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * {@link EventExecutorGroup} implementation that handles their tasks with multiple threads at
  * the same time.
  */
-public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
+public class MultithreadEventExecutorGroup implements EventExecutorGroup {
 
     private final EventExecutor[] children;
     private final List<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
-    private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+    private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
     private final boolean powerOfTwo;
 
     /**
