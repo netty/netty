@@ -98,6 +98,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             return this;
         }
         checkNewCapacity(newCapacity);
+        if (isDirect()) {
+            chunk.arena.parent.incrementUsedDirectBytes(newCapacity - length);
+        } else {
+            chunk.arena.parent.incrementUsedHeapBytes(newCapacity - length);
+        }
         if (!chunk.unpooled) {
             // If the request capacity does not require reallocation, just update the length of the memory.
             if (newCapacity > length) {
@@ -168,7 +173,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
+            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache, true);
             tmpNioBuf = null;
             chunk = null;
             recycle();

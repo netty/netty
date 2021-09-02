@@ -689,4 +689,67 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         assertTrue(beforeFreeBytes < afterFreeBytes);
     }
+
+    @Test
+    void testCountUsedDirectBytes() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 256, 64, false);
+        assertEquals(0, allocator.usedDirectBytes());
+
+        // Allocate
+        ByteBuf buffer = allocator.directBuffer(16, 128);
+        assertEquals(16, allocator.usedDirectBytes());
+
+        // Shrink
+        buffer.capacity(8);
+        assertEquals(8, allocator.usedDirectBytes());
+
+        buffer.capacity(2);
+        assertEquals(2, allocator.usedDirectBytes());
+
+        // Grow
+        buffer.writeLong(1);
+        assertEquals(16, allocator.usedDirectBytes());
+
+        buffer.writeLong(1);
+        assertEquals(16, allocator.usedDirectBytes());
+
+        buffer.writeLong(1);
+        assertEquals(64, allocator.usedDirectBytes());
+
+        // Release
+        buffer.release();
+        assertEquals(0, allocator.usedDirectBytes());
+    }
+
+    @Test
+    void testCountUsedHeapBytes() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 256, 64, false);
+        assertEquals(0, allocator.usedHeapBytes());
+
+        // Allocate
+        ByteBuf buffer = allocator.heapBuffer(16, 128);
+        assertEquals(16, allocator.usedHeapBytes());
+
+        // Shrink
+        buffer.capacity(8);
+        assertEquals(8, allocator.usedHeapBytes());
+
+        buffer.capacity(2);
+        assertEquals(2, allocator.usedHeapBytes());
+
+        // Grow
+        buffer.writeLong(1);
+        assertEquals(16, allocator.usedHeapBytes());
+
+        buffer.writeLong(1);
+        assertEquals(16, allocator.usedHeapBytes());
+
+        buffer.writeLong(1);
+        assertEquals(64, allocator.usedHeapBytes());
+
+        // Release
+        buffer.release();
+        assertEquals(0, allocator.usedHeapBytes());
+    }
+
 }

@@ -209,6 +209,14 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         allocationsSmall.increment();
     }
 
+    private void incUsedBytes(int bytes) {
+        if (isDirect()) {
+            parent.incrementUsedDirectBytes(bytes);
+        } else {
+            parent.incrementUsedHeapBytes(bytes);
+        }
+    }
+
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
         PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
         activeBytesHuge.add(chunk.chunkSize());
@@ -216,13 +224,17 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         allocationsHuge.increment();
     }
 
-    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache) {
+    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity,
+              PoolThreadCache cache, boolean decreaseUsedBytes) {
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
             destroyChunk(chunk);
             activeBytesHuge.add(-size);
             deallocationsHuge.increment();
         } else {
+            if (decreaseUsedBytes) {
+                incUsedBytes(-normCapacity);
+            }
             SizeClass sizeClass = sizeClass(handle);
             if (cache != null && cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass)) {
                 // cached so not free it.
@@ -293,7 +305,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
         memoryCopy(oldMemory, oldOffset, buf, bytesToCopy);
         if (freeOldMemory) {
-            free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
+            free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache, false);
         }
     }
 

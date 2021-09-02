@@ -107,12 +107,22 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
         return allocator.usedDirectMemory();
     }
 
+    public long usedHeapBytes() {
+        return allocator.usedHeapBytes();
+    }
+
+    public long usedDirectBytes() {
+        return allocator.usedDirectBytes();
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(256);
         sb.append(StringUtil.simpleClassName(this))
                 .append("(usedHeapMemory: ").append(usedHeapMemory())
                 .append("; usedDirectMemory: ").append(usedDirectMemory())
+                .append("; usedHeapBytes: ").append(usedHeapBytes())
+                .append("; usedDirectBytes: ").append(usedDirectBytes())
                 .append("; numHeapArenas: ").append(numHeapArenas())
                 .append("; numDirectArenas: ").append(numDirectArenas())
                 .append("; smallCacheSize: ").append(smallCacheSize())

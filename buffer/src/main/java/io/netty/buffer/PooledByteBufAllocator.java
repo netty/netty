@@ -22,6 +22,7 @@ import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -185,6 +186,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private final int normalCacheSize;
     private final List<PoolArenaMetric> heapArenaMetrics;
     private final List<PoolArenaMetric> directArenaMetrics;
+    private final LongCounter usedHeapBytes = PlatformDependent.newLongCounter();
+    private final LongCounter usedDirectBytes = PlatformDependent.newLongCounter();
     private final PoolThreadLocalCache threadCache;
     private final int chunkSize;
     private final PooledByteBufAllocatorMetric metric;
@@ -382,6 +385,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
 
+        incrementUsedHeapBytes(initialCapacity);
+
         return toLeakAwareBuffer(buf);
     }
 
@@ -399,7 +404,17 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
         }
 
+        incrementUsedDirectBytes(initialCapacity);
+
         return toLeakAwareBuffer(buf);
+    }
+
+    protected void incrementUsedHeapBytes(int bytes) {
+        usedHeapBytes.add(bytes);
+    }
+
+    protected void incrementUsedDirectBytes(int bytes) {
+        usedDirectBytes.add(bytes);
     }
 
     /**
@@ -661,6 +676,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     final long usedDirectMemory() {
         return usedMemory(directArenas);
+    }
+
+    final long usedHeapBytes() {
+        return usedHeapBytes.value();
+    }
+
+    final long usedDirectBytes() {
+        return usedDirectBytes.value();
     }
 
     private static long usedMemory(PoolArena<?>[] arenas) {
