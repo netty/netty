@@ -16,9 +16,10 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.util.concurrent.Promise;
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DnsAddressResolverGroupTest {
     @Test
     public void testUseConfiguredEventLoop() throws InterruptedException {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         final EventLoop loop = group.next();
         MultithreadEventLoopGroup defaultEventLoopGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
