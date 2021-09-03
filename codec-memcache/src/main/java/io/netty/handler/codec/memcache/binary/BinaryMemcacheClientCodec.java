@@ -17,6 +17,7 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -205,6 +206,11 @@ public final class BinaryMemcacheClientCodec extends
                 @Override
                 public ByteBufAllocator alloc() {
                     return ctx.alloc();
+                }
+
+                @Override
+                public BufferAllocator bufferAllocator() {
+                    return ctx.bufferAllocator();
                 }
 
                 @Override

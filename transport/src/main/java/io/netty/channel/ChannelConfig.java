@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.ByteBuffer;
@@ -165,14 +166,30 @@ public interface ChannelConfig {
     /**
      * Returns {@link ByteBufAllocator} which is used for the channel
      * to allocate buffers.
+     * @deprecated use {@link #getBufferAllocator()}
      */
+    @Deprecated
     ByteBufAllocator getAllocator();
 
     /**
      * Set the {@link ByteBufAllocator} which is used for the channel
      * to allocate buffers.
+     * @deprecated use {@link #setBufferAllocator(BufferAllocator)}
      */
+    @Deprecated
     ChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    /**
+     * Returns {@link BufferAllocator} which is used for the channel
+     * to allocate buffers.
+     */
+    BufferAllocator getBufferAllocator();
+
+    /**
+     * Set the {@link ByteBufAllocator} which is used for the channel
+     * to allocate buffers.
+     */
+    ChannelConfig setBufferAllocator(BufferAllocator allocator);
 
     /**
      * Returns {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.

@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -199,9 +200,18 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
+     * @deprecated Use {@link #bufferAllocator()}
      */
+    @Deprecated
     default ByteBufAllocator alloc() {
         return config().getAllocator();
+    }
+
+    /**
+     * Return the assigned {@link BufferAllocator} which will be used to allocate {@link io.netty.buffer.api.Buffer}s.
+     */
+    default BufferAllocator bufferAllocator() {
+        return config().getBufferAllocator();
     }
 
     @Override

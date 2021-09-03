@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -211,6 +212,11 @@ final class Http2FrameInboundWriter {
         @Override
         public ByteBufAllocator alloc() {
             return channel.alloc();
+        }
+
+        @Override
+        public BufferAllocator bufferAllocator() {
+            return channel.bufferAllocator();
         }
 
         @Override

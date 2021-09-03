@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -137,6 +138,11 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     @Override
     public ByteBufAllocator alloc() {
         return ctx.alloc();
+    }
+
+    @Override
+    public BufferAllocator bufferAllocator() {
+        return ctx.bufferAllocator();
     }
 
     @Deprecated

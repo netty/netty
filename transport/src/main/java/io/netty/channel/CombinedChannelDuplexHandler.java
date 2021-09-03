@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
@@ -491,6 +492,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         @Override
         public ByteBufAllocator alloc() {
             return ctx.alloc();
+        }
+
+        @Override
+        public BufferAllocator bufferAllocator() {
+            return ctx.bufferAllocator();
         }
 
         @Override

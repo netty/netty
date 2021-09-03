@@ -16,6 +16,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.netty.channel.ChannelOption.ALLOCATOR;
 import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
+import static io.netty.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
@@ -57,6 +60,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+    private volatile BufferAllocator bufferAllocator = DefaultGlobalBufferAllocator.DEFAUL_GLOBAL_BUFFER_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
@@ -85,7 +89,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
     }
 
@@ -132,6 +136,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == ALLOCATOR) {
             return (T) getAllocator();
         }
+        if (option == BUFFER_ALLOCATOR) {
+            return (T) getBufferAllocator();
+        }
         if (option == RCVBUF_ALLOCATOR) {
             return (T) getRecvByteBufAllocator();
         }
@@ -172,6 +179,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
+        } else if (option == BUFFER_ALLOCATOR) {
+            setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
@@ -294,6 +303,18 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setAllocator(ByteBufAllocator allocator) {
         requireNonNull(allocator, "allocator");
         this.allocator = allocator;
+        return this;
+    }
+
+    @Override
+    public BufferAllocator getBufferAllocator() {
+        return bufferAllocator;
+    }
+
+    @Override
+    public ChannelConfig setBufferAllocator(BufferAllocator bufferAllocator) {
+        requireNonNull(bufferAllocator, "bufferAllocator");
+        this.bufferAllocator = bufferAllocator;
         return this;
     }
 

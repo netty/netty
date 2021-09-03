@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
@@ -186,7 +187,13 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
+    @Deprecated
     ByteBufAllocator alloc();
+
+    /**
+     * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
+     */
+    BufferAllocator bufferAllocator();
 
     /**
      * @deprecated Use {@link Channel#attr(AttributeKey)}
