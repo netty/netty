@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
@@ -184,6 +185,12 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
     @Override
     public EpollServerChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public EpollServerChannelConfig setBufferAllocator(BufferAllocator bufferAllocator) {
+        super.setBufferAllocator(bufferAllocator);
         return this;
     }
 

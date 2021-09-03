@@ -14,9 +14,6 @@
  */
 package io.netty.buffer.api;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -63,7 +60,7 @@ public final class DefaultGlobalBufferAllocator implements BufferAllocator {
 
     private DefaultGlobalBufferAllocator(BufferAllocator delegate) {
         this.delegate = checkNotNullWithIAE(delegate, "delegate");
-        getRuntime().addShutdownHook(new Thread(this::close));
+        getRuntime().addShutdownHook(new Thread(this.delegate::close));
     }
 
     @Override
@@ -76,8 +73,11 @@ public final class DefaultGlobalBufferAllocator implements BufferAllocator {
         return delegate.constBufferSupplier(bytes);
     }
 
+    /**
+     * @throws UnsupportedOperationException Close is not supported as this is a shared allocator.
+     */
     @Override
     public void close() {
-        delegate.close();
+        throw new UnsupportedOperationException("Global buffer allocator can not be closed explicitly.");
     }
 }

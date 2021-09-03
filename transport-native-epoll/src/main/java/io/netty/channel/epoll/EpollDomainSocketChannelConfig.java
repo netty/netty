@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -110,6 +111,12 @@ public final class EpollDomainSocketChannelConfig extends EpollDuplexChannelConf
     @Override
     public EpollDomainSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public EpollDomainSocketChannelConfig setBufferAllocator(BufferAllocator bufferAllocator) {
+        super.setBufferAllocator(bufferAllocator);
         return this;
     }
 

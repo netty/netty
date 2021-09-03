@@ -200,6 +200,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
+     * @deprecated Use {@link #bufferAllocator()}
      */
     @Deprecated
     default ByteBufAllocator alloc() {

@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
@@ -161,6 +162,12 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     @Override
     public KQueueServerChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public KQueueServerChannelConfig setBufferAllocator(BufferAllocator bufferAllocator) {
+        super.setBufferAllocator(bufferAllocator);
         return this;
     }
 

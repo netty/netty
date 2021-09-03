@@ -166,6 +166,7 @@ public interface ChannelConfig {
     /**
      * Returns {@link ByteBufAllocator} which is used for the channel
      * to allocate buffers.
+     * @deprecated use {@link #getBufferAllocator()}
      */
     @Deprecated
     ByteBufAllocator getAllocator();
@@ -173,6 +174,7 @@ public interface ChannelConfig {
     /**
      * Set the {@link ByteBufAllocator} which is used for the channel
      * to allocate buffers.
+     * @deprecated use {@link #setBufferAllocator(BufferAllocator)}
      */
     @Deprecated
     ChannelConfig setAllocator(ByteBufAllocator allocator);

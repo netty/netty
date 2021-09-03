@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -93,6 +94,12 @@ public class KQueueDuplexChannelConfig extends KQueueChannelConfig implements Du
     @Override
     public KQueueDuplexChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public KQueueDuplexChannelConfig setBufferAllocator(BufferAllocator bufferAllocator) {
+        super.setBufferAllocator(bufferAllocator);
         return this;
     }
 

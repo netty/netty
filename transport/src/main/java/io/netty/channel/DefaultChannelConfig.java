@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.netty.channel.ChannelOption.ALLOCATOR;
 import static io.netty.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty.channel.ChannelOption.AUTO_READ;
+import static io.netty.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
@@ -88,7 +89,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
     }
 
@@ -135,6 +136,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == ALLOCATOR) {
             return (T) getAllocator();
         }
+        if (option == BUFFER_ALLOCATOR) {
+            return (T) getBufferAllocator();
+        }
         if (option == RCVBUF_ALLOCATOR) {
             return (T) getRecvByteBufAllocator();
         }
@@ -175,6 +179,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
+        } else if (option == BUFFER_ALLOCATOR) {
+            setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
