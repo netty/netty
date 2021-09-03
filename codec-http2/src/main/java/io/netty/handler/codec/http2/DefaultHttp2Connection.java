@@ -21,7 +21,6 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -123,7 +122,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (closePromise == promise) {
                 // Do nothing
             } else {
-                closePromise.asFuture().addListener(new UnaryPromiseNotifier<>(promise));
+                closePromise.asFuture().cascadeTo(promise);
             }
         } else {
             closePromise = promise;
