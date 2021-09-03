@@ -93,14 +93,6 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
 
     private void testSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite, boolean gro)
             throws Throwable {
-        if (!(cb.config().group() instanceof EpollEventLoopGroup)) {
-            // Only supported for the native epoll transport.
-            return;
-        }
-        if (gro && !(sb.config().group() instanceof EpollEventLoopGroup)) {
-            // Only supported for the native epoll transport.
-            return;
-        }
         assumeTrue(EpollDatagramChannel.isSegmentedDatagramPacketSupported());
         Channel sc = null;
         Channel cc = null;
@@ -114,7 +106,10 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
             });
 
             cc = cb.bind(newSocketAddress()).get();
-
+            if (!(cc instanceof EpollDatagramChannel)) {
+                // Only supported for the native epoll transport.
+                return;
+            }
             final int numBuffers = 16;
             final int segmentSize = 512;
             int bufferCapacity = numBuffers * segmentSize;
@@ -135,6 +130,10 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 }
             }).bind(newSocketAddress()).get();
 
+            if (gro && !(sc instanceof EpollDatagramChannel)) {
+                // Only supported for the native epoll transport.
+                return;
+            }
             if (sc instanceof EpollDatagramChannel) {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));
             }

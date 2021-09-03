@@ -230,7 +230,7 @@ public class LocalChannelTest {
     @Test
     public void localChannelRaceCondition() throws Exception {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        final EventLoopGroup clientGroup = new LocalEventLoopGroup(1) {
+        final EventLoopGroup clientGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory()) {
 
             @Override
             protected EventLoop newChild(
