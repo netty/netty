@@ -41,7 +41,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.UnaryPromiseNotifier;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -1053,8 +1053,8 @@ public abstract class SSLEngineTest {
                         // through we just want to verify the local failure condition. This way we don't have to worry
                         // about verifying the payload and releasing the content on the server side.
                         if (failureExpected) {
-                            ctx.write(ctx.alloc().buffer(1).writeByte(1))
-                                    .addListener(new UnaryPromiseNotifier<Void>(clientWritePromise));
+                            ChannelFuture f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
+                            PromiseNotifier.cascade(f, clientWritePromise);
                         }
                     }
 
