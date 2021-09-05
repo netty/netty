@@ -19,6 +19,11 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+/**
+ *
+ * @deprecated use {@link PromiseNotifier#cascade(boolean, Future, Promise)}.
+ */
+@Deprecated
 public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(UnaryPromiseNotifier.class);
     private final Promise<? super T> promise;
