@@ -18,14 +18,9 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for {@link EventExecutor} implementations.
@@ -35,45 +30,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 
-    private final Collection<EventExecutor> selfCollection = Collections.singleton(this);
     private final Future<?> successfulVoidFuture = DefaultPromise.newSuccessfulPromise(this, null).asFuture();
-
-    @Override
-    public EventExecutor next() {
-        return this;
-    }
-
-    @Override
-    public final boolean inEventLoop() {
-        return inEventLoop(Thread.currentThread());
-    }
-
-    @Override
-    public final Iterator<EventExecutor> iterator() {
-        return selfCollection.iterator();
-    }
-
-    @Override
-    public final Future<?> shutdownGracefully() {
-        return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
-    }
-
-    /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
-     */
-    @Override
-    @Deprecated
-    public abstract void shutdown();
-
-    /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
-     */
-    @Override
-    @Deprecated
-    public List<Runnable> shutdownNow() {
-        shutdown();
-        return Collections.emptyList();
-    }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {

@@ -18,10 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -44,7 +41,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
-    private final Set<EventExecutor> executorSet = Collections.singleton(this);
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}
@@ -78,16 +74,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public EventExecutor next() {
-        return this;
-    }
-
-    @Override
-    public boolean inEventLoop() {
-        return false;
-    }
-
-    @Override
     public boolean inEventLoop(Thread thread) {
         return false;
     }
@@ -111,11 +97,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public Future<?> shutdownGracefully() {
-        return shutdownGracefully(2, 15, TimeUnit.SECONDS);
-    }
-
-    @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         // TODO: At the moment this just calls shutdown but we may be able to do something more smart here which
         //       respects the quietPeriod and timeout.
@@ -126,11 +107,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     public Future<?> terminationFuture() {
         return terminationFuture.asFuture();
-    }
-
-    @Override
-    public Iterator<EventExecutor> iterator() {
-        return executorSet.iterator();
     }
 
     @Override
