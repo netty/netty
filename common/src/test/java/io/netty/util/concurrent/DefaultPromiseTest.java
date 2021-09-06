@@ -187,6 +187,16 @@ public class DefaultPromiseTest {
         assertTrue(promise.cancel());
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
         assertTrue(promise.isFailed());
+        assertTrue(promise.isDone());
+    }
+
+    @Test
+    public void uncancellablePromiseIsNotDone() {
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
+        promise.setUncancellable();
+        assertFalse(promise.isDone());
+        assertFalse(promise.isCancellable());
+        assertFalse(promise.isCancelled());
     }
 
     @Test
@@ -384,6 +394,22 @@ public class DefaultPromiseTest {
         assertTrue(promise.isSuccess());
         assertFalse(promise.isFailed());
         assertEquals("success", promise.getNow());
+    }
+
+    @Test
+    public void cancellingUncancellablePromiseDoesNotCompleteIt() {
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
+        promise.setUncancellable();
+        promise.cancel();
+        assertFalse(promise.isCancelled());
+        assertFalse(promise.isDone());
+        assertFalse(promise.isFailed());
+        assertFalse(promise.isSuccess());
+        promise.setSuccess(null);
+        assertFalse(promise.isCancelled());
+        assertTrue(promise.isDone());
+        assertFalse(promise.isFailed());
+        assertTrue(promise.isSuccess());
     }
 
     @Test
