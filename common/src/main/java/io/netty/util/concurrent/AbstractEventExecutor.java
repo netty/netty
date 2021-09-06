@@ -44,8 +44,8 @@ public abstract class AbstractEventExecutor implements EventExecutor {
     }
 
     @Override
-    public final Future<?> submit(Runnable task) {
-        var futureTask = newTaskFor(task, null);
+    public final Future<Void> submit(Runnable task) {
+        var futureTask = newTaskFor(task, (Void) null);
         execute(futureTask);
         return futureTask;
     }
@@ -64,10 +64,40 @@ public abstract class AbstractEventExecutor implements EventExecutor {
         return futureTask;
     }
 
+    /**
+     * Decorate the given {@link Runnable} and its return value, as a {@link RunnableFuture}, such that the
+     * returned {@link RunnableFuture} completes with the given result at the end of executing its
+     * {@link RunnableFuture#run()} method.
+     * <p>
+     * The returned {@link RunnableFuture} is the task that will actually be run by a thread in this
+     * executor.
+     * <p>
+     * This method can be overridden by sub-classes to hook into the life cycle of the given task.
+     *
+     * @param runnable The task to be decorated.
+     * @param value The value that the returned future will complete with, assuming the given {@link Runnable} doesn't
+     *             throw an exception.
+     * @param <T> The type of the result value.
+     * @return The decorated {@link Runnable} that is now also a {@link Future}.
+     */
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return newRunnableFuture(newPromise(), runnable, value);
     }
 
+    /**
+     * Decorate the given {@link Callable} and its return value, as a {@link RunnableFuture}, such that the
+     * returned {@link RunnableFuture} completes with the returned result from the {@link Callable} at the end of
+     * executing its {@link RunnableFuture#run()} method.
+     * <p>
+     * The returned {@link RunnableFuture} is the task that will actually be run by a thread in this
+     * executor.
+     * <p>
+     * This method can be overridden by sub-classes to hook into the life cycle of the given task.
+     *
+     * @param callable The task to be decorated.
+     * @param <T> The type of the result value.
+     * @return The decorated {@link Runnable} that is now also a {@link Future}.
+     */
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         return newRunnableFuture(newPromise(), callable);
     }

@@ -67,7 +67,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         private final Queue<Runnable> tasks;
         private final AtomicBoolean poisoned = new AtomicBoolean();
         private final Thread executorThread;
-        private final Promise<Object> terminationFuture = ImmediateEventExecutor.INSTANCE.newPromise();
+        private final Promise<Void> terminationFuture = ImmediateEventExecutor.INSTANCE.newPromise();
 
         SpinExecutorService(int maxTasks) {
             tasks = PlatformDependent.newFixedMpscQueue(maxTasks);
@@ -108,22 +108,22 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
@@ -133,20 +133,20 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public Future<?> submit(Runnable task) {
+        public Future<Void> submit(Runnable task) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void execute(Runnable command) {
-            if (!tasks.offer(command)) {
+        public void execute(Runnable task) {
+            if (!tasks.offer(task)) {
                 throw new RejectedExecutionException(
                         "If that happens, there is something wrong with the available capacity/burst size");
             }
         }
 
         @Override
-        public Future<?> shutdownGracefully() {
+        public Future<Void> shutdownGracefully() {
             if (poisoned.compareAndSet(false, true)) {
                 while (!tasks.offer(POISON_PILL)) {
                     // Just try again
@@ -162,12 +162,12 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return shutdownGracefully();
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return terminationFuture.asFuture();
         }
 

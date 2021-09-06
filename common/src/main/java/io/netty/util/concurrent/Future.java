@@ -234,6 +234,16 @@ public interface Future<V> extends AsynchronousResult<V> {
      */
     boolean awaitUninterruptibly(long timeoutMillis);
 
+    /**
+     * Get the result of this future, if it has completed.
+     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
+     * If the future has not yet completed, then this method will block until it completes.
+     *
+     * @return The result of the task execution, if it completed successfully.
+     * @throws InterruptedException If the call was blocked, waiting for the future to complete, and the thread was
+     * {@linkplain Thread#interrupt() interrupted}.
+     * @throws ExecutionException If the task failed, either by throwing an exception or through cancellation.
+     */
     default V get() throws InterruptedException, ExecutionException {
         await();
 
@@ -247,6 +257,24 @@ public interface Future<V> extends AsynchronousResult<V> {
         throw new ExecutionException(cause);
     }
 
+    /**
+     * Get the result of this future, if it has completed.
+     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
+     * If the future has not yet completed, then this method will block, waiting up to the given timeout for the future
+     * to complete.
+     * If the future does not complete within the specified timeout, then a {@link TimeoutException} will be thrown.
+     * If the timeout is zero, then this method will not block, and instead either get the result or failure of the
+     * future if completed, or immediately throw a {@link TimeoutException} if not yet completed.
+     *
+     * @param timeout The non-negative maximum amount of time, in terms of the given time unit, to wait for the
+     *                completion of the future.
+     * @param unit The time unit for the timeout.
+     * @return The value of the successfully completed future.
+     * @throws InterruptedException If this call was blocking and this thread got
+     * {@linkplain Thread#interrupt() interrupted}.
+     * @throws ExecutionException If the task failed, either by throwing an exception, or through cancellation.
+     * @throws TimeoutException If the future did not complete within the specified timeout.
+     */
     default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (await(timeout, unit)) {
             Throwable cause = cause();

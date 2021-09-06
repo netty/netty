@@ -54,7 +54,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final Future<?> terminationFuture = DefaultPromise.newFailedPromise(
+    private final Future<Void> terminationFuture = DefaultPromise.<Void>newFailedPromise(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException()).asFuture();
 
     private ImmediateEventExecutor() { }
@@ -65,12 +65,12 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
 
@@ -95,14 +95,14 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void execute(Runnable command) {
-        requireNonNull(command, "command");
+    public void execute(Runnable task) {
+        requireNonNull(task, "command");
         if (!RUNNING.get()) {
             RUNNING.set(true);
             try {
-                command.run();
+                task.run();
             } catch (Throwable cause) {
-                logger.info("Throwable caught while executing Runnable {}", command, cause);
+                logger.info("Throwable caught while executing Runnable {}", task, cause);
             } finally {
                 Queue<Runnable> delayedRunnables = DELAYED_RUNNABLES.get();
                 Runnable runnable;
@@ -116,7 +116,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
                 RUNNING.set(false);
             }
         } else {
-            DELAYED_RUNNABLES.get().add(command);
+            DELAYED_RUNNABLES.get().add(task);
         }
     }
 
@@ -126,23 +126,23 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public Future<?> schedule(Runnable command, long delay,
-                                       TimeUnit unit) {
+    public Future<Void> schedule(Runnable task, long delay,
+                                 TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+    public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+    public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 

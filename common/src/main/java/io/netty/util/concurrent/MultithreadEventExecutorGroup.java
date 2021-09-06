@@ -38,7 +38,7 @@ public class MultithreadEventExecutorGroup implements EventExecutorGroup {
     private final EventExecutor[] children;
     private final List<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
-    private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
+    private final Promise<Void> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
     private final boolean powerOfTwo;
 
     /**
@@ -223,7 +223,7 @@ public class MultithreadEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         for (EventExecutor l: children) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
@@ -231,7 +231,7 @@ public class MultithreadEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public final Future<?> terminationFuture() {
+    public final Future<Void> terminationFuture() {
         return terminationFuture.asFuture();
     }
 

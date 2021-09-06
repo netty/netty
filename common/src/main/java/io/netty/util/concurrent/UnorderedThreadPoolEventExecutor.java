@@ -18,9 +18,6 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
@@ -44,7 +41,7 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             UnorderedThreadPoolEventExecutor.class);
 
-    private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
+    private final Promise<Void> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
     private final InnerScheduledThreadPoolExecutor executor;
 
     /**
@@ -106,7 +103,7 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         // TODO: At the moment this just calls shutdown but we may be able to do something more smart here which
         //       respects the quietPeriod and timeout.
         executor.shutdown();
@@ -114,33 +111,33 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture.asFuture();
     }
 
     @Override
-    public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return (Future<?>) executor.schedule(command, delay, unit);
+    public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+        return (Future<Void>) executor.schedule(task, delay, unit);
     }
 
     @Override
-    public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return (Future<V>) executor.schedule(callable, delay, unit);
+    public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+        return (Future<V>) executor.schedule(task, delay, unit);
     }
 
     @Override
-    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return (Future<?>) executor.scheduleAtFixedRate(command, initialDelay, period, unit);
+    public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        return (Future<Void>) executor.scheduleAtFixedRate(task, initialDelay, period, unit);
     }
 
     @Override
-    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return (Future<?>) executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+        return (Future<Void>) executor.scheduleWithFixedDelay(task, initialDelay, delay, unit);
     }
 
     @Override
-    public Future<?> submit(Runnable task) {
-        return (Future<?>) executor.submit(task);
+    public Future<Void> submit(Runnable task) {
+        return (Future<Void>) executor.submit(task);
     }
 
     @Override
@@ -154,8 +151,8 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
     }
 
     @Override
-    public void execute(Runnable command) {
-        executor.schedule(new NonNotifyRunnable(command), 0, NANOSECONDS);
+    public void execute(Runnable task) {
+        executor.schedule(new NonNotifyRunnable(task), 0, NANOSECONDS);
     }
 
     /**
@@ -239,7 +236,7 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
         }
     }
 
-    private static class InnerScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor {
+    private static final class InnerScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor {
         private final EventExecutor eventExecutor;
 
         InnerScheduledThreadPoolExecutor(EventExecutor eventExecutor, int corePoolSize, ThreadFactory threadFactory) {

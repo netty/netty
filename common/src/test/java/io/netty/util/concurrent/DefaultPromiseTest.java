@@ -80,12 +80,12 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return null;
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return null;
         }
 
@@ -105,23 +105,23 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                         TimeUnit unit) {
+        public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay,
+                                                   TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
@@ -131,7 +131,7 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public void execute(Runnable command) {
+        public void execute(Runnable task) {
             fail("Cannot schedule commands");
         }
     }

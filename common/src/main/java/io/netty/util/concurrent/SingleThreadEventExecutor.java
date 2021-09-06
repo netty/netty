@@ -91,7 +91,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
 
-    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final Promise<Void> terminationFuture = new DefaultPromise<>(GlobalEventExecutor.INSTANCE);
 
     /**
      * Create a new instance
@@ -496,7 +496,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         if (quietPeriod < 0) {
             throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
         }
@@ -534,7 +534,6 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                 }
             }
             if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
-                //System.err.println(oldState + " " + newState + " " + this);
                 break;
             }
         }
@@ -556,7 +555,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public final Future<?> terminationFuture() {
+    public final Future<Void> terminationFuture() {
         return terminationFuture.asFuture();
     }
 

@@ -162,14 +162,14 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
+    public Future<Void> schedule(Runnable command, long delay, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (delay < 0) {
             delay = 0;
         }
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(
-                callable(command), deadlineNanos(unit.toNanos(delay)), 0);
+        RunnableScheduledFuture<Void> task = newScheduledTaskFor(
+                callable(command, null), deadlineNanos(unit.toNanos(delay)), 0);
         return schedule(task);
     }
 
@@ -185,7 +185,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+    public Future<Void> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (initialDelay < 0) {
@@ -197,13 +197,13 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     String.format("period: %d (expected: > 0)", period));
         }
 
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(
-                callable(command, (Void) null), deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
+        RunnableScheduledFuture<Void> task = newScheduledTaskFor(
+                callable(command, null), deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
         return schedule(task);
     }
 
     @Override
-    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+    public Future<Void> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         requireNonNull(command, "command");
         requireNonNull(unit, "unit");
         if (initialDelay < 0) {
@@ -215,8 +215,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     String.format("delay: %d (expected: > 0)", delay));
         }
 
-        RunnableScheduledFuture<?> task = newScheduledTaskFor(
-                callable(command, (Void) null), deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));
+        RunnableScheduledFuture<Void> task = newScheduledTaskFor(
+                callable(command, null), deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));
         return schedule(task);
     }
 

@@ -45,7 +45,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
         @Override
         public boolean canBlock() {
             assert inEventLoop();
-            return !SingleThreadEventLoop.this.hasTasks() && !SingleThreadEventLoop.this.hasScheduledTasks();
+            return !hasTasks() && !hasScheduledTasks();
         }
 
         @Override

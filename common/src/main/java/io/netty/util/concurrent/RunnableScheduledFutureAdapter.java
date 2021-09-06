@@ -104,7 +104,7 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
             return true;
         }
         if (obj instanceof RunnableScheduledFutureAdapter) {
-            var adaptor = (RunnableScheduledFutureAdapter<?>) obj;
+            RunnableScheduledFutureAdapter<?> adaptor = (RunnableScheduledFutureAdapter<?>) obj;
             return id == adaptor.id;
         }
         return false;

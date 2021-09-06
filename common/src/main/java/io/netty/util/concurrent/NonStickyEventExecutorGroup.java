@@ -79,17 +79,17 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public Future<?> shutdownGracefully() {
+    public Future<Void> shutdownGracefully() {
         return group.shutdownGracefully();
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return group.shutdownGracefully(quietPeriod, timeout, unit);
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return group.terminationFuture();
     }
 
@@ -120,7 +120,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public Future<?> submit(Runnable task) {
+    public Future<Void> submit(Runnable task) {
         return group.submit(task);
     }
 
@@ -135,23 +135,23 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public Future<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return group.schedule(command, delay, unit);
+    public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+        return group.schedule(task, delay, unit);
     }
 
     @Override
-    public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return group.schedule(callable, delay, unit);
+    public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+        return group.schedule(task, delay, unit);
     }
 
     @Override
-    public Future<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return group.scheduleAtFixedRate(command, initialDelay, period, unit);
+    public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        return group.scheduleAtFixedRate(task, initialDelay, period, unit);
     }
 
     @Override
-    public Future<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return group.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+        return group.scheduleWithFixedDelay(task, initialDelay, delay, unit);
     }
 
     @Override
@@ -170,8 +170,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public void execute(Runnable command) {
-        group.execute(command);
+    public void execute(Runnable task) {
+        group.execute(task);
     }
 
     private static final class NonStickyOrderedEventExecutor extends AbstractEventExecutor
@@ -255,12 +255,12 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return executor.shutdownGracefully(quietPeriod, timeout, unit);
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return executor.terminationFuture();
         }
 
@@ -280,8 +280,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public void execute(Runnable command) {
-            if (!tasks.offer(command)) {
+        public void execute(Runnable task) {
+            if (!tasks.offer(task)) {
                 throw new RejectedExecutionException();
             }
             if (state.compareAndSet(NONE, SUBMITTED)) {
@@ -292,25 +292,25 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public Future<?> schedule(Runnable command, long delay,
-                                           TimeUnit unit) {
+        public Future<Void> schedule(Runnable task, long delay,
+                                     TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <V> Future<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Future<?> scheduleAtFixedRate(
-                Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<Void> scheduleAtFixedRate(
+                Runnable task, long initialDelay, long period, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Future<?> scheduleWithFixedDelay(
-                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        public Future<Void> scheduleWithFixedDelay(
+                Runnable task, long initialDelay, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
     }
