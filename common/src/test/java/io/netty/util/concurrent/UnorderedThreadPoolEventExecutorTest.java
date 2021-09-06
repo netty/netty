@@ -105,4 +105,37 @@ public class UnorderedThreadPoolEventExecutorTest {
             executor.shutdownGracefully();
         }
     }
+
+    @Test
+    public void futuresMustHaveCorrectExecutor() {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        Future<Void> future = null;
+
+        try {
+            future = executor.schedule(() -> {}, 0, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.schedule(() -> null, 0, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.scheduleAtFixedRate(() -> {}, 0, 1, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.scheduleWithFixedDelay(() -> {}, 0, 1, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.submit(() -> {});
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.submit(() -> null);
+            assertSame(executor, future.executor());
+        } finally {
+            future.cancel();
+        }
+    }
 }

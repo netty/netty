@@ -62,8 +62,19 @@ public interface EventExecutorGroup extends Iterable<EventExecutor>, Executor {
      *
      * @return {@code true} if all executors in this group have terminated.
      */
-    boolean isTerminated();
+    default boolean isTerminated() {
+        return terminationFuture().isDone();
+    }
 
+    /**
+     * Wait for this {@link EventExecutorGroup} to {@linkplain #isTerminated() terminate}, up to the given timeout.
+     *
+     * @param timeout The non-negative maximum amount of time to wait for the executor group to terminate.
+     * @param unit The non-null time unit of the timeout.
+     * @return {@code true} if the executor group terminated within the specific timeout.
+     * @throws InterruptedException If this thread was {@linkplain Thread#interrupt() interrupted} while waiting for
+     * executor group to terminate.
+     */
     default boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         return terminationFuture().await(timeout, unit);
     }
