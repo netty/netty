@@ -50,6 +50,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private int localConnIdLength;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
+    private Integer recvQueueLen;
+    private Integer sendQueueLen;
     // package-private for testing only
     int version;
 
@@ -81,6 +83,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
         this.flushStrategy = builder.flushStrategy;
+        this.recvQueueLen = builder.recvQueueLen;
+        this.sendQueueLen = builder.sendQueueLen;
         this.version = builder.version;
     }
 
@@ -351,9 +355,6 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.version = version;
         return self();
     }
-
-    private Integer recvQueueLen;
-    private Integer sendQueueLen;
 
     /**
      * If configured this will enable <a href="https://tools.ietf.org/html/draft-ietf-quic-datagram-01">
