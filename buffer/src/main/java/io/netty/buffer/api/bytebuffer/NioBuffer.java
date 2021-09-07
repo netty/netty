@@ -253,38 +253,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
-        return new ByteCursor() {
-            // Duplicate source buffer to keep our own byte order state.
-            final ByteBuffer buffer = rmem.duplicate().order(ByteOrder.BIG_ENDIAN);
-            int index = fromOffset;
-            final int end = index + length;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (index < end) {
-                    byteValue = buffer.get(index);
-                    index++;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return end - index;
-            }
-        };
+        return new ForwardNioByteCursor(rmem, fromOffset, length);
     }
 
     @Override
@@ -305,37 +274,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             throw new IllegalArgumentException("The fromOffset - length would underflow the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
-        return new ByteCursor() {
-            final ByteBuffer buffer = rmem.duplicate().order(ByteOrder.LITTLE_ENDIAN);
-            int index = fromOffset;
-            final int end = index - length;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (index > end) {
-                    byteValue = buffer.get(index);
-                    index--;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return index - end;
-            }
-        };
+        return new ReverseNioByteCursor(rmem, fromOffset, length);
     }
 
     @Override
@@ -1103,5 +1042,84 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     ByteBuffer recoverable() {
         return base;
+    }
+
+    private static final class ForwardNioByteCursor implements ByteCursor {
+        // Duplicate source buffer to keep our own byte order state.
+        final ByteBuffer buffer;
+        int index;
+        final int end;
+        byte byteValue;
+
+        ForwardNioByteCursor(ByteBuffer rmem, int fromOffset, int length) {
+            buffer = rmem.duplicate().order(ByteOrder.BIG_ENDIAN);
+            index = fromOffset;
+            end = index + length;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (index < end) {
+                byteValue = buffer.get(index);
+                index++;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return end - index;
+        }
+    }
+
+    private static final class ReverseNioByteCursor implements ByteCursor {
+        final ByteBuffer buffer;
+        int index;
+        final int end;
+        byte byteValue;
+
+        ReverseNioByteCursor(ByteBuffer rmem, int fromOffset, int length) {
+            buffer = rmem.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+            index = fromOffset;
+            end = index - length;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (index > end) {
+                byteValue = buffer.get(index);
+                index--;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return index - end;
+        }
     }
 }
