@@ -139,6 +139,7 @@ public class UnorderedThreadPoolEventExecutorTest {
             assertSame(executor, future.executor());
         } finally {
             future.cancel();
+            executor.shutdownGracefully();
         }
     }
 }
