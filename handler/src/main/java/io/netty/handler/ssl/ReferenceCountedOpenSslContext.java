@@ -117,6 +117,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // https://mail.openjdk.java.net/pipermail/security-dev/2021-March/024758.html
     static final boolean CLIENT_ENABLE_SESSION_CACHE =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheClient", false);
+
     /**
      * The OpenSSL SSL_CTX object.
      *
@@ -384,6 +385,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (asyncPrivateKeyMethod != null) {
                 SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engineMap, asyncPrivateKeyMethod));
             }
+            // Set the curves.
+            SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
             success = true;
         } finally {
             if (!success) {

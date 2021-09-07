@@ -38,6 +38,7 @@ import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -67,6 +68,11 @@ public final class OpenSsl {
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
+    static final String[] NAMED_GROUPS;
+
+    // Use default that is supported in java 11 and earlier.
+    // See https://github.com/netty/netty-tcnative/issues/567
+    private static final String[] DEFAULT_NAMED_GROUPS = {  "P-256", "P-384", "X25519" };
 
     // self-signed certificate for netty.io and the matching private-key
     private static final String CERT = "-----BEGIN CERTIFICATE-----\n" +
@@ -181,6 +187,7 @@ public final class OpenSsl {
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
+            String[] namedGroups = DEFAULT_NAMED_GROUPS;
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
             if (IS_BORINGSSL) {
@@ -313,12 +320,46 @@ public final class OpenSsl {
                             SSL.freePrivateKey(key);
                         }
                     }
+
+                    String groups = SystemPropertyUtil.get("jdk.tls.namedGroups", null);
+                    if (groups != null) {
+                        String[] nGroups = groups.split(",");
+                        Set<String> supportedNamedGroups = new LinkedHashSet<String>(nGroups.length);
+                        Set<String> unsupportedNamedGroups = new LinkedHashSet<String>();
+                        for (String namedGroup : nGroups) {
+                            if (SSLContext.setCurvesList(sslCtx, namedGroup)) {
+                                supportedNamedGroups.add(namedGroup);
+                            } else {
+                                unsupportedNamedGroups.add(namedGroup);
+                            }
+                        }
+
+                        if (supportedNamedGroups.isEmpty()) {
+                            namedGroups = DEFAULT_NAMED_GROUPS;
+                            logger.info("All configured namedGroups are not supported: {}. Use default: .",
+                                    Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
+                                    Arrays.toString(DEFAULT_NAMED_GROUPS));
+                        } else {
+                            namedGroups = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                            if (unsupportedNamedGroups.isEmpty()) {
+                                logger.info("Use configured namedGroups -D 'jdk.tls.namedGroup': {} ",
+                                        Arrays.toString(namedGroups));
+                            } else {
+                                logger.info("Use supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
+                                        Arrays.toString(namedGroups),
+                                        Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
+                            }
+                        }
+                    } else {
+                        namedGroups = DEFAULT_NAMED_GROUPS;
+                    }
                 } finally {
                     SSLContext.free(sslCtx);
                 }
             } catch (Exception e) {
                 logger.warn("Failed to get the list of available OpenSSL cipher suites.", e);
             }
+            NAMED_GROUPS = namedGroups;
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.unmodifiableSet(availableOpenSslCipherSuites);
             final Set<String> availableJavaCipherSuites = new LinkedHashSet<String>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
@@ -399,6 +440,7 @@ public final class OpenSsl {
             IS_BORINGSSL = false;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
+            NAMED_GROUPS = DEFAULT_NAMED_GROUPS;
         }
     }
 
