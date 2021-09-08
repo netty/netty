@@ -518,54 +518,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         int off = fromOffset - offsets[startBufferIndex];
         Buffer startBuf = bufs[startBufferIndex];
         ByteCursor startCursor = startBuf.openCursor(off, Math.min(startBuf.capacity() - off, length));
-        return new ByteCursor() {
-            int index = fromOffset;
-            final int end = fromOffset + length;
-            int bufferIndex = startBufferIndex;
-            int initOffset = startCursor.currentOffset();
-            ByteCursor cursor = startCursor;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (cursor.readByte()) {
-                    byteValue = cursor.getByte();
-                    return true;
-                }
-                if (bytesLeft() > 0) {
-                    nextCursor();
-                    cursor.readByte();
-                    byteValue = cursor.getByte();
-                    return true;
-                }
-                return false;
-            }
-
-            private void nextCursor() {
-                bufferIndex++;
-                Buffer nextBuf = bufs[bufferIndex];
-                cursor = nextBuf.openCursor(0, Math.min(nextBuf.capacity(), bytesLeft()));
-                initOffset = 0;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                int currOff = cursor.currentOffset();
-                index += currOff - initOffset;
-                initOffset = currOff;
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return end - currentOffset();
-            }
-        };
+        return new ForwardCompositeByteCursor(bufs, fromOffset, length, startBufferIndex, startCursor);
     }
 
     @Override
@@ -584,56 +537,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         int off = fromOffset - offsets[startBufferIndex];
         Buffer startBuf = bufs[startBufferIndex];
         ByteCursor startCursor = startBuf.openReverseCursor(off, Math.min(off + 1, length));
-        return new ByteCursor() {
-            int index = fromOffset;
-            final int end = fromOffset - length;
-            int bufferIndex = startBufferIndex;
-            int initOffset = startCursor.currentOffset();
-            ByteCursor cursor = startCursor;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (cursor.readByte()) {
-                    byteValue = cursor.getByte();
-                    return true;
-                }
-                if (bytesLeft() > 0) {
-                    nextCursor();
-                    cursor.readByte();
-                    byteValue = cursor.getByte();
-                    return true;
-                }
-                return false;
-            }
-
-            private void nextCursor() {
-                bufferIndex--;
-                Buffer nextBuf = bufs[bufferIndex];
-                int length = Math.min(nextBuf.capacity(), bytesLeft());
-                int offset = nextBuf.capacity() - 1;
-                cursor = nextBuf.openReverseCursor(offset, length);
-                initOffset = offset;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                int currOff = cursor.currentOffset();
-                index -= initOffset - currOff;
-                initOffset = currOff;
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return currentOffset() - end;
-            }
-        };
+        return new ReverseCompositeByteCursor(bufs, fromOffset, length, startBufferIndex, startCursor);
     }
 
     @Override
@@ -1732,4 +1636,128 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
     }
     // </editor-fold>
+
+    private static final class ForwardCompositeByteCursor implements ByteCursor {
+        final Buffer[] bufs;
+        int index;
+        final int end;
+        int bufferIndex;
+        int initOffset;
+        ByteCursor cursor;
+        byte byteValue;
+
+        ForwardCompositeByteCursor(Buffer[] bufs, int fromOffset, int length, int startBufferIndex,
+                                   ByteCursor startCursor) {
+            this.bufs = bufs;
+            index = fromOffset;
+            end = fromOffset + length;
+            bufferIndex = startBufferIndex;
+            initOffset = startCursor.currentOffset();
+            cursor = startCursor;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (cursor.readByte()) {
+                byteValue = cursor.getByte();
+                return true;
+            }
+            if (bytesLeft() > 0) {
+                nextCursor();
+                cursor.readByte();
+                byteValue = cursor.getByte();
+                return true;
+            }
+            return false;
+        }
+
+        private void nextCursor() {
+            bufferIndex++;
+            Buffer nextBuf = bufs[bufferIndex];
+            cursor = nextBuf.openCursor(0, Math.min(nextBuf.capacity(), bytesLeft()));
+            initOffset = 0;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            int currOff = cursor.currentOffset();
+            index += currOff - initOffset;
+            initOffset = currOff;
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return end - currentOffset();
+        }
+    }
+
+    private static final class ReverseCompositeByteCursor implements ByteCursor {
+        final Buffer[] bufs;
+        int index;
+        final int end;
+        int bufferIndex;
+        int initOffset;
+        ByteCursor cursor;
+        byte byteValue;
+
+        ReverseCompositeByteCursor(Buffer[] bufs, int fromOffset, int length,
+                                   int startBufferIndex, ByteCursor startCursor) {
+            this.bufs = bufs;
+            index = fromOffset;
+            end = fromOffset - length;
+            bufferIndex = startBufferIndex;
+            initOffset = startCursor.currentOffset();
+            cursor = startCursor;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (cursor.readByte()) {
+                byteValue = cursor.getByte();
+                return true;
+            }
+            if (bytesLeft() > 0) {
+                nextCursor();
+                cursor.readByte();
+                byteValue = cursor.getByte();
+                return true;
+            }
+            return false;
+        }
+
+        private void nextCursor() {
+            bufferIndex--;
+            Buffer nextBuf = bufs[bufferIndex];
+            int length = Math.min(nextBuf.capacity(), bytesLeft());
+            int offset = nextBuf.capacity() - 1;
+            cursor = nextBuf.openReverseCursor(offset, length);
+            initOffset = offset;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            int currOff = cursor.currentOffset();
+            index -= initOffset - currOff;
+            initOffset = currOff;
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return currentOffset() - end;
+        }
+    }
 }

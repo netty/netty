@@ -269,43 +269,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
-        return new ByteCursor() {
-            final UnsafeMemory memory = UnsafeBuffer.this.memory; // Keep memory alive.
-            final Object baseObj = base;
-            final long baseAddress = address;
-            int index = fromOffset;
-            final int end = index + length;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (index < end) {
-                    try {
-                        byteValue = PlatformDependent.getByte(baseObj, baseAddress + index);
-                    } finally {
-                        Reference.reachabilityFence(memory);
-                    }
-                    index++;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return end - index;
-            }
-        };
+        return new ForwardUnsafeByteCursor(memory, base, address, fromOffset, length);
     }
 
     @Override
@@ -326,43 +290,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             throw new IllegalArgumentException("The fromOffset - length would underflow the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
-        return new ByteCursor() {
-            final UnsafeMemory memory = UnsafeBuffer.this.memory; // Keep memory alive.
-            final Object baseObj = base;
-            final long baseAddress = address;
-            int index = fromOffset;
-            final int end = index - length;
-            byte byteValue = -1;
-
-            @Override
-            public boolean readByte() {
-                if (index > end) {
-                    try {
-                        byteValue = PlatformDependent.getByte(baseObj, baseAddress + index);
-                    } finally {
-                        Reference.reachabilityFence(memory);
-                    }
-                    index--;
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public byte getByte() {
-                return byteValue;
-            }
-
-            @Override
-            public int currentOffset() {
-                return index;
-            }
-
-            @Override
-            public int bytesLeft() {
-                return index - end;
-            }
-        };
+        return new ReverseUnsafeByteCursor(memory, base, address, fromOffset, length);
     }
 
     @Override
@@ -1510,5 +1438,99 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     Object recover() {
         return memory;
+    }
+
+    private static final class ForwardUnsafeByteCursor implements ByteCursor {
+        final UnsafeMemory memory; // Keep memory alive.
+        final Object baseObj;
+        final long baseAddress;
+        int index;
+        final int end;
+        byte byteValue;
+
+        ForwardUnsafeByteCursor(UnsafeMemory memory, Object base, long address, int fromOffset, int length) {
+            this.memory = memory;
+            baseObj = base;
+            baseAddress = address;
+            index = fromOffset;
+            end = index + length;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (index < end) {
+                try {
+                    byteValue = PlatformDependent.getByte(baseObj, baseAddress + index);
+                } finally {
+                    Reference.reachabilityFence(memory);
+                }
+                index++;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return end - index;
+        }
+    }
+
+    private static final class ReverseUnsafeByteCursor implements ByteCursor {
+        final UnsafeMemory memory; // Keep memory alive.
+        final Object baseObj;
+        final long baseAddress;
+        int index;
+        final int end;
+        byte byteValue;
+
+        ReverseUnsafeByteCursor(UnsafeMemory memory, Object base, long address, int fromOffset, int length) {
+            this.memory = memory;
+            baseObj = base;
+            baseAddress = address;
+            index = fromOffset;
+            end = index - length;
+            byteValue = -1;
+        }
+
+        @Override
+        public boolean readByte() {
+            if (index > end) {
+                try {
+                    byteValue = PlatformDependent.getByte(baseObj, baseAddress + index);
+                } finally {
+                    Reference.reachabilityFence(memory);
+                }
+                index--;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public byte getByte() {
+            return byteValue;
+        }
+
+        @Override
+        public int currentOffset() {
+            return index;
+        }
+
+        @Override
+        public int bytesLeft() {
+            return index - end;
+        }
     }
 }
