@@ -152,4 +152,10 @@ public interface PoolArenaMetric extends SizeClassesMetric {
      * Return the number of active bytes that are currently allocated by the arena.
      */
     long numActiveBytes();
+
+    /**
+     * Return the number of bytes that are currently pinned to buffer instances, by the arena. The pinned memory is not
+     * accessible for use by any other allocation, until the buffers using have all been released.
+     */
+    long numPinnedBytes();
 }

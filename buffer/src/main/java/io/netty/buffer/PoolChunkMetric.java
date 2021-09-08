@@ -34,4 +34,9 @@ public interface PoolChunkMetric {
      * Return the number of free bytes in the chunk.
      */
     int freeBytes();
+
+    /**
+     * Return the number of free bytes from this chunk that are pinned to buffer instances.
+     */
+    int pinnedBytes();
 }

@@ -261,6 +261,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
+        public long pinnedHeapMemory() {
+            return usedHeapMemory();
+        }
+
+        @Override
+        public long pinnedDirectMemory() {
+            return usedDirectMemory();
+        }
+
+        @Override
         public String toString() {
             return StringUtil.simpleClassName(this) +
                     "(usedHeapMemory: " + usedHeapMemory() + "; usedDirectMemory: " + usedDirectMemory() + ')';

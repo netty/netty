@@ -677,6 +677,28 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return used;
     }
 
+    final long pinnedHeapMemory() {
+        return pinnedMemory(heapArenas);
+    }
+
+    final long pinnedDirectMemory() {
+        return pinnedMemory(directArenas);
+    }
+
+    private static long pinnedMemory(PoolArena<?>[] arenas) {
+        if (arenas == null) {
+            return -1;
+        }
+        long used = 0;
+        for (PoolArena<?> arena : arenas) {
+            used += arena.numPinnedBytes();
+            if (used < 0) {
+                return Long.MAX_VALUE;
+            }
+        }
+        return used;
+    }
+
     final PoolThreadCache threadCache() {
         PoolThreadCache cache =  threadCache.get();
         assert cache != null;

@@ -108,6 +108,16 @@ public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetri
     }
 
     @Override
+    public long pinnedHeapMemory() {
+        return allocator.pinnedHeapMemory();
+    }
+
+    @Override
+    public long pinnedDirectMemory() {
+        return allocator.pinnedDirectMemory();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(256);
         sb.append(StringUtil.simpleClassName(this))

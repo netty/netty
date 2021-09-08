@@ -67,6 +67,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         return allocator.metric().chunkSize();
     }
 
+    @Override
+    protected void trimCaches(PooledByteBufAllocator allocator) {
+        allocator.trimCurrentThreadCache();
+    }
+
     @Test
     public void testTrim() {
         PooledByteBufAllocator allocator = newAllocator(true);
