@@ -18,14 +18,15 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract base class for {@link EventExecutor} implementations.
  */
-public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
+public abstract class AbstractEventExecutor implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEventExecutor.class);
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
@@ -43,26 +44,60 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public final Future<?> submit(Runnable task) {
-        return (Future<?>) super.submit(task);
+    public final Future<Void> submit(Runnable task) {
+        var futureTask = newTaskFor(task, (Void) null);
+        execute(futureTask);
+        return futureTask;
     }
 
     @Override
     public final <T> Future<T> submit(Runnable task, T result) {
-        return (Future<T>) super.submit(task, result);
+        var futureTask = newTaskFor(task, result);
+        execute(futureTask);
+        return futureTask;
     }
 
     @Override
     public final <T> Future<T> submit(Callable<T> task) {
-        return (Future<T>) super.submit(task);
+        var futureTask = newTaskFor(task);
+        execute(futureTask);
+        return futureTask;
     }
 
-    @Override
+    /**
+     * Decorate the given {@link Runnable} and its return value, as a {@link RunnableFuture}, such that the
+     * returned {@link RunnableFuture} completes with the given result at the end of executing its
+     * {@link RunnableFuture#run()} method.
+     * <p>
+     * The returned {@link RunnableFuture} is the task that will actually be run by a thread in this
+     * executor.
+     * <p>
+     * This method can be overridden by sub-classes to hook into the life cycle of the given task.
+     *
+     * @param runnable The task to be decorated.
+     * @param value The value that the returned future will complete with, assuming the given {@link Runnable} doesn't
+     *             throw an exception.
+     * @param <T> The type of the result value.
+     * @return The decorated {@link Runnable} that is now also a {@link Future}.
+     */
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return newRunnableFuture(newPromise(), runnable, value);
     }
 
-    @Override
+    /**
+     * Decorate the given {@link Callable} and its return value, as a {@link RunnableFuture}, such that the
+     * returned {@link RunnableFuture} completes with the returned result from the {@link Callable} at the end of
+     * executing its {@link RunnableFuture#run()} method.
+     * <p>
+     * The returned {@link RunnableFuture} is the task that will actually be run by a thread in this
+     * executor.
+     * <p>
+     * This method can be overridden by sub-classes to hook into the life cycle of the given task.
+     *
+     * @param callable The task to be decorated.
+     * @param <T> The type of the result value.
+     * @return The decorated {@link Runnable} that is now also a {@link Future}.
+     */
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         return newRunnableFuture(newPromise(), callable);
     }
@@ -85,17 +120,14 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      * {@link RunnableFuture}.
      */
     private static <V> RunnableFuture<V> newRunnableFuture(Promise<V> promise, Callable<V> task) {
-        return new RunnableFutureAdapter<>(promise, task);
+        return new RunnableFutureAdapter<>(promise, requireNonNull(task, "task"));
     }
 
     /**
      * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Runnable} and
      * {@code value}.
-     *
-     * This can be used if you want to override {@link #newTaskFor(Runnable, V)} and return a different
-     * {@link RunnableFuture}.
      */
     private static <V> RunnableFuture<V> newRunnableFuture(Promise<V> promise, Runnable task, V value) {
-        return new RunnableFutureAdapter<>(promise, Executors.callable(task, value));
+        return new RunnableFutureAdapter<>(promise, Executors.callable(requireNonNull(task, "task"), value));
     }
 }

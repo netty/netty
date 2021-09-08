@@ -68,7 +68,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
     public Future<?> cancelInOrder(final FuturesHolder futuresHolder) {
         return executor.submit(() -> {
             for (int i = 0; i < futuresHolder.num; i++) {
-                futuresHolder.futures.get(i).cancel(false);
+                futuresHolder.futures.get(i).cancel();
             }
         }).syncUninterruptibly();
     }
@@ -77,7 +77,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
     public Future<?> cancelInReverseOrder(final FuturesHolder futuresHolder) {
         return executor.submit(() -> {
             for (int i = futuresHolder.num - 1; i >= 0; i--) {
-                futuresHolder.futures.get(i).cancel(false);
+                futuresHolder.futures.get(i).cancel();
             }
         }).syncUninterruptibly();
     }

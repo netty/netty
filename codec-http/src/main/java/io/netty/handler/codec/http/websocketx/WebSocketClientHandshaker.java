@@ -504,7 +504,7 @@ public abstract class WebSocketClientHandshaker {
                 }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
                 channel.closeFuture().addListener(ignore -> {
-                    forceCloseFuture.cancel(false);
+                    forceCloseFuture.cancel();
                 });
             }
         });

@@ -35,8 +35,8 @@ public class AbstractScheduledEventExecutorTest {
     @Test
     public void testScheduleRunnableZero() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        ScheduledFuture<?> future = executor.schedule(TEST_RUNNABLE, 0, TimeUnit.NANOSECONDS);
-        assertEquals(0, future.getDelay(TimeUnit.NANOSECONDS));
+        Future<?> future = executor.schedule(TEST_RUNNABLE, 0, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
         assertNotNull(executor.pollScheduledTask());
         assertNull(executor.pollScheduledTask());
     }
@@ -44,8 +44,8 @@ public class AbstractScheduledEventExecutorTest {
     @Test
     public void testScheduleRunnableNegative() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        ScheduledFuture<?> future = executor.schedule(TEST_RUNNABLE, -1, TimeUnit.NANOSECONDS);
-        assertEquals(0, future.getDelay(TimeUnit.NANOSECONDS));
+        Future<?> future = executor.schedule(TEST_RUNNABLE, -1, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
         assertNotNull(executor.pollScheduledTask());
         assertNull(executor.pollScheduledTask());
     }
@@ -53,8 +53,8 @@ public class AbstractScheduledEventExecutorTest {
     @Test
     public void testScheduleCallableZero() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        ScheduledFuture<?> future = executor.schedule(TEST_CALLABLE, 0, TimeUnit.NANOSECONDS);
-        assertEquals(0, future.getDelay(TimeUnit.NANOSECONDS));
+        Future<?> future = executor.schedule(TEST_CALLABLE, 0, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
         assertNotNull(executor.pollScheduledTask());
         assertNull(executor.pollScheduledTask());
     }
@@ -62,10 +62,14 @@ public class AbstractScheduledEventExecutorTest {
     @Test
     public void testScheduleCallableNegative() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        ScheduledFuture<?> future = executor.schedule(TEST_CALLABLE, -1, TimeUnit.NANOSECONDS);
-        assertEquals(0, future.getDelay(TimeUnit.NANOSECONDS));
+        Future<?> future = executor.schedule(TEST_CALLABLE, -1, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
         assertNotNull(executor.pollScheduledTask());
         assertNull(executor.pollScheduledTask());
+    }
+
+    private static long getDelay(Future<?> future) {
+        return ((RunnableScheduledFuture<?>) future).delayNanos();
     }
 
     @Test
@@ -113,17 +117,12 @@ public class AbstractScheduledEventExecutorTest {
         }
 
         @Override
-        public void shutdown() {
-            // NOOP
-        }
-
-        @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             throw new UnsupportedOperationException();
         }
 
@@ -143,7 +142,7 @@ public class AbstractScheduledEventExecutorTest {
         }
 
         @Override
-        public void execute(Runnable command) {
+        public void execute(Runnable task) {
             throw new UnsupportedOperationException();
         }
     }

@@ -67,7 +67,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
 
-    private final Future<?> terminationFuture = DefaultPromise.newFailedPromise(
+    private final Future<Void> terminationFuture = DefaultPromise.<Void>newFailedPromise(
             this, new UnsupportedOperationException()).asFuture();
 
     private GlobalEventExecutor() {
@@ -150,19 +150,13 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
-    }
-
-    @Override
-    @Deprecated
-    public void shutdown() {
-        throw new UnsupportedOperationException();
     }
 
     @Override

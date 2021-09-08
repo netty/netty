@@ -15,14 +15,14 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static java.util.Objects.requireNonNull;
 
 final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
 
@@ -135,13 +135,8 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return future.cancel(mayInterruptIfRunning);
-    }
-
-    @Override
     public boolean cancel() {
-        return cancel(false);
+        return future.cancel();
     }
 
     @Override

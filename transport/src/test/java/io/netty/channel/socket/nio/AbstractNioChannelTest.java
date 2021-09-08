@@ -23,7 +23,6 @@ import io.netty.channel.nio.AbstractNioChannel;
 import io.netty.channel.nio.NioHandler;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -108,6 +107,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
                 this.eventLoop = eventLoop;
             }
 
+            @Override
             @Test
             public EventLoop next() {
                 return this;
@@ -116,11 +116,6 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             @Override
             public Unsafe unsafe() {
                 return eventLoop.unsafe();
-            }
-
-            @Override
-            public void shutdown() {
-                eventLoop.shutdown();
             }
 
             @Override
@@ -134,12 +129,12 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             }
 
             @Override
-            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
                 return eventLoop.shutdownGracefully(quietPeriod, timeout, unit);
             }
 
             @Override
-            public Future<?> terminationFuture() {
+            public Future<Void> terminationFuture() {
                 return eventLoop.terminationFuture();
             }
 
@@ -159,30 +154,30 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             }
 
             @Override
-            public void execute(Runnable command) {
-                eventLoop.execute(command);
+            public void execute(Runnable task) {
+                eventLoop.execute(task);
             }
 
             @Override
-            public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-                return eventLoop.schedule(command, delay, unit);
+            public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+                return eventLoop.schedule(task, delay, unit);
             }
 
             @Override
-            public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-                return eventLoop.schedule(callable, delay, unit);
+            public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+                return eventLoop.schedule(task, delay, unit);
             }
 
             @Override
-            public ScheduledFuture<?> scheduleAtFixedRate(
-                    Runnable command, long initialDelay, long period, TimeUnit unit) {
-                return eventLoop.scheduleAtFixedRate(command, initialDelay, period, unit);
+            public Future<Void> scheduleAtFixedRate(
+                    Runnable task, long initialDelay, long period, TimeUnit unit) {
+                return eventLoop.scheduleAtFixedRate(task, initialDelay, period, unit);
             }
 
             @Override
-            public ScheduledFuture<?> scheduleWithFixedDelay(
-                    Runnable command, long initialDelay, long delay, TimeUnit unit) {
-                return eventLoop.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+            public Future<Void> scheduleWithFixedDelay(
+                    Runnable task, long initialDelay, long delay, TimeUnit unit) {
+                return eventLoop.scheduleWithFixedDelay(task, initialDelay, delay, unit);
             }
         }
 

@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
@@ -104,7 +105,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * Create the global TrafficCounter.
      */
-    void createGlobalTrafficCounter(ScheduledExecutorService executor) {
+    void createGlobalTrafficCounter(EventExecutorGroup executor) {
         requireNonNull(executor, "executor");
         TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
         setTrafficCounter(tc);
@@ -120,7 +121,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create a new instance.
      *
      * @param executor
-     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *            the {@link EventExecutorGroup} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *            0 or a limit in bytes/s
      * @param readLimit
@@ -131,7 +132,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * @param maxTime
      *            The maximum delay to wait in case of traffic excess.
      */
-    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit, long readLimit,
+    public GlobalTrafficShapingHandler(EventExecutorGroup executor, long writeLimit, long readLimit,
             long checkInterval, long maxTime) {
         super(writeLimit, readLimit, checkInterval, maxTime);
         createGlobalTrafficCounter(executor);
@@ -142,7 +143,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * default max time as delay allowed value of 15000 ms.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutorGroup} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
@@ -151,8 +152,8 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed.
      */
-    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
-            long readLimit, long checkInterval) {
+    public GlobalTrafficShapingHandler(EventExecutorGroup executor, long writeLimit,
+                                       long readLimit, long checkInterval) {
         super(writeLimit, readLimit, checkInterval);
         createGlobalTrafficCounter(executor);
     }
@@ -162,13 +163,13 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * default max time as delay allowed value of 15000 ms.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutorGroup} to use for the {@link TrafficCounter}.
      * @param writeLimit
      *          0 or a limit in bytes/s
      * @param readLimit
      *          0 or a limit in bytes/s
      */
-    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
+    public GlobalTrafficShapingHandler(EventExecutorGroup executor, long writeLimit,
             long readLimit) {
         super(writeLimit, readLimit);
         createGlobalTrafficCounter(executor);
@@ -179,12 +180,12 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * default max time as delay allowed value of 15000 ms and no limit.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutorGroup} to use for the {@link TrafficCounter}.
      * @param checkInterval
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed.
      */
-    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
+    public GlobalTrafficShapingHandler(EventExecutorGroup executor, long checkInterval) {
         super(checkInterval);
         createGlobalTrafficCounter(executor);
     }

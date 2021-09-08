@@ -61,7 +61,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
             assertFalse(future.awaitUninterruptibly(1000));
-            assertTrue(future.cancel(true));
+            assertTrue(future.cancel());
             assertNull(capture.get());
         } finally {
             group.shutdownGracefully();

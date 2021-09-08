@@ -90,7 +90,7 @@ class FuturesTest {
     public void cancelOnFutureFromMapMustCancelOriginalFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Future<String> strFut = promise.map(i -> i.toString());
-        strFut.cancel(false);
+        strFut.cancel();
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
     }
@@ -99,7 +99,7 @@ class FuturesTest {
     public void cancelOnOriginalFutureMustCancelFutureFromMap() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Future<String> strFut = promise.map(i -> i.toString());
-        promise.cancel(false);
+        promise.cancel();
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
     }
@@ -165,7 +165,7 @@ class FuturesTest {
     public void cancelOnFutureFromFlatMapMustCancelOriginalFuture() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Future<String> strFut = promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString()));
-        strFut.cancel(false);
+        strFut.cancel();
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
     }
@@ -174,7 +174,7 @@ class FuturesTest {
     public void cancelOnOriginalFutureMustCancelFutureFromFlatMap() {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Future<String> strFut = promise.flatMap(i -> INSTANCE.newSucceededFuture(i.toString()));
-        promise.cancel(false);
+        promise.cancel();
         assertTrue(promise.isCancelled());
         assertTrue(strFut.isCancelled());
     }
@@ -184,7 +184,7 @@ class FuturesTest {
         DefaultPromise<Integer> promise = new DefaultPromise<>(INSTANCE);
         Future<String> strFut = promise.flatMap(i -> {
             Future<String> future = new DefaultPromise<>(INSTANCE);
-            future.cancel(false);
+            future.cancel();
             return future;
         });
 
@@ -254,7 +254,7 @@ class FuturesTest {
         DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
         promise.cascadeTo(promise2);
 
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertTrue(promise.isCancelled());
         assertTrue(promise2.await(1, SECONDS));
         assertTrue(promise2.isCancelled());
@@ -267,7 +267,7 @@ class FuturesTest {
         DefaultPromise<Integer> promise2 = new DefaultPromise<>(executor);
         promise.cascadeTo(promise2);
 
-        assertTrue(promise2.cancel(false));
+        assertTrue(promise2.cancel());
         assertTrue(promise2.isCancelled());
 
         //

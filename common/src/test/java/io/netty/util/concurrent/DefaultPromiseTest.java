@@ -80,17 +80,13 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return null;
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return null;
-        }
-
-        @Override
-        public void shutdown() {
         }
 
         @Override
@@ -109,23 +105,23 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
         @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                         TimeUnit unit) {
+        public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay,
+                                                   TimeUnit unit) {
             return fail("Cannot schedule commands");
         }
 
@@ -135,7 +131,7 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public void execute(Runnable command) {
+        public void execute(Runnable task) {
             fail("Cannot schedule commands");
         }
     }
@@ -145,7 +141,7 @@ public class DefaultPromiseTest {
         EventExecutor executor = new RejectingEventExecutor();
 
         DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertTrue(promise.isCancelled());
     }
 
@@ -174,23 +170,33 @@ public class DefaultPromiseTest {
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThrows(CancellationException.class, promise::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
     }
 
     @Test
     public void testCancellationExceptionIsReturnedAsCause() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
-        assertTrue(promise.cancel(false));
+        assertTrue(promise.cancel());
         assertThat(promise.cause()).isInstanceOf(CancellationException.class);
         assertTrue(promise.isFailed());
+        assertTrue(promise.isDone());
+    }
+
+    @Test
+    public void uncancellablePromiseIsNotDone() {
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
+        promise.setUncancellable();
+        assertFalse(promise.isDone());
+        assertFalse(promise.isCancellable());
+        assertFalse(promise.isCancelled());
     }
 
     @Test
@@ -391,6 +397,22 @@ public class DefaultPromiseTest {
     }
 
     @Test
+    public void cancellingUncancellablePromiseDoesNotCompleteIt() {
+        DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
+        promise.setUncancellable();
+        promise.cancel();
+        assertFalse(promise.isCancelled());
+        assertFalse(promise.isDone());
+        assertFalse(promise.isFailed());
+        assertFalse(promise.isSuccess());
+        promise.setSuccess(null);
+        assertFalse(promise.isCancelled());
+        assertTrue(promise.isDone());
+        assertFalse(promise.isFailed());
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
     public void throwUncheckedSync() throws InterruptedException {
         Exception exception = new Exception();
         DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
@@ -421,7 +443,7 @@ public class DefaultPromiseTest {
     @Test
     public void throwCancelled() throws InterruptedException {
         DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
-        promise.cancel(true);
+        promise.cancel();
         assertThrows(CancellationException.class, promise::sync);
     }
 

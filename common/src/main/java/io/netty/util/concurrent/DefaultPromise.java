@@ -384,14 +384,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
 
     @Override
     public boolean cancel() {
-        return cancel(false);
-    }
-
-    /**
-     * @param mayInterruptIfRunning this value has no effect in this implementation.
-     */
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
@@ -668,6 +660,15 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
 
     @Override
     public FutureCompletionStage<V> asStage() {
+        return getFutureStageAdaptor();
+    }
+
+    @Override
+    public java.util.concurrent.Future<V> asJdkFuture() {
+        return getFutureStageAdaptor();
+    }
+
+    private DefaultFutureCompletionStage<V> getFutureStageAdaptor() {
         DefaultFutureCompletionStage<V> stageAdapter = stage;
         if (stageAdapter == null) {
             stage = stageAdapter = new DefaultFutureCompletionStage<>(this);

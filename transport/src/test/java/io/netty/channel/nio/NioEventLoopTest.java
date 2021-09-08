@@ -98,7 +98,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         assertFalse(future.awaitUninterruptibly(1000));
-        assertTrue(future.cancel(true));
+        assertTrue(future.cancel());
         group.shutdownGracefully();
     }
 
@@ -169,7 +169,6 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
         final AtomicReference<Throwable> error = new AtomicReference<>();
@@ -191,9 +190,9 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 }
             });
             t.start();
-            group.shutdownNow();
+            Future<?> termination = group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
             t.join();
-            group.terminationFuture().syncUninterruptibly();
+            termination.syncUninterruptibly();
             assertThat(error.get(), instanceOf(RejectedExecutionException.class));
             error.set(null);
         }

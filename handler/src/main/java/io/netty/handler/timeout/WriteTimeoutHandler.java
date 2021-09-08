@@ -117,7 +117,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
         lastTask = null;
         while (task != null) {
             assert task.ctx.executor().inEventLoop();
-            task.scheduledFuture.cancel(false);
+            task.scheduledFuture.cancel();
             WriteTimeoutTask prev = task.prev;
             task.prev = null;
             task.next = null;
@@ -214,7 +214,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
         @Override
         public void operationComplete(Future<? extends Void> future) throws Exception {
             // scheduledFuture has already be set when reaching here
-            scheduledFuture.cancel(false);
+            scheduledFuture.cancel();
 
             // Check if its safe to modify the "doubly-linked-list" that we maintain. If its not we will schedule the
             // modification so its picked up by the executor..

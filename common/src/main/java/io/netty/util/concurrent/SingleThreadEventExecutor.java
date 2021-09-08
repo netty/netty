@@ -22,21 +22,17 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.Thread.State;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -95,7 +91,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
 
-    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final Promise<Void> terminationFuture = new DefaultPromise<>(GlobalEventExecutor.INSTANCE);
 
     /**
      * Create a new instance
@@ -500,7 +496,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         if (quietPeriod < 0) {
             throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
         }
@@ -538,7 +534,6 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                 }
             }
             if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
-                //System.err.println(oldState + " " + newState + " " + this);
                 break;
             }
         }
@@ -560,56 +555,8 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public final Future<?> terminationFuture() {
+    public final Future<Void> terminationFuture() {
         return terminationFuture.asFuture();
-    }
-
-    @Override
-    @Deprecated
-    public final void shutdown() {
-        if (isShutdown()) {
-            return;
-        }
-
-        boolean inEventLoop = inEventLoop();
-        boolean wakeup;
-        int oldState;
-        for (;;) {
-            if (isShuttingDown()) {
-                return;
-            }
-            int newState;
-            wakeup = true;
-            oldState = state;
-            if (inEventLoop) {
-                newState = ST_SHUTDOWN;
-            } else {
-                switch (oldState) {
-                    case ST_NOT_STARTED:
-                    case ST_STARTED:
-                    case ST_SHUTTING_DOWN:
-                        newState = ST_SHUTDOWN;
-                        break;
-                    default:
-                        newState = oldState;
-                        wakeup = false;
-                }
-            }
-            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
-                break;
-            }
-        }
-
-        if (ensureThreadStarted(oldState)) {
-            return;
-        }
-
-        if (wakeup) {
-            taskQueue.offer(WAKEUP_TASK);
-            if (!addTaskWakesUp) {
-                wakeup(inEventLoop);
-            }
-        }
     }
 
     @Override
@@ -729,39 +676,6 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
         if (!addTaskWakesUp && wakesUpForTask(task)) {
             wakeup(inEventLoop);
-        }
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks, timeout, unit);
-    }
-
-    @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks);
-    }
-
-    @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks, timeout, unit);
-    }
-
-    private void throwIfInEventLoop(String method) {
-        if (inEventLoop()) {
-            throw new RejectedExecutionException("Calling " + method + " from within the EventLoop is not allowed");
         }
     }
 

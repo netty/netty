@@ -19,14 +19,12 @@ import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.openjdk.jmh.annotations.Fork;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import org.openjdk.jmh.annotations.Fork;
 
 /**
  * This harness facilitates the sharing of an executor between JMH and Netty and
@@ -87,19 +85,13 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return executor.shutdownGracefully(quietPeriod, timeout, unit);
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return executor.terminationFuture();
-        }
-
-        @Override
-        @Deprecated
-        public void shutdown() {
-            executor.shutdown();
         }
 
         @Override
@@ -128,8 +120,8 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        public void execute(Runnable command) {
-            executor.execute(command);
+        public void execute(Runnable task) {
+            executor.execute(task);
         }
 
         @Override
@@ -138,24 +130,24 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         }
 
         @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            return executor.schedule(command, delay, unit);
+        public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+            return executor.schedule(task, delay, unit);
         }
 
         @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            return executor.schedule(callable, delay, unit);
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+            return executor.schedule(task, delay, unit);
         }
 
         @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-            return executor.scheduleAtFixedRate(command, initialDelay, period, unit);
+        public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+            return executor.scheduleAtFixedRate(task, initialDelay, period, unit);
         }
 
         @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(
-                Runnable command, long initialDelay, long delay, TimeUnit unit) {
-            return executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+        public Future<Void> scheduleWithFixedDelay(
+                Runnable task, long initialDelay, long delay, TimeUnit unit) {
+            return executor.scheduleWithFixedDelay(task, initialDelay, delay, unit);
         }
     }
 

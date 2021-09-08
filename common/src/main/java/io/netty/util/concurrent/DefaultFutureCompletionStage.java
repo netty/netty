@@ -17,8 +17,11 @@ package io.netty.util.concurrent;
 
 
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -33,7 +36,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <V> the value type.
  */
-final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> {
+final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V>, java.util.concurrent.Future<V> {
     private enum Marker {
         EMPTY,
         ERROR
@@ -48,6 +51,31 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
     DefaultFutureCompletionStage(Future<V> future) {
         this.future = future;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return future.cancel();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return future.isCancelled();
+    }
+
+    @Override
+    public boolean isDone() {
+        return future.isDone();
+    }
+
+    @Override
+    public V get() throws InterruptedException, ExecutionException {
+        return future.get();
+    }
+
+    @Override
+    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        return future.get(timeout, unit);
     }
 
     @Override

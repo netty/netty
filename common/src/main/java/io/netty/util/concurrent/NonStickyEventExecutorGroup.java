@@ -15,22 +15,18 @@
  */
 package io.netty.util.concurrent;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link EventExecutorGroup} which will preserve {@link Runnable} execution order but makes no guarantees about what
@@ -83,30 +79,18 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public Future<?> shutdownGracefully() {
+    public Future<Void> shutdownGracefully() {
         return group.shutdownGracefully();
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return group.shutdownGracefully(quietPeriod, timeout, unit);
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return group.terminationFuture();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public void shutdown() {
-        group.shutdown();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public List<Runnable> shutdownNow() {
-        return group.shutdownNow();
     }
 
     @Override
@@ -136,7 +120,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public Future<?> submit(Runnable task) {
+    public Future<Void> submit(Runnable task) {
         return group.submit(task);
     }
 
@@ -151,23 +135,23 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return group.schedule(command, delay, unit);
+    public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+        return group.schedule(task, delay, unit);
     }
 
     @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return group.schedule(callable, delay, unit);
+    public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+        return group.schedule(task, delay, unit);
     }
 
     @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return group.scheduleAtFixedRate(command, initialDelay, period, unit);
+    public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        return group.scheduleAtFixedRate(task, initialDelay, period, unit);
     }
 
     @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return group.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+        return group.scheduleWithFixedDelay(task, initialDelay, delay, unit);
     }
 
     @Override
@@ -186,31 +170,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks) throws InterruptedException {
-        return group.invokeAll(tasks);
-    }
-
-    @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        return group.invokeAll(tasks, timeout, unit);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-        return group.invokeAny(tasks);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        return group.invokeAny(tasks, timeout, unit);
-    }
-
-    @Override
-    public void execute(Runnable command) {
-        group.execute(command);
+    public void execute(Runnable task) {
+        group.execute(task);
     }
 
     private static final class NonStickyOrderedEventExecutor extends AbstractEventExecutor
@@ -294,18 +255,13 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             return executor.shutdownGracefully(quietPeriod, timeout, unit);
         }
 
         @Override
-        public Future<?> terminationFuture() {
+        public Future<Void> terminationFuture() {
             return executor.terminationFuture();
-        }
-
-        @Override
-        public void shutdown() {
-            executor.shutdown();
         }
 
         @Override
@@ -324,8 +280,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public void execute(Runnable command) {
-            if (!tasks.offer(command)) {
+        public void execute(Runnable task) {
+            if (!tasks.offer(task)) {
                 throw new RejectedExecutionException();
             }
             if (state.compareAndSet(NONE, SUBMITTED)) {
@@ -336,25 +292,25 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay,
-                                           TimeUnit unit) {
+        public Future<Void> schedule(Runnable task, long delay,
+                                     TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(
-                Runnable command, long initialDelay, long period, TimeUnit unit) {
+        public Future<Void> scheduleAtFixedRate(
+                Runnable task, long initialDelay, long period, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(
-                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        public Future<Void> scheduleWithFixedDelay(
+                Runnable task, long initialDelay, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
     }

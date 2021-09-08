@@ -2038,7 +2038,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel(false));
+        localHandshakePromise.asFuture().addListener(f -> timeoutFuture.cancel());
     }
 
     private void forceFlush(ChannelHandlerContext ctx) {
@@ -2088,7 +2088,7 @@ public class SslHandler extends ByteToMessageDecoder {
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(f -> {
             if (timeoutFuture != null) {
-                timeoutFuture.cancel(false);
+                timeoutFuture.cancel();
             }
             final long closeNotifyReadTimeout = closeNotifyReadTimeoutMillis;
             if (closeNotifyReadTimeout <= 0) {
@@ -2122,7 +2122,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 // Do the close once we received the close_notify.
                 closeFuture.addListener(future -> {
                     if (closeNotifyReadTimeoutFuture != null) {
-                        closeNotifyReadTimeoutFuture.cancel(false);
+                        closeNotifyReadTimeoutFuture.cancel();
                     }
                     if (ctx.channel().isActive()) {
                         addCloseListener(ctx.close(), promise);

@@ -16,12 +16,17 @@
 package io.netty.util.concurrent;
 
 /**
- * A combination of {@link java.util.concurrent.RunnableScheduledFuture}, {@link RunnableFuture} and
- * {@link ScheduledFuture}.
+ * A combination of {@link RunnableFuture} and {@link Comparable} (sorting by their next deadline),
+ * with additional methods for scheduling, periodicity, and delay.
  */
-@SuppressWarnings("ClassNameSameAsAncestorName")
-public interface RunnableScheduledFuture<V> extends
-        java.util.concurrent.RunnableScheduledFuture<V>, RunnableFuture<V>, ScheduledFuture<V> {
+public interface RunnableScheduledFuture<V> extends RunnableFuture<V>, Comparable<RunnableScheduledFuture<?>> {
+    /**
+     * Return {@code true} if the task is periodic, which means it may be executed multiple times, as opposed to a
+     * delayed task or a normal task, that only execute once.
+     *
+     * @return {@code true} if this task is periodic, otherwise {@code false}.
+     */
+    boolean isPeriodic();
 
     /**
      * Returns the deadline in nanos when the {@link #run()} method should be called again.

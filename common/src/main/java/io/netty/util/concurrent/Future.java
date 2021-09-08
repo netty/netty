@@ -150,8 +150,7 @@ import java.util.function.Function;
  * }
  * </pre>
  */
-@SuppressWarnings("ClassNameSameAsAncestorName")
-public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousResult<V> {
+public interface Future<V> extends AsynchronousResult<V> {
     /**
      * Adds the specified listener to this future. The specified listener is notified when this future is {@linkplain
      * #isDone() done}. If this future is already completed, the specified listener is notified immediately.
@@ -236,14 +235,15 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
     boolean awaitUninterruptibly(long timeoutMillis);
 
     /**
-     * {@inheritDoc}
-     * <p>
-     * If the cancellation was successful it will fail the future with a {@link CancellationException}.
+     * Get the result of this future, if it has completed.
+     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
+     * If the future has not yet completed, then this method will block until it completes.
+     *
+     * @return The result of the task execution, if it completed successfully.
+     * @throws InterruptedException If the call was blocked, waiting for the future to complete, and the thread was
+     * {@linkplain Thread#interrupt() interrupted}.
+     * @throws ExecutionException If the task failed, either by throwing an exception or through cancellation.
      */
-    @Override
-    boolean cancel(boolean mayInterruptIfRunning);
-
-    @Override
     default V get() throws InterruptedException, ExecutionException {
         await();
 
@@ -257,7 +257,24 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
         throw new ExecutionException(cause);
     }
 
-    @Override
+    /**
+     * Get the result of this future, if it has completed.
+     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
+     * If the future has not yet completed, then this method will block, waiting up to the given timeout for the future
+     * to complete.
+     * If the future does not complete within the specified timeout, then a {@link TimeoutException} will be thrown.
+     * If the timeout is zero, then this method will not block, and instead either get the result or failure of the
+     * future if completed, or immediately throw a {@link TimeoutException} if not yet completed.
+     *
+     * @param timeout The non-negative maximum amount of time, in terms of the given time unit, to wait for the
+     *                completion of the future.
+     * @param unit The time unit for the timeout.
+     * @return The value of the successfully completed future.
+     * @throws InterruptedException If this call was blocking and this thread got
+     * {@linkplain Thread#interrupt() interrupted}.
+     * @throws ExecutionException If the task failed, either by throwing an exception, or through cancellation.
+     * @throws TimeoutException If the future did not complete within the specified timeout.
+     */
     default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (await(timeout, unit)) {
             Throwable cause = cause();
@@ -277,6 +294,13 @@ public interface Future<V> extends java.util.concurrent.Future<V>, AsynchronousR
      * updates as well.
      */
     default FutureCompletionStage<V> asStage() {
+        return new DefaultFutureCompletionStage<>(this);
+    }
+
+    /**
+     * Returns a {@link java.util.concurrent.Future JDK Future that reflects the state of this {@link Future}.
+     */
+    default java.util.concurrent.Future<V> asJdkFuture() {
         return new DefaultFutureCompletionStage<>(this);
     }
 

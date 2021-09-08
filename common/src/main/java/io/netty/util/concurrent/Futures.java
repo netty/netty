@@ -136,7 +136,7 @@ final class Futures {
         @Override
         public void operationComplete(Future<Object> context, Future<?> future) throws Exception {
             if (future.isCancelled()) {
-                context.cancel(false);
+                context.cancel();
             }
         }
     }

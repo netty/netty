@@ -16,19 +16,17 @@
 
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
-@SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+import static java.util.Objects.requireNonNull;
+
 final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventExecutor.RunnableScheduledFutureNode<V> {
     private static final AtomicLong NEXT_TASK_ID = new AtomicLong();
 
@@ -75,12 +73,7 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
-    public long getDelay(TimeUnit unit) {
-        return unit.convert(delayNanos(), TimeUnit.NANOSECONDS);
-    }
-
-    @Override
-    public int compareTo(Delayed o) {
+    public int compareTo(RunnableScheduledFuture<?> o) {
         if (this == o) {
             return 0;
         }
@@ -98,6 +91,23 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
         } else {
             return 1;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj instanceof RunnableScheduledFutureAdapter) {
+            RunnableScheduledFutureAdapter<?> adaptor = (RunnableScheduledFutureAdapter<?>) obj;
+            return id == adaptor.id;
+        }
+        return false;
     }
 
     @Override
@@ -130,21 +140,13 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
         }
     }
 
-    /**
-     * @param mayInterruptIfRunning this value has no effect in this implementation.
-     */
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        boolean canceled = future.cancel(mayInterruptIfRunning);
+    public boolean cancel() {
+        boolean canceled = future.cancel();
         if (canceled) {
             executor.removeScheduled(this);
         }
         return canceled;
-    }
-
-    @Override
-    public boolean cancel() {
-        return cancel(false);
     }
 
     @Override

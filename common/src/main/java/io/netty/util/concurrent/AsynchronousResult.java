@@ -25,9 +25,10 @@ import java.util.concurrent.CancellationException;
  */
 interface AsynchronousResult<V> {
     /**
-     * Cancel this asynchronous operation, unless it has already been completed.
+     * Cancel this asynchronous operation, unless it has already been completed
+     * or is not {@linkplain #isCancellable() cancellable}.
      * <p>
-     * A cancelled operation is considered to be {@linkplain #isFailed() failed}.
+     * A cancelled operation is considered to be {@linkplain #isDone() done} and {@linkplain #isFailed() failed}.
      * <p>
      * If the cancellation was successful, the result of this operation will be that it has failed with a
      * {@link CancellationException}.
@@ -66,7 +67,11 @@ interface AsynchronousResult<V> {
     boolean isDone();
 
     /**
-     * returns {@code true} if and only if the operation can be cancelled via {@link #cancel()}.
+     * Returns {@code true} if and only if the operation can be cancelled via {@link #cancel()}.
+     * Note that this is inherently racy, as the operation could be made
+     * {@linkplain Promise#setUncancellable() uncancellable} at any time.
+     *
+     * @return {@code true} if this operation can be cancelled.
      */
     boolean isCancellable();
 

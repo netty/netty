@@ -30,11 +30,12 @@ import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -42,14 +43,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class TrafficShapingHandlerTest {
 
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
-    private static final ScheduledExecutorService SES = Executors.newSingleThreadScheduledExecutor();
+    private static final EventExecutorGroup SES = new SingleThreadEventExecutor();
     private static final MultithreadEventLoopGroup GROUP =
             new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
     @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
-        SES.shutdown();
+        SES.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
     }
 
     @Test

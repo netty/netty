@@ -65,7 +65,7 @@ public class UnorderedThreadPoolEventExecutorTest {
         try {
             latch.await();
         } finally {
-            future.cancel(true);
+            future.cancel();
             executor.shutdownGracefully();
         }
     }
@@ -102,6 +102,43 @@ public class UnorderedThreadPoolEventExecutorTest {
 
             assertSame(cause, f.await().cause());
         } finally {
+            executor.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void futuresMustHaveCorrectExecutor() {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        Runnable runnable = () -> {
+        };
+        Callable<Void> callable = () -> null;
+        Future<Void> future = null;
+
+        try {
+            future = executor.schedule(runnable, 0, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.schedule(callable, 0, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.scheduleAtFixedRate(runnable, 0, 1, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.scheduleWithFixedDelay(runnable, 0, 1, TimeUnit.MILLISECONDS);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.submit(runnable);
+            assertSame(executor, future.executor());
+
+            future.cancel();
+            future = executor.submit(callable);
+            assertSame(executor, future.executor());
+        } finally {
+            future.cancel();
             executor.shutdownGracefully();
         }
     }

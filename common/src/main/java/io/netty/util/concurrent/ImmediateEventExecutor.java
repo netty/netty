@@ -15,8 +15,6 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,6 +22,8 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Executes {@link Runnable} objects in the caller's thread. If the {@link #execute(Runnable)} is reentrant it will be
@@ -54,7 +54,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final Future<?> terminationFuture = DefaultPromise.newFailedPromise(
+    private final Future<Void> terminationFuture = DefaultPromise.<Void>newFailedPromise(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException()).asFuture();
 
     private ImmediateEventExecutor() { }
@@ -65,18 +65,14 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public Future<Void> terminationFuture() {
         return terminationFuture;
     }
-
-    @Override
-    @Deprecated
-    public void shutdown() { }
 
     @Override
     public boolean isShuttingDown() {
@@ -99,14 +95,14 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void execute(Runnable command) {
-        requireNonNull(command, "command");
+    public void execute(Runnable task) {
+        requireNonNull(task, "command");
         if (!RUNNING.get()) {
             RUNNING.set(true);
             try {
-                command.run();
+                task.run();
             } catch (Throwable cause) {
-                logger.info("Throwable caught while executing Runnable {}", command, cause);
+                logger.info("Throwable caught while executing Runnable {}", task, cause);
             } finally {
                 Queue<Runnable> delayedRunnables = DELAYED_RUNNABLES.get();
                 Runnable runnable;
@@ -120,7 +116,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
                 RUNNING.set(false);
             }
         } else {
-            DELAYED_RUNNABLES.get().add(command);
+            DELAYED_RUNNABLES.get().add(task);
         }
     }
 
@@ -130,23 +126,23 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay,
-                                       TimeUnit unit) {
+    public Future<Void> schedule(Runnable task, long delay,
+                                 TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+    public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+    public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 

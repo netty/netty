@@ -122,6 +122,11 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return cancel();
+    }
+
+    @Override
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');

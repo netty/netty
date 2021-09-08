@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
+import static io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -44,6 +44,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
+        when(eventLoop.newPromise()).thenReturn(INSTANCE.newPromise());
 
         TestChannel channel = new TestChannel(eventLoop);
         // Using spy as otherwise intelliJ will not be able to understand that we dont want to skip the handler
@@ -78,7 +79,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
-        when(eventLoop.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
+        when(eventLoop.newPromise()).thenAnswer(inv -> INSTANCE.newPromise());
 
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();
@@ -134,7 +135,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
-        when(eventLoop.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
+        when(eventLoop.newPromise()).thenAnswer(inv -> INSTANCE.newPromise());
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();
             return null;
