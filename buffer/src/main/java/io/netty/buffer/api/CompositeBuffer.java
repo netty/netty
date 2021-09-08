@@ -385,11 +385,6 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     @Override
-    public long nativeAddress() {
-        return 0;
-    }
-
-    @Override
     public CompositeBuffer makeReadOnly() {
         for (Buffer buf : bufs) {
             buf.makeReadOnly();

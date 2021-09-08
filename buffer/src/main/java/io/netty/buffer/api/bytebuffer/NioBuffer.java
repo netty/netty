@@ -165,8 +165,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         return this;
     }
 
-    @Override
-    public long nativeAddress() {
+    private long nativeAddress() {
         return rmem.isDirect() && PlatformDependent.hasUnsafe()? PlatformDependent.directBufferAddress(rmem) : 0;
     }
 

@@ -233,7 +233,30 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     public void heapBufferMustHaveZeroAddress(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            assertThat(buf.nativeAddress()).isZero();
+            assertThat(buf.countReadableComponents()).isZero();
+            assertThat(buf.countWritableComponents()).isOne();
+            buf.forEachWritable(0, (index, component) -> {
+                assertThat(component.writableNativeAddress()).isZero();
+                return true;
+            });
+            buf.writeInt(42);
+            assertThat(buf.countReadableComponents()).isOne();
+            assertThat(buf.countWritableComponents()).isOne();
+            buf.forEachReadable(0, (index, component) -> {
+                assertThat(component.readableNativeAddress()).isZero();
+                return true;
+            });
+            buf.forEachWritable(0, (index, component) -> {
+                assertThat(component.writableNativeAddress()).isZero();
+                return true;
+            });
+            buf.writeInt(42);
+            assertThat(buf.countReadableComponents()).isOne();
+            assertThat(buf.countWritableComponents()).isZero();
+            buf.forEachReadable(0, (index, component) -> {
+                assertThat(component.readableNativeAddress()).isZero();
+                return true;
+            });
         }
     }
 
@@ -242,7 +265,30 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     public void directBufferMustHaveNonZeroAddress(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            assertThat(buf.nativeAddress()).isNotZero();
+            assertThat(buf.countReadableComponents()).isZero();
+            assertThat(buf.countWritableComponents()).isOne();
+            buf.forEachWritable(0, (index, component) -> {
+                assertThat(component.writableNativeAddress()).isNotZero();
+                return true;
+            });
+            buf.writeInt(42);
+            assertThat(buf.countReadableComponents()).isOne();
+            assertThat(buf.countWritableComponents()).isOne();
+            buf.forEachReadable(0, (index, component) -> {
+                assertThat(component.readableNativeAddress()).isNotZero();
+                return true;
+            });
+            buf.forEachWritable(0, (index, component) -> {
+                assertThat(component.writableNativeAddress()).isNotZero();
+                return true;
+            });
+            buf.writeInt(42);
+            assertThat(buf.countReadableComponents()).isOne();
+            assertThat(buf.countWritableComponents()).isZero();
+            buf.forEachReadable(0, (index, component) -> {
+                assertThat(component.readableNativeAddress()).isNotZero();
+                return true;
+            });
         }
     }
 
