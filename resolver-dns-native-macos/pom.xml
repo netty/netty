@@ -174,7 +174,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_resolver_dns_native_macos_${os.detected.arch}</name>
+                  <name>netty_resolver_dns_native_macos_aarch_64</name>
                   <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
