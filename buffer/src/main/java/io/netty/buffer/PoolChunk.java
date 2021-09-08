@@ -588,7 +588,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
     }
 
-    @Override
     public int pinnedBytes() {
         synchronized (arena) {
             return pinnedBytes;

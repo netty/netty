@@ -677,11 +677,23 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return used;
     }
 
-    final long pinnedHeapMemory() {
+    /**
+     * Returns the number of bytes of heap memory that is currently pinned to heap buffers allocated by a
+     * {@link ByteBufAllocator}, or {@code -1} if unknown.
+     * A buffer can pin more memory than its {@linkplain ByteBuf#capacity() capacity} might indicate,
+     * due to implementation details of the allocator.
+     */
+    public final long pinnedHeapMemory() {
         return pinnedMemory(heapArenas);
     }
 
-    final long pinnedDirectMemory() {
+    /**
+     * Returns the number of bytes of direct memory that is currently pinned to direct buffers allocated by a
+     * {@link ByteBufAllocator}, or {@code -1} if unknown.
+     * A buffer can pin more memory than its {@linkplain ByteBuf#capacity() capacity} might indicate,
+     * due to implementation details of the allocator.
+     */
+    public final long pinnedDirectMemory() {
         return pinnedMemory(directArenas);
     }
 

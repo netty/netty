@@ -18,9 +18,6 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
-
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -100,125 +97,39 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     @Test
     public void testUsedDirectMemory() {
-        for (int power = 0; power < 8; power++) {
-            int initialCapacity = 1024 << power;
-            testUsedDirectMemory(initialCapacity);
-        }
-    }
-
-    private void testUsedDirectMemory(int initialCapacity) {
-        T allocator = newAllocator(true);
+        T allocator =  newAllocator(true);
         ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
         assertEquals(0, metric.usedDirectMemory());
-        assertEquals(0, metric.pinnedDirectMemory());
-        ByteBuf buffer = allocator.directBuffer(initialCapacity, 4 * initialCapacity);
+        ByteBuf buffer = allocator.directBuffer(1024, 4096);
         int capacity = buffer.capacity();
         assertEquals(expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
-        assertThat(metric.pinnedDirectMemory())
-                .isGreaterThanOrEqualTo(capacity)
-                .isLessThanOrEqualTo(metric.usedDirectMemory());
 
         // Double the size of the buffer
         buffer.capacity(capacity << 1);
         capacity = buffer.capacity();
         assertEquals(expectedUsedMemory(allocator, capacity), metric.usedDirectMemory(), buffer.toString());
-        assertThat(metric.pinnedDirectMemory())
-                .isGreaterThanOrEqualTo(capacity)
-                .isLessThanOrEqualTo(metric.usedDirectMemory());
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedDirectMemory());
-        assertThat(metric.pinnedDirectMemory())
-                .isGreaterThanOrEqualTo(0)
-                .isLessThanOrEqualTo(metric.usedDirectMemory());
-        trimCaches(allocator);
-        assertEquals(0, metric.pinnedDirectMemory());
-
-        int[] capacities = new int[30];
-        Random rng = new Random();
-        for (int i = 0; i < capacities.length; i++) {
-            capacities[i] = initialCapacity / 4 + rng.nextInt(8 * initialCapacity);
-        }
-        ByteBuf[] bufs = new ByteBuf[capacities.length];
-        for (int i = 0; i < 20; i++) {
-            bufs[i] = allocator.directBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 10; i++) {
-            bufs[i].release();
-        }
-        for (int i = 20; i < 30; i++) {
-            bufs[i] = allocator.directBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 10; i++) {
-            bufs[i] = allocator.directBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 30; i++) {
-            bufs[i].release();
-        }
-        trimCaches(allocator);
-        assertEquals(0, metric.pinnedDirectMemory());
     }
 
     @Test
     public void testUsedHeapMemory() {
-        for (int power = 0; power < 8; power++) {
-            int initialCapacity = 1024 << power;
-            testUsedHeapMemory(initialCapacity);
-        }
-    }
-
-    private void testUsedHeapMemory(int initialCapacity) {
-        T allocator = newAllocator(true);
+        T allocator =  newAllocator(true);
         ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
 
         assertEquals(0, metric.usedHeapMemory());
-        assertEquals(0, metric.pinnedDirectMemory());
-        ByteBuf buffer = allocator.heapBuffer(initialCapacity, 4 * initialCapacity);
+        ByteBuf buffer = allocator.heapBuffer(1024, 4096);
         int capacity = buffer.capacity();
         assertEquals(expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
-        assertThat(metric.pinnedHeapMemory())
-                .isGreaterThanOrEqualTo(capacity)
-                .isLessThanOrEqualTo(metric.usedHeapMemory());
 
         // Double the size of the buffer
         buffer.capacity(capacity << 1);
         capacity = buffer.capacity();
         assertEquals(expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
-        assertThat(metric.pinnedHeapMemory())
-                .isGreaterThanOrEqualTo(capacity)
-                .isLessThanOrEqualTo(metric.usedHeapMemory());
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedHeapMemory());
-        assertThat(metric.pinnedHeapMemory())
-                .isGreaterThanOrEqualTo(0)
-                .isLessThanOrEqualTo(metric.usedHeapMemory());
-        trimCaches(allocator);
-        assertEquals(0, metric.pinnedHeapMemory());
-
-        int[] capacities = new int[30];
-        Random rng = new Random();
-        for (int i = 0; i < capacities.length; i++) {
-            capacities[i] = initialCapacity / 4 + rng.nextInt(8 * initialCapacity);
-        }
-        ByteBuf[] bufs = new ByteBuf[capacities.length];
-        for (int i = 0; i < 20; i++) {
-            bufs[i] = allocator.heapBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 10; i++) {
-            bufs[i].release();
-        }
-        for (int i = 20; i < 30; i++) {
-            bufs[i] = allocator.heapBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 10; i++) {
-            bufs[i] = allocator.heapBuffer(capacities[i], 2 * capacities[i]);
-        }
-        for (int i = 0; i < 30; i++) {
-            bufs[i].release();
-        }
-        trimCaches(allocator);
-        assertEquals(0, metric.pinnedDirectMemory());
     }
 
     protected long expectedUsedMemory(T allocator, int capacity) {
