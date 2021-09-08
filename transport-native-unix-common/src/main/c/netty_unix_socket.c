@@ -764,12 +764,13 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
-    if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+
+    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 
-    if (unlink((const char*) socket_path) == -1 && errno != ENOENT) {
+    if (unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
         return -errno;
     }
 
@@ -791,8 +792,9 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
-    if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+
+    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 
