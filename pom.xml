@@ -169,6 +169,34 @@
       </properties>
     </profile>
     <profile>
+      <id>mac-m1-cross-compile</id>
+      <properties>
+        <jniLibName>netty_quiche_osx_aarch_64</jniLibName>
+        <jni.classifier>osx-aarch_64</jni.classifier>
+        <macosxDeploymentTarget/>
+        <extraCflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCflags>
+        <extraCxxflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack -target arm64-apple-macos11</cmakeAsmFlags>
+        <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_OSX_ARCHITECTURES=arm64</extraCmakeFlags>
+        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCflags} -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
+        <extraLdflags>-arch arm64 -Wl,-exported_symbol,_JNI_*</extraLdflags>
+        <extraConfigureArg>--host=aarch64-apple-darwin</extraConfigureArg>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=aarch_64</bundleNativeCode>
+        <!-- Don't run tests as we can't load the aarch64 lib on a x86_64 system -->
+        <skipTests>true</skipTests>
+        <crossCompile>mac</crossCompile>
+        <quicheTarget>aarch64-apple-darwin</quicheTarget>
+        <cargoTarget>--target=${quicheTarget}</cargoTarget>
+        <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
+      </properties>
+    </profile>
+    <profile>
       <id>linux</id>
       <activation>
         <os>
@@ -458,7 +486,7 @@
         <extraCmakeFlags>-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=aarch64-none-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-none-linux-gnu-g++</extraCmakeFlags>
         <!-- Don't run tests as we can't load the aarch64 lib on a x86_64 system -->
         <skipTests>true</skipTests>
-        <crossCompile>true</crossCompile>
+        <crossCompile>linux</crossCompile>
         <quicheTarget>aarch64-unknown-linux-gnu</quicheTarget>
         <cargoTarget>--target=${quicheTarget}</cargoTarget>
         <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
@@ -720,7 +748,7 @@
                             </exec>
                           </then>
                           <elseif>
-                            <equals arg1="${crossCompile}" arg2="true" />
+                            <equals arg1="${crossCompile}" arg2="linux" />
                             <then>
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                                 <arg line="build --features &quot;ffi qlog&quot; --release" />
@@ -729,6 +757,20 @@
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                                 <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
+                              </exec>
+                            </then>
+                          </elseif>
+                          <elseif>
+                            <equals arg1="${crossCompile}" arg2="mac" />
+                            <then>
+                              <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                                <arg line="build --features &quot;ffi qlog&quot; --release" />
+                                <env key="CFLAGS" value="${extraCflags}" />
+                                <env key="CXXFLAGS" value="${extraCxxflags}" />
+                                <arg value="${cargoTarget}" />
+                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <!-- Lets enable frame-pointers so we can profile better -->
+                                <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                               </exec>
                             </then>
                           </elseif>
