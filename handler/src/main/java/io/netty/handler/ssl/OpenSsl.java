@@ -336,16 +336,16 @@ public final class OpenSsl {
 
                         if (supportedNamedGroups.isEmpty()) {
                             namedGroups = DEFAULT_NAMED_GROUPS;
-                            logger.info("All configured namedGroups are not supported: {}. Use default: .",
+                            logger.info("All configured namedGroups are not supported: {}. Use default: {}.",
                                     Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
                                     Arrays.toString(DEFAULT_NAMED_GROUPS));
                         } else {
                             namedGroups = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                             if (unsupportedNamedGroups.isEmpty()) {
-                                logger.info("Use configured namedGroups -D 'jdk.tls.namedGroup': {} ",
+                                logger.info("Using configured namedGroups -D 'jdk.tls.namedGroup': {} ",
                                         Arrays.toString(namedGroups));
                             } else {
-                                logger.info("Use supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
+                                logger.info("Using supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
                                         Arrays.toString(namedGroups),
                                         Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
                             }
