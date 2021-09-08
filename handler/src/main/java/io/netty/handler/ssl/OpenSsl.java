@@ -70,9 +70,10 @@ public final class OpenSsl {
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
     static final String[] NAMED_GROUPS;
 
-    // Use default that is supported in java 11 and earlier.
+    // Use default that is supported in java 11 and earlier and also in OpenSSL / BoringSSL.
     // See https://github.com/netty/netty-tcnative/issues/567
-    private static final String[] DEFAULT_NAMED_GROUPS = {  "P-256", "P-384", "X25519" };
+    // See https://www.java.com/en/configure_crypto.html for ordering
+    private static final String[] DEFAULT_NAMED_GROUPS = { "x25519", "secp256r1", "secp384r1", "secp521r1" };
 
     // self-signed certificate for netty.io and the matching private-key
     private static final String CERT = "-----BEGIN CERTIFICATE-----\n" +
@@ -188,6 +189,10 @@ public final class OpenSsl {
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
+            String[] defaultConvertedNamedGroups = new String[namedGroups.length];
+            for (int i = 0; i < namedGroups.length; i++) {
+                defaultConvertedNamedGroups[i] = GroupsConverter.toOpenSsl(namedGroups[i]);
+            }
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
             if (IS_BORINGSSL) {
@@ -325,9 +330,13 @@ public final class OpenSsl {
                     if (groups != null) {
                         String[] nGroups = groups.split(",");
                         Set<String> supportedNamedGroups = new LinkedHashSet<String>(nGroups.length);
+                        Set<String> supportedConvertedNamedGroups = new LinkedHashSet<String>(nGroups.length);
+
                         Set<String> unsupportedNamedGroups = new LinkedHashSet<String>();
                         for (String namedGroup : nGroups) {
-                            if (SSLContext.setCurvesList(sslCtx, namedGroup)) {
+                            String converted = GroupsConverter.toOpenSsl(namedGroup);
+                            if (SSLContext.setCurvesList(sslCtx, converted)) {
+                                supportedConvertedNamedGroups.add(converted);
                                 supportedNamedGroups.add(namedGroup);
                             } else {
                                 unsupportedNamedGroups.add(namedGroup);
@@ -335,23 +344,24 @@ public final class OpenSsl {
                         }
 
                         if (supportedNamedGroups.isEmpty()) {
-                            namedGroups = DEFAULT_NAMED_GROUPS;
+                            namedGroups = defaultConvertedNamedGroups;
                             logger.info("All configured namedGroups are not supported: {}. Use default: {}.",
                                     Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
                                     Arrays.toString(DEFAULT_NAMED_GROUPS));
                         } else {
-                            namedGroups = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                            String[] groupArray = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                             if (unsupportedNamedGroups.isEmpty()) {
                                 logger.info("Using configured namedGroups -D 'jdk.tls.namedGroup': {} ",
-                                        Arrays.toString(namedGroups));
+                                        Arrays.toString(groupArray));
                             } else {
                                 logger.info("Using supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
-                                        Arrays.toString(namedGroups),
+                                        Arrays.toString(groupArray),
                                         Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
                             }
+                            namedGroups =  supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                         }
                     } else {
-                        namedGroups = DEFAULT_NAMED_GROUPS;
+                        namedGroups = defaultConvertedNamedGroups;
                     }
                 } finally {
                     SSLContext.free(sslCtx);

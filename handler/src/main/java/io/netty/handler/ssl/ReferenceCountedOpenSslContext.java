@@ -386,7 +386,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engineMap, asyncPrivateKeyMethod));
             }
             // Set the curves.
-            SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
+            boolean done = SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
             success = true;
         } finally {
             if (!success) {
