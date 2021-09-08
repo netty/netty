@@ -25,8 +25,9 @@ import java.util.function.Supplier;
 public interface BufferAllocator extends AutoCloseable {
     /**
      * Produces a {@link BufferAllocator} that allocates unpooled, on-heap buffers.
-     * On-heap buffers have a {@code byte[]} internally, and their {@linkplain Buffer#nativeAddress() native address}
-     * is zero.
+     * On-heap buffers have a {@code byte[]} internally, and their
+     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
+     * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
@@ -39,7 +40,8 @@ public interface BufferAllocator extends AutoCloseable {
     /**
      * Produces a {@link BufferAllocator} that allocates unpooled, off-heap buffers.
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
-     * {@linkplain Buffer#nativeAddress() native address method.
+     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
+     * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
@@ -51,8 +53,9 @@ public interface BufferAllocator extends AutoCloseable {
 
     /**
      * Produces a pooling {@link BufferAllocator} that allocates and recycles on-heap buffers.
-     * On-heap buffers have a {@code byte[]} internally, and their {@linkplain Buffer#nativeAddress() native address}
-     * is zero.
+     * On-heap buffers have a {@code byte[]} internally, and their
+     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
+     * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *
@@ -65,7 +68,8 @@ public interface BufferAllocator extends AutoCloseable {
     /**
      * Produces a pooling {@link BufferAllocator} that allocates and recycles off-heap buffers.
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
-     * {@linkplain Buffer#nativeAddress() native address method.
+     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
+     * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      *

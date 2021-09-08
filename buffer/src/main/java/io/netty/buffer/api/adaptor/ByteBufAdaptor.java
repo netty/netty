@@ -48,7 +48,7 @@ import static io.netty.buffer.api.internal.Statics.isOwned;
 public final class ByteBufAdaptor extends ByteBuf {
     private final ByteBufAllocatorAdaptor alloc;
     private final Buffer buffer;
-    private final boolean hasMemoryAddress;
+    private long nativeAddress;
     private final int maxCapacity;
 
     public ByteBufAdaptor(ByteBufAllocatorAdaptor alloc, Buffer buffer, int maxCapacity) {
@@ -58,8 +58,34 @@ public final class ByteBufAdaptor extends ByteBuf {
         }
         this.alloc = Objects.requireNonNull(alloc, "The ByteBuf allocator adaptor cannot be null.");
         this.buffer = Objects.requireNonNull(buffer, "The buffer being adapted cannot be null.");
-        hasMemoryAddress = buffer.nativeAddress() != 0;
+        updateNativeAddress(buffer);
         this.maxCapacity = maxCapacity;
+    }
+
+    private void updateNativeAddress(Buffer buffer) {
+        if (buffer.countReadableComponents() == 1) {
+            buffer.forEachReadable(0, (index, component) -> {
+                if (index == 0) {
+                    nativeAddress = component.readableNativeAddress();
+                    return true;
+                } else {
+                    nativeAddress = 0;
+                    return false;
+                }
+            });
+        } else if (buffer.countWritableComponents() == 1) {
+            buffer.forEachWritable(0, (index, component) -> {
+                if (index == 0) {
+                    nativeAddress = component.writableNativeAddress();
+                    return true;
+                } else {
+                    nativeAddress = 0;
+                    return false;
+                }
+            });
+        } else {
+            nativeAddress = 0;
+        }
     }
 
     /**
@@ -154,7 +180,7 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public boolean isDirect() {
-        return hasMemoryAddress;
+        return nativeAddress != 0;
     }
 
     @Override
@@ -1549,7 +1575,7 @@ public final class ByteBufAdaptor extends ByteBuf {
 
     @Override
     public boolean hasMemoryAddress() {
-        return hasMemoryAddress;
+        return isDirect();
     }
 
     @Override
@@ -1557,7 +1583,7 @@ public final class ByteBufAdaptor extends ByteBuf {
         if (!hasMemoryAddress()) {
             throw new UnsupportedOperationException("No memory address associated with this buffer.");
         }
-        return buffer.nativeAddress();
+        return nativeAddress;
     }
 
     @Override

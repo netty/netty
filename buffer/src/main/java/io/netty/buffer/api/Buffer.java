@@ -173,12 +173,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     Buffer fill(byte value);
 
     /**
-     * Gives the native memory address backing this buffer, or return 0 if this buffer has no native memory address.
-     * @return The native memory address, if any, otherwise 0.
-     */
-    long nativeAddress();
-
-    /**
      * Makes this buffer read-only. This is irreversible.
      * This operation is also idempotent, so calling this method multiple times on the same buffer makes no difference.
      *

@@ -135,8 +135,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         return this;
     }
 
-    @Override
-    public long nativeAddress() {
+    private long nativeAddress() {
         return base == null? address : 0;
     }
 
@@ -232,14 +231,16 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (dest.readOnly()) {
             throw bufferIsReadOnly(this);
         }
-        long nativeAddress = dest.nativeAddress();
         try {
-            if (nativeAddress != 0) {
-                PlatformDependent.copyMemory(base, address + srcPos, null, nativeAddress + destPos, length);
-            } else if (dest instanceof UnsafeBuffer) {
+            if (dest instanceof UnsafeBuffer) {
                 UnsafeBuffer destUnsafe = (UnsafeBuffer) dest;
-                PlatformDependent.copyMemory(
-                        base, address + srcPos, destUnsafe.base, destUnsafe.address + destPos, length);
+                long nativeAddress = destUnsafe.nativeAddress();
+                if (nativeAddress != 0) {
+                    PlatformDependent.copyMemory(base, address + srcPos, null, nativeAddress + destPos, length);
+                } else {
+                    PlatformDependent.copyMemory(
+                            base, address + srcPos, destUnsafe.base, destUnsafe.address + destPos, length);
+                }
             } else {
                 Statics.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
             }

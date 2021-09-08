@@ -77,11 +77,6 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public long nativeAddress() {
-        return delegate.nativeAddress();
-    }
-
-    @Override
     public Buffer makeReadOnly() {
         return delegate.makeReadOnly();
     }
