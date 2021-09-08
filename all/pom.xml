@@ -84,8 +84,22 @@
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <classifier>osx-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -120,15 +134,29 @@
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <classifier>osx-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
 
-    <!-- The linux profile will only include the native jar for epol to the all jar.
+    <!-- The linux profile will only include the native jar for epoll to the all jar.
          If you want to also include the native jar for kqueue use -Puber.
     -->
     <profile>

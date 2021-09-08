@@ -194,6 +194,12 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty-resolver-dns-native-macos</artifactId>
+        <version>4.1.68.Final-SNAPSHOT</version>
+        <classifier>osx-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>5.0.0.Final-SNAPSHOT</version>
       </dependency>
@@ -214,6 +220,12 @@
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>5.0.0.Final-SNAPSHOT</version>
         <classifier>osx-x86_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>4.1.68.Final-SNAPSHOT</version>
+        <classifier>osx-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -243,7 +255,12 @@
         <version>5.0.0.Final-SNAPSHOT</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
-
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-kqueue</artifactId>
+        <version>4.1.68.Final-SNAPSHOT</version>
+        <classifier>osx-aarch_64</classifier>
+      </dependency>
       <!-- Add netty-tcnative* as well as users need to ensure they use the correct version -->
       <dependency>
         <groupId>io.netty</groupId>
