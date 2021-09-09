@@ -37,6 +37,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
             new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
     /**
+     * Default instance which uses leak-detection for direct buffers and fallback policy.
+     */
+    public static final FallbackByteBufAllocator FALL_BACK =
+            new FallbackByteBufAllocator(DEFAULT);
+
+    /**
      * Create a new instance which uses leak-detection for direct buffers.
      *
      * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
