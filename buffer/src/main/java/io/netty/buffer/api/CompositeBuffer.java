@@ -276,9 +276,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     }
 
     private void computeBufferOffsets() {
+        int woff = 0;
+        int roff = 0;
         if (bufs.length > 0) {
-            int woff = 0;
-            int roff = 0;
             boolean woffMidpoint = false;
             for (Buffer buf : bufs) {
                 if (buf.writableBytes() == 0) {
@@ -307,10 +307,10 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             }
             assert roff <= woff:
                     "The given buffers place the read offset ahead of the write offset: " + Arrays.toString(bufs) + '.';
-            // Commit computed offsets.
-            this.woff = woff;
-            this.roff = roff;
         }
+        // Commit computed offsets, if any
+        this.woff = woff;
+        this.roff = roff;
 
         offsets = new int[bufs.length];
         long cap = 0;
@@ -704,6 +704,11 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (!isOwned()) {
             throw new IllegalStateException("Cannot split a buffer that is not owned.");
         }
+    }
+
+    @Override
+    public CompositeBuffer split() {
+        return split(writerOffset());
     }
 
     @Override
@@ -1164,22 +1169,19 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         }
         boolean readOnly = this.readOnly;
         makeInaccessible();
-        return new Owned<CompositeBuffer>() {
-            @Override
-            public CompositeBuffer transferOwnership(Drop<CompositeBuffer> drop) {
-                Buffer[] received = new Buffer[sends.length];
-                for (int i = 0; i < sends.length; i++) {
-                    received[i] = sends[i].receive();
-                }
-                var composite = new CompositeBuffer(allocator, received, drop);
-                composite.readOnly = readOnly;
-                drop.attach(composite);
-                return composite;
+        return drop -> {
+            Buffer[] received = new Buffer[sends.length];
+            for (int i = 0; i < sends.length; i++) {
+                received[i] = sends[i].receive();
             }
+            var composite = new CompositeBuffer(allocator, received, drop);
+            composite.readOnly = readOnly;
+            drop.attach(composite);
+            return composite;
         };
     }
 
-    void makeInaccessible() {
+    private void makeInaccessible() {
         capacity = 0;
         roff = 0;
         woff = 0;
