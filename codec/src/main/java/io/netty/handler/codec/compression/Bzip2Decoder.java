@@ -291,26 +291,27 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
 
                 final int blockLength = blockDecompressor.blockLength();
-                final ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
-                boolean success = false;
+                ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
                 try {
                     int uncByte;
                     while ((uncByte = blockDecompressor.read()) >= 0) {
                         uncompressed.writeByte(uncByte);
                     }
-
+                    // We did read all the data, lets reset the state and do the CRC check.
+                    currentState = State.INIT_BLOCK;
                     int currentBlockCRC = blockDecompressor.checkCRC();
                     streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
 
                     out.add(uncompressed);
-                    success = true;
+                    uncompressed = null;
                 } finally {
-                    if (!success) {
+                    if (uncompressed != null) {
                         uncompressed.release();
                     }
                 }
-                currentState = State.INIT_BLOCK;
-                break;
+                // Return here so the ByteBuf that was put in the List will be forwarded to the user and so can be
+                // released as soon as possible.
+                return;
             case EOF:
                 in.skipBytes(in.readableBytes());
                 return;

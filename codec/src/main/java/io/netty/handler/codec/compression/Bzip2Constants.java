@@ -49,6 +49,8 @@ final class Bzip2Constants {
     static final int MIN_BLOCK_SIZE = 1;
     static final int MAX_BLOCK_SIZE = 9;
 
+    static final int MAX_BLOCK_LENGTH = MAX_BLOCK_SIZE * BASE_BLOCK_SIZE;
+
     /**
      * Maximum possible Huffman alphabet size.
      */

@@ -228,6 +228,11 @@ final class Bzip2BlockDecompressor {
                 bwtBlock[bwtBlockLength++] = nextByte;
             }
         }
+        if (bwtBlockLength > MAX_BLOCK_LENGTH) {
+            throw new DecompressionException("block length exceeds max block length: "
+                    + bwtBlockLength + " > " + MAX_BLOCK_LENGTH);
+        }
+
         this.bwtBlockLength = bwtBlockLength;
         initialiseInverseBWT();
         return true;
