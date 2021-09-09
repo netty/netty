@@ -50,6 +50,17 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoderForBuffer {
         this.frameLength = frameLength;
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param frameLength the length of the frame
+     */
+    public FixedLengthFrameDecoder(int frameLength, Cumulator cumulator) {
+        super(cumulator);
+        checkPositive(frameLength, "frameLength");
+        this.frameLength = frameLength;
+    }
+
     @Override
     protected final void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         Object decoded = decode0(ctx, in);
@@ -71,7 +82,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoderForBuffer {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {
-            return in.split(frameLength);
+            return in.split(in.readerOffset() + frameLength);
         }
     }
 }

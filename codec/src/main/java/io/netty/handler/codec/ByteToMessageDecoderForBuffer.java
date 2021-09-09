@@ -81,63 +81,21 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     /**
      * Cumulate {@link Buffer}s by merge them into one {@link Buffer}'s, using memory copies.
      */
-    public static final Cumulator MERGE_CUMULATOR = (alloc, cumulation, in) -> {
-        if (cumulation.readableBytes() == 0) {
-            // If cumulation is empty and input buffer is contiguous, use it directly
-            cumulation.close();
-            return in;
-        }
-        // We must close input Buffer in all cases as otherwise it may produce a leak if writeBytes(...) throw
-        // for whatever close (for example because of OutOfMemoryError)
-        try (in) {
-            final int required = in.readableBytes();
-            if (required > cumulation.writableBytes() || cumulation.readOnly()) {
-                return expandCumulation(alloc, cumulation, in);
-            }
-            cumulation.writeBytes(in);
-            return cumulation;
-        }
-    };
+    public static final Cumulator MERGE_CUMULATOR = new MergeCumulator();
 
     /**
      * Cumulate {@link Buffer}s by add them to a {@link CompositeBuffer} and so do no memory copy whenever possible.
      * Be aware that {@link CompositeBuffer} use a more complex indexing implementation so depending on your use-case
      * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
      */
-    public static final Cumulator COMPOSITE_CUMULATOR = (alloc, cumulation, in) -> {
-        if (cumulation.readableBytes() == 0) {
-            cumulation.close();
-            return in;
-        }
-        CompositeBuffer composite = null;
-        try {
-            if (CompositeBuffer.isComposite(cumulation)) {
-                composite = (CompositeBuffer) cumulation;
-            } else {
-                composite = CompositeBuffer.compose(alloc, cumulation.send());
-            }
-            composite.extendWith(in.send());
-            in = null;
-            return composite;
-        } finally {
-            if (in != null) {
-                // We must close if the ownership was not transferred as otherwise it may produce a leak
-                in.close();
-                // Also close any new buffer allocated if we're not returning it
-                if (composite != null && composite != cumulation) {
-                    composite.close();
-                }
-            }
-        }
-    };
+    public static final Cumulator COMPOSITE_CUMULATOR = new CompositeBufferCumulator();
 
     private final int discardAfterReads = 16;
+    private final Cumulator cumulator;
 
     private Buffer cumulation;
-    private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
     private boolean first;
-
     /**
      * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
      * when {@link ChannelConfig#isAutoRead()} is {@code false}.
@@ -147,6 +105,11 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     private ByteToMessageDecoderContext context;
 
     protected ByteToMessageDecoderForBuffer() {
+        this(MERGE_CUMULATOR);
+    }
+
+    protected ByteToMessageDecoderForBuffer(Cumulator cumulator) {
+        this.cumulator = requireNonNull(cumulator, "cumulator");
         ensureNotSharable();
     }
 
@@ -168,14 +131,6 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
      */
     public boolean isSingleDecode() {
         return singleDecode;
-    }
-
-    /**
-     * Set the {@link Cumulator} to use for cumulate the received {@link Buffer}s.
-     */
-    public void setCumulator(Cumulator cumulator) {
-        requireNonNull(cumulator, "cumulator");
-        this.cumulator = cumulator;
     }
 
     /**
@@ -239,7 +194,12 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 Buffer data = (Buffer) msg;
                 first = cumulation == null;
                 if (first) {
-                    cumulation = data;
+                    if (data.readOnly()) {
+                        cumulation = CompositeBuffer.compose(ctx.bufferAllocator(), data.copy().send());
+                        data.close();
+                    } else {
+                        cumulation = data;
+                    }
                 } else {
                     cumulation = cumulator.cumulate(ctx.bufferAllocator(), cumulation, data);
                 }
@@ -253,7 +213,9 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
             } finally {
                 if (cumulation != null && cumulation.readableBytes() == 0) {
                     numReads = 0;
-                    cumulation.close();
+                    if (cumulation.isAccessible()) {
+                        cumulation.close();
+                    }
                     cumulation = null;
                 } else if (++numReads >= discardAfterReads) {
                     // We did enough reads already try to discard some bytes so we not risk to see a OOME.
@@ -657,6 +619,65 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
         @Override
         public Future<Void> newFailedFuture(Throwable cause) {
             return ctx.newFailedFuture(cause);
+        }
+    }
+
+    private static final class CompositeBufferCumulator implements Cumulator {
+        @Override
+        public Buffer cumulate(BufferAllocator alloc, Buffer cumulation, Buffer in) {
+            if (cumulation.readableBytes() == 0) {
+                cumulation.close();
+                return in;
+            }
+            CompositeBuffer composite;
+            try (in) {
+                if (CompositeBuffer.isComposite(cumulation)) {
+                    CompositeBuffer tmp = (CompositeBuffer) cumulation;
+                    // Since we are extending the composite buffer below, we have to make sure there is no space to
+                    // write in the existing cumulation.
+                    if (tmp.writerOffset() < tmp.capacity()) {
+                        composite = tmp.split();
+                        tmp.close();
+                    } else {
+                        composite = tmp;
+                    }
+                } else {
+                    composite = CompositeBuffer.compose(alloc, cumulation.send());
+                }
+                composite.extendWith((in.readOnly() ? in.copy() : in).send());
+                return composite;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "CompositeBufferCumulator";
+        }
+    }
+
+    private static final class MergeCumulator implements Cumulator {
+        @Override
+        public Buffer cumulate(BufferAllocator alloc, Buffer cumulation, Buffer in) {
+            if (cumulation.readableBytes() == 0) {
+                // If cumulation is empty and input buffer is contiguous, use it directly
+                cumulation.close();
+                return in;
+            }
+            // We must close input Buffer in all cases as otherwise it may produce a leak if writeBytes(...) throw
+            // for whatever close (for example because of OutOfMemoryError)
+            try (in) {
+                final int required = in.readableBytes();
+                if (required > cumulation.writableBytes() || cumulation.readOnly()) {
+                    return expandCumulation(alloc, cumulation, in);
+                }
+                cumulation.writeBytes(in);
+                return cumulation;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "MergeCumulator";
         }
     }
 }
