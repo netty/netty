@@ -29,22 +29,12 @@ final class GroupsConverter {
     static {
         // See https://tools.ietf.org/search/rfc4492#appendix-A and https://www.java.com/en/configure_crypto.html
         Map<String, String> map = new HashMap<String, String>();
-        map.put("P-224", "P-224");
         map.put("secp224r1", "P-224");
-        map.put("P-256", "P-256");
         map.put("prime256v1", "P-256");
         map.put("secp256r1", "P-256");
-
-        map.put("P-384", "P-384");
         map.put("secp384r1", "P-384");
-
-        map.put("P-521", "P-521");
         map.put("secp521r1", "P-521");
-
-        map.put("X25519", "X25519");
         map.put("x25519", "X25519");
-
-        map.put("CECPQ2", "CECPQ2");
         mappings = Collections.unmodifiableMap(map);
     }
 
