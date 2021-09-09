@@ -38,12 +38,11 @@ public final class Snappy {
     private static final int COPY_2_BYTE_OFFSET = 2;
     private static final int COPY_4_BYTE_OFFSET = 3;
 
-    private State state = State.READY;
+    private State state = State.READING_PREAMBLE;
     private byte tag;
     private int written;
 
     private enum State {
-        READY,
         READING_PREAMBLE,
         READING_TAG,
         READING_LITERAL,
@@ -51,7 +50,7 @@ public final class Snappy {
     }
 
     public void reset() {
-        state = State.READY;
+        state = State.READING_PREAMBLE;
         tag = 0;
         written = 0;
     }
@@ -270,9 +269,6 @@ public final class Snappy {
     public void decode(ByteBuf in, ByteBuf out) {
         while (in.isReadable()) {
             switch (state) {
-            case READY:
-                state = State.READING_PREAMBLE;
-                // fall through
             case READING_PREAMBLE:
                 int uncompressedLength = readPreamble(in);
                 if (uncompressedLength == PREAMBLE_NOT_FULL) {
@@ -281,7 +277,6 @@ public final class Snappy {
                 }
                 if (uncompressedLength == 0) {
                     // Should never happen, but it does mean we have nothing further to do
-                    state = State.READY;
                     return;
                 }
                 out.ensureWritable(uncompressedLength);
@@ -375,6 +370,27 @@ public final class Snappy {
             }
         }
 
+        return 0;
+    }
+
+    /**
+     * Get the length varint (a series of bytes, where the lower 7 bits
+     * are data and the upper bit is a flag to indicate more bytes to be
+     * read).
+     *
+     * @param in The input buffer to get the preamble from
+     * @return The calculated length based on the input buffer, or 0 if
+     *   no preamble is able to be calculated
+     */
+    int getPreamble(ByteBuf in) {
+        if (state == State.READING_PREAMBLE) {
+            int readerIndex = in.readerIndex();
+            try {
+                return readPreamble(in);
+            } finally {
+                in.readerIndex(readerIndex);
+            }
+        }
         return 0;
     }
 

@@ -45,13 +45,19 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
     }
 
     private static final int SNAPPY_IDENTIFIER_LEN = 6;
+    // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L95
     private static final int MAX_UNCOMPRESSED_DATA_SIZE = 65536 + 4;
+    // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L82
+    private static final int MAX_DECOMPRESSED_DATA_SIZE = 65536;
+    // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L82
+    private static final int MAX_COMPRESSED_CHUNK_SIZE = 16777216 - 1;
 
     private final Snappy snappy = new Snappy();
     private final boolean validateChecksums;
 
     private boolean started;
     private boolean corrupted;
+    private int numBytesToSkip;
 
     /**
      * Creates a new snappy-framed decoder with validation of checksums
@@ -79,6 +85,16 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (corrupted) {
             in.skipBytes(in.readableBytes());
+            return;
+        }
+
+        if (numBytesToSkip != 0) {
+            // The last chunkType we detected was RESERVED_SKIPPABLE and we still have some bytes to skip.
+            int skipBytes = Math.min(numBytesToSkip, in.readableBytes());
+            in.skipBytes(skipBytes);
+            numBytesToSkip -= skipBytes;
+
+            // Let's return and try again.
             return;
         }
 
@@ -123,12 +139,15 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                         throw new DecompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                     }
 
-                    if (inSize < 4 + chunkLength) {
-                        // TODO: Don't keep skippable bytes
-                        return;
-                    }
+                    in.skipBytes(4);
 
-                    in.skipBytes(4 + chunkLength);
+                    int skipBytes = Math.min(chunkLength, in.readableBytes());
+                    in.skipBytes(skipBytes);
+                    if (skipBytes != chunkLength) {
+                        // We could skip all bytes, let's store the remaining so we can do so once we receive more
+                        // data.
+                        numBytesToSkip = chunkLength - skipBytes;
+                    }
                     break;
                 case RESERVED_UNSKIPPABLE:
                     // The spec mandates that reserved unskippable chunks must immediately
@@ -141,7 +160,8 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                         throw new DecompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
                     if (chunkLength > MAX_UNCOMPRESSED_DATA_SIZE) {
-                        throw new DecompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA larger than " +
+                                MAX_UNCOMPRESSED_DATA_SIZE + " bytes");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -162,13 +182,25 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                         throw new DecompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
 
+                    if (chunkLength > MAX_COMPRESSED_CHUNK_SIZE) {
+                        throw new DecompressionException("Received COMPRESSED_DATA that contains" +
+                                " chunk that exceeds " + MAX_COMPRESSED_CHUNK_SIZE + " bytes");
+                    }
+
                     if (inSize < 4 + chunkLength) {
                         return;
                     }
 
                     in.skipBytes(4);
                     int checksum = in.readIntLE();
-                    ByteBuf uncompressed = ctx.alloc().buffer();
+
+                    int uncompressedSize = snappy.getPreamble(in);
+                    if (uncompressedSize > MAX_DECOMPRESSED_DATA_SIZE) {
+                        throw new DecompressionException("Received COMPRESSED_DATA that contains" +
+                                " uncompressed data that exceeds " + MAX_DECOMPRESSED_DATA_SIZE + " bytes");
+                    }
+
+                    ByteBuf uncompressed = ctx.alloc().buffer(uncompressedSize, MAX_DECOMPRESSED_DATA_SIZE);
                     try {
                         if (validateChecksums) {
                             int oldWriterIndex = in.writerIndex();
