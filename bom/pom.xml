@@ -17,17 +17,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-    <relativePath />
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.1.69.Final-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.1.69.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
-
   <name>Netty/BOM</name>
   <description>Netty (Bill of Materials)</description>
   <url>https://netty.io/</url>
@@ -69,206 +65,206 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-buffer</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-dns</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-haproxy</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-http</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-http2</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-memcache</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-mqtt</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-redis</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-smtp</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-socks</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-stomp</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-xml</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-dev-tools</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-handler</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-handler-proxy</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-rxtx</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-sctp</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-udt</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-example</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns-native-macos</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns-native-macos</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns-native-macos</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
-        <version>4.1.69.Final-SNAPSHOT</version>
+        <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
       </dependency>
       <!-- Add netty-tcnative* as well as users need to ensure they use the correct version -->
