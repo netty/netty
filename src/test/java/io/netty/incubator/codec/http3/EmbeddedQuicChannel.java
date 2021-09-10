@@ -83,6 +83,11 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
+    public boolean isTimedOut() {
+        return false;
+    }
+
+    @Override
     public SSLEngine sslEngine() {
         return null;
     }
