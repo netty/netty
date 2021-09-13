@@ -19,13 +19,18 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which makes it easy to handle
  * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7">HTTP3 request streams</a>.
  */
 public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(Http3RequestStreamInboundHandler.class);
     private static final Http3DataFrame EMPTY = new DefaultHttp3DataFrame(Unpooled.EMPTY_BUFFER);
     private boolean lastFrameDetected;
     private boolean firstFrameReceived;
@@ -68,6 +73,17 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
         ctx.fireUserEventTriggered(evt);
     }
 
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        if (cause instanceof QuicException) {
+            handleQuicException(ctx, (QuicException) cause);
+        } else if (cause instanceof Http3Exception) {
+            handleHttp3Exception(ctx, (Http3Exception) cause);
+        } else {
+            ctx.fireExceptionCaught(cause);
+        }
+    }
+
     private void notifyLast(ChannelHandlerContext ctx) throws Exception {
         if (!lastFrameDetected && firstFrameReceived) {
             lastFrameDetected = true;
@@ -107,6 +123,27 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
      */
     protected void channelRead(@SuppressWarnings("unused") ChannelHandlerContext ctx, Http3UnknownFrame frame) {
         frame.release();
+    }
+
+    /**
+     * Called once a {@link QuicException} should be handled.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} of this handler.
+     * @param exception     the {@link QuicException} that caused the error.
+     */
+    protected void handleQuicException(@SuppressWarnings("unused") ChannelHandlerContext ctx, QuicException exception) {
+        logger.debug("Caught QuicException on channel {}", ctx.channel(), exception);
+    }
+
+    /**
+     * Called once a {@link Http3Exception} should be handled.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} of this handler.
+     * @param exception     the {@link Http3Exception} that caused the error.
+     */
+    protected void handleHttp3Exception(@SuppressWarnings("unused") ChannelHandlerContext ctx,
+                                        Http3Exception exception) {
+        logger.error("Caught Http3Exception on channel {}", ctx.channel(), exception);
     }
 
     /**
