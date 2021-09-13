@@ -293,6 +293,8 @@ static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, j
 static inline void cpu_relax() {
 #if defined(__x86_64__)
     asm volatile("pause\n": : :"memory");
+#elif defined(__aarch64__)
+    asm volatile("isb\n": : :"memory");
 #endif
 }
 
