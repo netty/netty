@@ -406,17 +406,36 @@ public class ByteToMessageDecoderForBufferTest {
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("allocators")
-    public void releaseWhenMergeCumulateThrowsInExpand(BufferAllocator allocator, Cumulator cumulator) {
+    public void releaseWhenMergeCumulateThrowsInExpand(BufferAllocator allocator) {
         this.allocator = allocator;
-        releaseWhenMergeCumulateThrowsInExpand(allocator, 1, true);
-        releaseWhenMergeCumulateThrowsInExpand(allocator, 2, true);
-        releaseWhenMergeCumulateThrowsInExpand(allocator, 3, false); // sentinel test case
+        final WriteFailingBuffer cumulation = new WriteFailingBuffer(allocator, 1, 16) {
+            @Override
+            public int readableBytes() {
+                return 1;
+            }
+        };
+
+        Buffer in = newBufferWithRandomBytes(allocator, 12);
+        Throwable thrown = null;
+        try {
+            BufferAllocator mockAlloc = mock(BufferAllocator.class);
+            MERGE_CUMULATOR.cumulate(mockAlloc, cumulation, in);
+        } catch (Throwable t) {
+            thrown = t;
+        }
+
+        assertFalse(in.isAccessible());
+
+        assertSame(cumulation.writeError(), thrown);
+        assertTrue(cumulation.isAccessible());
     }
 
-    private void releaseWhenMergeCumulateThrowsInExpand(BufferAllocator allocator, int untilFailure,
-                                                        boolean shouldFail) {
-        Buffer oldCumulation = newBufferWithData(allocator, 8, (char) 1);
-        final WriteFailingBuffer newCumulation = new WriteFailingBuffer(allocator, untilFailure, 16);
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("allocators")
+    public void releaseWhenMergeCumulateThrowsInExpandAndCumulatorIsReadOnly(BufferAllocator allocator) {
+        this.allocator = allocator;
+        Buffer oldCumulation = newBufferWithData(allocator, 8, (char) 1).makeReadOnly();
+        final WriteFailingBuffer newCumulation = new WriteFailingBuffer(allocator, 1, 16) ;
 
         Buffer in = newBufferWithRandomBytes(allocator, 12);
         Throwable thrown = null;
@@ -430,22 +449,14 @@ public class ByteToMessageDecoderForBufferTest {
 
         assertFalse(in.isAccessible());
 
-        if (shouldFail) {
-            assertSame(newCumulation.writeError(), thrown);
-            assertTrue(oldCumulation.isAccessible());
-            oldCumulation.close();
-            assertFalse(newCumulation.isAccessible());
-        } else {
-            assertNull(thrown);
-            assertFalse(oldCumulation.isAccessible());
-            assertTrue(newCumulation.isAccessible());
-            newCumulation.close();
-        }
+        assertSame(newCumulation.writeError(), thrown);
+        assertFalse(oldCumulation.isAccessible());
+        assertTrue(newCumulation.isAccessible());
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("allocators")
-    public void releaseWhenCompositeCumulateThrows(BufferAllocator allocator, Cumulator cumulator) {
+    public void releaseWhenCompositeCumulateThrows(BufferAllocator allocator) {
         this.allocator = allocator;
         final Error error = new Error();
         try (CompositeBuffer cumulation = compose(allocator, newBufferWithRandomBytes(allocator).send())) {

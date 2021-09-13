@@ -399,17 +399,20 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
         }
     }
 
-    private static Buffer expandCumulation(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
-        Buffer newCumulation =
-                alloc.allocate(safeFindNextPositivePowerOfTwo(oldCumulation.readableBytes() + in.readableBytes()));
-        Buffer toRelease = newCumulation;
+    private static Buffer expandCumulationAndWrite(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
+        final int newSize = safeFindNextPositivePowerOfTwo(oldCumulation.readableBytes() + in.readableBytes());
+        Buffer newCumulation = oldCumulation.readOnly() ? alloc.allocate(newSize) :
+                oldCumulation.ensureWritable(newSize, in.readableBytes(), true);
         try {
-            newCumulation.writeBytes(oldCumulation);
+            if (newCumulation != oldCumulation) {
+                newCumulation.writeBytes(oldCumulation);
+            }
             newCumulation.writeBytes(in);
-            toRelease = oldCumulation;
             return newCumulation;
         } finally {
-            toRelease.close();
+            if (newCumulation != oldCumulation) {
+                oldCumulation.close();
+            }
         }
     }
 
@@ -668,7 +671,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
             try (in) {
                 final int required = in.readableBytes();
                 if (required > cumulation.writableBytes() || cumulation.readOnly()) {
-                    return expandCumulation(alloc, cumulation, in);
+                    return expandCumulationAndWrite(alloc, cumulation, in);
                 }
                 cumulation.writeBytes(in);
                 return cumulation;
