@@ -432,7 +432,7 @@ public class ByteToMessageDecoderTest {
         }
     }
 
-    @Disabled
+    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testDoesNotOverRead() {
         class ReadInterceptingHandler implements ChannelHandler {
