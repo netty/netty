@@ -93,32 +93,48 @@ final class Http3ControlStreamOutboundHandler
 
     @Override
     void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, ChannelPromise promise) {
-        if (msg instanceof Http3MaxPushIdFrame) {
-            sentMaxPushId = ((Http3MaxPushIdFrame) msg).id();
+        if (msg instanceof Http3MaxPushIdFrame && !handleHttp3MaxPushIdFrame(promise, (Http3MaxPushIdFrame) msg)) {
+            ReferenceCountUtil.release(msg);
+            return;
+        } else if (msg instanceof Http3GoAwayFrame && !handleHttp3GoAwayFrame(promise, (Http3GoAwayFrame) msg)) {
+            ReferenceCountUtil.release(msg);
+            return;
         }
-        if (msg instanceof Http3GoAwayFrame) {
-            Http3GoAwayFrame goAwayFrame = (Http3GoAwayFrame) msg;
-            if (server) {
-                // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2
-                long id = goAwayFrame.id();
-                if (id % 4 != 0) {
-                    ReferenceCountUtil.release(msg);
-                    promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
-                            "GOAWAY id not valid : " + id));
-                    return;
-                }
-                if (sendGoAwayId != null && id > sendGoAwayId) {
-                    ReferenceCountUtil.release(msg);
-                    promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
-                            "GOAWAY id is bigger then the last sent: " + id + " > " + sendGoAwayId));
-                    return;
-                }
-                sendGoAwayId = id;
-            } else {
-                // TODO: Add logic for the client side as well.
-            }
-        }
+
         ctx.write(msg, promise);
+    }
+
+    private boolean handleHttp3MaxPushIdFrame(ChannelPromise promise, Http3MaxPushIdFrame maxPushIdFrame) {
+        long id = maxPushIdFrame.id();
+
+        // See https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-32#section-7.2.7
+        if (sentMaxPushId != null && id < sentMaxPushId) {
+            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR, "MAX_PUSH_ID reduced limit."));
+            return false;
+        }
+
+        sentMaxPushId = maxPushIdFrame.id();
+        return true;
+    }
+
+    private boolean handleHttp3GoAwayFrame(ChannelPromise promise, Http3GoAwayFrame goAwayFrame) {
+        long id = goAwayFrame.id();
+
+        // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2
+        if (server && id % 4 != 0) {
+            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+                    "GOAWAY id not valid : " + id));
+            return false;
+        }
+
+        if (sendGoAwayId != null && id > sendGoAwayId) {
+            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+                    "GOAWAY id is bigger then the last sent: " + id + " > " + sendGoAwayId));
+            return false;
+        }
+
+        sendGoAwayId = id;
+        return true;
     }
 
     @Override

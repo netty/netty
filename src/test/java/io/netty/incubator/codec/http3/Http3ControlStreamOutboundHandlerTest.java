@@ -16,35 +16,48 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
-import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
-import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
+import static io.netty.incubator.codec.http3.Http3TestUtils.*;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
 
+@RunWith(Parameterized.class)
 public class Http3ControlStreamOutboundHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3ControlStreamFrame> {
     private final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+    private final boolean server;
 
-    public Http3ControlStreamOutboundHandlerTest() {
-        super(true, QuicStreamType.UNIDIRECTIONAL);
+    public Http3ControlStreamOutboundHandlerTest(boolean server) {
+        super(server, QuicStreamType.UNIDIRECTIONAL);
+        this.server = server;
+    }
+
+    @Parameterized.Parameters(name = "{index}: server = {0}")
+    public static Collection<Boolean> data() {
+        return Arrays.asList(true, false);
     }
 
     @Override
-    protected Http3FrameTypeDuplexValidationHandler<Http3ControlStreamFrame> newHandler() {
-        return new Http3ControlStreamOutboundHandler(false, settingsFrame, new ChannelInboundHandlerAdapter());
+    protected Http3ControlStreamOutboundHandler newHandler() {
+        return new Http3ControlStreamOutboundHandler(server, settingsFrame, new ChannelInboundHandlerAdapter());
     }
 
     @Override
@@ -69,12 +82,15 @@ public class Http3ControlStreamOutboundHandlerTest extends
     public void testGoAwayIdDecreaseWorks() throws Exception {
         parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()));
-        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(8)));
-        ReferenceCountUtil.release(channel.readOutbound());
-        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
-        ReferenceCountUtil.release(channel.readOutbound());
+        EmbeddedChannel channel = newStream(newHandler());
+
+        if (server) {
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(8));
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(4));
+        } else {
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(9));
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(5));
+        }
 
         assertFalse(channel.finish());
     }
@@ -83,32 +99,68 @@ public class Http3ControlStreamOutboundHandlerTest extends
     public void testGoAwayIdIncreaseFails() throws Exception {
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
         parent.close().get();
-        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()));
-        assertTrue(channel.writeOutbound(new DefaultHttp3GoAwayFrame(4)));
-        ReferenceCountUtil.release(channel.readOutbound());
+        EmbeddedChannel channel = newStream(newHandler());
 
-        try {
-            channel.writeOutbound(new DefaultHttp3GoAwayFrame(8));
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_ID_ERROR, e);
+        if (server) {
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(4));
+            writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(8));
+        } else {
+            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(1));
+            writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(3));
         }
+
         assertFalse(channel.finish());
     }
 
     @Test
     public void testGoAwayIdUseInvalidId() throws Exception {
+        assumeThat(server, is(true));
         parent.close().get();
         // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
-        EmbeddedChannel channel = newStream(new Http3ControlStreamOutboundHandler(
-                true, settingsFrame, new ChannelInboundHandlerAdapter()));
-        try {
-            channel.writeOutbound(new DefaultHttp3GoAwayFrame(2));
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_ID_ERROR, e);
+        EmbeddedChannel channel = newStream(newHandler());
+
+        if (server) {
+            writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(2));
         }
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testPassesUnknownFrame() throws Exception {
+        parent.close().get();
+        // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
+        EmbeddedChannel channel = newStream(newHandler());
+
+        writeValidFrame(channel, new DefaultHttp3UnknownFrame(Http3CodecUtils.MIN_RESERVED_FRAME_TYPE,
+                Unpooled.buffer().writeLong(8)));
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMaxPushIdFailsWhenReduced() throws Exception {
+        parent.close().get();
+        // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
+        EmbeddedChannel channel = newStream(newHandler());
+
+        writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(8));
+        writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3MaxPushIdFrame(4));
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMaxPushIdCanBeIncreased() throws Exception {
+        parent.close().get();
+        // Let's mark the parent as inactive before we close as otherwise we will send a close frame.
+        Http3ControlStreamOutboundHandler handler = newHandler();
+        EmbeddedChannel channel = newStream(handler);
+
+        writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(4));
+        writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(8));
+        assertEquals(Long.valueOf(8), handler.sentMaxPushId());
+
         assertFalse(channel.finish());
     }
 
@@ -133,5 +185,24 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
         assertNull(channel.readOutbound());
         return channel;
+    }
+
+    private void writeInvalidFrame(Http3ErrorCode expectedCode,
+                                   EmbeddedChannel channel,
+                                   Http3Frame frame) {
+        try {
+            channel.writeOutbound(frame);
+            fail();
+        } catch (Exception e) {
+            assertException(expectedCode, e);
+        }
+    }
+
+    private void writeValidFrame(EmbeddedChannel channel, Http3Frame frame) {
+        try {
+            assertTrue(channel.writeOutbound(frame));
+        } finally {
+            ReferenceCountUtil.release(channel.readOutbound());
+        }
     }
 }
