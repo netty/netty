@@ -402,7 +402,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     private static Buffer expandCumulationAndWrite(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
         final int newSize = safeFindNextPositivePowerOfTwo(oldCumulation.readableBytes() + in.readableBytes());
         Buffer newCumulation = oldCumulation.readOnly() ? alloc.allocate(newSize) :
-                oldCumulation.ensureWritable(newSize, in.readableBytes(), true);
+                oldCumulation.ensureWritable(newSize);
         try {
             if (newCumulation != oldCumulation) {
                 newCumulation.writeBytes(oldCumulation);
