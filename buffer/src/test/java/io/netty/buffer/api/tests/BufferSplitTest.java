@@ -19,9 +19,103 @@ import io.netty.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 public class BufferSplitTest extends BufferTestSupport {
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void readSplit(Fixture fixture) {
+        readSplit(fixture, 3, 3, 1, 1);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void readSplitWriteOffsetLessThanCapacity(Fixture fixture) {
+        readSplit(fixture, 5, 4, 2, 1);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void readSplitOffsetZero(Fixture fixture) {
+        readSplit(fixture, 3, 3, 1, 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void readSplitOffsetToWriteOffset(Fixture fixture) {
+        readSplit(fixture, 3, 3, 1, 2);
+    }
+
+    private void readSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            try (Buffer buf = allocator.allocate(capacity)) {
+                writeRandomBytes(buf, writeBytes);
+                assertEquals(writeBytes, buf.writerOffset());
+
+                for (int i = 0; i < readBytes; i++) {
+                    buf.readByte();
+                }
+                assertEquals(readBytes, buf.readerOffset());
+
+                try (Buffer split = buf.readSplit(offset)) {
+                    assertEquals(readBytes + offset, split.capacity());
+                    assertEquals(split.capacity(), split.writerOffset());
+                    assertEquals(readBytes, split.readerOffset());
+
+                    assertEquals(capacity - split.capacity(), buf.capacity());
+                    assertEquals(writeBytes - split.capacity(), buf.writerOffset());
+                    assertEquals(0, buf.readerOffset());
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void writeSplit(Fixture fixture) {
+        writeSplit(fixture, 5, 3, 1, 1);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void writeSplitWriteOffsetLessThanCapacity(Fixture fixture) {
+        writeSplit(fixture, 5, 2, 2, 2);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void writeSplitOffsetZero(Fixture fixture) {
+        writeSplit(fixture, 3, 3, 1, 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void writeSplitOffsetToCapacity(Fixture fixture) {
+        writeSplit(fixture, 3, 1, 1, 2);
+    }
+
+    private void writeSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            try (Buffer buf = allocator.allocate(capacity)) {
+                writeRandomBytes(buf, writeBytes);
+                assertEquals(writeBytes, buf.writerOffset());
+                for (int i = 0; i < readBytes; i++) {
+                    buf.readByte();
+                }
+                assertEquals(readBytes, buf.readerOffset());
+
+                try (Buffer split = buf.writeSplit(offset)) {
+                    assertEquals(writeBytes + offset, split.capacity());
+                    assertEquals(writeBytes, split.writerOffset());
+                    assertEquals(readBytes, split.readerOffset());
+
+                    assertEquals(capacity - split.capacity(), buf.capacity());
+                    assertEquals(0, buf.writerOffset());
+                    assertEquals(0, buf.readerOffset());
+                }
+            }
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("allocators")
     void splitPostFull(Fixture fixture) {
@@ -38,9 +132,7 @@ public class BufferSplitTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             final int capacity = 3;
             try (Buffer buf = allocator.allocate(capacity)) {
-                byte[] data = new byte[capacity];
-                ThreadLocalRandom.current().nextBytes(data);
-                buf.writeBytes(data);
+                writeRandomBytes(buf, capacity);
                 assertEquals(buf.capacity(), buf.writerOffset());
                 if (read) {
                     for (int i = 0; i < capacity; i++) {
