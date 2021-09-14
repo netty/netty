@@ -122,7 +122,7 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     private int capacity;
     private int roff;
     private int woff;
-    private int subOffset; // The next offset *within* a consituent buffer to read from or write to.
+    private int subOffset; // The next offset *within* a constituent buffer to read from or write to.
     private boolean closed;
     private boolean readOnly;
 
@@ -378,6 +378,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
 
     @Override
     public CompositeBuffer fill(byte value) {
+        if (closed) {
+            throw bufferIsClosed(this);
+        }
         for (Buffer buf : bufs) {
             buf.fill(value);
         }
@@ -405,6 +408,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             throw new IllegalArgumentException(
                     "Offset and length cannot be negative, but offset was " +
                     offset + ", and length was " + length + '.');
+        }
+        if (closed) {
+            throw bufferIsClosed(this);
         }
         Buffer choice = (Buffer) chooseBuffer(offset, 0);
         Buffer[] copies;
@@ -509,6 +515,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
             throw new IllegalArgumentException("The fromOffset+length is beyond the end of the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
         }
+        if (closed) {
+            throw bufferIsClosed(this);
+        }
         int startBufferIndex = searchOffsets(fromOffset);
         int off = fromOffset - offsets[startBufferIndex];
         Buffer startBuf = bufs[startBufferIndex];
@@ -527,6 +536,9 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         if (fromOffset - length < -1) {
             throw new IllegalArgumentException("The fromOffset-length would underflow the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
+        }
+        if (closed) {
+            throw bufferIsClosed(this);
         }
         int startBufferIndex = searchOffsets(fromOffset);
         int off = fromOffset - offsets[startBufferIndex];
@@ -789,6 +801,21 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         bufs = Arrays.copyOfRange(bufs, i, bufs.length);
         computeBufferOffsets();
         return buildSplitBuffer(splits);
+    }
+
+    /**
+     * Break a composite buffer into its constituent components.
+     * <p>
+     * This "consumes" the composite buffer, leaving the composite buffer instance as if it had been closed.
+     * The buffers in the returned array are not closed, and become owned by the caller.
+     *
+     * @return An array of the constituent buffer components.
+     */
+    public Buffer[] decomposeBuffer() {
+        Buffer[] result = bufs;
+        bufs = EMPTY_BUFFER_ARRAY;
+        close();
+        return result;
     }
 
     @Override

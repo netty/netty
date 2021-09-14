@@ -563,4 +563,37 @@ public class BufferCompositionTest extends BufferTestSupport {
             }
         }
     }
+
+    @Test
+    public void decomposeOfEmptyBufferMustGiveEmptyArray() {
+        CompositeBuffer composite = CompositeBuffer.compose(BufferAllocator.onHeapUnpooled());
+        Buffer[] components = composite.decomposeBuffer();
+        assertThat(components.length).isZero();
+        verifyInaccessible(composite);
+        assertThrows(IllegalStateException.class, () -> composite.close());
+    }
+
+    @Test
+    public void decomposeOfCompositeBufferMustGiveComponentArray() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            CompositeBuffer composite = CompositeBuffer.compose(
+                    allocator,
+                    allocator.allocate(3).send(),
+                    allocator.allocate(3).send(),
+                    allocator.allocate(2).send());
+            composite.writeLong(0x0102030405060708L);
+            assertThat(composite.readInt()).isEqualTo(0x01020304);
+            Buffer[] components = composite.decomposeBuffer();
+            assertThat(components.length).isEqualTo(3);
+            verifyInaccessible(composite);
+            assertThat(components[0].readableBytes()).isZero();
+            assertThat(components[0].writableBytes()).isZero();
+            assertThat(components[1].readableBytes()).isEqualTo(2);
+            assertThat(components[1].writableBytes()).isZero();
+            assertThat(components[2].readableBytes()).isEqualTo(2);
+            assertThat(components[2].writableBytes()).isZero();
+            assertThat(components[1].readShort()).isEqualTo((short) 0x0506);
+            assertThat(components[2].readShort()).isEqualTo((short) 0x0708);
+        }
+    }
 }
