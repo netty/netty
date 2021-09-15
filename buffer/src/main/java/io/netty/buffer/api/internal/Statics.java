@@ -206,4 +206,9 @@ public interface Statics {
     static int countBorrows(ResourceSupport<?, ?> obj) {
         return ResourceSupport.countBorrows(obj);
     }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    static void unsafeSetDrop(ResourceSupport<?, ?> obj, Drop<?> replacement) {
+        obj.unsafeSetDrop((Drop) replacement);
+    }
 }
