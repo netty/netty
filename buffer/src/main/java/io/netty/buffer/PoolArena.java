@@ -455,6 +455,22 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         return max(0, val);
     }
 
+    /**
+     * Return the number of bytes that are currently pinned to buffer instances, by the arena. The pinned memory is not
+     * accessible for use by any other allocation, until the buffers using have all been released.
+     */
+    public long numPinnedBytes() {
+        long val = activeBytesHuge.value(); // Huge chunks are exact-sized for the buffers they were allocated to.
+        synchronized (this) {
+            for (int i = 0; i < chunkListMetrics.size(); i++) {
+                for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+                    val += ((PoolChunk<?>) m).pinnedBytes();
+                }
+            }
+        }
+        return max(0, val);
+    }
+
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);

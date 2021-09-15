@@ -95,7 +95,6 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testUsedDirectMemory() {
         T allocator =  newAllocator(true);
@@ -114,7 +113,6 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedDirectMemory());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testUsedHeapMemory() {
         T allocator =  newAllocator(true);
@@ -140,5 +138,8 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     protected long expectedUsedMemoryAfterRelease(T allocator, int capacity) {
         return 0;
+    }
+
+    protected void trimCaches(T allocator) {
     }
 }
