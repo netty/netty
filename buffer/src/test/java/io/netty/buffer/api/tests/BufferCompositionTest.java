@@ -20,8 +20,10 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.CompositeBuffer;
+import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.Send;
 import io.netty.buffer.api.internal.ResourceSupport;
+import io.netty.buffer.api.internal.Statics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,6 +31,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.netty.buffer.api.internal.Statics.acquire;
 import static io.netty.buffer.api.internal.Statics.isOwned;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -560,6 +563,72 @@ public class BufferCompositionTest extends BufferTestSupport {
                 assertTrue(isOwned(composite));
                 assertTrue(composite.isAccessible());
                 assertThat(composite.capacity()).isEqualTo(16);
+            }
+        }
+    }
+
+    @Test
+    public void decomposeOfEmptyBufferMustGiveEmptyArray() {
+        CompositeBuffer composite = CompositeBuffer.compose(BufferAllocator.onHeapUnpooled());
+        Buffer[] components = composite.decomposeBuffer();
+        assertThat(components.length).isZero();
+        verifyInaccessible(composite);
+        assertThrows(IllegalStateException.class, () -> composite.close());
+    }
+
+    @Test
+    public void decomposeOfCompositeBufferMustGiveComponentArray() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            CompositeBuffer composite = CompositeBuffer.compose(
+                    allocator,
+                    allocator.allocate(3).send(),
+                    allocator.allocate(3).send(),
+                    allocator.allocate(2).send());
+            composite.writeLong(0x0102030405060708L);
+            assertThat(composite.readInt()).isEqualTo(0x01020304);
+            Buffer[] components = composite.decomposeBuffer();
+            assertThat(components.length).isEqualTo(3);
+            verifyInaccessible(composite);
+            assertThat(components[0].readableBytes()).isZero();
+            assertThat(components[0].writableBytes()).isZero();
+            assertThat(components[1].readableBytes()).isEqualTo(2);
+            assertThat(components[1].writableBytes()).isZero();
+            assertThat(components[2].readableBytes()).isEqualTo(2);
+            assertThat(components[2].writableBytes()).isZero();
+            assertThat(components[1].readShort()).isEqualTo((short) 0x0506);
+            assertThat(components[2].readShort()).isEqualTo((short) 0x0708);
+        }
+    }
+
+    @Test
+    public void failureInDecomposeMustCloseConstituentBuffers() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            CompositeBuffer composite = CompositeBuffer.compose(
+                    allocator,
+                    allocator.allocate(3).send(),
+                    allocator.allocate(3).send(),
+                    allocator.allocate(2).send());
+            Drop<Object> throwingDrop = obj -> {
+                throw new RuntimeException("Expected.");
+            };
+            try {
+                Statics.unsafeSetDrop(composite, throwingDrop);
+            } catch (Exception e) {
+                composite.close();
+                throw e;
+            }
+            Buffer[] inners  = new Buffer[3];
+            assertThat(composite.countWritableComponents()).isEqualTo(3);
+            int count = composite.forEachWritable(0, (i, component) -> {
+                inners[i] = (Buffer) component;
+                return true;
+            });
+            assertThat(count).isEqualTo(3);
+            var re = assertThrows(RuntimeException.class, () -> composite.decomposeBuffer());
+            assertThat(re.getMessage()).isEqualTo("Expected.");
+            // The failure to decompose the buffer should have closed the inner buffers we extracted earlier.
+            for (Buffer inner : inners) {
+                assertFalse(inner.isAccessible());
             }
         }
     }
