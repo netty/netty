@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 /**
- * A decoder that splits the received {@link ByteBuf}s by the fixed number
+ * A decoder that splits the received {@link Buffer}s by the fixed number
  * of bytes. For example, if you received the following four fragmented packets:
  * <pre>
  * +---+----+------+----+
@@ -36,7 +36,7 @@ import io.netty.channel.ChannelHandlerContext;
  * +-----+-----+-----+
  * </pre>
  */
-public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
+public class FixedLengthFrameDecoder extends ByteToMessageDecoderForBuffer {
 
     private final int frameLength;
 
@@ -50,8 +50,19 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
         this.frameLength = frameLength;
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param frameLength the length of the frame
+     */
+    public FixedLengthFrameDecoder(int frameLength, Cumulator cumulator) {
+        super(cumulator);
+        checkPositive(frameLength, "frameLength");
+        this.frameLength = frameLength;
+    }
+
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected final void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         Object decoded = decode0(ctx, in);
         if (decoded != null) {
             ctx.fireChannelRead(decoded);
@@ -59,19 +70,19 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Create a frame out of the {@link ByteBuf} and return it.
+     * Create a frame out of the {@link Buffer} and return it.
      *
      * @param   ctx             the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
-     * @param   in              the {@link ByteBuf} from which to read data
-     * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
+     * @param   in              the {@link Buffer} from which to read data
+     * @return  frame           the {@link Buffer} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
-    protected Object decode0(
-            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decode0(@SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, Buffer in)
+            throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {
-            return in.readRetainedSlice(frameLength);
+            return in.split(in.readerOffset() + frameLength);
         }
     }
 }

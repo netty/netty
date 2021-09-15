@@ -25,8 +25,8 @@ import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -432,6 +432,7 @@ public class ByteToMessageDecoderTest {
         }
     }
 
+    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testDoesNotOverRead() {
         class ReadInterceptingHandler implements ChannelHandler {
