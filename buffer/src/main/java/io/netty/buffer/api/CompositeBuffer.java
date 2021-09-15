@@ -814,7 +814,18 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
     public Buffer[] decomposeBuffer() {
         Buffer[] result = bufs;
         bufs = EMPTY_BUFFER_ARRAY;
-        close();
+        try {
+            close();
+        } catch (Exception e) {
+            for (Buffer buffer : result) {
+                try {
+                    buffer.close();
+                } catch (Exception ex) {
+                    e.addSuppressed(ex);
+                }
+            }
+            throw e;
+        }
         return result;
     }
 
