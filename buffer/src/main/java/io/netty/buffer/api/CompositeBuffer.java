@@ -816,11 +816,11 @@ public final class CompositeBuffer extends ResourceSupport<Buffer, CompositeBuff
         bufs = EMPTY_BUFFER_ARRAY;
         try {
             close();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             for (Buffer buffer : result) {
                 try {
                     buffer.close();
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     e.addSuppressed(ex);
                 }
             }
