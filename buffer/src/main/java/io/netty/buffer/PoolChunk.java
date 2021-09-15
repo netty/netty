@@ -175,6 +175,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final Deque<ByteBuffer> cachedNioBuffers;
 
     int freeBytes;
+    int pinnedBytes;
 
     PoolChunkList<T> parent;
     PoolChunk<T> prev;
@@ -342,7 +343,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
                 handle = splitLargeRun(handle, pages);
             }
 
-            freeBytes -= runSize(pageShifts, handle);
+            int pinnedSize = runSize(pageShifts, handle);
+            freeBytes -= pinnedSize;
+            pinnedBytes += pinnedSize;
             return handle;
         }
     }
@@ -451,6 +454,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @param handle handle to free
      */
     void free(long handle, int normCapacity, ByteBuffer nioBuffer) {
+        int runSize = runSize(pageShifts, handle);
+        pinnedBytes -= runSize;
         if (isSubpage(handle)) {
             int sizeIdx = arena.size2SizeIdx(normCapacity);
             PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
@@ -473,8 +478,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         //start free run
-        int pages = runPages(handle);
-
         synchronized (runsAvail) {
             // collapse continuous runs, successfully collapsed runs
             // will be removed from runsAvail and runsAvailMap
@@ -486,7 +489,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             finalRun &= ~(1L << IS_SUBPAGE_SHIFT);
 
             insertAvailRun(runOffset(finalRun), runPages(finalRun), finalRun);
-            freeBytes += pages << pageShifts;
+            freeBytes += runSize;
         }
 
         if (nioBuffer != null && cachedNioBuffers != null &&
@@ -585,6 +588,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
     public int freeBytes() {
         synchronized (arena) {
             return freeBytes;
+        }
+    }
+
+    public int pinnedBytes() {
+        synchronized (arena) {
+            return pinnedBytes;
         }
     }
 

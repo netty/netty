@@ -139,4 +139,7 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     protected long expectedUsedMemoryAfterRelease(T allocator, int capacity) {
         return 0;
     }
+
+    protected void trimCaches(T allocator) {
+    }
 }
