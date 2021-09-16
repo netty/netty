@@ -178,4 +178,50 @@ public class BufferOffsetsTest extends BufferTestSupport {
             assertEquals(Long.BYTES - Short.BYTES, buf.readableBytes());
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void skipReadable(Fixture fixture) {
+        skipReadable(fixture, 32, 16, 8, 8);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void skipReadableNegative(Fixture fixture) {
+        skipReadable(fixture, 16, 8, 4, -2);
+    }
+
+    private void skipReadable(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+            writeRandomBytes(buf, writeBytes);
+
+            for (int i = 0; i < readBytes; i++) {
+                buf.readByte();
+            }
+
+            buf.skipReadable(offset);
+            assertEquals(readBytes + offset, buf.readerOffset());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void skipWritable(Fixture fixture) {
+        skipWritable(fixture, 32, 16, 8);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void skipWritableNegative(Fixture fixture) {
+        skipWritable(fixture, 16, 8, -2);
+    }
+
+    private void skipWritable(Fixture fixture, int capacity, int writeBytes, int offset) {
+        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+            writeRandomBytes(buf, writeBytes);
+
+            buf.skipWritable(offset);
+            assertEquals(writeBytes + offset, buf.writerOffset());
+        }
+    }
 }

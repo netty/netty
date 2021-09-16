@@ -32,54 +32,48 @@ public class BufferCharSequenceTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void readCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator()) {
-            try (Buffer buf = allocator.allocate(32)) {
-                String data = "Hello World";
-                buf.writeBytes(data.getBytes());
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(0, buf.readerOffset());
+        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+            String data = "Hello World";
+            buf.writeBytes(data.getBytes(US_ASCII));
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(0, buf.readerOffset());
 
-                final CharSequence charSequence = buf.readCharSequence(data.length(), US_ASCII);
-                Assertions.assertEquals(data, charSequence.toString());
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(data.length(), buf.readerOffset());
-            }
+            final CharSequence charSequence = buf.readCharSequence(data.length(), US_ASCII);
+            Assertions.assertEquals(data, charSequence.toString());
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(data.length(), buf.readerOffset());
         }
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void writeCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator()) {
-            try (Buffer buf = allocator.allocate(32)) {
-                AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
-                buf.writeCharSequence(data, US_ASCII);
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(0, buf.readerOffset());
+        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+            AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
+            buf.writeCharSequence(data, US_ASCII);
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(0, buf.readerOffset());
 
-                final byte[] read = readByteArray(buf);
-                Assertions.assertEquals(data.toString(), new String(read, US_ASCII));
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(data.length(), buf.readerOffset());
-            }
+            final byte[] read = readByteArray(buf);
+            Assertions.assertEquals(data.toString(), new String(read, US_ASCII));
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(data.length(), buf.readerOffset());
         }
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void readAndWriteCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator()) {
-            try (Buffer buf = allocator.allocate(32)) {
-                AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
-                buf.writeCharSequence(data, US_ASCII);
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(0, buf.readerOffset());
+        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+            AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
+            buf.writeCharSequence(data, US_ASCII);
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(0, buf.readerOffset());
 
-                final CharSequence read = buf.readCharSequence(data.length(), US_ASCII);
-                Assertions.assertEquals(data, read);
-                assertEquals(data.length(), buf.writerOffset());
-                assertEquals(data.length(), buf.readerOffset());
-            }
+            final CharSequence read = buf.readCharSequence(data.length(), US_ASCII);
+            Assertions.assertEquals(data, read);
+            assertEquals(data.length(), buf.writerOffset());
+            assertEquals(data.length(), buf.readerOffset());
         }
     }
 }

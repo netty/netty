@@ -15,6 +15,8 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.Statics;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
@@ -127,7 +129,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * {@link #writerOffset()}.
      * @throws BufferClosedException if this buffer is closed.
      */
-    default Buffer accumulateReaderOffset(int delta) {
+    default Buffer skipReadable(int delta) {
         return readerOffset(readerOffset() + delta);
     }
 
@@ -159,7 +161,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this buffer is closed.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
-    default Buffer accumulateWriterOffset(int delta) {
+    default Buffer skipWritable(int delta) {
         return writerOffset(writerOffset() + delta);
     }
 
@@ -289,7 +291,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeCharSequence(CharSequence source, Charset charset) {
-        BufferUtils.writeCharSequence(source, this, charset);
+        Statics.writeCharSequence(source, this, charset);
         return this;
     }
 
@@ -304,7 +306,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * this buffer.
      */
     default CharSequence readCharSequence(int length, Charset charset) {
-        return BufferUtils.readCharSequence(this, length, charset);
+        return Statics.readCharSequence(this, length, charset);
     }
 
     /**
@@ -538,7 +540,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     Buffer copy(int offset, int length);
 
     /**
-     * Splits the buffer into two, at the {@code offset} from current {@linkplain #readerOffset()} reader offset}
+     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #readerOffset()} reader offset}
      * position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
@@ -589,7 +591,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
-     * Splits the buffer into two, at the {@code offset} from current {@linkplain #writerOffset()} writer offset}
+     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #writerOffset()} writer offset}
      * position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
