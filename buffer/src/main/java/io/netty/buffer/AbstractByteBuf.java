@@ -255,17 +255,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void adjustMarkers(int decrement) {
-        if (markedReaderIndex <= decrement) {
-            markedReaderIndex = 0;
-            if (markedWriterIndex <= decrement) {
-                markedWriterIndex = 0;
-            } else {
-                markedWriterIndex -= decrement;
-            }
-        } else {
-            markedReaderIndex -= decrement;
-            markedWriterIndex -= decrement;
-        }
+        markedReaderIndex = Math.max(markedReaderIndex - decrement, 0);
+        markedWriterIndex = Math.max(markedWriterIndex - decrement, 0);
     }
 
     // Called after a capacity reduction
