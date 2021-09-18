@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -62,23 +62,28 @@ public class FileDescriptor {
         return fd;
     }
 
+    protected boolean markClosed() {
+        for (;;) {
+            int state = this.state;
+            if (isClosed(state)) {
+                return false;
+            }
+            // Once a close operation happens, the channel is considered shutdown.
+            if (casState(state, state | STATE_ALL_MASK)) {
+                return true;
+            }
+        }
+    }
+
     /**
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        for (;;) {
-            int state = this.state;
-            if (isClosed(state)) {
-                return;
+        if (markClosed()) {
+            int res = close(fd);
+            if (res < 0) {
+                throw newIOException("close", res);
             }
-            // Once a close operation happens, the channel is considered shutdown.
-            if (casState(state, state | STATE_ALL_MASK)) {
-                break;
-            }
-        }
-        int res = close(fd);
-        if (res < 0) {
-            throw newIOException("close", res);
         }
     }
 

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -27,7 +27,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
@@ -287,7 +286,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void verifyDataFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         if (payloadLength < flags.getPaddingPresenceFieldLength()) {
             throw streamError(streamId, FRAME_SIZE_ERROR,
@@ -298,7 +296,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void verifyHeadersFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         int requiredLength = flags.getPaddingPresenceFieldLength() + flags.getNumPriorityBytes();
         if (payloadLength < requiredLength) {
@@ -328,7 +325,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifySettingsFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
         if (streamId != 0) {
             throw connectionError(PROTOCOL_ERROR, "A stream ID must be zero.");
         }
@@ -342,7 +338,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyPushPromiseFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         // Subtract the length of the promised stream ID field, to determine the length of the
         // rest of the payload (header block fragment + payload).
@@ -366,7 +361,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyGoAwayFrame() throws Http2Exception {
         verifyNotProcessingHeaders();
-        verifyPayloadLength(payloadLength);
 
         if (streamId != 0) {
             throw connectionError(PROTOCOL_ERROR, "A stream ID must be zero.");
@@ -387,7 +381,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void verifyContinuationFrame() throws Http2Exception {
         verifyAssociatedWithAStream();
-        verifyPayloadLength(payloadLength);
 
         if (headersContinuation == null) {
             throw connectionError(PROTOCOL_ERROR, "Received %s frame but not currently processing headers.",
@@ -529,14 +522,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 try {
                     settings.put(id, Long.valueOf(value));
                 } catch (IllegalArgumentException e) {
-                    switch(id) {
-                    case SETTINGS_MAX_FRAME_SIZE:
-                        throw connectionError(PROTOCOL_ERROR, e, e.getMessage());
-                    case SETTINGS_INITIAL_WINDOW_SIZE:
+                    if (id == SETTINGS_INITIAL_WINDOW_SIZE) {
                         throw connectionError(FLOW_CONTROL_ERROR, e, e.getMessage());
-                    default:
-                        throw connectionError(PROTOCOL_ERROR, e, e.getMessage());
                     }
+                    throw connectionError(PROTOCOL_ERROR, e, e.getMessage());
                 }
             }
             listener.onSettingsRead(ctx, settings);
@@ -768,12 +757,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         if (headersContinuation != null) {
             throw connectionError(PROTOCOL_ERROR, "Received frame of type %s while processing headers on stream %d.",
                                   frameType, headersContinuation.getStreamId());
-        }
-    }
-
-    private void verifyPayloadLength(int payloadLength) throws Http2Exception {
-        if (payloadLength > maxFrameSize) {
-            throw connectionError(PROTOCOL_ERROR, "Total payload length %d exceeds max frame length.", payloadLength);
         }
     }
 

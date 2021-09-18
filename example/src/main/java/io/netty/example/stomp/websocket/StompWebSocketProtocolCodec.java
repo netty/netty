@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,24 +15,26 @@
  */
 package io.netty.example.stomp.websocket;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.HandshakeComplete;
+import io.netty.handler.codec.stomp.StompSubframe;
 import io.netty.handler.codec.stomp.StompSubframeAggregator;
 import io.netty.handler.codec.stomp.StompSubframeDecoder;
-import io.netty.handler.codec.stomp.StompSubframeEncoder;
 
 import java.util.List;
 
 @Sharable
-public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocketFrame, ByteBuf> {
+public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocketFrame, StompSubframe> {
 
     private final StompChatHandler stompChatHandler = new StompChatHandler();
+    private final StompWebSocketFrameEncoder stompWebSocketFrameEncoder = new StompWebSocketFrameEncoder();
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -40,8 +42,8 @@ public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocket
             StompVersion stompVersion = StompVersion.findBySubProtocol(((HandshakeComplete) evt).selectedSubprotocol());
             ctx.channel().attr(StompVersion.CHANNEL_ATTRIBUTE_KEY).set(stompVersion);
             ctx.pipeline()
+               .addLast(new WebSocketFrameAggregator(65536))
                .addLast(new StompSubframeDecoder())
-               .addLast(new StompSubframeEncoder())
                .addLast(new StompSubframeAggregator(65536))
                .addLast(stompChatHandler)
                .remove(StompWebSocketClientPageHandler.INSTANCE);
@@ -51,13 +53,13 @@ public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocket
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf stompFrame, List<Object> out) {
-        out.add(new TextWebSocketFrame(stompFrame.retain()));
+    protected void encode(ChannelHandlerContext ctx, StompSubframe stompFrame, List<Object> out) throws Exception {
+        stompWebSocketFrameEncoder.encode(ctx, stompFrame, out);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame webSocketFrame, List<Object> out) {
-        if (webSocketFrame instanceof TextWebSocketFrame) {
+        if (webSocketFrame instanceof TextWebSocketFrame || webSocketFrame instanceof BinaryWebSocketFrame) {
             out.add(webSocketFrame.content().retain());
         } else {
             ctx.close();

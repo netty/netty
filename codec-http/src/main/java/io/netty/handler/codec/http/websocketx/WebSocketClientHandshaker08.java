@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,7 @@ import java.net.URI;
 /**
  * <p>
  * Performs client side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
+ * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
  * 10</a>
  * </p>
  */
@@ -266,27 +266,26 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
-        final HttpHeaders headers = response.headers();
-
-        if (!response.status().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+        HttpResponseStatus status = response.status();
+        if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response getStatus: " + status, response);
         }
 
+        HttpHeaders headers = response.headers();
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
         if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
-            throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
+            throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
         }
 
         if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-            throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + headers.get(HttpHeaderNames.CONNECTION));
+            throw new WebSocketClientHandshakeException("Invalid handshake response connection: "
+                    + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
         CharSequence accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
-            throw new WebSocketHandshakeException(String.format(
-                    "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));
+            throw new WebSocketClientHandshakeException(String.format(
+                    "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString), response);
         }
     }
 

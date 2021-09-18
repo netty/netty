@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -42,16 +42,19 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ReflectionUtil;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -60,19 +63,17 @@ import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.same;
@@ -100,12 +101,12 @@ public class Http2FrameCodecTest {
     private final Http2Headers response = new DefaultHttp2Headers()
             .status(HttpResponseStatus.OK.codeAsText());
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings());
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (inboundHandler != null) {
             inboundHandler.finishAndReleaseAll();
@@ -119,7 +120,7 @@ public class Http2FrameCodecTest {
     }
 
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
-        /**
+        /*
          * Some tests call this method twice. Once with JUnit's @Before and once directly to pass special settings.
          * This call ensures that in case of two consecutive calls to setUp(), the previous channel is shutdown and
          * ByteBufs are released correctly.
@@ -378,6 +379,18 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void unknownFrameTypeOnConnectionStream() throws Exception {
+        // handle the case where unknown frames are sent before a stream is created,
+        // for example: HTTP/2 GREASE testing
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
+        channel.flush();
+
+        assertEquals(0, debugData.refCnt());
+        assertTrue(channel.isActive());
+    }
+
+    @Test
     public void goAwayLastStreamIdOverflowed() throws Exception {
         frameInboundWriter.writeInboundHeaders(5, request, 31, false);
 
@@ -415,12 +428,13 @@ public class Http2FrameCodecTest {
         Http2HeadersFrame headersFrame = inboundHandler.readInboundMessageOrUserEvent();
         assertNotNull(headersFrame);
 
-        try {
-            inboundHandler.checkException();
-            fail("stream exception expected");
-        } catch (Http2FrameStreamException e) {
-            assertEquals(streamEx, e.getCause());
-        }
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(streamEx, e.getCause());
 
         assertNull(inboundHandler.readInboundMessageOrUserEvent());
     }
@@ -566,7 +580,8 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeSettings(eqFrameCodecCtx(), same(settings), any(ChannelPromise.class));
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void newOutboundStream() {
         final Http2FrameStream stream = frameCodec.newStream();
 
@@ -837,7 +852,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
+        Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
@@ -875,7 +890,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
+        Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         String longString = new String(new char[70000]).replace("\0", "*");
         DefaultFullHttpRequest request =
@@ -884,6 +899,40 @@ public class Http2FrameCodecTest {
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
             "HTTP/2", request);
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
+    }
+
+    @Test
+    public void priorityForNonExistingStream() {
+        writeHeaderAndAssert(1);
+
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+    }
+
+    @Test
+    public void priorityForExistingStream() {
+        writeHeaderAndAssert(1);
+        writeHeaderAndAssert(3);
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+
+        assertInboundStreamFrame(3, new DefaultHttp2PriorityFrame(1, (short) 31, true));
+    }
+
+    private void writeHeaderAndAssert(int streamId) {
+        frameInboundWriter.writeInboundHeaders(streamId, request, 31, false);
+
+        Http2Stream stream = frameCodec.connection().stream(streamId);
+        assertNotNull(stream);
+        assertEquals(State.OPEN, stream.state());
+
+        assertInboundStreamFrame(streamId, new DefaultHttp2HeadersFrame(request, false, 31));
+    }
+
+    private void assertInboundStreamFrame(int expectedId, Http2StreamFrame streamFrame) {
+        Http2StreamFrame inboundFrame = inboundHandler.readInbound();
+        Http2FrameStream stream2 = inboundFrame.stream();
+        assertNotNull(stream2);
+        assertEquals(expectedId, stream2.id());
+        assertEquals(inboundFrame, streamFrame.stream(stream2));
     }
 
     private ChannelHandlerContext eqFrameCodecCtx() {

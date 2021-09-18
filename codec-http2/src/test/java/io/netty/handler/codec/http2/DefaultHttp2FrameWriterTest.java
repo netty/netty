@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -25,9 +24,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -37,7 +36,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
@@ -63,7 +63,7 @@ public class DefaultHttp2FrameWriterTest {
     @Mock
     private ChannelHandlerContext ctx;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         http2HeadersEncoder = new DefaultHttp2HeadersEncoder(
@@ -96,7 +96,7 @@ public class DefaultHttp2FrameWriterTest {
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         outbound.release();
         expectedOutbound.release();
@@ -160,8 +160,28 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(expectedOutbound, outbound);
     }
 
+    @Test
+    public void writeEmptyDataWithPadding() {
+        int streamId = 1;
+
+        ByteBuf payloadByteBuf = Unpooled.buffer();
+        frameWriter.writeData(ctx, streamId, payloadByteBuf, 2, true, promise);
+
+        assertEquals(0, payloadByteBuf.refCnt());
+
+        byte[] expectedFrameBytes = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x02, // payload length
+            (byte) 0x00, // payload type
+            (byte) 0x09, // flags
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id
+            (byte) 0x01, (byte) 0x00, // padding
+        };
+        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes);
+        assertEquals(expectedOutbound, outbound);
+    }
+
     /**
-     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize}
+     * Test large headers that exceed {@link DefaultHttp2FrameWriter#maxFrameSize()}
      * the remaining headers will be sent in a CONTINUATION frame
      */
     @Test
@@ -277,6 +297,38 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 // stream id
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameHeaderBytes, payload);
+        assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writePriority() {
+        frameWriter.writePriority(
+            ctx, /* streamId= */ 1, /* dependencyId= */ 2, /* weight= */ (short) 256, /* exclusive= */ true, promise);
+
+        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+                (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
+                (byte) 0x02, // payload type = 2
+                (byte) 0x00, // flags = 0x00
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id = 1
+                (byte) 0x80, (byte) 0x00, (byte) 0x00, (byte) 0x02, // dependency id = 2 | exclusive = 1 << 63
+                (byte) 0xFF, // weight = 255 (implicit +1)
+        });
+        assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writePriorityDefaults() {
+        frameWriter.writePriority(
+            ctx, /* streamId= */ 1, /* dependencyId= */ 0, /* weight= */ (short) 16, /* exclusive= */ false, promise);
+
+        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+                (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
+                (byte) 0x02, // payload type = 2
+                (byte) 0x00, // flags = 0x00
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id = 1
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, // dependency id = 0 | exclusive = 0 << 63
+                (byte) 0x0F, // weight = 15 (implicit +1)
+        });
         assertEquals(expectedOutbound, outbound);
     }
 

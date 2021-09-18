@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,19 +23,28 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.channels.AlreadyConnectedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketMultipleConnectTest extends AbstractSocketTest {
 
-    @Test(timeout = 30000)
-    public void testMultipleConnect() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testMultipleConnect(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testMultipleConnect(serverBootstrap, bootstrap);
+            }
+        });
     }
 
     public void testMultipleConnect(ServerBootstrap sb, Bootstrap cb) throws Exception {
@@ -65,7 +74,7 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories
                 = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
-                : SocketTestPermutation.INSTANCE.socket()) {
+                : SocketTestPermutation.INSTANCE.socketWithFastOpen()) {
             if (comboFactory.newClientInstance().config().group() instanceof NioEventLoopGroup) {
                 factories.add(comboFactory);
             }

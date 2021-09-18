@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,19 +16,31 @@
 package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CombinedChannelDuplexHandlerTest {
 
     private static final Object MSG = new Object();
-    private static final SocketAddress ADDRESS = new InetSocketAddress(0);
+    private static final SocketAddress LOCAL_ADDRESS = new InetSocketAddress(0);
+    private static final SocketAddress REMOTE_ADDRESS = new InetSocketAddress(0);
+    private static final Throwable CAUSE = new Throwable();
+    private static final Object USER_EVENT = new Object();
 
     private enum Event {
         REGISTERED,
@@ -53,39 +65,64 @@ public class CombinedChannelDuplexHandlerTest {
         DISCONNECT
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testInboundRemoveBeforeAdded() {
-        CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
+        final CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                         new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
-        handler.removeInboundHandler();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                handler.removeInboundHandler();
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testOutboundRemoveBeforeAdded() {
-        CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
+        final CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                         new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
-        handler.removeOutboundHandler();
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                handler.removeOutboundHandler();
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInboundHandlerImplementsOutboundHandler() {
-        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                new ChannelDuplexHandler(), new ChannelOutboundHandlerAdapter());
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                        new ChannelDuplexHandler(), new ChannelOutboundHandlerAdapter());
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOutboundHandlerImplementsInboundHandler() {
-        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                new ChannelInboundHandlerAdapter(), new ChannelDuplexHandler());
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                        new ChannelInboundHandlerAdapter(), new ChannelDuplexHandler());
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testInitNotCalledBeforeAdded() throws Exception {
-        CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
+    @Test
+    public void testInitNotCalledBeforeAdded() {
+        final CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() { };
-        handler.handlerAdded(null);
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                handler.handlerAdded(null);
+            }
+        });
     }
 
     @Test
@@ -95,15 +132,16 @@ public class CombinedChannelDuplexHandlerTest {
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
                 ctx.fireExceptionCaught(cause);
             }
         };
         ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
+            @SuppressWarnings("deprecation")
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
                 ctx.fireExceptionCaught(cause);
@@ -111,7 +149,7 @@ public class CombinedChannelDuplexHandlerTest {
         };
         ChannelInboundHandler lastHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
             }
@@ -129,245 +167,131 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     public void testInboundEvents() {
-        final Queue<Event> queue = new ArrayDeque<Event>();
-
-        ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
-            @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.HANDLER_ADDED);
-            }
-
-            @Override
-            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.HANDLER_REMOVED);
-            }
-
-            @Override
-            public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.REGISTERED);
-            }
-
-            @Override
-            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.UNREGISTERED);
-            }
-
-            @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.ACTIVE);
-            }
-
-            @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.INACTIVE);
-            }
-
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                queue.add(Event.CHANNEL_READ);
-            }
-
-            @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.CHANNEL_READ_COMPLETE);
-            }
-
-            @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                queue.add(Event.USER_EVENT_TRIGGERED);
-            }
-
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.CHANNEL_WRITABILITY_CHANGED);
-            }
-
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                queue.add(Event.EXCEPTION_CAUGHT);
-            }
-        };
+        InboundEventHandler inboundHandler = new InboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                 inboundHandler, new ChannelOutboundHandlerAdapter());
 
-        EmbeddedChannel channel = new EmbeddedChannel(handler);
-        channel.pipeline().fireChannelWritabilityChanged();
-        channel.pipeline().fireUserEventTriggered(MSG);
-        channel.pipeline().fireChannelRead(MSG);
-        channel.pipeline().fireChannelReadComplete();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast(handler);
+        assertEquals(Event.HANDLER_ADDED, inboundHandler.pollEvent());
 
-        assertEquals(Event.HANDLER_ADDED, queue.poll());
-        assertEquals(Event.REGISTERED, queue.poll());
-        assertEquals(Event.ACTIVE, queue.poll());
-        assertEquals(Event.CHANNEL_WRITABILITY_CHANGED, queue.poll());
-        assertEquals(Event.USER_EVENT_TRIGGERED, queue.poll());
-        assertEquals(Event.CHANNEL_READ, queue.poll());
-        assertEquals(Event.CHANNEL_READ_COMPLETE, queue.poll());
-
+        doInboundOperations(channel);
+        assertInboundOperations(inboundHandler);
         handler.removeInboundHandler();
-        assertEquals(Event.HANDLER_REMOVED, queue.poll());
+
+        assertEquals(Event.HANDLER_REMOVED, inboundHandler.pollEvent());
 
         // These should not be handled by the inboundHandler anymore as it was removed before
-        channel.pipeline().fireChannelWritabilityChanged();
-        channel.pipeline().fireUserEventTriggered(MSG);
-        channel.pipeline().fireChannelRead(MSG);
-        channel.pipeline().fireChannelReadComplete();
+        doInboundOperations(channel);
 
         // Should have not received any more events as it was removed before via removeInboundHandler()
-        assertTrue(queue.isEmpty());
+        assertNull(inboundHandler.pollEvent());
+        try {
+            channel.checkException();
+            fail();
+        } catch (Throwable cause) {
+            assertSame(CAUSE, cause);
+        }
+
         assertTrue(channel.finish());
-        assertTrue(queue.isEmpty());
+        assertNull(inboundHandler.pollEvent());
     }
 
     @Test
     public void testOutboundEvents() {
-        final Queue<Event> queue = new ArrayDeque<Event>();
-
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter();
-        ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
-            @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.HANDLER_ADDED);
-            }
-
-            @Override
-            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.HANDLER_REMOVED);
-            }
-
-            @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
-                    throws Exception {
-                queue.add(Event.BIND);
-            }
-
-            @Override
-            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) throws Exception {
-                queue.add(Event.CONNECT);
-            }
-
-            @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                queue.add(Event.DISCONNECT);
-            }
-
-            @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                queue.add(Event.CLOSE);
-            }
-
-            @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                queue.add(Event.DEREGISTER);
-            }
-
-            @Override
-            public void read(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.READ);
-            }
-
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                queue.add(Event.WRITE);
-            }
-
-            @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
-                queue.add(Event.FLUSH);
-            }
-        };
+        OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                         inboundHandler, outboundHandler);
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addFirst(handler);
+        channel.pipeline().addLast(new OutboundEventHandler());
+        channel.pipeline().addLast(handler);
+
+        assertEquals(Event.HANDLER_ADDED, outboundHandler.pollEvent());
 
         doOutboundOperations(channel);
 
-        assertEquals(Event.HANDLER_ADDED, queue.poll());
-        assertEquals(Event.BIND, queue.poll());
-        assertEquals(Event.CONNECT, queue.poll());
-        assertEquals(Event.WRITE, queue.poll());
-        assertEquals(Event.FLUSH, queue.poll());
-        assertEquals(Event.READ, queue.poll());
-        assertEquals(Event.CLOSE, queue.poll());
-        assertEquals(Event.CLOSE, queue.poll());
-        assertEquals(Event.DEREGISTER, queue.poll());
+        assertOutboundOperations(outboundHandler);
 
         handler.removeOutboundHandler();
-        assertEquals(Event.HANDLER_REMOVED, queue.poll());
+
+        assertEquals(Event.HANDLER_REMOVED, outboundHandler.pollEvent());
 
         // These should not be handled by the inboundHandler anymore as it was removed before
         doOutboundOperations(channel);
 
         // Should have not received any more events as it was removed before via removeInboundHandler()
-        assertTrue(queue.isEmpty());
-        assertTrue(channel.finish());
-        assertTrue(queue.isEmpty());
+        assertNull(outboundHandler.pollEvent());
+        assertFalse(channel.finish());
+        assertNull(outboundHandler.pollEvent());
     }
 
     private static void doOutboundOperations(Channel channel) {
-        channel.pipeline().bind(ADDRESS);
-        channel.pipeline().connect(ADDRESS);
-        channel.pipeline().write(MSG);
+        channel.pipeline().bind(LOCAL_ADDRESS).syncUninterruptibly();
+        channel.pipeline().connect(REMOTE_ADDRESS, LOCAL_ADDRESS).syncUninterruptibly();
+        channel.pipeline().write(MSG).syncUninterruptibly();
         channel.pipeline().flush();
         channel.pipeline().read();
-        channel.pipeline().disconnect();
-        channel.pipeline().close();
-        channel.pipeline().deregister();
+        channel.pipeline().disconnect().syncUninterruptibly();
+        channel.pipeline().close().syncUninterruptibly();
+        channel.pipeline().deregister().syncUninterruptibly();
     }
 
-    @Test(timeout = 3000)
+    private static void assertOutboundOperations(OutboundEventHandler outboundHandler) {
+        assertEquals(Event.BIND, outboundHandler.pollEvent());
+        assertEquals(Event.CONNECT, outboundHandler.pollEvent());
+        assertEquals(Event.WRITE, outboundHandler.pollEvent());
+        assertEquals(Event.FLUSH, outboundHandler.pollEvent());
+        assertEquals(Event.READ, outboundHandler.pollEvent());
+        assertEquals(Event.CLOSE, outboundHandler.pollEvent());
+        assertEquals(Event.CLOSE, outboundHandler.pollEvent());
+        assertEquals(Event.DEREGISTER, outboundHandler.pollEvent());
+    }
+
+    private static void doInboundOperations(Channel channel) {
+        channel.pipeline().fireChannelRegistered();
+        channel.pipeline().fireChannelActive();
+        channel.pipeline().fireChannelRead(MSG);
+        channel.pipeline().fireChannelReadComplete();
+        channel.pipeline().fireExceptionCaught(CAUSE);
+        channel.pipeline().fireUserEventTriggered(USER_EVENT);
+        channel.pipeline().fireChannelWritabilityChanged();
+        channel.pipeline().fireChannelInactive();
+        channel.pipeline().fireChannelUnregistered();
+    }
+
+    private static void assertInboundOperations(InboundEventHandler handler) {
+        assertEquals(Event.REGISTERED, handler.pollEvent());
+        assertEquals(Event.ACTIVE, handler.pollEvent());
+        assertEquals(Event.CHANNEL_READ, handler.pollEvent());
+        assertEquals(Event.CHANNEL_READ_COMPLETE, handler.pollEvent());
+        assertEquals(Event.EXCEPTION_CAUGHT, handler.pollEvent());
+        assertEquals(Event.USER_EVENT_TRIGGERED, handler.pollEvent());
+        assertEquals(Event.CHANNEL_WRITABILITY_CHANGED, handler.pollEvent());
+        assertEquals(Event.INACTIVE, handler.pollEvent());
+        assertEquals(Event.UNREGISTERED, handler.pollEvent());
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testPromisesPassed() {
-        ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
-            @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                             ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-
-            @Override
-            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-
-            @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-
-            @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-
-            @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                promise.setSuccess();
-            }
-        };
+        OutboundEventHandler outboundHandler = new OutboundEventHandler();
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                         new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter()));
         ChannelPipeline pipeline = ch.pipeline();
 
         ChannelPromise promise = ch.newPromise();
-        pipeline.connect(new InetSocketAddress(0), null, promise);
+        pipeline.bind(LOCAL_ADDRESS, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.bind(new InetSocketAddress(0), promise);
+        pipeline.connect(REMOTE_ADDRESS, LOCAL_ADDRESS, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
@@ -379,7 +303,7 @@ public class CombinedChannelDuplexHandlerTest {
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.write("test", promise);
+        pipeline.write(MSG, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
@@ -388,13 +312,170 @@ public class CombinedChannelDuplexHandlerTest {
         ch.finish();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testNotSharable() {
-        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
+        assertThrows(IllegalStateException.class, new Executable() {
             @Override
-            public boolean isSharable() {
-                return true;
+            public void execute() {
+                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                };
             }
-        };
+        });
+    }
+
+    private static final class InboundEventHandler extends ChannelInboundHandlerAdapter {
+        private final Queue<Object> queue = new ArrayDeque<Object>();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) {
+            queue.add(Event.HANDLER_ADDED);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            queue.add(Event.HANDLER_REMOVED);
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) {
+            queue.add(Event.REGISTERED);
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) {
+            queue.add(Event.UNREGISTERED);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            queue.add(Event.ACTIVE);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            queue.add(Event.INACTIVE);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            queue.add(Event.CHANNEL_READ);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            queue.add(Event.CHANNEL_READ_COMPLETE);
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            queue.add(Event.USER_EVENT_TRIGGERED);
+        }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+            queue.add(Event.CHANNEL_WRITABILITY_CHANGED);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            queue.add(Event.EXCEPTION_CAUGHT);
+        }
+
+        Event pollEvent() {
+            Object o = queue.poll();
+            if (o instanceof AssertionError) {
+                throw (AssertionError) o;
+            }
+            return (Event) o;
+        }
+    }
+
+    private static final class OutboundEventHandler extends ChannelOutboundHandlerAdapter {
+        private final Queue<Object> queue = new ArrayDeque<Object>();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) {
+            queue.add(Event.HANDLER_ADDED);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            queue.add(Event.HANDLER_REMOVED);
+        }
+
+        @Override
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            try {
+                assertSame(LOCAL_ADDRESS, localAddress);
+                queue.add(Event.BIND);
+                promise.setSuccess();
+            } catch (AssertionError e) {
+                promise.setFailure(e);
+            }
+        }
+
+        @Override
+        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                            SocketAddress localAddress, ChannelPromise promise) {
+            try {
+                assertSame(REMOTE_ADDRESS, remoteAddress);
+                assertSame(LOCAL_ADDRESS, localAddress);
+                queue.add(Event.CONNECT);
+                promise.setSuccess();
+            } catch (AssertionError e) {
+                promise.setFailure(e);
+            }
+        }
+
+        @Override
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            queue.add(Event.DISCONNECT);
+            promise.setSuccess();
+        }
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            queue.add(Event.CLOSE);
+            promise.setSuccess();
+        }
+
+        @Override
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            queue.add(Event.DEREGISTER);
+            promise.setSuccess();
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            queue.add(Event.READ);
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            try {
+                assertSame(MSG, msg);
+                queue.add(Event.WRITE);
+                promise.setSuccess();
+            } catch (AssertionError e) {
+                promise.setFailure(e);
+            }
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) {
+            queue.add(Event.FLUSH);
+        }
+
+        Event pollEvent() {
+            Object o = queue.poll();
+            if (o instanceof AssertionError) {
+                throw (AssertionError) o;
+            }
+            return (Event) o;
+        }
     }
 }

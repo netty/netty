@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,23 +21,23 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
-
+import java.util.Random;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpResponseDecoderTest {
 
@@ -144,6 +144,58 @@ public class HttpResponseDecoderTest {
 
         ch.finish();
         assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testResponseDisallowPartialChunks() {
+        HttpResponseDecoder decoder = new HttpResponseDecoder(
+            HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
+            HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE,
+            HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE,
+            HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS,
+            HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE,
+            HttpObjectDecoder.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS,
+            false);
+        EmbeddedChannel ch = new EmbeddedChannel(decoder);
+
+        String headers = "HTTP/1.1 200 OK\r\n"
+            + "Transfer-Encoding: chunked\r\n"
+            + "\r\n";
+       assertTrue(ch.writeInbound(Unpooled.copiedBuffer(headers, CharsetUtil.US_ASCII)));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+
+        byte[] chunkBytes = new byte[10];
+        Random random = new Random();
+        random.nextBytes(chunkBytes);
+        final ByteBuf chunk = ch.alloc().buffer().writeBytes(chunkBytes);
+        final int chunkSize = chunk.readableBytes();
+        ByteBuf partialChunk1 = chunk.retainedSlice(0, 5);
+        ByteBuf partialChunk2 = chunk.retainedSlice(5, 5);
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(chunkSize)
+                                                          + "\r\n", CharsetUtil.US_ASCII)));
+        assertFalse(ch.writeInbound(partialChunk1));
+        assertTrue(ch.writeInbound(partialChunk2));
+
+        HttpContent content = ch.readInbound();
+        assertEquals(chunk, content.content());
+        content.release();
+        chunk.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+
+        // Write the last chunk.
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        // Ensure the last chunk was decoded.
+        HttpContent lastContent = ch.readInbound();
+        assertFalse(lastContent.content().isReadable());
+        lastContent.release();
+
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -725,6 +777,26 @@ public class HttpResponseDecoderTest {
         assertFalse(response.decoderResult().isFailure());
         assertEquals(HttpHeaderValues.CHUNKED.toString(), response.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
         assertEquals("netty.io", response.headers().get(HttpHeaderNames.HOST));
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testHttpMessageDecoderResult() {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 11\r\n" +
+                "Connection: close\r\n\r\n" +
+                "Lorem ipsum";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertThat(response.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) response.decoderResult();
+        assertThat(decoderResult.initialLineLength(), is(15));
+        assertThat(decoderResult.headerSize(), is(35));
+        assertThat(decoderResult.totalSize(), is(50));
+        HttpContent c = channel.readInbound();
+        c.release();
         assertFalse(channel.finish());
     }
 }

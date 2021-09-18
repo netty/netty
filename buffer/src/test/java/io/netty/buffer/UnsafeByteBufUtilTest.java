@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,21 +16,23 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 
 import static io.netty.util.internal.PlatformDependent.directBufferAddress;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UnsafeByteBufUtilTest {
-    @Before
+    @BeforeEach
     public void checkHasUnsafe() {
-        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        Assumptions.assumeTrue(PlatformDependent.hasUnsafe(), "sun.misc.Unsafe not found, skip tests");
     }
 
     @Test
@@ -49,7 +51,7 @@ public class UnsafeByteBufUtilTest {
             byte[] check = new byte[length];
             targetBuffer.getBytes(0, check, 0, length);
 
-            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
         } finally {
             targetBuffer.release();
         }
@@ -82,11 +84,168 @@ public class UnsafeByteBufUtilTest {
             byte[] check = new byte[length];
             targetBuffer.getBytes(0, check, 0, length);
 
-            assertArrayEquals("The byte array's copy does not equal the original", testData, check);
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
         } finally {
             targetBuffer.release();
             b1.release();
             b2.release();
+        }
+    }
+
+    @Test
+    public void testSetBytesWithByteArray() {
+        final byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final int length = testData.length;
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, length, length);
+
+        try {
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), 0, testData, 0, length);
+
+            final byte[] check = new byte[length];
+            targetBuffer.getBytes(0, check, 0, length);
+
+            assertArrayEquals(testData, check, "The byte array's copy does not equal the original");
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test
+    public void testSetBytesWithZeroLength() {
+        final byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final int length = testData.length;
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, length, length);
+
+        try {
+            final byte[] beforeSet = new byte[length];
+            targetBuffer.getBytes(0, beforeSet, 0, length);
+
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), 0, testData, 0, 0);
+
+            final byte[] check = new byte[length];
+            targetBuffer.getBytes(0, check, 0, length);
+
+            assertArrayEquals(beforeSet, check);
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test
+    public void testSetBytesWithNullByteArray() {
+
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, 8, 8);
+
+        try {
+            assertThrows(NullPointerException.class, new Executable() {
+                @Override
+                public void execute() {
+                    UnsafeByteBufUtil.setBytes(targetBuffer,
+                            directBufferAddress(targetBuffer.nioBuffer()), 0, (byte[]) null, 0, 8);
+                }
+            });
+        } finally {
+            targetBuffer.release();
+        }
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative index
+                testSetBytesOutOfBounds0(4, 4, -1, 0, 4);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds2() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative length
+                testSetBytesOutOfBounds0(4, 4, 0, 0, -1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds3() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // buffer length oversize
+                testSetBytesOutOfBounds0(4, 8, 0, 0, 5);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds4() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // buffer length oversize
+                testSetBytesOutOfBounds0(4, 4, 3, 0, 3);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds5() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // negative srcIndex
+                testSetBytesOutOfBounds0(4, 4, 0, -1, 4);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds6() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // src length oversize
+                testSetBytesOutOfBounds0(8, 4, 0, 0, 5);
+            }
+        });
+    }
+
+    @Test
+    public void testSetBytesOutOfBounds7() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                // src length oversize
+                testSetBytesOutOfBounds0(4, 4, 0, 1, 4);
+            }
+        });
+    }
+
+    private static void testSetBytesOutOfBounds0(int lengthOfBuffer,
+                                                 int lengthOfBytes,
+                                                 int index,
+                                                 int srcIndex,
+                                                 int length) {
+        final UnpooledByteBufAllocator alloc = new UnpooledByteBufAllocator(true);
+        final UnpooledDirectByteBuf targetBuffer = new UnpooledDirectByteBuf(alloc, lengthOfBuffer, lengthOfBuffer);
+
+        try {
+            UnsafeByteBufUtil.setBytes(targetBuffer,
+                    directBufferAddress(targetBuffer.nioBuffer()), index, new byte[lengthOfBytes], srcIndex, length);
+        } finally {
+            targetBuffer.release();
         }
     }
 

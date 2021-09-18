@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -142,7 +142,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
-                        out.add(res);
+                        out.add(ReferenceCountUtil.retain(res));
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
@@ -165,7 +165,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
-                        out.add(res);
+                        out.add(ReferenceCountUtil.retain(res));
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
@@ -193,7 +193,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
                     res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-                    out.add(res);
+                    out.add(ReferenceCountUtil.retain(res));
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
                         // only break out the switch statement if we have not content to process

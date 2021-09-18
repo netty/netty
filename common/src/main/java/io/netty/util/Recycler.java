@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 import static java.lang.Math.max;
@@ -89,6 +90,8 @@ public abstract class Recycler<T> {
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
         DELAYED_QUEUE_RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.delayedQueue.ratio", RATIO));
 
+        INITIAL_CAPACITY = min(DEFAULT_MAX_CAPACITY_PER_THREAD, 256);
+
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
                 logger.debug("-Dio.netty.recycler.maxCapacityPerThread: disabled");
@@ -104,8 +107,6 @@ public abstract class Recycler<T> {
                 logger.debug("-Dio.netty.recycler.delayedQueue.ratio: {}", DELAYED_QUEUE_RATIO);
             }
         }
-
-        INITIAL_CAPACITY = min(DEFAULT_MAX_CAPACITY_PER_THREAD, 256);
     }
 
     private final int maxCapacityPerThread;
@@ -209,8 +210,16 @@ public abstract class Recycler<T> {
 
     public interface Handle<T> extends ObjectPool.Handle<T>  { }
 
+    @SuppressWarnings("unchecked")
     private static final class DefaultHandle<T> implements Handle<T> {
-        int lastRecycledId;
+        private static final AtomicIntegerFieldUpdater<DefaultHandle<?>> LAST_RECYCLED_ID_UPDATER;
+        static {
+            AtomicIntegerFieldUpdater<?> updater = AtomicIntegerFieldUpdater.newUpdater(
+                    DefaultHandle.class, "lastRecycledId");
+            LAST_RECYCLED_ID_UPDATER = (AtomicIntegerFieldUpdater<DefaultHandle<?>>) updater;
+        }
+
+        volatile int lastRecycledId;
         int recycleId;
 
         boolean hasBeenRecycled;
@@ -234,6 +243,12 @@ public abstract class Recycler<T> {
             }
 
             stack.push(this);
+        }
+
+        public boolean compareAndSetLastRecycledId(int expectLastRecycledId, int updateLastRecycledId) {
+            // Use "weak…" because we do not need synchronize-with ordering, only atomicity.
+            // Also, spurious failures are fine, since no code should rely on recycling for correctness.
+            return LAST_RECYCLED_ID_UPDATER.weakCompareAndSet(this, expectLastRecycledId, updateLastRecycledId);
         }
     }
 
@@ -371,21 +386,27 @@ public abstract class Recycler<T> {
 
         void reclaimAllSpaceAndUnlink() {
             head.reclaimAllSpaceAndUnlink();
-            this.next = null;
+            next = null;
         }
 
         void add(DefaultHandle<?> handle) {
-            handle.lastRecycledId = id;
+            if (!handle.compareAndSetLastRecycledId(0, id)) {
+                // Separate threads could be racing to add the handle to each their own WeakOrderQueue.
+                // We only add the handle to the queue if we win the race and observe that lastRecycledId is zero.
+                return;
+            }
 
             // While we also enforce the recycling ratio when we transfer objects from the WeakOrderQueue to the Stack
             // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
             // without control
-            if (handleRecycleCount < interval) {
-                handleRecycleCount++;
-                // Drop the item to prevent recycling to aggressive.
-                return;
+            if (!handle.hasBeenRecycled) {
+                if (handleRecycleCount < interval) {
+                    handleRecycleCount++;
+                    // Drop the item to prevent from recycling too aggressively.
+                    return;
+                }
+                handleRecycleCount = 0;
             }
-            handleRecycleCount = 0;
 
             Link tail = this.tail;
             int writeIndex;
@@ -649,10 +670,10 @@ public abstract class Recycler<T> {
         }
 
         private void pushNow(DefaultHandle<?> item) {
-            if ((item.recycleId | item.lastRecycledId) != 0) {
+            if (item.recycleId != 0 || !item.compareAndSetLastRecycledId(0, OWN_THREAD_ID)) {
                 throw new IllegalStateException("recycled already");
             }
-            item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
+            item.recycleId = OWN_THREAD_ID;
 
             int size = this.size;
             if (size >= maxCapacity || dropHandle(item)) {

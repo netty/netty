@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,34 +19,38 @@ package io.netty.util.concurrent;
 import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromiseTest.class);
     private static int stackOverflowDepth;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         try {
             findStackOverflowDepth();
@@ -56,6 +60,7 @@ public class DefaultPromiseTest {
         }
     }
 
+    @SuppressWarnings("InfiniteRecursion")
     private static void findStackOverflowDepth() {
         ++stackOverflowDepth;
         findStackOverflowDepth();
@@ -65,62 +70,131 @@ public class DefaultPromiseTest {
         return max(stackOverflowDepth << 1, stackOverflowDepth);
     }
 
+    private static class RejectingEventExecutor extends AbstractEventExecutor {
+        @Override
+        public boolean isShuttingDown() {
+            return false;
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            return null;
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            return null;
+        }
+
+        @Override
+        public void shutdown() {
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return false;
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return false;
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
+                                                         TimeUnit unit) {
+            return fail("Cannot schedule commands");
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return false;
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            fail("Cannot schedule commands");
+        }
+    }
+
     @Test
     public void testCancelDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Promise<Void> promise = new DefaultPromise<Void>(executor);
         assertTrue(promise.cancel(false));
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertTrue(promise.isCancelled());
     }
 
     @Test
     public void testSuccessDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Object value = new Object();
         Promise<Object> promise = new DefaultPromise<Object>(executor);
         promise.setSuccess(value);
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertSame(value, promise.getNow());
     }
 
     @Test
     public void testFailureDoesNotScheduleWhenNoListeners() {
-        EventExecutor executor = Mockito.mock(EventExecutor.class);
-        Mockito.when(executor.inEventLoop()).thenReturn(false);
+        EventExecutor executor = new RejectingEventExecutor();
 
         Exception cause = new Exception();
         Promise<Void> promise = new DefaultPromise<Void>(executor);
         promise.setFailure(cause);
-        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertSame(cause, promise.cause());
     }
 
-    @Test(expected = CancellationException.class)
-    public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
+    @Test
+    public void testCancellationExceptionIsThrownWhenBlockingGet() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
-        promise.get();
-    }
-
-    @Test(expected = CancellationException.class)
-    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
-            ExecutionException, TimeoutException {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        assertTrue(promise.cancel(false));
-        promise.get(1, TimeUnit.SECONDS);
+        assertThrows(CancellationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                promise.get();
+            }
+        });
     }
 
     @Test
-    public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
-    ExecutionException, TimeoutException {
+    public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         assertTrue(promise.cancel(false));
-        assertThat(promise.cause(), instanceOf(CancellationException.class));
+        assertThrows(CancellationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                promise.get(1, TimeUnit.SECONDS);
+            }
+        });
+    }
+
+    @Test
+    public void testCancellationExceptionIsReturnedAsCause() {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        assertTrue(promise.cancel(false));
+        assertThat(promise.cause()).isInstanceOf(CancellationException.class);
     }
 
     @Test
@@ -211,11 +285,11 @@ public class DefaultPromiseTest {
 
                 promise.addListener(listener1).addListener(listener2).addListener(listener3);
 
-                assertSame("Fail 1 during run " + i + " / " + runs, listener1, listeners.take());
-                assertSame("Fail 2 during run " + i + " / " + runs, listener2, listeners.take());
-                assertSame("Fail 3 during run " + i + " / " + runs, listener3, listeners.take());
-                assertSame("Fail 4 during run " + i + " / " + runs, listener4, listeners.take());
-                assertTrue("Fail during run " + i + " / " + runs, listeners.isEmpty());
+                assertSame(listener1, listeners.take(), "Fail 1 during run " + i + " / " + runs);
+                assertSame(listener2, listeners.take(), "Fail 2 during run " + i + " / " + runs);
+                assertSame(listener3, listeners.take(), "Fail 3 during run " + i + " / " + runs);
+                assertSame(listener4, listeners.take(), "Fail 4 during run " + i + " / " + runs);
+                assertTrue(listeners.isEmpty(), "Fail during run " + i + " / " + runs);
             }
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
@@ -231,22 +305,26 @@ public class DefaultPromiseTest {
         testListenerNotifyLater(2);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testPromiseListenerAddWhenCompleteFailure() throws Exception {
         testPromiseListenerAddWhenComplete(fakeException());
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testPromiseListenerAddWhenCompleteSuccess() throws Exception {
         testPromiseListenerAddWhenComplete(null);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testLateListenerIsOrderedCorrectlySuccess() throws InterruptedException {
         testLateListenerIsOrderedCorrectly(null);
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testLateListenerIsOrderedCorrectlyFailure() throws InterruptedException {
         testLateListenerIsOrderedCorrectly(fakeException());
     }
@@ -275,7 +353,7 @@ public class DefaultPromiseTest {
                 promise.getKey().start();
                 final long start = System.nanoTime();
                 promise.getValue().awaitUninterruptibly(wait, TimeUnit.NANOSECONDS);
-                assertThat(System.nanoTime() - start, lessThan(wait));
+                assertThat(System.nanoTime() - start).isLessThan(wait);
             }
         } finally {
             if (executor != null) {
@@ -335,7 +413,7 @@ public class DefaultPromiseTest {
 
         assertTrue(latch.await(2, TimeUnit.SECONDS));
         for (int i = 0; i < p.length; ++i) {
-            assertTrue("index " + i, p[i].isSuccess());
+            assertTrue(p[i].isSuccess(), "index " + i);
         }
     }
 
@@ -368,16 +446,16 @@ public class DefaultPromiseTest {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    testStackOverFlowChainedFuturesA(executor, p, latch);
+                    testStackOverFlowChainedFuturesB(executor, p, latch);
                 }
             });
         } else {
-            testStackOverFlowChainedFuturesA(executor, p, latch);
+            testStackOverFlowChainedFuturesB(executor, p, latch);
         }
 
         assertTrue(latch.await(2, TimeUnit.SECONDS));
         for (int i = 0; i < p.length; ++i) {
-            assertTrue("index " + i, p[i].isSuccess());
+            assertTrue(p[i].isSuccess(), "index " + i);
         }
     }
 
@@ -533,8 +611,8 @@ public class DefaultPromiseTest {
             }
         });
 
-        assertTrue("Should have notified " + expectedCount + " listeners",
-                   latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS),
+            "Should have notified " + expectedCount + " listeners");
         executor.shutdownGracefully().sync();
     }
 

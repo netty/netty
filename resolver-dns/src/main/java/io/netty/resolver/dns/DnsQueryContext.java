@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,7 +30,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -52,7 +51,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     private final InetSocketAddress nameServerAddr;
 
     private final boolean recursionDesired;
-    private volatile ScheduledFuture<?> timeoutFuture;
+    private volatile Future<?> timeoutFuture;
 
     DnsQueryContext(DnsNameResolver parent,
                     InetSocketAddress nameServerAddr,
@@ -228,7 +227,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     @Override
     public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
         // Cancel the timeout task.
-        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+        Future<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture != null) {
             this.timeoutFuture = null;
             timeoutFuture.cancel(false);

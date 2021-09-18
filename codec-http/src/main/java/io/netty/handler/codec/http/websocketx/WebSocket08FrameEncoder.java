@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// (BSD License: http://www.opensource.org/licenses/bsd-license)
+// (BSD License: https://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
 // All rights reserved.
@@ -57,6 +57,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -178,7 +179,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int random = (int) (Math.random() * Integer.MAX_VALUE);
+                int random = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 buf.writeBytes(mask);
 

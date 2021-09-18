@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,9 @@
 package io.netty.util;
 
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,11 +28,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static io.netty.util.NetUtil.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NetUtilTest {
 
@@ -382,7 +383,7 @@ public class NetUtilTest {
     private static final Map<byte[], String> ipv6ToAddressStrings = new HashMap<byte[], String>() {
         private static final long serialVersionUID = 2999763170377573184L;
         {
-            // From the RFC 5952 http://tools.ietf.org/html/rfc5952#section-4
+            // From the RFC 5952 https://tools.ietf.org/html/rfc5952#section-4
             put(new byte[] {
                         32, 1, 13, -72,
                         0, 0, 0, 0,
@@ -610,72 +611,72 @@ public class NetUtilTest {
     @Test
     public void testIsValidIpV4Address() {
         for (String host : validIpV4Hosts.keySet()) {
-            assertTrue(host, isValidIpV4Address(host));
+            assertTrue(isValidIpV4Address(host), host);
         }
         for (String host : invalidIpV4Hosts.keySet()) {
-            assertFalse(host, isValidIpV4Address(host));
+            assertFalse(isValidIpV4Address(host), host);
         }
     }
 
     @Test
     public void testIsValidIpV6Address() {
         for (String host : validIpV6Hosts.keySet()) {
-            assertTrue(host, isValidIpV6Address(host));
+            assertTrue(isValidIpV6Address(host), host);
             if (host.charAt(0) != '[' && !host.contains("%")) {
-                assertNotNull(host, getByName(host, true));
+                assertNotNull(getByName(host, true), host);
 
                 String hostMod = '[' + host + ']';
-                assertTrue(hostMod, isValidIpV6Address(hostMod));
+                assertTrue(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = host + '%';
-                assertTrue(hostMod, isValidIpV6Address(hostMod));
+                assertTrue(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = host + "%eth1";
-                assertTrue(hostMod, isValidIpV6Address(hostMod));
+                assertTrue(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = '[' + host + "%]";
-                assertTrue(hostMod, isValidIpV6Address(hostMod));
+                assertTrue(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = '[' + host + "%1]";
-                assertTrue(hostMod, isValidIpV6Address(hostMod));
+                assertTrue(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = '[' + host + "]%";
-                assertFalse(hostMod, isValidIpV6Address(hostMod));
+                assertFalse(isValidIpV6Address(hostMod), hostMod);
 
                 hostMod = '[' + host + "]%1";
-                assertFalse(hostMod, isValidIpV6Address(hostMod));
+                assertFalse(isValidIpV6Address(hostMod), hostMod);
             }
         }
         for (String host : invalidIpV6Hosts.keySet()) {
-            assertFalse(host, isValidIpV6Address(host));
-            assertNull(host, getByName(host));
+            assertFalse(isValidIpV6Address(host), host);
+            assertNull(getByName(host), host);
 
             String hostMod = '[' + host + ']';
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = host + '%';
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = host + "%eth1";
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = '[' + host + "%]";
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = '[' + host + "%1]";
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = '[' + host + "]%";
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = '[' + host + "]%1";
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = host + ']';
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
 
             hostMod = '[' + host;
-            assertFalse(hostMod, isValidIpV6Address(hostMod));
+            assertFalse(isValidIpV6Address(hostMod), hostMod);
         }
     }
 
@@ -725,24 +726,30 @@ public class NetUtilTest {
     }
 
     @Test
+    public void testIPv4ToInt() throws UnknownHostException {
+        assertEquals(2130706433, ipv4AddressToInt((Inet4Address) InetAddress.getByName("127.0.0.1")));
+        assertEquals(-1062731519, ipv4AddressToInt((Inet4Address) InetAddress.getByName("192.168.1.1")));
+    }
+
+    @Test
     public void testIpv4MappedIp6GetByName() {
         for (Entry<String, String> testEntry : ipv4MappedToIPv6AddressStrings.entrySet()) {
             String srcIp = testEntry.getKey();
             String dstIp = testEntry.getValue();
             Inet6Address inet6Address = getByName(srcIp, true);
-            assertNotNull(srcIp + ", " + dstIp, inet6Address);
-            assertEquals(srcIp, dstIp, toAddressString(inet6Address, true));
+            assertNotNull(inet6Address, srcIp + ", " + dstIp);
+            assertEquals(dstIp, toAddressString(inet6Address, true), srcIp);
         }
     }
 
     @Test
     public void testInvalidIpv4MappedIp6GetByName() {
         for (String host : invalidIpV4Hosts.keySet()) {
-            assertNull(host, getByName(host, true));
+            assertNull(getByName(host, true), host);
         }
 
         for (String host : invalidIpV6Hosts.keySet()) {
-            assertNull(host, getByName(host, true));
+            assertNull(getByName(host, true), host);
         }
     }
 
@@ -763,7 +770,7 @@ public class NetUtilTest {
     }
 
     private static void assertHexDumpEquals(String expected, byte[] actual, String message) {
-        assertEquals(message, expected, hex(actual));
+        assertEquals(expected, hex(actual), message);
     }
 
     private static String hex(byte[] value) {

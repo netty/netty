@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -51,7 +51,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
-                EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE);
+                EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
+                EpollChannelOption.UDP_GRO);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -102,6 +103,9 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             return (T) Integer.valueOf(getMaxDatagramPayloadSize());
         }
+        if (option == EpollChannelOption.UDP_GRO) {
+            return (T) Boolean.valueOf(isUdpGro());
+        }
         return super.getOption(option);
     }
 
@@ -140,6 +144,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             setIpRecvOrigDestAddr((Boolean) value);
         } else if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             setMaxDatagramPayloadSize((Integer) value);
+        } else if (option == EpollChannelOption.UDP_GRO) {
+            setUdpGro((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -433,7 +439,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
     public boolean isIpTransparent() {
@@ -445,7 +451,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
     public EpollDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
@@ -458,7 +464,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
     public boolean isFreeBind() {
@@ -470,7 +476,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
     public EpollDatagramChannelConfig setFreeBind(boolean freeBind) {
@@ -483,7 +489,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
      * enabled, {@code false} otherwise.
      */
     public boolean isIpRecvOrigDestAddr() {
@@ -495,7 +501,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
      * enabled, {@code false} for disable it. Default is disabled.
      */
     public EpollDatagramChannelConfig setIpRecvOrigDestAddr(boolean ipTransparent) {
@@ -525,5 +531,38 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      */
     public int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
+    }
+
+    private volatile boolean gro;
+
+    /**
+     * Enable / disable <a href="https://lwn.net/Articles/768995/">UDP_GRO</a>.
+     * @param gro {@code true} if {@code UDP_GRO} should be enabled, {@code false} otherwise.
+     * @return this.
+     */
+    public EpollDatagramChannelConfig setUdpGro(boolean gro) {
+        try {
+            ((EpollDatagramChannel) channel).socket.setUdpGro(gro);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+        this.gro = gro;
+        return this;
+    }
+
+    /**
+     * Returns if {@code UDP_GRO} is enabled.
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public boolean isUdpGro() {
+        // We don't do a syscall here but just return the cached value due a kernel bug:
+        // https://lore.kernel.org/netdev/20210325195614.800687-1-norman_maurer@apple.com/T/#u
+        return gro;
+    }
+
+    @Override
+    public EpollDatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
     }
 }

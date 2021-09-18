@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -97,9 +97,9 @@ public final class NativeLibraryLoader {
                 return;
             } catch (Throwable t) {
                 suppressed.add(t);
-                logger.debug("Unable to load the library '{}', trying next name...", name, t);
             }
         }
+
         IllegalArgumentException iae =
                 new IllegalArgumentException("Failed to load any of the given libraries: " + Arrays.toString(names));
         ThrowableUtil.addSuppressedAndClear(iae, suppressed);
@@ -137,11 +137,6 @@ public final class NativeLibraryLoader {
             return;
         } catch (Throwable ex) {
             suppressed.add(ex);
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "{} cannot be loaded from java.library.path, "
-                                + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
-            }
         }
 
         String libname = System.mapLibraryName(name);
@@ -182,7 +177,7 @@ public final class NativeLibraryLoader {
             String prefix = libname.substring(0, index);
             String suffix = libname.substring(index);
 
-            tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
+            tmpFile = PlatformDependent.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
 
@@ -343,19 +338,31 @@ public final class NativeLibraryLoader {
                 return;
             } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             } catch (Exception e) {
                 suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             }
             NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
             logger.debug("Successfully loaded the library {}", name);
+        } catch (NoSuchMethodError nsme) {
+            if (suppressed != null) {
+                ThrowableUtil.addSuppressed(nsme, suppressed);
+            }
+            rethrowWithMoreDetailsIfPossible(name, nsme);
         } catch (UnsatisfiedLinkError ule) {
             if (suppressed != null) {
                 ThrowableUtil.addSuppressed(ule, suppressed);
             }
             throw ule;
         }
+    }
+
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    private static void rethrowWithMoreDetailsIfPossible(String name, NoSuchMethodError error) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            throw new LinkageError(
+                    "Possible multiple incompatible native libraries on the classpath for '" + name + "'?", error);
+        }
+        throw error;
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)

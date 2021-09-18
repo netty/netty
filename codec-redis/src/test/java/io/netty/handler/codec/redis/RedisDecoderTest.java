@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,15 +22,20 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link RedisDecoder} and {@link RedisArrayAggregator}.
@@ -39,7 +44,7 @@ public class RedisDecoderTest {
 
     private EmbeddedChannel channel;
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         channel = newChannel(false);
     }
@@ -51,7 +56,7 @@ public class RedisDecoderTest {
                 new RedisArrayAggregator());
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception {
         assertFalse(channel.finish());
     }
@@ -66,15 +71,20 @@ public class RedisDecoderTest {
         ReferenceCountUtil.release(msg);
     }
 
-    @Test(expected = DecoderException.class)
+    @Test
     public void shouldNotDecodeInlineCommandByDefault() {
-        assertFalse(channel.writeInbound(byteBufOf("P")));
-        assertFalse(channel.writeInbound(byteBufOf("I")));
-        assertFalse(channel.writeInbound(byteBufOf("N")));
-        assertFalse(channel.writeInbound(byteBufOf("G")));
-        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf("P")));
+                assertFalse(channel.writeInbound(byteBufOf("I")));
+                assertFalse(channel.writeInbound(byteBufOf("N")));
+                assertFalse(channel.writeInbound(byteBufOf("G")));
+                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
 
-        channel.readInbound();
+                channel.readInbound();
+            }
+        });
     }
 
     @Test
@@ -263,22 +273,27 @@ public class RedisDecoderTest {
         ReferenceCountUtil.release(msg);
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
-    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() throws Exception {
+    @Test
+    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
         buf.writeBytes(byteBufOf("*2\r\n+Foo\r\n-Bar\r\n"));
         assertTrue(channel.writeInbound(buf));
 
-        ArrayRedisMessage msg = channel.readInbound();
+        final ArrayRedisMessage msg = channel.readInbound();
 
         ReferenceCountUtil.release(msg);
-        ReferenceCountUtil.release(msg);
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                ReferenceCountUtil.release(msg);
+            }
+        });
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
-    public void shouldErrorOnReleaseArrayChildReferenceCounted() throws Exception {
+    @Test
+    public void shouldErrorOnReleaseArrayChildReferenceCounted() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
@@ -287,12 +302,17 @@ public class RedisDecoderTest {
 
         ArrayRedisMessage msg = channel.readInbound();
 
-        List<RedisMessage> children = msg.children();
+        final List<RedisMessage> children = msg.children();
         ReferenceCountUtil.release(msg);
-        ReferenceCountUtil.release(children.get(1));
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                ReferenceCountUtil.release(children.get(1));
+            }
+        });
     }
 
-    @Test(expected = IllegalReferenceCountException.class)
+    @Test
     public void shouldErrorOnReleasecontentOfArrayChildReferenceCounted() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
@@ -302,9 +322,14 @@ public class RedisDecoderTest {
         ArrayRedisMessage msg = channel.readInbound();
 
         List<RedisMessage> children = msg.children();
-        ByteBuf childBuf = ((FullBulkStringRedisMessage) children.get(0)).content();
+        final ByteBuf childBuf = ((FullBulkStringRedisMessage) children.get(0)).content();
         ReferenceCountUtil.release(msg);
-        ReferenceCountUtil.release(childBuf);
+        assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() {
+                ReferenceCountUtil.release(childBuf);
+            }
+        });
     }
 
     @Test

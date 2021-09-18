@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,8 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
 
 import java.nio.channels.ClosedChannelException;
@@ -36,15 +37,15 @@ import java.util.List;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertSame;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpObjectAggregatorTest {
 
@@ -119,11 +120,11 @@ public class HttpObjectAggregatorTest {
 
     @Test
     public void testOversizedRequest() {
-        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
+        final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
-        HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
+        final HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -134,12 +135,12 @@ public class HttpObjectAggregatorTest {
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
-        try {
-            assertFalse(embedder.writeInbound(chunk3));
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof ClosedChannelException);
-        }
+        assertThrows(ClosedChannelException.class, new Executable() {
+            @Override
+            public void execute() {
+                embedder.writeInbound(chunk3);
+            }
+        });
 
         assertFalse(embedder.finish());
     }
@@ -211,7 +212,7 @@ public class HttpObjectAggregatorTest {
     }
 
     private static void checkOversizedRequest(HttpRequest message) {
-        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
+        final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
 
         assertFalse(embedder.writeInbound(message));
         HttpResponse response = embedder.readOutbound();
@@ -224,13 +225,13 @@ public class HttpObjectAggregatorTest {
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
 
-            try {
-                embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
-                fail();
-            } catch (Exception e) {
-                assertThat(e, instanceOf(ClosedChannelException.class));
-                // expected
-            }
+            assertThrows(ClosedChannelException.class, new Executable() {
+                @Override
+                public void execute() {
+                    embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+                }
+            });
+
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());
@@ -281,43 +282,58 @@ public class HttpObjectAggregatorTest {
 
     @Test
     public void testOversizedResponse() {
-        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
+        final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
         HttpResponse message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        final HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
 
-        try {
-            embedder.writeInbound(chunk2);
-            fail();
-        } catch (TooLongFrameException expected) {
-            // Expected
-        }
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                embedder.writeInbound(chunk2);
+            }
+        });
 
         assertFalse(embedder.isOpen());
         assertFalse(embedder.finish());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidConstructorUsage() {
-        new HttpObjectAggregator(-1);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HttpObjectAggregator(-1);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidMaxCumulationBufferComponents() {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
-        aggr.setMaxCumulationBufferComponents(1);
+        final HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                aggr.setMaxCumulationBufferComponents(1);
+            }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testSetMaxCumulationBufferComponentsAfterInit() throws Exception {
-        HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
+        final HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
         ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
         aggr.handlerAdded(ctx);
         Mockito.verifyNoMoreInteractions(ctx);
-        aggr.setMaxCumulationBufferComponents(10);
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                aggr.setMaxCumulationBufferComponents(10);
+            }
+        });
     }
 
     @Test

@@ -1,0 +1,79 @@
+# ----------------------------------------------------------------------------
+# Copyright 2021 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+name: Build project
+
+on:
+  push:
+    branches: [ "main"]
+
+  schedule:
+    - cron: '30 1 * * 1'  # At 01:30 on Monday, every Monday.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java11
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build"
+
+    name: ${{ matrix.setup }}
+    steps:
+      - uses: actions/checkout@v2
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ matrix.setup }}-
+            ${{ runner.os }}-maven-
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: build-docker-cache-${{ matrix.setup }}-{hash}
+          restore-keys: |
+            build-docker-cache-${{ matrix.setup }}-
+            build-docker-cache-
+
+      - name: Build docker image
+        run: docker-compose ${{ matrix.docker-compose-build }}
+
+      - name: Build project without leak detection
+        run: docker-compose ${{ matrix.docker-compose-run }} | tee build.output
+
+      - name: Checking for test failures
+        run: ./.github/scripts/check_build_result.sh build.output
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: target
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log

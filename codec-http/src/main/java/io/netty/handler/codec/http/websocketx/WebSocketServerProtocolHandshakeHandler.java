@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -61,7 +61,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         final FullHttpRequest req = (FullHttpRequest) msg;
-        if (isNotWebSocketPath(req)) {
+        if (!isWebSocketPath(req)) {
             ctx.fireChannelRead(msg);
             return;
         }
@@ -113,9 +113,21 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
     }
 
-    private boolean isNotWebSocketPath(FullHttpRequest req) {
+    private boolean isWebSocketPath(FullHttpRequest req) {
         String websocketPath = serverConfig.websocketPath();
-        return serverConfig.checkStartsWith() ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
+        String uri = req.uri();
+        boolean checkStartUri = uri.startsWith(websocketPath);
+        boolean checkNextUri = "/".equals(websocketPath) || checkNextUri(uri, websocketPath);
+        return serverConfig.checkStartsWith() ? (checkStartUri && checkNextUri) : uri.equals(websocketPath);
+    }
+
+    private boolean checkNextUri(String uri, String websocketPath) {
+        int len = websocketPath.length();
+        if (uri.length() > len) {
+            char nextUri = uri.charAt(len);
+            return nextUri == '/' || nextUri == '?';
+        }
+        return true;
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
@@ -146,7 +158,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             @Override
             public void run() {
                 if (!localHandshakePromise.isDone() &&
-                        localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
+                    localHandshakePromise.tryFailure(new WebSocketServerHandshakeException("handshake timed out"))) {
                     ctx.flush()
                        .fireUserEventTriggered(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                        .close();

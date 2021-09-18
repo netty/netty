@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -169,6 +169,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
+    private final boolean validateHeaders;
     private boolean handlingUpgrade;
 
     /**
@@ -199,22 +200,48 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
+        this(sourceCodec, upgradeCodecFactory, maxContentLength, true);
+    }
+
+    /**
+     * Constructs the upgrader with the supported codecs.
+     *
+     * @param sourceCodec the codec that is being used initially
+     * @param upgradeCodecFactory the factory that creates a new upgrade codec
+     *                            for one of the requested upgrade protocols
+     * @param maxContentLength the maximum length of the content of an upgrade request
+     * @param validateHeaders validate the header names and values of the upgrade response.
+     */
+    public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
+                                    int maxContentLength, boolean validateHeaders) {
         super(maxContentLength);
 
         this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
         this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out)
             throws Exception {
-        // Determine if we're already handling an upgrade request or just starting a new one.
-        handlingUpgrade |= isUpgradeRequest(msg);
+
         if (!handlingUpgrade) {
-            // Not handling an upgrade request, just pass it to the next handler.
-            ReferenceCountUtil.retain(msg);
-            out.add(msg);
-            return;
+            // Not handling an upgrade request yet. Check if we received a new upgrade request.
+            if (msg instanceof HttpRequest) {
+                HttpRequest req = (HttpRequest) msg;
+                if (req.headers().contains(HttpHeaderNames.UPGRADE) &&
+                    shouldHandleUpgradeRequest(req)) {
+                    handlingUpgrade = true;
+                } else {
+                    ReferenceCountUtil.retain(msg);
+                    ctx.fireChannelRead(msg);
+                    return;
+                }
+            } else {
+                ReferenceCountUtil.retain(msg);
+                ctx.fireChannelRead(msg);
+                return;
+            }
         }
 
         FullHttpRequest fullRequest;
@@ -248,10 +275,20 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     }
 
     /**
-     * Determines whether or not the message is an HTTP upgrade request.
+     * Determines whether the specified upgrade {@link HttpRequest} should be handled by this handler or not.
+     * This method will be invoked only when the request contains an {@code Upgrade} header.
+     * It always returns {@code true} by default, which means any request with an {@code Upgrade} header
+     * will be handled. You can override this method to ignore certain {@code Upgrade} headers, for example:
+     * <pre>{@code
+     * @Override
+     * protected boolean isUpgradeRequest(HttpRequest req) {
+     *   // Do not handle WebSocket upgrades.
+     *   return !req.headers().contains(HttpHeaderNames.UPGRADE, "websocket", false);
+     * }
+     * }</pre>
      */
-    private static boolean isUpgradeRequest(HttpObject msg) {
-        return msg instanceof HttpRequest && ((HttpRequest) msg).headers().get(HttpHeaderNames.UPGRADE) != null;
+    protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
+        return true;
     }
 
     /**
@@ -286,7 +323,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         // Make sure the CONNECTION header is present.
         List<String> connectionHeaderValues = request.headers().getAll(HttpHeaderNames.CONNECTION);
 
-        if (connectionHeaderValues == null) {
+        if (connectionHeaderValues == null || connectionHeaderValues.isEmpty()) {
             return false;
         }
 
@@ -352,9 +389,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     /**
      * Creates the 101 Switching Protocols response message.
      */
-    private static FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, SWITCHING_PROTOCOLS,
-                Unpooled.EMPTY_BUFFER, false);
+    private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
+        DefaultFullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, validateHeaders);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

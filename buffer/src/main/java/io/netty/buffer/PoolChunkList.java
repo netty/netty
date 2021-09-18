@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -96,7 +96,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         this.prevList = prevList;
     }
 
-    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity, PoolThreadCache threadCache) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache threadCache) {
+        int normCapacity = arena.sizeIdx2size(sizeIdx);
         if (normCapacity > maxCapacity) {
             // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
             // be handled by the PoolChunks that are contained in this PoolChunkList.
@@ -104,7 +105,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         }
 
         for (PoolChunk<T> cur = head; cur != null; cur = cur.next) {
-            if (cur.allocate(buf, reqCapacity, normCapacity, threadCache)) {
+            if (cur.allocate(buf, reqCapacity, sizeIdx, threadCache)) {
                 if (cur.freeBytes <= freeMinThreshold) {
                     remove(cur);
                     nextList.add(cur);
@@ -115,8 +116,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         return false;
     }
 
-    boolean free(PoolChunk<T> chunk, long handle, ByteBuffer nioBuffer) {
-        chunk.free(handle, nioBuffer);
+    boolean free(PoolChunk<T> chunk, long handle, int normCapacity, ByteBuffer nioBuffer) {
+        chunk.free(handle, normCapacity, nioBuffer);
         if (chunk.freeBytes > freeMaxThreshold) {
             remove(chunk);
             // Move the PoolChunk down the PoolChunkList linked-list.

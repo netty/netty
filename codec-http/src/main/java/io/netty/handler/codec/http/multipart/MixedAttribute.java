@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,8 +27,8 @@ import java.nio.charset.Charset;
  * Mixed implementation using both in Memory and in File with a limit of size
  */
 public class MixedAttribute implements Attribute {
-    private String baseDir;
-    private boolean deleteOnExit;
+    private final String baseDir;
+    private final boolean deleteOnExit;
     private Attribute attribute;
 
     private final long limitSize;
@@ -122,16 +122,21 @@ public class MixedAttribute implements Attribute {
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
-            checkSize(attribute.length() + buffer.readableBytes());
-            if (attribute.length() + buffer.readableBytes() > limitSize) {
-                DiskAttribute diskAttribute = new DiskAttribute(attribute
-                        .getName(), attribute.definedLength(), baseDir, deleteOnExit);
-                diskAttribute.setMaxSize(maxSize);
-                if (((MemoryAttribute) attribute).getByteBuf() != null) {
-                    diskAttribute.addContent(((MemoryAttribute) attribute)
-                        .getByteBuf(), false);
+            try {
+                checkSize(attribute.length() + buffer.readableBytes());
+                if (attribute.length() + buffer.readableBytes() > limitSize) {
+                    DiskAttribute diskAttribute = new DiskAttribute(attribute
+                            .getName(), attribute.definedLength(), baseDir, deleteOnExit);
+                    diskAttribute.setMaxSize(maxSize);
+                    if (((MemoryAttribute) attribute).getByteBuf() != null) {
+                        diskAttribute.addContent(((MemoryAttribute) attribute)
+                            .getByteBuf(), false);
+                    }
+                    attribute = diskAttribute;
                 }
-                attribute = diskAttribute;
+            } catch (IOException e) {
+                buffer.release();
+                throw e;
             }
         }
         attribute.addContent(buffer, last);
@@ -199,7 +204,12 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        checkSize(buffer.readableBytes());
+        try {
+            checkSize(buffer.readableBytes());
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
@@ -270,9 +280,6 @@ public class MixedAttribute implements Attribute {
 
     @Override
     public void setValue(String value) throws IOException {
-        if (value != null) {
-            checkSize(value.getBytes().length);
-        }
         attribute.setValue(value);
     }
 

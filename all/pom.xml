@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,13 +14,13 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.51.Final-SNAPSHOT</version>
+    <version>4.1.69.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -31,7 +31,7 @@
   <properties>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
     <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <dependencyManagement>
@@ -71,7 +71,7 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
-          <classifier>linux-aarch64</classifier>
+          <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -84,8 +84,22 @@
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <classifier>osx-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -107,7 +121,7 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
-          <classifier>linux-aarch64</classifier>
+          <classifier>linux-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -120,15 +134,29 @@
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <classifier>osx-aarch_64</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
       </dependencies>
     </profile>
 
-    <!-- The linux profile will only include the native jar for epol to the all jar.
+    <!-- The linux profile will only include the native jar for epoll to the all jar.
          If you want to also include the native jar for kqueue use -Puber.
     -->
     <profile>
@@ -186,7 +214,8 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
-          <classifier>osx-x86_64</classifier>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -217,6 +246,12 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -244,6 +279,12 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
         <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -253,125 +294,9 @@
         </dependency>
       </dependencies>
     </profile>
-
-    <profile>
-      <id>full</id>
-      <!-- Only include in full profile as this will not work on Java9 yet -->
-      <!-- https://issues.apache.org/jira/browse/JXR-133 -->
-      <build>
-        <plugins>
-          <!-- Generate Xref -->
-          <plugin>
-            <artifactId>maven-jxr-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>generate-xref</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>jxr</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <linkJavadoc>true</linkJavadoc>
-              <destDir>${project.build.directory}/xref</destDir>
-              <javadocDir>${project.build.directory}/api</javadocDir>
-              <docTitle>Netty Source Xref (${project.version})</docTitle>
-              <windowTitle>Netty Source Xref (${project.version})</windowTitle>
-            </configuration>
-            <dependencies>
-              <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>netty-build</artifactId>
-                <version>${netty.build.version}</version>
-              </dependency>
-            </dependencies>
-          </plugin>
-
-          <!-- Generate Javadoc -->
-          <plugin>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <skip>${quickbuild}</skip>
-              <excludePackageNames>*.internal,*.example</excludePackageNames>
-              <docfilessubdirs>true</docfilessubdirs>
-              <outputDirectory>${project.build.directory}/api</outputDirectory>
-              <overview>${project.basedir}/src/javadoc/overview.html</overview>
-              <doctitle>Netty API Reference (${project.version})</doctitle>
-              <windowtitle>Netty API Reference (${project.version})</windowtitle>
-              <detectJavaApiLink>false</detectJavaApiLink>
-              <additionalparam>
-                -link http://docs.oracle.com/javase/7/docs/api/
-                -link https://developers.google.com/protocol-buffers/docs/reference/java/
-                -link http://docs.oracle.com/javaee/6/api/
-                -link http://www.slf4j.org/apidocs/
-                -link https://commons.apache.org/proper/commons-logging/apidocs/
-                -link http://logging.apache.org/log4j/1.2/apidocs/
-
-                -group "Low-level data representation" io.netty.buffer*
-                -group "Central interface for all I/O operations" io.netty.channel*
-                -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
-                -group "Reusable I/O event interceptors" io.netty.handler*
-                -group "Miscellaneous" io.netty.util*
-              </additionalparam>
-              <locale>en_US</locale>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>coverage</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>jacoco-merge</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>merge</goal>
-                </goals>
-                <configuration>
-                  <fileSets>
-                    <fileSet>
-                      <directory>${project.parent.build.directory}/..</directory>
-                      <includes>
-                        <include>**/target/jacoco.exec</include>
-                      </includes>
-                    </fileSet>
-                  </fileSets>
-                </configuration>
-              </execution>
-              <execution>
-                <id>jacoco-report</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>report</goal>
-                </goals>
-                <configuration>
-                  <outputDirectory>${project.build.directory}/jacoco-report</outputDirectory>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
   </profiles>
 
   <dependencies>
-
     <!-- All release modules -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -503,41 +428,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-udt</artifactId>
       <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-example</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- Add optional dependencies explicitly to avoid Javadoc warnings and errors. -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
       <optional>true</optional>
     </dependency>
   </dependencies>

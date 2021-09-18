@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
@@ -31,11 +29,11 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -47,8 +45,7 @@ import java.nio.ByteBuffer;
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 
 @UnstableApi
-public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel implements DatagramChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -84,11 +81,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     @SuppressWarnings("deprecation")
     public boolean isActive() {
         return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
@@ -107,10 +99,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
-            return joinGroup(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    null, promise);
+            NetworkInterface iface = config().getNetworkInterface();
+            if (iface == null) {
+                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+            }
+            return joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
@@ -244,41 +237,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (;;) {
-            Object msg = in.current();
-            if (msg == null) {
-                // Wrote all messages.
-                writeFilter(false);
-                break;
-            }
-
-            try {
-                boolean done = false;
-                for (int i = config().getWriteSpinCount(); i > 0; --i) {
-                    if (doWriteMessage(msg)) {
-                        done = true;
-                        break;
-                    }
-                }
-
-                if (done) {
-                    in.remove();
-                } else {
-                    // Did not write all messages.
-                    writeFilter(true);
-                    break;
-                }
-            } catch (IOException e) {
-                // Continue on write error as a DatagramChannel can write to multiple remote peers
-                //
-                // See https://github.com/netty/netty/issues/2665
-                in.remove(e);
-            }
-        }
-    }
-
-    private boolean doWriteMessage(Object msg) throws Exception {
+    protected boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -468,7 +427,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+
+                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                    // as we read anything).
+                    } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();

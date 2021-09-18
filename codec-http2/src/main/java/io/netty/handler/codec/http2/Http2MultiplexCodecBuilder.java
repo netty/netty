@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,7 +43,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
-        if ((handler instanceof ChannelHandlerAdapter && !((ChannelHandlerAdapter) handler).isSharable()) &&
+        if (handler instanceof ChannelHandlerAdapter && !((ChannelHandlerAdapter) handler).isSharable() &&
                 !handler.getClass().isAnnotationPresent(ChannelHandler.Sharable.class)) {
             throw new IllegalArgumentException("The handler must be Sharable");
         }
@@ -77,7 +77,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
-        if (this.isServer()) {
+        if (isServer()) {
             throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
         }
         this.upgradeStreamHandler = upgradeStreamHandler;

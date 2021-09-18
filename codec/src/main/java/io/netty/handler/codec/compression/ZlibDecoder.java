@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.compression;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -44,10 +46,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      */
     public ZlibDecoder(int maxAllocation) {
-        if (maxAllocation < 0) {
-            throw new IllegalArgumentException("maxAllocation must be >= 0");
-        }
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     /**

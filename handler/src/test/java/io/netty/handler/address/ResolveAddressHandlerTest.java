@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,31 +31,34 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
 
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ResolveAddressHandlerTest {
 
-    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID().toString());
-    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID().toString());
+    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID());
+    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID());
     private static final Exception ERROR = new UnknownHostException();
 
     private static EventLoopGroup group;
 
-    @BeforeClass
+    @BeforeAll
     public static void createEventLoop() {
         group = new DefaultEventLoopGroup();
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroyEventLoop() {
         if (group != null) {
             group.shutdownGracefully();
@@ -135,5 +138,5 @@ public class ResolveAddressHandlerTest {
                 }
             };
         }
-    };
+    }
 }

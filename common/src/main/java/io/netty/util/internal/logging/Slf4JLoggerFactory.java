@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,13 +22,15 @@ import org.slf4j.helpers.NOPLoggerFactory;
 import org.slf4j.spi.LocationAwareLogger;
 
 /**
- * Logger factory which creates a <a href="http://www.slf4j.org/">SLF4J</a>
+ * Logger factory which creates a <a href="https://www.slf4j.org/">SLF4J</a>
  * logger.
  */
 public class Slf4JLoggerFactory extends InternalLoggerFactory {
 
     @SuppressWarnings("deprecation")
     public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
+
+    static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
 
     /**
      * @deprecated Use {@link #INSTANCE} instead.

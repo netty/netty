@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -425,7 +425,7 @@ public final class ChannelOutboundBuffer {
                         //
                         // See also:
                         // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                        // - http://linux.die.net/man/2/writev
+                        // - https://linux.die.net//man/2/writev
                         break;
                     }
                     nioBufferSize += readableBytes;
@@ -603,7 +603,7 @@ public final class ChannelOutboundBuffer {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
-                if (oldValue == 0 && newValue != 0) {
+                if (oldValue == 0) {
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;

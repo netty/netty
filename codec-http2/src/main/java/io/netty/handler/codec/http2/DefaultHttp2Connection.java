@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntObjectHashMap;
@@ -23,7 +24,7 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.UnaryPromiseNotifier;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -124,10 +125,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         if (closePromise != null) {
             if (closePromise == promise) {
                 // Do nothing
-            } else if ((promise instanceof ChannelPromise) && ((ChannelPromise) closePromise).isVoid()) {
+            } else if (promise instanceof ChannelPromise && ((ChannelFuture) closePromise).isVoid()) {
                 closePromise = promise;
             } else {
-                closePromise.addListener(new UnaryPromiseNotifier<Void>(promise));
+                PromiseNotifier.cascade(closePromise, promise);
             }
         } else {
             closePromise = promise;
@@ -482,8 +483,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
             state = activeState(id, state, isLocal(), halfClosed);
-            if (!createdBy().canOpenStream()) {
-                throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
+            final DefaultEndpoint<? extends Http2FlowController> endpoint = createdBy();
+            if (!endpoint.canOpenStream()) {
+                throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint: " +
+                        endpoint.maxActiveStreams());
             }
 
             activate();
@@ -681,7 +684,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          */
         private int nextReservationStreamId;
         private int lastStreamKnownByPeer = -1;
-        private boolean pushToAllowed = true;
+        private boolean pushToAllowed;
         private F flowController;
         private int maxStreams;
         private int maxActiveStreams;
@@ -846,7 +849,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         private void lastStreamKnownByPeer(int lastKnownStream) {
-            this.lastStreamKnownByPeer = lastKnownStream;
+            lastStreamKnownByPeer = lastKnownStream;
         }
 
         @Override
@@ -889,11 +892,15 @@ public class DefaultHttp2Connection implements Http2Connection {
                         streamId, nextStreamIdToCreate);
             }
             if (nextStreamIdToCreate <= 0) {
-                throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
+                // We exhausted the stream id space that we  can use. Let's signal this back but also signal that
+                // we still may want to process active streams.
+                throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
+                        Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
             }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
             if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {
-                throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
+                throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint: " +
+                        (isReserved ? maxStreams : maxActiveStreams));
             }
             if (isClosed()) {
                 throw connectionError(INTERNAL_ERROR, "Attempted to create stream id %d after connection was closed",

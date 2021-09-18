@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,11 +16,11 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllocator> extends ByteBufAllocatorTest {
 
@@ -95,7 +95,6 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testUsedDirectMemory() {
         T allocator =  newAllocator(true);
@@ -108,13 +107,12 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         // Double the size of the buffer
         buffer.capacity(capacity << 1);
         capacity = buffer.capacity();
-        assertEquals(buffer.toString(), expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedDirectMemory(), buffer.toString());
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedDirectMemory());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testUsedHeapMemory() {
         T allocator =  newAllocator(true);
@@ -140,5 +138,8 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     protected long expectedUsedMemoryAfterRelease(T allocator, int capacity) {
         return 0;
+    }
+
+    protected void trimCaches(T allocator) {
     }
 }

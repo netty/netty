@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,6 +29,7 @@ import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivilegedAction;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -66,7 +67,7 @@ final class OpenSslX509TrustManagerWrapper {
                 // validations.
                 //
                 // See:
-                // - http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/
+                // - https://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/
                 //          cadea780bc76/src/share/classes/sun/security/ssl/SSLContextImpl.java#l127
                 context.init(null, new TrustManager[] {
                         new X509TrustManager() {
@@ -152,8 +153,10 @@ final class OpenSslX509TrustManagerWrapper {
         X509TrustManager wrapIfNeeded(X509TrustManager manager);
     }
 
-    private static SSLContext newSSLContext() throws NoSuchAlgorithmException {
-        return SSLContext.getInstance("TLS");
+    private static SSLContext newSSLContext() throws NoSuchAlgorithmException, NoSuchProviderException {
+        // As this depends on the implementation detail we should explicit select the correct provider.
+        // See https://github.com/netty/netty/issues/10374
+        return SSLContext.getInstance("TLS", "SunJSSE");
     }
 
     private static final class UnsafeTrustManagerWrapper implements TrustManagerWrapper {
@@ -180,11 +183,15 @@ final class OpenSslX509TrustManagerWrapper {
                         }
                     }
                 } catch (NoSuchAlgorithmException e) {
-                    // This should never happen as we did the same in the static
+                    // This should never happen as we did the same in the static block
                     // before.
                     PlatformDependent.throwException(e);
                 } catch (KeyManagementException e) {
-                    // This should never happen as we did the same in the static
+                    // This should never happen as we did the same in the static block
+                    // before.
+                    PlatformDependent.throwException(e);
+                } catch (NoSuchProviderException e) {
+                    // This should never happen as we did the same in the static block
                     // before.
                     PlatformDependent.throwException(e);
                 }

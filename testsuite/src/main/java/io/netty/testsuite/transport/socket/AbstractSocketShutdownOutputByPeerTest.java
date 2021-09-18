@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,22 +23,33 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends AbstractServerSocketTest {
 
-    @Test(timeout = 30000)
-    public void testShutdownOutput() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutput(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap) throws Throwable {
+                testShutdownOutput(serverBootstrap);
+            }
+        });
     }
 
     public void testShutdownOutput(ServerBootstrap sb) throws Throwable {
@@ -78,9 +89,15 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
         }
     }
 
-    @Test(timeout = 30000)
-    public void testShutdownOutputWithoutOption() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputWithoutOption(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap) throws Throwable {
+                testShutdownOutputWithoutOption(serverBootstrap);
+            }
+        });
     }
 
     public void testShutdownOutputWithoutOption(ServerBootstrap sb) throws Throwable {

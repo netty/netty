@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,14 +29,25 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class WebSocketServerHandshaker00Test {
+public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTest {
+
+    @Override
+    protected WebSocketServerHandshaker newHandshaker(String webSocketURL, String subprotocols,
+            WebSocketDecoderConfig decoderConfig) {
+        return new WebSocketServerHandshaker00(webSocketURL, subprotocols, decoderConfig);
+    }
+
+    @Override
+    protected WebSocketVersion webSocketVersion() {
+        return WebSocketVersion.V00;
+    }
 
     @Test
     public void testPerformOpeningHandshake() {
@@ -103,16 +114,16 @@ public class WebSocketServerHandshaker00Test {
         ch2.writeInbound(ch.readOutbound());
         HttpResponse res = ch2.readInbound();
 
-        Assert.assertEquals("ws://example.com/chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
+        assertEquals("ws://example.com/chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
 
         if (subProtocol) {
-            Assert.assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertEquals("chat", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } else {
-            Assert.assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+            assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         }
         LastHttpContent content = ch2.readInbound();
 
-        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
+        assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
         content.release();
         req.release();
     }

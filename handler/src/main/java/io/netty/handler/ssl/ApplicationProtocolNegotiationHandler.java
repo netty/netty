@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,9 +20,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import javax.net.ssl.SSLException;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
@@ -65,6 +70,9 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
 
     private final String fallbackProtocol;
+    private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
+    private ChannelHandlerContext ctx;
+    private boolean sslHandlerChecked;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -77,11 +85,50 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     }
 
     @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        fireBufferedMessages();
+        bufferedMessages.recycle();
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // Let's buffer all data until this handler will be removed from the pipeline.
+        bufferedMessages.add(msg);
+        if (!sslHandlerChecked) {
+            sslHandlerChecked = true;
+            if (ctx.pipeline().get(SslHandler.class) == null) {
+                // Just remove ourself if there is no SslHandler in the pipeline and so we would otherwise
+                // buffer forever.
+                removeSelfIfPresent(ctx);
+            }
+        }
+    }
+
+    /**
+     * Process all backlog into pipeline from List.
+     */
+    private void fireBufferedMessages() {
+        if (!bufferedMessages.isEmpty()) {
+            for (int i = 0; i < bufferedMessages.size(); i++) {
+                ctx.fireChannelRead(bufferedMessages.get(i));
+            }
+            ctx.fireChannelReadComplete();
+            bufferedMessages.clear();
+        }
+    }
+
+    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
-
+            SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
-                SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvent.isSuccess()) {
                     SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                     if (sslHandler == null) {
@@ -91,18 +138,40 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    handshakeFailure(ctx, handshakeEvent.cause());
+                    // if the event is not produced because of an successful handshake we will receive the same
+                    // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
+                    // control over which exception we propagate down the ChannelPipeline.
+                    //
+                    // See https://github.com/netty/netty/issues/10342
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                ChannelPipeline pipeline = ctx.pipeline();
-                if (pipeline.context(this) != null) {
-                    pipeline.remove(this);
+                // Handshake failures are handled in exceptionCaught(...).
+                if (handshakeEvent.isSuccess()) {
+                    removeSelfIfPresent(ctx);
                 }
             }
         }
+
+        if (evt instanceof ChannelInputShutdownEvent) {
+            fireBufferedMessages();
+        }
+
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        fireBufferedMessages();
+        super.channelInactive(ctx);
+    }
+
+    private void removeSelfIfPresent(ChannelHandlerContext ctx) {
+        ChannelPipeline pipeline = ctx.pipeline();
+        if (pipeline.context(this) != null) {
+            pipeline.remove(this);
+        }
     }
 
     /**
@@ -125,6 +194,15 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        Throwable wrapped;
+        if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
+            try {
+                handshakeFailure(ctx, wrapped);
+                return;
+            } finally {
+                removeSelfIfPresent(ctx);
+            }
+        }
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
         ctx.fireExceptionCaught(cause);
         ctx.close();

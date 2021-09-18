@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,12 +14,12 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.51.Final-SNAPSHOT</version>
+    <version>4.1.69.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-epoll</artifactId>
 
@@ -35,7 +35,7 @@
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
-    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
   </properties>
@@ -213,7 +213,8 @@
     <profile>
       <id>linux-aarch64</id>
       <properties>
-        <jni.classifier>${os.detected.name}-aarch64</jni.classifier>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
       </properties>
       <build>
         <pluginManagement>
@@ -306,6 +307,7 @@
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                     <configureArg>--host=aarch64-linux-gnu</configureArg>
+                    <configureArg>CC=aarch64-none-linux-gnu-gcc</configureArg>
                   </configureArgs>
                 </configuration>
                 <goals>
@@ -397,6 +399,11 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.artsok</groupId>
+      <artifactId>rerunner-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

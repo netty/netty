@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -219,7 +219,7 @@ final class Bzip2HuffmanStageEncoder {
             final int groupEnd = Math.min(groupStart + HUFFMAN_GROUP_RUN_LENGTH, mtfLength) - 1;
 
             // Calculate the cost of this group when encoded by each table
-            short[] cost = new short[totalTables];
+            int[] cost = new int[totalTables];
             for (int i = groupStart; i <= groupEnd; i++) {
                 final int value = mtfBlock[i];
                 for (int j = 0; j < totalTables; j++) {
@@ -341,7 +341,6 @@ final class Bzip2HuffmanStageEncoder {
         final Bzip2BitWriter writer = this.writer;
         final int[][] huffmanMergedCodeSymbols = this.huffmanMergedCodeSymbols;
         final byte[] selectors = this.selectors;
-        final char[] mtf = mtfBlock;
         final int mtfLength = this.mtfLength;
 
         int selectorIndex = 0;
@@ -350,7 +349,7 @@ final class Bzip2HuffmanStageEncoder {
             final int[] tableMergedCodeSymbols = huffmanMergedCodeSymbols[selectors[selectorIndex++]];
 
             while (mtfIndex <= groupEnd) {
-                final int mergedCodeSymbol = tableMergedCodeSymbols[mtf[mtfIndex++]];
+                final int mergedCodeSymbol = tableMergedCodeSymbols[mtfBlock[mtfIndex++]];
                 writer.writeBits(out, mergedCodeSymbol >>> 24, mergedCodeSymbol);
             }
         }

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -128,7 +128,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             // Decode the HTTP2-Settings header and set the settings on the handler to make
             // sure everything is fine with the request.
             List<String> upgradeHeaders = upgradeRequest.headers().getAll(HTTP_UPGRADE_SETTINGS_HEADER);
-            if (upgradeHeaders.isEmpty() || upgradeHeaders.size() > 1) {
+            if (upgradeHeaders.size() != 1) {
                 throw new IllegalArgumentException("There must be 1 and only 1 "
                         + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
             }

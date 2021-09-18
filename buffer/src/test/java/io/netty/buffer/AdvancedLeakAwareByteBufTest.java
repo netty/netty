@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,9 +16,9 @@
 package io.netty.buffer;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.ResourceLeakTracker;
@@ -46,7 +46,6 @@ public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
         composite.addComponent(true, leakAwareBuf);
         byte[] result = new byte[5];
         ByteBuf bb = composite.component(0);
-        System.out.println(bb);
         bb.readBytes(result);
         assertArrayEquals("world".getBytes(CharsetUtil.US_ASCII), result);
         composite.release();

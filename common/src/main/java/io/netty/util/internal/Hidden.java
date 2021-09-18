@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,7 +24,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Contains classes that must be have public visibility but are not public API.
+ * Contains classes that must have public visibility but are not public API.
  */
 class Hidden {
 
@@ -56,6 +56,16 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "start"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.HashedWheelTimer",
+                    "stop"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.util.HashedWheelTimer$Worker",
                     "waitForNextTick"
             );
@@ -74,7 +84,10 @@ class Hidden {
                     "io.netty.handler.ssl.SslHandler",
                     "runAllDelegatedTasks"
             );
-
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.SslHandler",
+                    "runDelegatedTasks"
+            );
             builder.allowBlockingCallsInside(
                     "io.netty.util.concurrent.GlobalEventExecutor",
                     "takeTask");
@@ -86,6 +99,40 @@ class Hidden {
             builder.allowBlockingCallsInside(
                     "io.netty.util.concurrent.SingleThreadEventExecutor",
                     "takeTask");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "addTask");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
+                    "verify");
+
+            // Let's whitelist SSLEngineImpl.unwrap(...) for now as it may fail otherwise for TLS 1.3.
+            // See https://mail.openjdk.java.net/pipermail/security-dev/2020-August/022271.html
+            builder.allowBlockingCallsInside(
+                    "sun.security.ssl.SSLEngineImpl",
+                    "unwrap");
+
+            builder.allowBlockingCallsInside(
+                    "sun.security.ssl.SSLEngineImpl",
+                    "wrap");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider",
+                    "parse");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider",
+                    "parseEtcResolverSearchDomains");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider",
+                    "parseEtcResolverOptions");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
+                    "parse");
 
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override

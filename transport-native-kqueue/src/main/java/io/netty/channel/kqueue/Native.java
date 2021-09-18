@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,22 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.PeerCredentials;
+import io.netty.channel.unix.Unix;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.util.Locale;
+import java.nio.channels.FileChannel;
 
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.connectDataIdempotent;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.connectResumeOnReadWrite;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evAdd;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evClear;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evDelete;
@@ -51,6 +55,16 @@ final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
     static {
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(Native.class,
+                // netty_kqueue_bsdsocket
+                PeerCredentials.class, DefaultFileRegion.class, FileChannel.class, java.io.FileDescriptor.class
+        );
+
         try {
             // First, try calling a side-effect free JNI method to see if the library was already
             // loaded by the application.
@@ -59,8 +73,15 @@ final class Native {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
         }
-        Socket.initialize();
+        Unix.registerInternal(new Runnable() {
+            @Override
+            public void run() {
+                registerUnix();
+            }
+        });
     }
+
+    private static native int registerUnix();
 
     static final short EV_ADD = evAdd();
     static final short EV_ENABLE = evEnable();
@@ -84,6 +105,11 @@ final class Native {
     static final short EVFILT_WRITE = evfiltWrite();
     static final short EVFILT_USER = evfiltUser();
     static final short EVFILT_SOCK = evfiltSock();
+
+    // Flags for connectx(2)
+    private static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
+    private static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
+    static final int CONNECT_TCP_FASTOPEN = CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT;
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());
@@ -114,9 +140,9 @@ final class Native {
     static native int offsetofKeventData();
 
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("mac") && !name.contains("bsd") && !name.startsWith("darwin")) {
-            throw new IllegalStateException("Only supported on BSD");
+        String name = PlatformDependent.normalizedOs();
+        if (!"osx".equals(name) && !name.contains("bsd")) {
+            throw new IllegalStateException("Only supported on OSX/BSD");
         }
         String staticLibName = "netty_transport_native_kqueue";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();

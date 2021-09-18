@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeaderInternal;
 import static io.netty.handler.codec.http2.Http2FrameTypes.DATA;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -114,7 +115,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     private static final class OldDefaultHttp2FrameWriter implements Http2DataWriter {
         private static final ByteBuf ZERO_BUFFER =
                 unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly();
-        private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+        private final int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
         @Override
         public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                                        int padding, boolean endStream, ChannelPromise promise) {
@@ -124,7 +125,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
             boolean needToReleaseHeaders = true;
             boolean needToReleaseData = true;
             try {
-                verifyStreamId(streamId, "Stream ID");
+                checkPositive(streamId, "streamId");
                 verifyPadding(padding);
 
                 boolean lastFrame;
@@ -173,12 +174,6 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                 return promiseAggregator;
             }
             return promiseAggregator.doneAllocatingPromises();
-        }
-
-        private static void verifyStreamId(int streamId, String argumentName) {
-            if (streamId <= 0) {
-                throw new IllegalArgumentException(argumentName + " must be > 0");
-            }
         }
 
         private static int paddingBytes(int padding) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -243,8 +243,7 @@ public final class StringUtil {
         assert HEX2B.length == (Character.MAX_VALUE + 1);
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        final int index = c;
-        return HEX2B[index];
+        return HEX2B[c];
     }
 
     /**
@@ -261,7 +260,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes part of a string with <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes part of a string with <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      *
      * @param hexDump a {@link CharSequence} which contains the hex dump
      * @param fromIndex start of hex dump in {@code hexDump}
@@ -282,7 +281,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      */
     public static byte[] decodeHexDump(CharSequence hexDump) {
         return decodeHexDump(hexDump, 0, hexDump.length());
@@ -593,11 +592,11 @@ public final class StringUtil {
 
     /**
      * Determine if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
      *
      * @param c the character to check.
      * @return {@code true} if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
      */
     public static boolean isSurrogate(char c) {
         return c >= '\uD800' && c <= '\uDFFF';

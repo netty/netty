@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -252,7 +253,7 @@ public class TrafficCounter {
      */
     public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
 
-        this.name = ObjectUtil.checkNotNull(name, "name");
+        this.name = checkNotNull(name, "name");
         trafficShapingHandler = null;
         this.executor = executor;
 
@@ -276,13 +277,8 @@ public class TrafficCounter {
     public TrafficCounter(
             AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
             String name, long checkInterval) {
-
-        if (trafficShapingHandler == null) {
-            throw new IllegalArgumentException("trafficShapingHandler");
-        }
-
-        this.name = ObjectUtil.checkNotNull(name, "name");
-        this.trafficShapingHandler = trafficShapingHandler;
+        this.name = checkNotNull(name, "name");
+        this.trafficShapingHandler = checkNotNullWithIAE(trafficShapingHandler, "trafficShapingHandler");
         this.executor = executor;
 
         init(checkInterval);

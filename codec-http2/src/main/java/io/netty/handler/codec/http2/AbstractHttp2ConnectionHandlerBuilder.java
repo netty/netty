@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
@@ -347,7 +346,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
         enforceNonCodecConstraints("encoderEnforceMaxQueuedControlFrames");
-        this.maxQueuedControlFrames = ObjectUtil.checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
+        this.maxQueuedControlFrames = checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
         return self();
     }
 
@@ -376,7 +375,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
         enforceNonCodecConstraints("encoderIgnoreMaxHeaderListSize");
-        this.encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
+        encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         return self();
     }
 
@@ -428,7 +427,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
         enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
-        this.maxConsecutiveEmptyFrames = ObjectUtil.checkPositiveOrZero(
+        this.maxConsecutiveEmptyFrames = checkPositiveOrZero(
                 maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
         return self();
     }
@@ -439,7 +438,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B autoAckSettingsFrame(boolean autoAckSettings) {
         enforceNonCodecConstraints("autoAckSettingsFrame");
-        this.autoAckSettingsFrame = autoAckSettings;
+        autoAckSettingsFrame = autoAckSettings;
         return self();
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,24 +14,6 @@
  * under the License.
  */
 package io.netty.channel.embedded;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -50,7 +32,24 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ScheduledFuture;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmbeddedChannelTest {
 
@@ -87,7 +86,8 @@ public class EmbeddedChannelTest {
         assertFalse(channel.finish());
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.closeFuture().addListener(new ChannelFutureListener() {
@@ -132,7 +132,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.eventLoop().schedule(new Runnable() {
+        Future future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
@@ -156,7 +156,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-        ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
+        Future<?> future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() { }
         }, 1, TimeUnit.DAYS);
@@ -164,7 +164,8 @@ public class EmbeddedChannelTest {
         assertTrue(future.isCancelled());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerAddedExecutedInEventLoop() throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
@@ -209,7 +210,8 @@ public class EmbeddedChannelTest {
     }
 
     // See https://github.com/netty/netty/issues/4316.
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
@@ -225,7 +227,8 @@ public class EmbeddedChannelTest {
         });
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
@@ -586,7 +589,8 @@ public class EmbeddedChannelTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelInactiveFired() throws InterruptedException {
         final AtomicBoolean inactive = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {

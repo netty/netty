@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,6 +37,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -47,7 +48,6 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -61,7 +61,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
      * connection attempts will fail.
      */
     private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
@@ -390,7 +390,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
-            if (allocHandle.isReadEOF() || (readPending && maybeMoreDataToRead)) {
+            if (allocHandle.isReadEOF() || readPending && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -558,9 +558,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
-                                ConnectTimeoutException cause =
-                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                if (connectPromise != null && !connectPromise.isDone()
+                                        && connectPromise.tryFailure(new ConnectTimeoutException(
+                                        "connection timed out: " + remoteAddress))) {
                                     close(voidPromise());
                                 }
                             }
@@ -699,7 +699,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             socket.bind(localAddress);
         }
 
-        boolean connected = doConnect0(remoteAddress);
+        boolean connected = doConnect0(remoteAddress, localAddress);
         if (connected) {
             remote = remoteSocketAddr == null?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
@@ -711,10 +711,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return connected;
     }
 
-    private boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         boolean success = false;
         try {
-            boolean connected = socket.connect(remote);
+            boolean connected = socket.connect(remoteAddress);
             if (!connected) {
                 writeFilter(true);
             }

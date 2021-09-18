@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -35,9 +35,9 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -53,8 +53,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -88,7 +88,7 @@ public class DataCompressionHttp2Test {
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
 
-    @Before
+    @BeforeEach
     public void setup() throws InterruptedException, Http2Exception {
         MockitoAnnotations.initMocks(this);
         doAnswer(new Answer<Void>() {
@@ -113,12 +113,12 @@ public class DataCompressionHttp2Test {
                 anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
     }
 
-    @After
+    @AfterEach
     public void cleanup() throws IOException {
         serverOut.close();
     }
 
-    @After
+    @AfterEach
     public void teardown() throws InterruptedException {
         if (clientChannel != null) {
             clientChannel.close().sync();
@@ -236,6 +236,102 @@ public class DataCompressionHttp2Test {
     }
 
     @Test
+    public void brotliEncodingSingleEmptyMessage() throws Exception {
+        final String text = "";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void brotliEncodingSingleMessage() throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void zstdEncodingSingleEmptyMessage() throws Exception {
+        final String text = "";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void zstdEncodingSingleMessage() throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
     public void deflateEncodingWriteLargeMessage() throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
@@ -346,6 +442,7 @@ public class DataCompressionHttp2Test {
                         .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
                 p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();

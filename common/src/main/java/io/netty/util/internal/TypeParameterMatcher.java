@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -119,18 +119,17 @@ public abstract class TypeParameterMatcher {
                 if (actualTypeParam instanceof TypeVariable) {
                     // Resolved type parameter points to another type parameter.
                     TypeVariable<?> v = (TypeVariable<?>) actualTypeParam;
-                    currentClass = thisClass;
                     if (!(v.getGenericDeclaration() instanceof Class)) {
                         return Object.class;
                     }
 
+                    currentClass = thisClass;
                     parametrizedSuperclass = (Class<?>) v.getGenericDeclaration();
                     typeParamName = v.getName();
                     if (parametrizedSuperclass.isAssignableFrom(thisClass)) {
                         continue;
-                    } else {
-                        return Object.class;
                     }
+                    return Object.class;
                 }
 
                 return fail(thisClass, typeParamName);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,9 @@
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
+#include "netty_jni_util.h"
+
+#define FILEDESCRIPTOR_CLASSNAME "io/netty/channel/unix/FileDescriptor"
 
 static jmethodID posId = NULL;
 static jmethodID limitId = NULL;
@@ -275,10 +278,12 @@ static const JNINativeMethod method_table[] = {
 static const jint method_table_size = sizeof(method_table) / sizeof(method_table[0]);
 // JNI Method Registration Table End
 
+// IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
+//            Unix to reflect that.
 jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     void* mem = NULL;
-    if (netty_unix_util_register_natives(env, packagePrefix, "io/netty/channel/unix/FileDescriptor", method_table, method_table_size) != 0) {
+    if (netty_jni_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
         goto done;
     }
     if ((mem = malloc(1)) == NULL) {
@@ -298,19 +303,21 @@ jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
  
     // Get the method id for Buffer.position() and Buffer.limit(). These are used as fallback if
     // it is not possible to obtain the position and limit using the fields directly.
-    NETTY_GET_METHOD(env, cls, posId, "position", "()I", done);
-    NETTY_GET_METHOD(env, cls, limitId, "limit", "()I", done);
+    NETTY_JNI_UTIL_GET_METHOD(env, cls, posId, "position", "()I", done);
+    NETTY_JNI_UTIL_GET_METHOD(env, cls, limitId, "limit", "()I", done);
 
     // Try to get the ids of the position and limit fields. We later then check if we was able
     // to find them and if so use them get the position and limit of the buffer. This is
     // much faster then call back into java via (*env)->CallIntMethod(...).
-    NETTY_TRY_GET_FIELD(env, cls, posFieldId, "position", "I");
-    NETTY_TRY_GET_FIELD(env, cls, limitFieldId, "limit", "I");
+    NETTY_JNI_UTIL_TRY_GET_FIELD(env, cls, posFieldId, "position", "I");
+    NETTY_JNI_UTIL_TRY_GET_FIELD(env, cls, limitFieldId, "limit", "I");
 
-    ret = NETTY_JNI_VERSION;
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     free(mem);
     return ret;
 }
 
-void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env) { }
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    netty_jni_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
+}

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.unix.Limits.SIZEOF_JLONG;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 final class NativeLongArray {
     private ByteBuffer memory;
@@ -29,12 +30,9 @@ final class NativeLongArray {
     private int size;
 
     NativeLongArray(int capacity) {
-        if (capacity < 1) {
-            throw new IllegalArgumentException("capacity must be >= 1 but was " + capacity);
-        }
+        this.capacity = checkPositive(capacity, "capacity");
         memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(capacity));
         memoryAddress = Buffer.memoryAddress(memory);
-        this.capacity = capacity;
     }
 
     private static int idx(int index) {

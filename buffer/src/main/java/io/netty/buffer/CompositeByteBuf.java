@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -267,6 +267,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
+    private static void checkForOverflow(int capacity, int readableBytes) {
+        if (capacity + readableBytes < 0) {
+            throw new IllegalArgumentException("Can't increase by " + readableBytes + " as capacity(" + capacity + ")" +
+                    " would overflow " + Integer.MAX_VALUE);
+        }
+    }
+
     /**
      * Precondition is that {@code buffer != null}.
      */
@@ -282,9 +289,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
             // Check if we would overflow.
             // See https://github.com/netty/netty/issues/10194
-            if (capacity() + readableBytes < 0) {
-                throw new IllegalArgumentException("Can't increase by " + readableBytes);
-            }
+            checkForOverflow(capacity(), readableBytes);
 
             addComp(cIndex, c);
             wasAdded = true;
@@ -369,14 +374,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         int readableBytes = 0;
         int capacity = capacity();
-        for (int i = 0; i < buffers.length; i++) {
-            readableBytes += buffers[i].readableBytes();
+        for (int i = arrOffset; i < buffers.length; i++) {
+            ByteBuf b = buffers[i];
+            if (b == null) {
+                break;
+            }
+            readableBytes += b.readableBytes();
 
             // Check if we would overflow.
             // See https://github.com/netty/netty/issues/10194
-            if (capacity + readableBytes < 0) {
-                throw new IllegalArgumentException("Can't increase by " + readableBytes);
-            }
+            checkForOverflow(capacity, readableBytes);
         }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
@@ -1598,6 +1605,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int low = 0, high = componentCount; low <= high;) {
             int mid = low + high >>> 1;
             Component c = components[mid];
+            if (c == null) {
+                throw new IllegalStateException("No component found for offset. " +
+                        "Composite buffer layout might be outdated, e.g. from a discardReadBytes call.");
+            }
             if (offset >= c.endOffset) {
                 low = mid + 1;
             } else if (offset < c.offset) {
@@ -1653,6 +1664,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             if (buf.nioBufferCount() == 1) {
                 return buf.nioBuffer(c.idx(index), length);
             }
+            break;
+        default:
+            break;
         }
 
         ByteBuffer[] buffers = nioBuffers(index, length);

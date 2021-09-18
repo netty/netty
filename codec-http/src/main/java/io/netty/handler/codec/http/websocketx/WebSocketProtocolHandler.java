@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,10 +21,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -112,11 +112,15 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
-            closeSent = promise.unvoid();
-            ctx.write(msg).addListener(new ChannelPromiseNotifier(false, closeSent));
+            closeSent(promise.unvoid());
+            ctx.write(msg).addListener(new PromiseNotifier<Void, ChannelFuture>(false, closeSent));
         } else {
             ctx.write(msg, promise);
         }
+    }
+
+    void closeSent(ChannelPromise promise) {
+        closeSent = promise;
     }
 
     private void applyCloseSentTimeout(ChannelHandlerContext ctx) {
@@ -124,11 +128,11 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
 
-        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(new Runnable() {
+        final Future<?> timeoutTask = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!closeSent.isDone()) {
-                    closeSent.tryFailure(new WebSocketHandshakeException("send close frame timed out"));
+                    closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
                 }
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -139,6 +143,14 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
                 timeoutTask.cancel(false);
             }
         });
+    }
+
+    /**
+     * Returns a {@link WebSocketHandshakeException} that depends on which client or server pipeline
+     * this handler belongs. Should be overridden in implementation otherwise a default exception is used.
+     */
+    protected WebSocketHandshakeException buildHandshakeException(String message) {
+        return new WebSocketHandshakeException(message);
     }
 
     @Override

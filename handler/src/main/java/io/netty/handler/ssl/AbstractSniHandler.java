@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -128,8 +128,11 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
     @Override
     protected void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception {
-        fireSniCompletionEvent(ctx, hostname, future);
-        onLookupComplete(ctx, hostname, future);
+        try {
+            onLookupComplete(ctx, hostname, future);
+        } finally {
+            fireSniCompletionEvent(ctx, hostname, future);
+        }
     }
 
     /**
@@ -148,7 +151,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
                                              String hostname, Future<T> future) throws Exception;
 
-    private void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<T> future) {
+    private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();
         if (cause == null) {
             ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));

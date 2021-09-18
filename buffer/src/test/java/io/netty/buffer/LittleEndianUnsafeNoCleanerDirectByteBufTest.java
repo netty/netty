@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,16 +16,16 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class LittleEndianUnsafeNoCleanerDirectByteBufTest extends LittleEndianDirectByteBufTest {
 
-    @Before
+    @BeforeEach
     @Override
     public void init() {
-        Assume.assumeTrue("java.nio.DirectByteBuffer.<init>(long, int) not found, skip tests",
-                PlatformDependent.useDirectBufferNoCleaner());
+        Assumptions.assumeTrue(PlatformDependent.useDirectBufferNoCleaner(),
+          "java.nio.DirectByteBuffer.<init>(long, int) not found, skip tests");
         super.init();
     }
 

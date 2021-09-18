@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
@@ -35,7 +35,11 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SslContextBuilderTest {
 
@@ -46,7 +50,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testClientContextFromFileOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testClientContextFromFile(SslProvider.OPENSSL);
     }
 
@@ -57,7 +61,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testClientContextOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testClientContext(SslProvider.OPENSSL);
     }
 
@@ -68,7 +72,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testKeyStoreTypeOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testKeyStoreType(SslProvider.OPENSSL);
     }
 
@@ -79,7 +83,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testServerContextFromFileOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testServerContextFromFile(SslProvider.OPENSSL);
     }
 
@@ -90,7 +94,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testServerContextOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         testServerContext(SslProvider.OPENSSL);
     }
 
@@ -101,23 +105,34 @@ public class SslContextBuilderTest {
 
     @Test
     public void testContextFromManagersOpenssl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
+        assumeTrue(OpenSsl.useKeyManagerFactory());
         testContextFromManagers(SslProvider.OPENSSL);
     }
 
-    @Test(expected = SSLException.class)
+    @Test
     public void testUnsupportedPrivateKeyFailsFastForServer() throws Exception {
-        Assume.assumeTrue(OpenSsl.isBoringSSL());
-        testUnsupportedPrivateKeyFailsFast(true);
+        assumeTrue(OpenSsl.isBoringSSL());
+        assertThrows(SSLException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                testUnsupportedPrivateKeyFailsFast(true);
+            }
+        });
     }
 
-    @Test(expected = SSLException.class)
+    @Test
     public void testUnsupportedPrivateKeyFailsFastForClient() throws Exception {
-        Assume.assumeTrue(OpenSsl.isBoringSSL());
-        testUnsupportedPrivateKeyFailsFast(false);
+        assumeTrue(OpenSsl.isBoringSSL());
+        assertThrows(SSLException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                testUnsupportedPrivateKeyFailsFast(false);
+            }
+        });
     }
     private static void testUnsupportedPrivateKeyFailsFast(boolean server) throws Exception {
-        Assume.assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL());
         String cert = "-----BEGIN CERTIFICATE-----\n" +
                 "MIICODCCAY2gAwIBAgIEXKTrajAKBggqhkjOPQQDBDBUMQswCQYDVQQGEwJVUzEM\n" +
                 "MAoGA1UECAwDTi9hMQwwCgYDVQQHDANOL2ExDDAKBgNVBAoMA04vYTEMMAoGA1UE\n" +
@@ -151,15 +166,20 @@ public class SslContextBuilderTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidCipherJdk() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        testInvalidCipher(SslProvider.JDK);
+        OpenSsl.ensureAvailability();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                testInvalidCipher(SslProvider.JDK);
+            }
+        });
     }
 
     @Test
     public void testInvalidCipherOpenSSL() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
         try {
             // This may fail or not depending on the OpenSSL version used
             // See https://github.com/openssl/openssl/issues/7196

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package io.netty.util.concurrent;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements ProgressivePromise<V> {
 
@@ -37,9 +39,7 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
         if (total < 0) {
             // total unknown
             total = -1; // normalize
-            if (progress < 0) {
-                throw new IllegalArgumentException("progress: " + progress + " (expected: >= 0)");
-            }
+            checkPositiveOrZero(progress, "progress");
         } else if (progress < 0 || progress > total) {
             throw new IllegalArgumentException(
                     "progress: " + progress + " (expected: 0 <= progress <= total (" + total + "))");

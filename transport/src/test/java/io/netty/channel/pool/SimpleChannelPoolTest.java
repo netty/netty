@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,21 +27,22 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SimpleChannelPoolTest {
     @Test
@@ -67,25 +68,25 @@ public class SimpleChannelPoolTest {
         Channel sc = sb.bind(addr).sync().channel();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
-        ChannelPool pool = new SimpleChannelPool(cb, handler);
+        final ChannelPool pool = new SimpleChannelPool(cb, handler);
 
         Channel channel = pool.acquire().sync().getNow();
 
         pool.release(channel).syncUninterruptibly();
 
-        Channel channel2 = pool.acquire().sync().getNow();
+        final Channel channel2 = pool.acquire().sync().getNow();
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
         pool.release(channel2).syncUninterruptibly();
 
         // Should fail on multiple release calls.
-        try {
-            pool.release(channel2).syncUninterruptibly();
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-            assertFalse(channel.isActive());
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.release(channel2).syncUninterruptibly();
+            }
+        });
+        assertFalse(channel.isActive());
 
         assertEquals(2, handler.acquiredCount());
         assertEquals(2, handler.releasedCount());
@@ -118,7 +119,7 @@ public class SimpleChannelPoolTest {
         Channel sc = sb.bind(addr).sync().channel();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
-        ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE) {
+        final ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE) {
             private final Queue<Channel> queue = new LinkedBlockingQueue<Channel>(1);
 
             @Override
@@ -133,15 +134,15 @@ public class SimpleChannelPoolTest {
         };
 
         Channel channel = pool.acquire().sync().getNow();
-        Channel channel2 = pool.acquire().sync().getNow();
+        final Channel channel2 = pool.acquire().sync().getNow();
 
         pool.release(channel).syncUninterruptibly().getNow();
-        try {
-            pool.release(channel2).syncUninterruptibly();
-            fail();
-        } catch (IllegalStateException e) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                pool.release(channel2).syncUninterruptibly();
+            }
+        });
         channel2.close().sync();
 
         assertEquals(2, handler.channelCount());
@@ -347,6 +348,51 @@ public class SimpleChannelPoolTest {
         // Assert channels were indeed closed
         assertFalse(ch1.isOpen());
         assertFalse(ch2.isOpen());
+
+        sc.close().sync();
+        pool.close();
+        group.shutdownGracefully();
+    }
+
+    @Test
+    public void testChannelAcquiredException() throws InterruptedException {
+        final LocalAddress addr = new LocalAddress(getLocalAddrId());
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+
+        // Start server
+        final ServerBootstrap sb = new ServerBootstrap()
+              .group(group)
+              .channel(LocalServerChannel.class)
+              .childHandler(new ChannelInitializer<LocalChannel>() {
+                  @Override
+                  protected void initChannel(LocalChannel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  }
+              });
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Create pool, acquire and return channels
+        final Bootstrap bootstrap = new Bootstrap()
+              .channel(LocalChannel.class).group(group).remoteAddress(addr);
+        final NullPointerException exception = new NullPointerException();
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new ChannelPoolHandler() {
+            @Override
+            public void channelReleased(Channel ch) {
+            }
+            @Override
+            public void channelAcquired(Channel ch) {
+                throw exception;
+            }
+            @Override
+            public void channelCreated(Channel ch) {
+            }
+        });
+
+        try {
+            pool.acquire().sync();
+        } catch (NullPointerException e) {
+            assertSame(e, exception);
+        }
 
         sc.close().sync();
         pool.close();

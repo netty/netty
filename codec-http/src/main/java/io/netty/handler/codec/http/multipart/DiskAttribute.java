@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -126,7 +126,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public void addContent(ByteBuf buffer, boolean last) throws IOException {
         final long newDefinedSize = size + buffer.readableBytes();
-        checkSize(newDefinedSize);
+        try {
+            checkSize(newDefinedSize);
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
+        }
         if (definedSize > 0 && definedSize < newDefinedSize) {
             definedSize = newDefinedSize;
         }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,7 +30,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
  * Please note that if you intent to use the JDK provider for SSL, you MUST use JDK 1.8.
  * Previous JDK versions don't have any cipher suite that is suitable for use with HTTP/2.
  * The associated ALPN library for your JDK version can be found here:
- * http://eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions.
+ * https://eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions.
  * Alternatively, you can use the OpenSsl provider. Please make sure that you run OpenSsl
  * version 1.0.2 or greater.
  * </p>

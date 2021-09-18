@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.socket.InternetProtocolFamily;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PreferredAddressTypeComparatorTest {
 
@@ -44,7 +45,7 @@ public class PreferredAddressTypeComparatorTest {
                 ipv6Address2, ipv4Address3, ipv6Address3);
         Collections.sort(addressList, ipv4);
 
-        Assert.assertEquals(Arrays.asList(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
+        assertEquals(Arrays.asList(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
                 ipv6Address2, ipv6Address3), addressList);
     }
 
@@ -64,7 +65,7 @@ public class PreferredAddressTypeComparatorTest {
                 ipv6Address2, ipv4Address3, ipv6Address3);
         Collections.sort(addressList, ipv4);
 
-        Assert.assertEquals(Arrays.asList(ipv6Address1,
+        assertEquals(Arrays.asList(ipv6Address1,
                 ipv6Address2, ipv6Address3, ipv4Address1, ipv4Address2, ipv4Address3), addressList);
     }
 }

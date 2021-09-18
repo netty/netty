@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,7 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,12 +37,13 @@ import static io.netty.util.internal.ObjectUtil.intValue;
  * A {@link DnsNameResolver} builder.
  */
 public final class DnsNameResolverBuilder {
-    private EventLoop eventLoop;
+    volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private SocketAddress localAddress;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
@@ -202,6 +204,16 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Configure the address that will be used to bind too. If `null` the default will be used.
+     * @param localAddress the bind address
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder localAddress(SocketAddress localAddress) {
+        this.localAddress = localAddress;
+        return this;
+    }
+
+    /**
      * Sets the minimum and maximum TTL of the cached DNS resource records (in seconds). If the TTL of the DNS
      * resource record returned by the DNS server is less than the minimum TTL or greater than the maximum TTL,
      * this resolver will ignore the TTL from the DNS server and use the minimum TTL or the maximum TTL instead
@@ -324,7 +336,10 @@ public final class DnsNameResolverBuilder {
      *
      * @param traceEnabled true if trace is enabled
      * @return {@code this}
+     * @deprecated Prefer to {@linkplain #dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory) configure}
+     * a {@link LoggingDnsQueryLifeCycleObserverFactory} instead.
      */
+    @Deprecated
     public DnsNameResolverBuilder traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
         return this;
@@ -477,6 +492,7 @@ public final class DnsNameResolverBuilder {
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
+                localAddress,
                 dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
                 resolvedAddressTypes,

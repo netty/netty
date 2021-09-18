@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -110,7 +110,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         if (cause != null) {
             Throwable unwrappedCause;
             // Unwrap if needed
-            if (cause instanceof Http2FrameStreamException && ((unwrappedCause = cause.getCause()) != null)) {
+            if (cause instanceof Http2FrameStreamException && (unwrappedCause = cause.getCause()) != null) {
                 cause = unwrappedCause;
             }
 
@@ -147,8 +147,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         REQUESTED
     }
 
-    private final AbstractHttp2StreamChannel.Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
-    private final AbstractHttp2StreamChannel.Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
+    private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
+    private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
     private final ChannelId channelId;
     private final ChannelPipeline pipeline;
     private final DefaultHttp2FrameStream stream;
@@ -258,7 +258,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
             if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
-                if (oldValue == 0 && newValue != 0) {
+                if (oldValue == 0) {
                     fireChannelWritabilityChanged(invokeLater);
                 }
                 break;
@@ -677,7 +677,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && !readEOS && Http2CodecUtil.isStreamIdValid(stream.id())) {
+            if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
                 Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();

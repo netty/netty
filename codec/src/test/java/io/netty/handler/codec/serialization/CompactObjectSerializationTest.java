@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CompactObjectSerializationTest {
 
@@ -31,6 +31,6 @@ public class CompactObjectSerializationTest {
         CompactObjectOutputStream out = new CompactObjectOutputStream(pipeOut);
         CompactObjectInputStream in = new CompactObjectInputStream(pipeIn, ClassResolvers.cacheDisabled(null));
         out.writeObject(List.class);
-        Assert.assertSame(List.class, in.readObject());
+        Assertions.assertSame(List.class, in.readObject());
     }
 }

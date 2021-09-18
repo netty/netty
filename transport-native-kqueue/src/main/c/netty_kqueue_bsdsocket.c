@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -31,6 +32,8 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+
+#define BSDSOCKET_CLASSNAME "io/netty/channel/kqueue/BsdSocket"
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jclass stringClass = NULL;
@@ -79,6 +82,60 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
         return sbytes;
     }
     return res < 0 ? -err : 0;
+}
+
+static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
+        jint socketFd,
+        jint socketInterface,
+        jboolean sourceIPv6, jbyteArray sourceAddress, jint sourceScopeId, jint sourcePort,
+        jboolean destinationIPv6, jbyteArray destinationAddress, jint destinationScopeId, jint destinationPort,
+        jint flags,
+        jlong iovAddress, jint iovCount, jint iovDataLength) {
+#ifdef __APPLE__ // connectx(2) is only defined on Darwin.
+    sa_endpoints_t endpoints;
+    endpoints.sae_srcif = (unsigned int) socketInterface;
+    endpoints.sae_srcaddr = NULL;
+    endpoints.sae_srcaddrlen = 0;
+    endpoints.sae_dstaddr = NULL;
+    endpoints.sae_dstaddrlen = 0;
+
+    struct sockaddr_storage srcaddr;
+    socklen_t srcaddrlen;
+    struct sockaddr_storage dstaddr;
+    socklen_t dstaddrlen;
+
+    if (NULL != sourceAddress) {
+        if (-1 == netty_unix_socket_initSockaddr(env,
+                sourceIPv6, sourceAddress, sourceScopeId, sourcePort, &srcaddr, &srcaddrlen)) {
+            netty_unix_errors_throwIOException(env,
+                "Source address specified, but could not be converted to sockaddr.");
+            return -EINVAL;
+        }
+        endpoints.sae_srcaddr = (const struct sockaddr*) &srcaddr;
+        endpoints.sae_srcaddrlen = srcaddrlen;
+    }
+
+    assert(destinationAddress != NULL); // Java side will ensure destination is never null.
+    if (-1 == netty_unix_socket_initSockaddr(env,
+            destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
+        netty_unix_errors_throwIOException(env, "Destination address could not be converted to sockaddr.");
+        return -EINVAL;
+    }
+    endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
+    endpoints.sae_dstaddrlen = dstaddrlen;
+
+    int socket = (int) socketFd;
+    const struct iovec* iov = (const struct iovec*) iovAddress;
+    unsigned int iovcnt = (unsigned int) iovCount;
+    size_t len = (size_t) iovDataLength;
+    int result = connectx(socket, &endpoints, SAE_ASSOCID_ANY, flags, iov, iovcnt, &len, NULL);
+    if (result == -1) {
+        return -errno;
+    }
+    return (jint) len;
+#else
+    return -ENOSYS;
+#endif
 }
 
 static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
@@ -194,7 +251,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
-  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt }
+  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
@@ -214,28 +272,30 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
 
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
-    NETTY_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendFile";
     dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_sendFile;
-    netty_unix_util_free_dynamic_name(&dynamicTypeName);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials;", dynamicTypeName, error);
-    NETTY_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "getPeerCredentials";
     dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_getPeerCredentials;
-    netty_unix_util_free_dynamic_name(&dynamicTypeName);
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     return dynamicMethods;
 error:
     free(dynamicTypeName);
-    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     return NULL;
 }
 
 // JNI Method Registration Table End
 
+// IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
+//            Native to reflect that.
 jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
@@ -247,44 +307,46 @@ jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     if (dynamicMethods == NULL) {
         goto done;
     }
-    if (netty_unix_util_register_natives(env,
+    if (netty_jni_util_register_natives(env,
             packagePrefix,
-            "io/netty/channel/kqueue/BsdSocket",
+            BSDSOCKET_CLASSNAME,
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
         goto done;
     }
 
     // Initialize this module
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
-    NETTY_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
-    netty_unix_util_free_dynamic_name(&nettyClassName);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
+    netty_jni_util_free_dynamic_name(&nettyClassName);
 
-    NETTY_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
-    NETTY_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
 
-    NETTY_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
-    NETTY_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
 
-    NETTY_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
-    NETTY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I", done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I", done);
   
-    NETTY_LOAD_CLASS(env, stringClass, "java/lang/String", done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
-    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
-    NETTY_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
-    netty_unix_util_free_dynamic_name(&nettyClassName);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
+    netty_jni_util_free_dynamic_name(&nettyClassName);
   
-    NETTY_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
-    ret = NETTY_JNI_VERSION;
+    NETTY_JNI_UTIL_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
-    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
     return ret;
 }
 
-void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env) {
-    NETTY_UNLOAD_CLASS(env, peerCredentialsClass);
-    NETTY_UNLOAD_CLASS(env, stringClass);
+void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, peerCredentialsClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
+
+    netty_jni_util_unregister_natives(env, packagePrefix, BSDSOCKET_CLASSNAME);
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -46,6 +46,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.TcpDnsQueryEncoder;
 import io.netty.handler.codec.dns.TcpDnsResponseDecoder;
+import io.netty.resolver.DefaultHostsFileEntriesResolver;
 import io.netty.resolver.HostsFileEntries;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
@@ -91,6 +92,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
+    private static final String WINDOWS_HOST_NAME;
     private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
@@ -127,6 +129,14 @@ public class DnsNameResolver extends InetNameResolver {
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
+
+        String hostName;
+        try {
+            hostName = PlatformDependent.isWindows() ? InetAddress.getLocalHost().getHostName() : null;
+        } catch (Exception ignore) {
+            hostName = null;
+        }
+        WINDOWS_HOST_NAME = hostName;
     }
 
     static {
@@ -383,6 +393,35 @@ public class DnsNameResolver extends InetNameResolver {
             int ndots,
             boolean decodeIdn,
             boolean completeOncePreferredResolved) {
+        this(eventLoop, channelFactory, socketChannelFactory, resolveCache, cnameCache, authoritativeDnsServerCache,
+                null, dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes,
+                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
+                hostsFileEntriesResolver, dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn,
+                completeOncePreferredResolved);
+    }
+
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            ChannelFactory<? extends SocketChannel> socketChannelFactory,
+            final DnsCache resolveCache,
+            final DnsCnameCache cnameCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            SocketAddress localAddress,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn,
+            boolean completeOncePreferredResolved) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis > 0
             ? queryTimeoutMillis
@@ -399,8 +438,8 @@ public class DnsNameResolver extends InetNameResolver {
         this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
-                        new TraceDnsQueryLifeCycleObserverFactory() :
-                        new BiDnsQueryLifecycleObserverFactory(new TraceDnsQueryLifeCycleObserverFactory(),
+                        new LoggingDnsQueryLifeCycleObserverFactory() :
+                        new BiDnsQueryLifecycleObserverFactory(new LoggingDnsQueryLifeCycleObserverFactory(),
                                                                dnsQueryLifecycleObserverFactory) :
                 checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
@@ -453,7 +492,12 @@ public class DnsNameResolver extends InetNameResolver {
         });
 
         channelFuture = responseHandler.channelActivePromise;
-        ChannelFuture future = b.register();
+        final ChannelFuture future;
+        if (localAddress == null) {
+            future = b.register();
+        } else {
+            future = b.bind(localAddress);
+        }
         Throwable cause = future.cause();
         if (cause != null) {
             if (cause instanceof RuntimeException) {
@@ -532,7 +576,7 @@ public class DnsNameResolver extends InetNameResolver {
     /**
      * Returns the {@link DnsCnameCache}.
      */
-    DnsCnameCache cnameCache() {
+    public DnsCnameCache cnameCache() {
         return cnameCache;
     }
 
@@ -650,16 +694,38 @@ public class DnsNameResolver extends InetNameResolver {
     private InetAddress resolveHostsFileEntry(String hostname) {
         if (hostsFileEntriesResolver == null) {
             return null;
+        }
+        InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
+        return address == null && isLocalWindowsHost(hostname) ? LOCALHOST_ADDRESS : address;
+    }
+
+    private List<InetAddress> resolveHostsFileEntries(String hostname) {
+        if (hostsFileEntriesResolver == null) {
+            return null;
+        }
+        List<InetAddress> addresses;
+        if (hostsFileEntriesResolver instanceof DefaultHostsFileEntriesResolver) {
+            addresses = ((DefaultHostsFileEntriesResolver) hostsFileEntriesResolver)
+                    .addresses(hostname, resolvedAddressTypes);
         } else {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            if (address == null && PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname)) {
-                // If we tried to resolve localhost we need workaround that windows removed localhost from its
-                // hostfile in later versions.
-                // See https://github.com/netty/netty/issues/5386
-                return LOCALHOST_ADDRESS;
-            }
-            return address;
+            addresses = address != null ? Collections.singletonList(address) : null;
         }
+        return addresses == null && isLocalWindowsHost(hostname) ?
+                Collections.singletonList(LOCALHOST_ADDRESS) : addresses;
+    }
+
+    /**
+     * Checks whether the given hostname is the localhost/host (computer) name on Windows OS.
+     * Windows OS removed the localhost/host (computer) name information from the hosts file in the later versions
+     * and such hostname cannot be resolved from hosts file.
+     * See https://github.com/netty/netty/issues/5386
+     * See https://github.com/netty/netty/issues/11142
+     */
+    private static boolean isLocalWindowsHost(String hostname) {
+        return PlatformDependent.isWindows() &&
+                (LOCALHOST.equalsIgnoreCase(hostname) ||
+                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
     }
 
     /**
@@ -793,24 +859,29 @@ public class DnsNameResolver extends InetNameResolver {
         final String hostname = question.name();
 
         if (type == DnsRecordType.A || type == DnsRecordType.AAAA) {
-            final InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
-            if (hostsFileEntry != null) {
-                ByteBuf content = null;
-                if (hostsFileEntry instanceof Inet4Address) {
-                    if (type == DnsRecordType.A) {
-                        content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+            final List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
+            if (hostsFileEntries != null) {
+                List<DnsRecord> result = new ArrayList<DnsRecord>();
+                for (InetAddress hostsFileEntry : hostsFileEntries) {
+                    ByteBuf content = null;
+                    if (hostsFileEntry instanceof Inet4Address) {
+                        if (type == DnsRecordType.A) {
+                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                        }
+                    } else if (hostsFileEntry instanceof Inet6Address) {
+                        if (type == DnsRecordType.AAAA) {
+                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                        }
                     }
-                } else if (hostsFileEntry instanceof Inet6Address) {
-                    if (type == DnsRecordType.AAAA) {
-                        content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                    if (content != null) {
+                        // Our current implementation does not support reloading the hosts file,
+                        // so use a fairly large TTL (1 day, i.e. 86400 seconds).
+                        result.add(new DefaultDnsRawRecord(hostname, type, 86400, content));
                     }
                 }
 
-                if (content != null) {
-                    // Our current implementation does not support reloading the hosts file,
-                    // so use a fairly large TTL (1 day, i.e. 86400 seconds).
-                    trySuccess(promise, Collections.<DnsRecord>singletonList(
-                            new DefaultDnsRawRecord(hostname, type, 86400, content)));
+                if (!result.isEmpty()) {
+                    trySuccess(promise, result);
                     return promise;
                 }
             }
@@ -819,7 +890,8 @@ public class DnsNameResolver extends InetNameResolver {
         // It was not A/AAAA question or there was no entry in /etc/hosts.
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs).resolve(promise);
+        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs, maxQueriesPerResolve)
+                .resolve(promise);
         return promise;
     }
 
@@ -920,13 +992,15 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    static <T> void trySuccess(Promise<T> promise, T result) {
-        if (!promise.trySuccess(result)) {
+    static <T> boolean trySuccess(Promise<T> promise, T result) {
+        final boolean notifiedRecords = promise.trySuccess(result);
+        if (!notifiedRecords) {
             // There is nothing really wrong with not be able to notify the promise as we may have raced here because
             // of multiple queries that have been executed. Log it with trace level anyway just in case the user
             // wants to better understand what happened.
             logger.trace("Failed to notify success ({}) to a promise: {}", result, promise);
         }
+        return notifiedRecords;
     }
 
     private static void tryFailure(Promise<?> promise, Throwable cause) {
@@ -983,9 +1057,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         final String hostname = hostname(inetHost);
 
-        InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
-        if (hostsFileEntry != null) {
-            promise.setSuccess(Collections.singletonList(hostsFileEntry));
+        List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
+        if (hostsFileEntries != null) {
+            promise.setSuccess(hostsFileEntries);
             return;
         }
 
@@ -1066,13 +1140,14 @@ public class DnsNameResolver extends InetNameResolver {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         new DnsAddressResolveContext(this, originalPromise, hostname, additionals, nameServerAddrs,
-                                     resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible)
+                                     maxQueriesPerResolve, resolveCache,
+                                     authoritativeDnsServerCache, completeEarlyIfPossible)
                 .resolve(promise);
     }
 
     private static String hostname(String inetHost) {
         String hostname = IDN.toASCII(inetHost);
-        // Check for http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
+        // Check for https://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
         if (StringUtil.endsWith(inetHost, '.') && !StringUtil.endsWith(hostname, '.')) {
             hostname += ".";
         }

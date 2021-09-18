@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,9 +25,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -113,15 +113,15 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
 
-    private ScheduledFuture<?> readerIdleTimeout;
+    private Future<?> readerIdleTimeout;
     private long lastReadTime;
     private boolean firstReaderIdleEvent = true;
 
-    private ScheduledFuture<?> writerIdleTimeout;
+    private Future<?> writerIdleTimeout;
     private long lastWriteTime;
     private boolean firstWriterIdleEvent = true;
 
-    private ScheduledFuture<?> allIdleTimeout;
+    private Future<?> allIdleTimeout;
     private boolean firstAllIdleEvent = true;
 
     private byte state; // 0 - none, 1 - initialized, 2 - destroyed
@@ -312,6 +312,8 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         case 1:
         case 2:
             return;
+        default:
+             break;
         }
 
         state = 1;
@@ -342,7 +344,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     /**
      * This method is visible for testing!
      */
-    ScheduledFuture<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
+    Future<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
         return ctx.executor().schedule(task, delay, unit);
     }
 

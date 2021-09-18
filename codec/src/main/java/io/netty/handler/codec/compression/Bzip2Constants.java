@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -48,6 +48,8 @@ final class Bzip2Constants {
      */
     static final int MIN_BLOCK_SIZE = 1;
     static final int MAX_BLOCK_SIZE = 9;
+
+    static final int MAX_BLOCK_LENGTH = MAX_BLOCK_SIZE * BASE_BLOCK_SIZE;
 
     /**
      * Maximum possible Huffman alphabet size.

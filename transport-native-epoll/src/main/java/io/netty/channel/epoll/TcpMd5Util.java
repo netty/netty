@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,9 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -29,20 +31,15 @@ final class TcpMd5Util {
 
     static Collection<InetAddress> newTcpMd5Sigs(AbstractEpollChannel channel, Collection<InetAddress> current,
                                          Map<InetAddress, byte[]> newKeys) throws IOException {
-        ObjectUtil.checkNotNull(channel, "channel");
-        ObjectUtil.checkNotNull(current, "current");
-        ObjectUtil.checkNotNull(newKeys, "newKeys");
+        checkNotNull(channel, "channel");
+        checkNotNull(current, "current");
+        checkNotNull(newKeys, "newKeys");
 
         // Validate incoming values
         for (Entry<InetAddress, byte[]> e : newKeys.entrySet()) {
             final byte[] key = e.getValue();
-            if (e.getKey() == null) {
-                throw new IllegalArgumentException("newKeys contains an entry with null address: " + newKeys);
-            }
-            ObjectUtil.checkNotNull(key, "newKeys[" + e.getKey() + ']');
-            if (key.length == 0) {
-                throw new IllegalArgumentException("newKeys[" + e.getKey() + "] has an empty key.");
-            }
+            checkNotNullWithIAE(e.getKey(), "e.getKey");
+            checkNonEmpty(key, e.getKey().toString());
             if (key.length > Native.TCP_MD5SIG_MAXKEYLEN) {
                 throw new IllegalArgumentException("newKeys[" + e.getKey() +
                     "] has a key with invalid length; should not exceed the maximum length (" +

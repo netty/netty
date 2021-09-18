@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,10 +37,11 @@ import java.util.List;
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
  * <tr>
- * <th>Name</th><th>Meaning</th>
+ * <th>Name</th><th>Default value</th><th>Meaning</th>
  * </tr>
  * <tr>
  * <td>{@code maxInitialLineLength}</td>
+ * <td>{@value #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td>
  * <td>The maximum length of the initial line
  *     (e.g. {@code "GET / HTTP/1.0"} or {@code "HTTP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
@@ -48,15 +49,41 @@ import java.util.List;
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
+ * <td>{@value #DEFAULT_MAX_HEADER_SIZE}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
  *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxChunkSize}</td>
+ * <td>{@value #DEFAULT_MAX_CHUNK_SIZE}</td>
  * <td>The maximum length of the content or each chunk.  If the content length
  *     (or the length of each chunk) exceeds this value, the content or chunk
  *     will be split into multiple {@link HttpContent}s whose length is
  *     {@code maxChunkSize} at maximum.</td>
+ * </tr>
+ * </table>
+ *
+ * <h3>Parameters that control parsing behavior</h3>
+ * <table border="1">
+ * <tr>
+ * <th>Name</th><th>Default value</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code allowDuplicateContentLengths}</td>
+ * <td>{@value #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS}</td>
+ * <td>When set to {@code false}, will reject any messages that contain multiple Content-Length header fields.
+ *     When set to {@code true}, will allow multiple Content-Length headers only if they are all the same decimal value.
+ *     The duplicated field-values will be replaced with a single valid Content-Length field.
+ *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code allowPartialChunks}</td>
+ * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
+ * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
+ *     is set to {@code true}, the chunk will be split into multiple {@link HttpContent}s.
+ *     Otherwise, if the chunk size does not exceed {@code maxChunkSize} and {@code allowPartialChunks}
+ *     is set to {@code false}, the {@link ByteBuf} is not decoded into an {@link HttpContent} until
+ *     the readable bytes are greater or equal to the chunk size.</td>
  * </tr>
  * </table>
  *
@@ -96,17 +123,28 @@ import java.util.List;
  *
  * Please note that this decoder is designed to be extended to implement
  * a protocol derived from HTTP, such as
- * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
- * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
+    public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
+    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    public static final boolean DEFAULT_CHUNKED_SUPPORTED = true;
+    public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS = true;
+    public static final int DEFAULT_MAX_CHUNK_SIZE = 8192;
+    public static final boolean DEFAULT_VALIDATE_HEADERS = true;
+    public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
+    public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
+
     private static final String EMPTY_VALUE = "";
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
+    private final boolean allowPartialChunks;
     protected final boolean validateHeaders;
+    private final boolean allowDuplicateContentLengths;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
 
@@ -147,7 +185,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, 8192, true);
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
+             DEFAULT_CHUNKED_SUPPORTED);
     }
 
     /**
@@ -155,7 +194,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
     }
 
     /**
@@ -164,12 +203,38 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders,
+             DEFAULT_INITIAL_BUFFER_SIZE);
     }
 
+    /**
+     * Creates a new instance with the specified parameters.
+     */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
+             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            boolean allowDuplicateContentLengths) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
+            allowDuplicateContentLengths, DEFAULT_ALLOW_PARTIAL_CHUNKS);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
+            boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
         checkPositive(maxInitialLineLength, "maxInitialLineLength");
         checkPositive(maxHeaderSize, "maxHeaderSize");
         checkPositive(maxChunkSize, "maxChunkSize");
@@ -180,6 +245,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
+        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
+        this.allowPartialChunks = allowPartialChunks;
     }
 
     @Override
@@ -325,6 +392,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_CHUNKED_CONTENT: {
             assert chunkSize <= Integer.MAX_VALUE;
             int toRead = Math.min((int) chunkSize, maxChunkSize);
+            if (!allowPartialChunks && buffer.readableBytes() < toRead) {
+                return;
+            }
             toRead = Math.min(toRead, buffer.readableBytes());
             if (toRead == 0) {
                 return;
@@ -381,6 +451,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             break;
         }
+        default:
+            break;
         }
     }
 
@@ -455,7 +527,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // Correctly handle return codes of 1xx.
             //
             // See:
-            //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
+            //     - https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 // One exception: Hixie 76 websocket handshake response
@@ -466,6 +538,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             switch (code) {
             case 204: case 304:
                 return true;
+            default:
+                return false;
             }
         }
         return false;
@@ -585,34 +659,29 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         name = null;
         value = null;
 
-        List<String> values = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-        int contentLengthValuesCount = values.size();
+        // Done parsing initial line and headers. Set decoder result.
+        HttpMessageDecoderResult decoderResult = new HttpMessageDecoderResult(lineParser.size, headerParser.size);
+        message.setDecoderResult(decoderResult);
 
-        if (contentLengthValuesCount > 0) {
+        List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
+        if (!contentLengthFields.isEmpty()) {
+            HttpVersion version = message.protocolVersion();
+            boolean isHttp10OrEarlier = version.majorVersion() < 1 || (version.majorVersion() == 1
+                    && version.minorVersion() == 0);
             // Guard against multiple Content-Length headers as stated in
             // https://tools.ietf.org/html/rfc7230#section-3.3.2:
-            //
-            // If a message is received that has multiple Content-Length header
-            //   fields with field-values consisting of the same decimal value, or a
-            //   single Content-Length header field with a field value containing a
-            //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
-            //   indicating that duplicate Content-Length header fields have been
-            //   generated or combined by an upstream message processor, then the
-            //   recipient MUST either reject the message as invalid or replace the
-            //   duplicated field-values with a single valid Content-Length field
-            //   containing that decimal value prior to determining the message body
-            //   length or forwarding the message.
-            if (contentLengthValuesCount > 1 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                throw new IllegalArgumentException("Multiple Content-Length headers found");
+            contentLength = HttpUtil.normalizeAndGetContentLength(contentLengthFields,
+                    isHttp10OrEarlier, allowDuplicateContentLengths);
+            if (contentLength != -1) {
+                headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
             }
-            contentLength = Long.parseLong(values.get(0));
         }
 
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         } else if (HttpUtil.isTransferEncodingChunked(message)) {
-            if (contentLengthValuesCount > 0 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+            if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
@@ -837,7 +906,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             } else if (validateOWS && !isOWS(c)) {
                 // Only OWS is supported for whitespace
                 throw new IllegalArgumentException("Invalid separator, only a single space or horizontal tab allowed," +
-                        " but received a '" + c + "'");
+                        " but received a '" + c + "' (0x" + Integer.toHexString(c) + ")");
             }
         }
         return sb.length();
@@ -859,7 +928,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static class HeaderParser implements ByteProcessor {
         private final AppendableCharSequence seq;
         private final int maxLength;
-        private int size;
+        int size;
 
         HeaderParser(AppendableCharSequence seq, int maxLength) {
             this.seq = seq;
@@ -924,7 +993,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         @Override
         public AppendableCharSequence parse(ByteBuf buffer) {
-            reset();
+            // Suppress a warning because HeaderParser.reset() is supposed to be called
+            reset();    // lgtm[java/subtle-inherited-call]
             return super.parse(buffer);
         }
 

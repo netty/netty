@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,7 @@ import static io.netty.channel.unix.Limits.UIO_MAX_IOV;
 import static io.netty.channel.unix.NativeInetAddress.copyIpv4MappedIpv6Address;
 
 /**
- * Support <a href="http://linux.die.net/man/2/sendmmsg">sendmmsg(...)</a> on linux with GLIBC 2.14+
+ * Support <a href="https://linux.die.net//man/2/sendmmsg">sendmmsg(...)</a> on linux with GLIBC 2.14+
  */
 final class NativeDatagramPacketArray {
 
@@ -55,10 +55,10 @@ final class NativeDatagramPacketArray {
     }
 
     boolean addWritable(ByteBuf buf, int index, int len) {
-        return add0(buf, index, len, null);
+        return add0(buf, index, len, 0, null);
     }
 
-    private boolean add0(ByteBuf buf, int index, int len, InetSocketAddress recipient) {
+    private boolean add0(ByteBuf buf, int index, int len, int segmentLen, InetSocketAddress recipient) {
         if (count == packets.length) {
             // We already filled up to UIO_MAX_IOV messages. This is the max allowed per
             // recvmmsg(...) / sendmmsg(...) call, we will try again later.
@@ -73,14 +73,15 @@ final class NativeDatagramPacketArray {
             return false;
         }
         NativeDatagramPacket p = packets[count];
-        p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, recipient);
+        p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
 
         count++;
         return true;
     }
 
-    void add(ChannelOutboundBuffer buffer, boolean connected) throws Exception {
+    void add(ChannelOutboundBuffer buffer, boolean connected, int maxMessagesPerWrite) throws Exception {
         processor.connected = connected;
+        processor.maxMessagesPerWrite = maxMessagesPerWrite;
         buffer.forEachFlushedMessage(processor);
     }
 
@@ -109,20 +110,48 @@ final class NativeDatagramPacketArray {
 
     private final class MyMessageProcessor implements MessageProcessor {
         private boolean connected;
+        private int maxMessagesPerWrite;
 
         @Override
         public boolean processMessage(Object msg) {
+            final boolean added;
             if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
-                return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
-            }
-            if (msg instanceof ByteBuf && connected) {
+                int segmentSize = 0;
+                if (packet instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
+                    int seg = ((io.netty.channel.unix.SegmentedDatagramPacket) packet).segmentSize();
+                    // We only need to tell the kernel that we want to use UDP_SEGMENT if there are multiple
+                    // segments in the packet.
+                    if (buf.readableBytes() > seg) {
+                        segmentSize = seg;
+                    }
+                }
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+            } else if (msg instanceof ByteBuf && connected) {
                 ByteBuf buf = (ByteBuf) msg;
-                return add0(buf, buf.readerIndex(), buf.readableBytes(), null);
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
+            } else {
+                added = false;
+            }
+            if (added) {
+                maxMessagesPerWrite--;
+                return maxMessagesPerWrite > 0;
             }
             return false;
         }
+    }
+
+    private static InetSocketAddress newAddress(byte[] addr, int addrLen, int port, int scopeId, byte[] ipv4Bytes)
+            throws UnknownHostException {
+        final InetAddress address;
+        if (addrLen == ipv4Bytes.length) {
+            System.arraycopy(addr, 0, ipv4Bytes, 0, addrLen);
+            address = InetAddress.getByAddress(ipv4Bytes);
+        } else {
+            address = Inet6Address.getByAddress(null, addr, scopeId);
+        }
+        return new InetSocketAddress(address, port);
     }
 
     /**
@@ -135,44 +164,57 @@ final class NativeDatagramPacketArray {
         private long memoryAddress;
         private int count;
 
-        private final byte[] addr = new byte[16];
+        private final byte[] senderAddr = new byte[16];
+        private int senderAddrLen;
+        private int senderScopeId;
+        private int senderPort;
 
-        private int addrLen;
-        private int scopeId;
-        private int port;
+        private final byte[] recipientAddr = new byte[16];
+        private int recipientAddrLen;
+        private int recipientScopeId;
+        private int recipientPort;
 
-        private void init(long memoryAddress, int count, InetSocketAddress recipient) {
+        private int segmentSize;
+
+        private void init(long memoryAddress, int count, int segmentSize, InetSocketAddress recipient) {
             this.memoryAddress = memoryAddress;
             this.count = count;
+            this.segmentSize = segmentSize;
+
+            this.senderScopeId = 0;
+            this.senderPort = 0;
+            this.senderAddrLen = 0;
 
             if (recipient == null) {
-                this.scopeId = 0;
-                this.port = 0;
-                this.addrLen = 0;
+                this.recipientScopeId = 0;
+                this.recipientPort = 0;
+                this.recipientAddrLen = 0;
             } else {
                 InetAddress address = recipient.getAddress();
                 if (address instanceof Inet6Address) {
-                    System.arraycopy(address.getAddress(), 0, addr, 0, addr.length);
-                    scopeId = ((Inet6Address) address).getScopeId();
+                    System.arraycopy(address.getAddress(), 0, recipientAddr, 0, recipientAddr.length);
+                    recipientScopeId = ((Inet6Address) address).getScopeId();
                 } else {
-                    copyIpv4MappedIpv6Address(address.getAddress(), addr);
-                    scopeId = 0;
+                    copyIpv4MappedIpv6Address(address.getAddress(), recipientAddr);
+                    recipientScopeId = 0;
                 }
-                addrLen = addr.length;
-                port = recipient.getPort();
+                recipientAddrLen = recipientAddr.length;
+                recipientPort = recipient.getPort();
             }
         }
 
-        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress localAddress) throws UnknownHostException {
-            final InetAddress address;
-            if (addrLen == ipv4Bytes.length) {
-                System.arraycopy(addr, 0, ipv4Bytes, 0, addrLen);
-                address = InetAddress.getByAddress(ipv4Bytes);
-            } else {
-                address = Inet6Address.getByAddress(null, addr, scopeId);
+        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress recipient) throws UnknownHostException {
+            InetSocketAddress sender = newAddress(senderAddr, senderAddrLen, senderPort, senderScopeId, ipv4Bytes);
+            if (recipientAddrLen != 0) {
+                recipient = newAddress(recipientAddr, recipientAddrLen, recipientPort, recipientScopeId, ipv4Bytes);
             }
-            return new DatagramPacket(buffer.writerIndex(count),
-                    localAddress, new InetSocketAddress(address, port));
+            buffer.writerIndex(count);
+
+            // UDP_GRO
+            if (segmentSize > 0) {
+                return new SegmentedDatagramPacket(buffer, segmentSize, recipient, sender);
+            }
+            return new DatagramPacket(buffer, recipient, sender);
         }
     }
 }

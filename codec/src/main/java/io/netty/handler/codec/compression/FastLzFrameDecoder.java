@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.internal.EmptyArrays;
 
 import java.util.List;
 import java.util.zip.Adler32;
@@ -47,7 +46,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
     /**
      * Underlying checksum calculator in use.
      */
-    private final Checksum checksum;
+    private final ByteBufChecksum checksum;
 
     /**
      * Length of current received chunk of data.
@@ -104,7 +103,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
      *        You may set {@code null} if you do not want to validate checksum of each block.
      */
     public FastLzFrameDecoder(Checksum checksum) {
-        this.checksum = checksum;
+        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 
     @Override
@@ -146,49 +145,29 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                 final int idx = in.readerIndex();
                 final int originalLength = this.originalLength;
 
-                final ByteBuf uncompressed;
-                final byte[] output;
-                final int outputPtr;
+                ByteBuf output = null;
 
-                if (originalLength != 0) {
-                    uncompressed = ctx.alloc().heapBuffer(originalLength, originalLength);
-                    output = uncompressed.array();
-                    outputPtr = uncompressed.arrayOffset() + uncompressed.writerIndex();
-                } else {
-                    uncompressed = null;
-                    output = EmptyArrays.EMPTY_BYTES;
-                    outputPtr = 0;
-                }
-
-                boolean success = false;
                 try {
                     if (isCompressed) {
-                        final byte[] input;
-                        final int inputPtr;
-                        if (in.hasArray()) {
-                            input = in.array();
-                            inputPtr = in.arrayOffset() + idx;
-                        } else {
-                            input = new byte[chunkLength];
-                            in.getBytes(idx, input);
-                            inputPtr = 0;
-                        }
 
-                        final int decompressedBytes = decompress(input, inputPtr, chunkLength,
-                                output, outputPtr, originalLength);
+                        output = ctx.alloc().buffer(originalLength);
+                        int outputOffset = output.writerIndex();
+                        final int decompressedBytes = decompress(in, idx, chunkLength,
+                                output, outputOffset, originalLength);
                         if (originalLength != decompressedBytes) {
                             throw new DecompressionException(String.format(
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
                                     originalLength, decompressedBytes));
                         }
+                        output.writerIndex(output.writerIndex() + decompressedBytes);
                     } else {
-                        in.getBytes(idx, output, outputPtr, chunkLength);
+                        output = in.retainedSlice(idx, chunkLength);
                     }
 
-                    final Checksum checksum = this.checksum;
+                    final ByteBufChecksum checksum = this.checksum;
                     if (hasChecksum && checksum != null) {
                         checksum.reset();
-                        checksum.update(output, outputPtr, originalLength);
+                        checksum.update(output, output.readerIndex(), output.readableBytes());
                         final int checksumResult = (int) checksum.getValue();
                         if (checksumResult != currentChecksum) {
                             throw new DecompressionException(String.format(
@@ -197,17 +176,18 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                         }
                     }
 
-                    if (uncompressed != null) {
-                        uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                        out.add(uncompressed);
+                    if (output.readableBytes() > 0) {
+                        out.add(output);
+                    } else {
+                        output.release();
                     }
+                    output = null;
                     in.skipBytes(chunkLength);
 
                     currentState = State.INIT_BLOCK;
-                    success = true;
                 } finally {
-                    if (!success && uncompressed != null) {
-                        uncompressed.release();
+                    if (output != null) {
+                        output.release();
                     }
                 }
                 break;

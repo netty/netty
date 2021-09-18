@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,7 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -44,7 +44,7 @@
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
   <inceptionYear>2008</inceptionYear>
@@ -104,15 +104,6 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- Byte code generator - completely optional -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>3.18.0-GA</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
       <!-- JBoss Marshalling - completely optional -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -218,13 +209,6 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- Enable Javassist support for all test runs -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -685,7 +669,7 @@
         </plugin>               
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
-             See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
+             See: https://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>

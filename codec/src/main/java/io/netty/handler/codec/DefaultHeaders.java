@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -1012,12 +1012,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return value;
     }
 
-    private HeaderEntry<K, V> remove0(HeaderEntry<K, V> entry, HeaderEntry<K, V> previous) {
+    HeaderEntry<K, V> remove0(HeaderEntry<K, V> entry, HeaderEntry<K, V> previous) {
         int i = index(entry.hash);
-        HeaderEntry<K, V> e = entries[i];
-        if (e == entry) {
+        HeaderEntry<K, V> firstEntry = entries[i];
+        if (firstEntry == entry) {
             entries[i] = entry.next;
             previous = entries[i];
+        } else if (previous == null) {
+            // If we don't have any existing starting point, then start from the beginning.
+            previous = firstEntry;
+            HeaderEntry<K, V> next = firstEntry.next;
+            while (next != null && next != entry) {
+                previous = next;
+                next = next.next;
+            }
+            assert next != null: "Entry not found in its hash bucket: " + entry;
+            previous.next = entry.next;
         } else {
             previous.next = entry.next;
         }

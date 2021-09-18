@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -37,13 +37,15 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -62,9 +64,11 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -96,12 +100,12 @@ public class HttpToHttp2ConnectionHandlerTest {
     private CountDownLatch trailersLatch;
     private FrameCountDown serverFrameCountDown;
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
@@ -142,6 +146,29 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
+    public void testHttpScheme() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
+                "http://my-user_name@www.example.org:5555/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                        .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                        .scheme(new AsciiString("http"))
+                        .add(new AsciiString("foo"), new AsciiString("goo"))
+                        .add(new AsciiString("foo"), new AsciiString("goo2"))
+                        .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         ChannelPromise writePromise = newPromise();
         verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
@@ -333,6 +360,30 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     @Test
+    public void testInvalidStreamId() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/foo",
+                Unpooled.copiedBuffer("foobar", UTF_8));
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        httpHeaders.set(HttpHeaderNames.HOST, "localhost");
+        ChannelPromise writePromise = newPromise();
+        ChannelFuture writeFuture = clientChannel.writeAndFlush(request, writePromise);
+
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isDone());
+        assertFalse(writePromise.isSuccess());
+        Throwable cause = writePromise.cause();
+        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+
+        assertTrue(writeFuture.isDone());
+        assertFalse(writeFuture.isSuccess());
+        cause = writeFuture.cause();
+        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+    }
+
+    @Test
     public void testRequestWithBody() throws Exception {
         final String text = "foooooogoooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
@@ -520,6 +571,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 p.addLast(new HttpToHttp2ConnectionHandlerBuilder()
                            .server(true)
                            .frameListener(serverFrameCountDown)
+                           .httpScheme(HttpScheme.HTTP)
                            .build());
                 serverChannelLatch.countDown();
             }

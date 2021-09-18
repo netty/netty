@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,6 @@
  */
 package io.netty.microbench.util;
 
-import static org.junit.Assert.assertNull;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
@@ -65,7 +64,7 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
      */
     public static final class DelegateHarnessExecutor extends AbstractEventExecutor {
         private static EventLoop executor;
-        private InternalLogger logger = InternalLoggerFactory.getInstance(DelegateHarnessExecutor.class);
+        private final InternalLogger logger = InternalLoggerFactory.getInstance(DelegateHarnessExecutor.class);
 
         public DelegateHarnessExecutor(int maxThreads, String prefix) {
             logger.debug("Using DelegateHarnessExecutor executor {}", this);
@@ -154,6 +153,8 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
     }
 
     public static void handleUnexpectedException(Throwable t) {
-        assertNull(t);
+        if (t != null) {
+            throw new IllegalStateException(t);
+        }
     }
 }

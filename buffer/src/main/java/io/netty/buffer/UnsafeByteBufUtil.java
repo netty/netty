@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -532,6 +532,13 @@ final class UnsafeByteBufUtil {
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, byte[] src, int srcIndex, int length) {
         buf.checkIndex(index, length);
+        // we need to check not null for src as it may cause the JVM crash
+        // See https://github.com/netty/netty/issues/10791
+        checkNotNull(src, "src");
+        if (isOutOfBounds(srcIndex, length, src.length)) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
         if (length != 0) {
             PlatformDependent.copyMemory(src, srcIndex, addr, length);
         }

@@ -6,7 +6,7 @@
   ~ version 2.0 (the "License"); you may not use this file except in compliance
   ~ with the License. You may obtain a copy of the License at:
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~   https://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,13 +14,13 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.51.Final-SNAPSHOT</version>
+    <version>4.1.69.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-shading</artifactId>
@@ -35,10 +35,11 @@
     <classesShadedNativeDir>${classesShadedDir}/META-INF/native</classesShadedNativeDir>
     <shadingPrefix>shaded</shadingPrefix>
     <shadingPrefix2>shaded2</shadingPrefix2>
-
-    <jarName>${project.artifactId}-${project.version}.jar</jarName>
+    <skipShadingTestsuite>true</skipShadingTestsuite>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
   </properties>
 
   <build>
@@ -57,9 +58,145 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>shade</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>${project.groupId}</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>${shadedPackagePrefix}</pattern>
+                  <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
+                </relocation>
+              </relocations>
+              <finalName>shaded1</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>shade-1</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>${project.groupId}</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>${shadedPackagePrefix}</pattern>
+                  <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
+                </relocation>
+              </relocations>
+              <finalName>shaded2</finalName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-jar-features</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <skip>${skipShadingTestsuite}</skip>
+              <target>
+                <unzip dest="${classesShadedDir}/">
+                  <fileset dir="${project.build.directory}/">
+                    <include name="shaded1.jar" />
+                    <include name="shaded2.jar" />
+                  </fileset>
+                </unzip>
+                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
+                <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
+
+                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
+
+                <delete file="${project.build.directory}/shaded1.jar" />
+                <delete file="${project.build.directory}/shaded2.jar" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <skip>${skipShadingTestsuite}</skip>
+          <systemPropertyVariables>
+            <shadingPrefix>${shadingPrefix}</shadingPrefix>
+            <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
+          </systemPropertyVariables>
+          <additionalClasspathElements>
+            <additionalClasspathElement>${classesShadedDir}</additionalClasspathElement>
+          </additionalClasspathElements>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>integration-test</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+
   <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -77,6 +214,7 @@
         <skipShadingTestsuite>true</skipShadingTestsuite>
       </properties>
     </profile>
+
     <profile>
       <id>windows</id>
       <activation>
@@ -84,6 +222,9 @@
           <family>windows</family>
         </os>
       </activation>
+      <properties>
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -106,6 +247,7 @@
         </dependency>
       </dependencies>
     </profile>
+
     <profile>
       <id>mac</id>
       <activation>
@@ -115,6 +257,8 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
+        <nativeTcnativeLib>netty_tcnative_osx_${os.detected.arch}.jnilib</nativeTcnativeLib>
+        <skipShadingTestsuite>false</skipShadingTestsuite>
       </properties>
       <dependencies>
         <dependency>
@@ -145,113 +289,8 @@
           <scope>compile</scope>
         </dependency>
       </dependencies>
-
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-shade-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>shade</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <artifactSet>
-                    <includes>
-                      <include>${project.groupId}</include>
-                    </includes>
-                  </artifactSet>
-                  <relocations>
-                    <relocation>
-                      <pattern>${shadedPackagePrefix}</pattern>
-                      <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
-                    </relocation>
-                  </relocations>
-                </configuration>
-              </execution>
-              <execution>
-                <id>shade-1</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <artifactSet>
-                    <includes>
-                      <include>${project.groupId}</include>
-                    </includes>
-                  </artifactSet>
-                  <relocations>
-                    <relocation>
-                      <pattern>${shadedPackagePrefix}</pattern>
-                      <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
-                    </relocation>
-                  </relocations>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>unpack-jar-features</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <skip>${skipShadingTestsuite}</skip>
-                  <target>
-                    <unzip dest="${classesShadedDir}/">
-                      <fileset dir="${project.build.directory}/">
-                        <include name="${jarName}" />
-                      </fileset>
-                    </unzip>
-                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
-                    <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
-
-                    <condition property="nativeTcnativeLib" value="netty_tcnative_osx_${os.detected.arch}.jnilib" else="netty_tcnative.jnilib">
-                      <equals arg1="${tcnative.classifier}" arg2="" />
-                    </condition>
-
-                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
-                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
-                    <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
-
-                    <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
-                    <delete dir="${classesShadedDir}" />
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <configuration>
-              <skip>${skipShadingTestsuite}</skip>
-              <systemPropertyVariables>
-                <shadingPrefix>${shadingPrefix}</shadingPrefix>
-                <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
-              </systemPropertyVariables>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>integration-test</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
+
     <profile>
       <id>linux</id>
       <activation>
@@ -261,6 +300,8 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
+        <nativeTcnativeLib>netty_tcnative_linux_${os.detected.arch}.so</nativeTcnativeLib>
+        <skipShadingTestsuite>false</skipShadingTestsuite>
       </properties>
       <dependencies>
         <dependency>
@@ -291,112 +332,6 @@
           <scope>compile</scope>
         </dependency>
       </dependencies>
-
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-shade-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>shade</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <artifactSet>
-                    <includes>
-                      <include>${project.groupId}</include>
-                    </includes>
-                  </artifactSet>
-                  <relocations>
-                    <relocation>
-                      <pattern>${shadedPackagePrefix}</pattern>
-                      <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
-                    </relocation>
-                  </relocations>
-                </configuration>
-              </execution>
-              <execution>
-                <id>shade-1</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <artifactSet>
-                    <includes>
-                      <include>${project.groupId}</include>
-                    </includes>
-                  </artifactSet>
-                  <relocations>
-                    <relocation>
-                      <pattern>${shadedPackagePrefix}</pattern>
-                      <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
-                    </relocation>
-                  </relocations>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>unpack-jar-features</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <skip>${skipShadingTestsuite}</skip>
-                  <target>
-                    <unzip dest="${classesShadedDir}/">
-                      <fileset dir="${project.build.directory}/">
-                        <include name="${jarName}" />
-                      </fileset>
-                    </unzip>
-                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
-                    <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
-
-                    <condition property="nativeTcnativeLib" value="netty_tcnative_linux_${os.detected.arch}.so" else="netty_tcnative.so">
-                      <equals arg1="${tcnative.classifier}" arg2="" />
-                    </condition>
-
-                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
-                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
-                    <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
-
-                    <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
-                    <delete dir="${classesShadedDir}" />
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <configuration>
-              <skip>${skipShadingTestsuite}</skip>
-              <systemPropertyVariables>
-                <shadingPrefix>${shadingPrefix}</shadingPrefix>
-                <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
-              </systemPropertyVariables>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>integration-test</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 </project>

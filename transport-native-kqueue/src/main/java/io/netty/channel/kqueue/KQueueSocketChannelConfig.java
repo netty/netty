@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -42,6 +42,7 @@ import static io.netty.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
 @UnstableApi
 public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
+    private volatile boolean tcpFastopen;
 
     KQueueSocketChannelConfig(KQueueSocketChannel channel) {
         super(channel);
@@ -92,6 +93,9 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         if (option == TCP_NOPUSH) {
             return (T) Boolean.valueOf(isTcpNoPush());
         }
+        if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
+            return (T) Boolean.valueOf(isTcpFastOpenConnect());
+        }
         return super.getOption(option);
     }
 
@@ -119,6 +123,8 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
             setSndLowAt((Integer) value);
         } else if (option == TCP_NOPUSH) {
             setTcpNoPush((Boolean) value);
+        } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
+            setTcpFastOpenConnect((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -295,6 +301,21 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public boolean isAllowHalfClosure() {
         return allowHalfClosure;
+    }
+
+    /**
+     * Enables client TCP fast open, if available.
+     */
+    public KQueueSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+        tcpFastopen = fastOpenConnect;
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
+     */
+    public boolean isTcpFastOpenConnect() {
+        return tcpFastopen;
     }
 
     @Override

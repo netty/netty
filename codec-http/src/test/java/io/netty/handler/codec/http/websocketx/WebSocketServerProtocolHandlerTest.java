@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,34 +22,39 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
+
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocketServerProtocolHandlerTest {
 
     private final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
 
-    @Before
+    @BeforeEach
     public void setUp() {
         responses.clear();
     }
@@ -192,6 +197,93 @@ public class WebSocketServerProtocolHandlerTest {
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testCheckWebSocketPathStartWithSlash() {
+        WebSocketRequestBuilder builder = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/")
+                .checkStartsWith(true)
+                .build();
+
+        FullHttpResponse response;
+
+        createChannel(config, null).writeInbound(builder.uri("/test").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/?q=v").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        createChannel(config, null).writeInbound(builder.uri("/").build());
+        response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
+    public void testCheckValidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/test")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+    }
+
+    @Test
+    public void testCheckInvalidWebSocketPath() {
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+                .method(HttpMethod.GET)
+                .uri("/testabc")
+                .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                .connection("Upgrade")
+                .upgrade(HttpHeaderValues.WEBSOCKET)
+                .version13()
+                .build();
+
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .checkStartsWith(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler(config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        ch.writeInbound(httpRequest);
+
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        assertNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
     }
 
     @Test
@@ -346,6 +438,10 @@ public class WebSocketServerProtocolHandlerTest {
             .websocketPath("/test")
             .sendCloseFrame(null)
             .build();
+        return createChannel(serverConfig, handler);
+    }
+
+    private EmbeddedChannel createChannel(WebSocketServerProtocolConfig serverConfig, ChannelHandler handler) {
         return new EmbeddedChannel(
                 new WebSocketServerProtocolHandler(serverConfig),
                 new HttpRequestDecoder(),

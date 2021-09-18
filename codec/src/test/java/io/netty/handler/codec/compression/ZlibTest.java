@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,7 +36,11 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class ZlibTest {
 
@@ -43,8 +48,8 @@ public abstract class ZlibTest {
     private static final byte[] BYTES_LARGE = new byte[1024 * 1024];
     private static final byte[] BYTES_LARGE2 = ("<!--?xml version=\"1.0\" encoding=\"ISO-8859-1\"?-->\n" +
             "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " +
-            "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
-            "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\"><head>\n" +
+            "\"https://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
+            "<html xmlns=\"https://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\"><head>\n" +
             "    <title>Apache Tomcat</title>\n" +
             "</head>\n" +
             '\n' +
@@ -105,9 +110,20 @@ public abstract class ZlibTest {
 
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
         try {
-            chDecoderGZip.writeInbound(deflatedData);
+            while (deflatedData.isReadable()) {
+                chDecoderGZip.writeInbound(deflatedData.readRetainedSlice(1));
+            }
+            deflatedData.release();
             assertTrue(chDecoderGZip.finish());
-            ByteBuf buf = chDecoderGZip.readInbound();
+            ByteBuf buf = Unpooled.buffer();
+            for (;;) {
+                ByteBuf b = chDecoderGZip.readInbound();
+                if (b == null) {
+                    break;
+                }
+                buf.writeBytes(b);
+                b.release();
+            }
             assertEquals(buf, data);
             assertNull(chDecoderGZip.readInbound());
             data.release();
@@ -198,7 +214,7 @@ public abstract class ZlibTest {
                 buf.release();
                 decoded = true;
             }
-            assertFalse("should decode nothing", decoded);
+            assertFalse(decoded, "should decode nothing");
 
             assertFalse(chDecoderZlib.finish());
         } finally {
@@ -355,19 +371,20 @@ public abstract class ZlibTest {
     public void testMaxAllocation() throws Exception {
         int maxAllocation = 1024;
         ZlibDecoder decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
-        EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
+        final EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
 
-        try {
-            chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
-            fail("decompressed size > maxAllocation, so should have thrown exception");
-        } catch (DecompressionException e) {
-            assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
-            assertEquals(maxAllocation, alloc.getMaxAllocation());
-            assertTrue(decoder.isClosed());
-            assertFalse(chDecoder.finish());
-        }
+        DecompressionException e = assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
+            }
+        });
+        assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
+        assertEquals(maxAllocation, alloc.getMaxAllocation());
+        assertTrue(decoder.isClosed());
+        assertFalse(chDecoder.finish());
     }
 
     private static byte[] gzip(byte[] bytes) throws IOException {
@@ -387,7 +404,7 @@ public abstract class ZlibTest {
     }
 
     private static final class TestByteBufAllocator extends AbstractByteBufAllocator {
-        private ByteBufAllocator wrapped;
+        private final ByteBufAllocator wrapped;
         private int maxAllocation;
 
         TestByteBufAllocator(ByteBufAllocator wrapped) {

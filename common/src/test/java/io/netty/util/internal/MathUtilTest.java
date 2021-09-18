@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,12 @@
  */
 package io.netty.util.internal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static io.netty.util.internal.MathUtil.*;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class MathUtilTest {
 
@@ -68,6 +68,9 @@ public class MathUtilTest {
         assertTrue(isOutOfBounds(Integer.MAX_VALUE - 1, 1, Integer.MAX_VALUE - 1));
         assertTrue(isOutOfBounds(Integer.MAX_VALUE - 1, 2, Integer.MAX_VALUE));
         assertTrue(isOutOfBounds(1, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertTrue(isOutOfBounds(0, 1, Integer.MIN_VALUE));
+        assertTrue(isOutOfBounds(0, 1, -1));
+        assertTrue(isOutOfBounds(0, Integer.MAX_VALUE, 0));
     }
 
     @Test

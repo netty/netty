@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -64,11 +65,15 @@ public class Http2Exception extends Exception {
         this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
 
-    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint) {
+    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint,
+                                    Class<?> clazz, String method) {
+        final Http2Exception exception;
         if (PlatformDependent.javaVersion() >= 7) {
-            return new Http2Exception(error, message, shutdownHint, true);
+            exception = new StacklessHttp2Exception(error, message, shutdownHint, true);
+        } else {
+            exception = new StacklessHttp2Exception(error, message, shutdownHint);
         }
-        return new Http2Exception(error, message, shutdownHint);
+        return ThrowableUtil.unknownStackTrace(exception, clazz, method);
     }
 
     @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
@@ -131,25 +136,25 @@ public class Http2Exception extends Exception {
 
     /**
      * Use if an error which can be isolated to a single stream has occurred.  If the {@code id} is not
-     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link StreamException} will be returned.
      * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
      * @param id The stream id for which the error is isolated to.
      * @param error The type of error as defined by the HTTP/2 specification.
      * @param fmt String with the content and format for the additional debug data.
      * @param args Objects which fit into the format defined by {@code fmt}.
      * @return If the {@code id} is not
-     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link StreamException} will be returned.
      * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
      */
     public static Http2Exception streamError(int id, Http2Error error, String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
-                Http2Exception.connectionError(error, fmt, args) :
+                connectionError(error, fmt, args) :
                     new StreamException(id, error, String.format(fmt, args));
     }
 
     /**
      * Use if an error which can be isolated to a single stream has occurred.  If the {@code id} is not
-     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link StreamException} will be returned.
      * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
      * @param id The stream id for which the error is isolated to.
      * @param error The type of error as defined by the HTTP/2 specification.
@@ -157,20 +162,20 @@ public class Http2Exception extends Exception {
      * @param fmt String with the content and format for the additional debug data.
      * @param args Objects which fit into the format defined by {@code fmt}.
      * @return If the {@code id} is not
-     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link Http2Exception.StreamException} will be returned.
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link StreamException} will be returned.
      * Otherwise the error is considered a connection error and a {@link Http2Exception} is returned.
      */
     public static Http2Exception streamError(int id, Http2Error error, Throwable cause,
             String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
-                Http2Exception.connectionError(error, cause, fmt, args) :
+                connectionError(error, cause, fmt, args) :
                     new StreamException(id, error, String.format(fmt, args), cause);
     }
 
     /**
      * A specific stream error resulting from failing to decode headers that exceeds the max header size list.
      * If the {@code id} is not {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a
-     * {@link Http2Exception.StreamException} will be returned. Otherwise the error is considered a
+     * {@link StreamException} will be returned. Otherwise the error is considered a
      * connection error and a {@link Http2Exception} is returned.
      * @param id The stream id for which the error is isolated to.
      * @param error The type of error as defined by the HTTP/2 specification.
@@ -185,14 +190,14 @@ public class Http2Exception extends Exception {
     public static Http2Exception headerListSizeError(int id, Http2Error error, boolean onDecode,
             String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
-                Http2Exception.connectionError(error, fmt, args) :
+                connectionError(error, fmt, args) :
                     new HeaderListSizeException(id, error, String.format(fmt, args), onDecode);
     }
 
     /**
      * Check if an exception is isolated to a single stream or the entire connection.
      * @param e The exception to check.
-     * @return {@code true} if {@code e} is an instance of {@link Http2Exception.StreamException}.
+     * @return {@code true} if {@code e} is an instance of {@link StreamException}.
      * {@code false} otherwise.
      */
     public static boolean isStreamError(Http2Exception e) {
@@ -303,6 +308,26 @@ public class Http2Exception extends Exception {
         @Override
         public Iterator<StreamException> iterator() {
             return exceptions.iterator();
+        }
+    }
+
+    private static final class StacklessHttp2Exception extends Http2Exception {
+
+        private static final long serialVersionUID = 1077888485687219443L;
+
+        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
+            super(error, message, shutdownHint);
+        }
+
+        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
+            super(error, message, shutdownHint, shared);
+        }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 }

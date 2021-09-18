@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,38 +15,24 @@
  */
 package io.netty.handler.ssl;
 
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import javax.net.ssl.SSLSessionContext;
 import java.security.Provider;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
-import static org.junit.Assume.assumeTrue;
-
-@RunWith(Parameterized.class)
+@DisabledIf("checkConscryptDisabled")
 public class ConscryptSslEngineTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
-    public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
-        for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
-        }
-        return params;
+    static boolean checkConscryptDisabled() {
+        return !Conscrypt.isAvailable();
     }
 
-    public ConscryptSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
-        super(type, combo, delegate);
-    }
-
-    @BeforeClass
-    public static void checkConscrypt() {
-        assumeTrue(Conscrypt.isAvailable());
+    public ConscryptSslEngineTest() {
+        super(false);
     }
 
     @Override
@@ -69,13 +55,37 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
         return Java8SslTestUtils.conscryptProvider();
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() {
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param) {
     }
 
-    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param) {
+    }
+
+    @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled("Possible Conscrypt bug")
+    @Override
+    public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
+        // Skip
+        // https://github.com/google/conscrypt/issues/851
+    }
+
+    @Disabled("Not supported")
+    @Override
+    public void testRSASSAPSS(SSLEngineTestParam param) {
+        // skip
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,10 +15,11 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.util.concurrent.AbstractEventExecutor.LazyRunnable;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Collections;
 import java.util.Set;
@@ -35,7 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SingleThreadEventExecutorTest {
 
@@ -43,7 +49,8 @@ public class SingleThreadEventExecutorTest {
     public void testWrappedExecutorIsShutdown() {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
+       final SingleThreadEventExecutor executor =
+               new SingleThreadEventExecutor(null, executorService, false) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -58,27 +65,27 @@ public class SingleThreadEventExecutorTest {
         executorService.shutdownNow();
         executeShouldFail(executor);
         executeShouldFail(executor);
-        try {
-            executor.shutdownGracefully().syncUninterruptibly();
-            Assert.fail();
-        } catch (RejectedExecutionException expected) {
-            // expected
-        }
-        Assert.assertTrue(executor.isShutdown());
+        assertThrows(RejectedExecutionException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.shutdownGracefully().syncUninterruptibly();
+            }
+        });
+        assertTrue(executor.isShutdown());
     }
 
-    private static void executeShouldFail(Executor executor) {
-        try {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Noop.
-                }
-            });
-            Assert.fail();
-        } catch (RejectedExecutionException expected) {
-            // expected
-        }
+    private static void executeShouldFail(final Executor executor) {
+        assertThrows(RejectedExecutionException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Noop.
+                    }
+                });
+            }
+        });
     }
 
     @Test
@@ -100,31 +107,35 @@ public class SingleThreadEventExecutorTest {
         ThreadProperties threadProperties = executor.threadProperties();
 
         Thread thread = threadRef.get();
-        Assert.assertEquals(thread.getId(), threadProperties.id());
-        Assert.assertEquals(thread.getName(), threadProperties.name());
-        Assert.assertEquals(thread.getPriority(), threadProperties.priority());
-        Assert.assertEquals(thread.isAlive(), threadProperties.isAlive());
-        Assert.assertEquals(thread.isDaemon(), threadProperties.isDaemon());
-        Assert.assertTrue(threadProperties.stackTrace().length > 0);
+        assertEquals(thread.getId(), threadProperties.id());
+        assertEquals(thread.getName(), threadProperties.name());
+        assertEquals(thread.getPriority(), threadProperties.priority());
+        assertEquals(thread.isAlive(), threadProperties.isAlive());
+        assertEquals(thread.isDaemon(), threadProperties.isDaemon());
+        assertTrue(threadProperties.stackTrace().length > 0);
         executor.shutdownGracefully();
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testInvokeAnyInEventLoop() {
         testInvokeInEventLoop(true, false);
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testInvokeAnyInEventLoopWithTimeout() {
         testInvokeInEventLoop(true, true);
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testInvokeAllInEventLoop() {
         testInvokeInEventLoop(false, false);
     }
 
-    @Test(expected = RejectedExecutionException.class, timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testInvokeAllInEventLoopWithTimeout() {
         testInvokeInEventLoop(false, true);
     }
@@ -143,38 +154,44 @@ public class SingleThreadEventExecutorTest {
             }
         };
         try {
-            final Promise<Void> promise = executor.newPromise();
-            executor.execute(new Runnable() {
+            assertThrows(RejectedExecutionException.class, new Executable() {
                 @Override
-                public void run() {
-                    try {
-                        Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(new Callable<Boolean>() {
-                            @Override
-                            public Boolean call() throws Exception {
-                                promise.setFailure(new AssertionError("Should never execute the Callable"));
-                                return Boolean.TRUE;
-                            }
-                        });
-                        if (any) {
-                            if (timeout) {
-                                executor.invokeAny(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAny(set);
-                            }
-                        } else {
-                            if (timeout) {
-                                executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAll(set);
+                public void execute() throws Throwable {
+                    final Promise<Void> promise = executor.newPromise();
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(
+                                        new Callable<Boolean>() {
+                                    @Override
+                                    public Boolean call() throws Exception {
+                                        promise.setFailure(new AssertionError("Should never execute the Callable"));
+                                        return Boolean.TRUE;
+                                    }
+                                });
+                                if (any) {
+                                    if (timeout) {
+                                        executor.invokeAny(set, 10, TimeUnit.SECONDS);
+                                    } else {
+                                        executor.invokeAny(set);
+                                    }
+                                } else {
+                                    if (timeout) {
+                                        executor.invokeAll(set, 10, TimeUnit.SECONDS);
+                                    } else {
+                                        executor.invokeAll(set);
+                                    }
+                                }
+                                promise.setFailure(new AssertionError("Should never reach here"));
+                            } catch (Throwable cause) {
+                                promise.setFailure(cause);
                             }
                         }
-                        promise.setFailure(new AssertionError("Should never reach here"));
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
-                    }
+                    });
+                    promise.syncUninterruptibly();
                 }
             });
-            promise.syncUninterruptibly();
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
@@ -209,7 +226,7 @@ public class SingleThreadEventExecutorTest {
                         runAllTasks();
                     } catch (Exception e) {
                         e.printStackTrace();
-                        Assert.fail(e.toString());
+                        fail(e.toString());
                     }
                 }
             }
@@ -321,7 +338,8 @@ public class SingleThreadEventExecutorTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTakeTask() throws Exception {
         final SingleThreadEventExecutor executor =
                 new SingleThreadEventExecutor(null, Executors.defaultThreadFactory(), true) {
@@ -355,7 +373,8 @@ public class SingleThreadEventExecutorTest {
         assertThat(afterTask.ran.get(), is(true));
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testTakeTaskAlwaysHasTask() throws Exception {
         //for https://github.com/netty/netty/issues/1614
 
@@ -374,34 +393,22 @@ public class SingleThreadEventExecutorTest {
 
         //add scheduled task
         TestRunnable t = new TestRunnable();
-        ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
-
-        final Runnable doNothing = new Runnable() {
-            @Override
-            public void run() {
-                //NOOP
-            }
-        };
-        final AtomicBoolean stop = new AtomicBoolean(false);
+        final ScheduledFuture<?> f = executor.schedule(t, 1500, TimeUnit.MILLISECONDS);
 
         //ensure always has at least one task in taskQueue
         //check if scheduled tasks are triggered
-        try {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (!stop.get()) {
-                        executor.execute(doNothing);
-                    }
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (!f.isDone()) {
+                    executor.execute(this);
                 }
-            }).start();
+            }
+        });
 
-            f.sync();
+        f.sync();
 
-            assertThat(t.ran.get(), is(true));
-        } finally {
-            stop.set(true);
-        }
+        assertThat(t.ran.get(), is(true));
     }
 
     private static final class TestRunnable implements Runnable {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,7 +29,6 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -132,8 +131,8 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         this.maxChannels = maxChannels;
         this.executor = executor;
 
-        tooManyChannels = ThrowableUtil.unknownStackTrace(
-                ChannelException.newStatic("too many channels (max: " + maxChannels + ')', null),
+        tooManyChannels =
+                ChannelException.newStatic("too many channels (max: " + maxChannels + ')',
                 ThreadPerChannelEventLoopGroup.class, "nextChild()");
     }
 

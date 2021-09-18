@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.traffic;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -164,15 +166,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            Must be positive.
      */
     protected AbstractTrafficShapingHandler(long writeLimit, long readLimit, long checkInterval, long maxTime) {
-        if (maxTime <= 0) {
-            throw new IllegalArgumentException("maxTime must be positive");
-        }
+        this.maxTime = checkPositive(maxTime, "maxTime");
 
         userDefinedWritabilityIndex = userDefinedWritabilityIndex();
         this.writeLimit = writeLimit;
         this.readLimit = readLimit;
         this.checkInterval = checkInterval;
-        this.maxTime = maxTime;
     }
 
     /**
@@ -346,10 +345,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            Must be positive.
      */
     public void setMaxTimeWait(long maxTime) {
-        if (maxTime <= 0) {
-            throw new IllegalArgumentException("maxTime must be positive");
-        }
-        this.maxTime = maxTime;
+        this.maxTime = checkPositive(maxTime, "maxTime");
     }
 
     /**
@@ -377,10 +373,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *              Must be positive.
      */
     public void setMaxWriteDelay(long maxWriteDelay) {
-        if (maxWriteDelay <= 0) {
-            throw new IllegalArgumentException("maxWriteDelay must be positive");
-        }
-        this.maxWriteDelay = maxWriteDelay;
+        this.maxWriteDelay = checkPositive(maxWriteDelay, "maxWriteDelay");
     }
 
     /**

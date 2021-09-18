@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,19 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
@@ -137,12 +141,12 @@ public class PlatformDependentTest {
                 bytes[j] = (byte) (bytesChar[j] & 0xff);
             }
             String string = new String(bytesChar);
-            assertEquals("length=" + i,
-                         hashCodeAsciiSafe(bytes, 0, bytes.length),
-                         hashCodeAscii(bytes, 0, bytes.length));
-            assertEquals("length=" + i,
-                    hashCodeAscii(bytes, 0, bytes.length),
-                    hashCodeAscii(string));
+            assertEquals(hashCodeAsciiSafe(bytes, 0, bytes.length),
+                         hashCodeAscii(bytes, 0, bytes.length),
+                        "length=" + i);
+            assertEquals(hashCodeAscii(bytes, 0, bytes.length),
+                        hashCodeAscii(string),
+                        "length=" + i);
         }
     }
 

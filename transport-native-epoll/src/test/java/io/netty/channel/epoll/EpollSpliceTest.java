@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,16 +28,19 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EpollSpliceTest {
 
@@ -189,10 +192,11 @@ public class EpollSpliceTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void spliceToFile() throws Throwable {
         EventLoopGroup group = new EpollEventLoopGroup(1);
-        File file = File.createTempFile("netty-splice", null);
+        File file = PlatformDependent.createTempFile("netty-splice", null, null);
         file.deleteOnExit();
 
         SpliceHandler sh = new SpliceHandler(file);
@@ -237,8 +241,8 @@ public class EpollSpliceTest {
         FileInputStream in = new FileInputStream(file);
 
         try {
-            Assert.assertEquals(written.length, in.read(written));
-            Assert.assertArrayEquals(data, written);
+            assertEquals(written.length, in.read(written));
+            assertArrayEquals(data, written);
         } finally {
             in.close();
             group.shutdownGracefully();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,17 @@
  */
 package io.netty.util.concurrent;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AbstractScheduledEventExecutorTest {
     private static final Runnable TEST_RUNNABLE = new Runnable() {
@@ -71,28 +73,48 @@ public class AbstractScheduledEventExecutorTest {
         assertNull(executor.pollScheduledTask());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testScheduleAtFixedRateRunnableZero() {
-        TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, 0, TimeUnit.DAYS);
+        final TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, 0, TimeUnit.DAYS);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testScheduleAtFixedRateRunnableNegative() {
-        TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+        final TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testScheduleWithFixedDelayZero() {
-        TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+        final TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testScheduleWithFixedDelayNegative() {
-        TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
-        executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+        final TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
+            }
+        });
     }
 
     private static final class TestScheduledEventExecutor extends AbstractScheduledEventExecutor {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -153,7 +153,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         this.factory = checkNotNull(factory, "factory");
         try {
             if (request instanceof HttpContent) {
-                // Offer automatically if the given request is als type of HttpContent
+                // Offer automatically if the given request is as type of HttpContent
                 // See #1089
                 offer((HttpContent) request);
             } else {
@@ -287,13 +287,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
         ByteBuf buf = content.content();
         if (undecodedChunk == null) {
-            undecodedChunk = isLastChunk ?
-                    // Take a slice instead of copying when the first chunk is also the last
-                    // as undecodedChunk.writeBytes will never be called.
-                    buf.retainedSlice() :
-                    // Maybe we should better not copy here for performance reasons but this will need
-                    // more care by the caller to release the content in a correct manner later
-                    // So maybe something to optimize on a later stage.
+            undecodedChunk =
+                    // Since the Handler will release the incoming later on, we need to copy it
                     //
                     // We are explicit allocate a buffer and NOT calling copy() as otherwise it may set a maxCapacity
                     // which is not really usable for us as we may exceed it once we add more bytes.
@@ -303,7 +298,17 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         }
         parseBody();
         if (undecodedChunk != null && undecodedChunk.writerIndex() > discardThreshold) {
-            undecodedChunk.discardReadBytes();
+            if (undecodedChunk.refCnt() == 1) {
+                // It's safe to call discardBytes() as we are the only owner of the buffer.
+                undecodedChunk.discardReadBytes();
+            } else {
+                // There seems to be multiple references of the buffer. Let's copy the data and release the buffer to
+                // ensure we can give back memory to the system.
+                ByteBuf buffer = undecodedChunk.alloc().buffer(undecodedChunk.readableBytes());
+                buffer.writeBytes(undecodedChunk);
+                undecodedChunk.release();
+                undecodedChunk = buffer;
+            }
         }
         return this;
     }
@@ -683,8 +688,15 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      */
     @Override
     public void destroy() {
-        // Release all data items, including those not yet pulled
+        // Release all data items, including those not yet pulled, only file based items
         cleanFiles();
+        // Clean Memory based data
+        for (InterfaceHttpData httpData : bodyListHttpData) {
+            // Might have been already released by the user
+            if (httpData.refCnt() > 0) {
+                httpData.release();
+            }
+        }
 
         destroyed = true;
 

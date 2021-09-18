@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,10 +24,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -218,7 +221,7 @@ public class WebSocketClientExtensionHandlerTest {
         verify(fallbackExtensionMock).newExtensionDecoder();
     }
 
-    @Test(expected = CodecException.class)
+    @Test
     public void testIfMainAndFallbackUseRSV1WillFail() {
         // initialize
         when(mainHandshakerMock.newRequestData()).
@@ -248,7 +251,12 @@ public class WebSocketClientExtensionHandlerTest {
                 req2.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
 
         HttpResponse res = newUpgradeResponse("main, fallback");
-        ch.writeInbound(res);
+        try {
+            ch.writeInbound(res);
+        } catch (CodecException e) {
+            return;
+        }
+        fail("Expected to encounter a CodecException");
 
         // test
         assertEquals(2, reqExts.size());

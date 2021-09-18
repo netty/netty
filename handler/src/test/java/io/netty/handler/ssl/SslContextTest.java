@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,8 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.ResourcesUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,36 +31,47 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class SslContextTest {
 
-    @Test(expected = IOException.class)
+    @Test
     public void testUnencryptedEmptyPassword() throws Exception {
-        PrivateKey key = SslContext.toPrivateKey(
-                ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem"), "");
-        Assert.assertNotNull(key);
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(
+                        ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem"), "");
+            }
+        });
     }
 
     @Test
     public void testUnEncryptedNullPassword() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
                 ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem"), null);
-        Assert.assertNotNull(key);
+        assertNotNull(key);
     }
 
     @Test
     public void testEncryptedEmptyPassword() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
                 ResourcesUtil.getFile(getClass(), "test_encrypted_empty_pass.pem"), "");
-        Assert.assertNotNull(key);
+        assertNotNull(key);
     }
 
-    @Test(expected = InvalidKeySpecException.class)
+    @Test
     public void testEncryptedNullPassword() throws Exception {
-        SslContext.toPrivateKey(
-                ResourcesUtil.getFile(getClass(), "test_encrypted_empty_pass.pem"), null);
+        assertThrows(InvalidKeySpecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(
+                        ResourcesUtil.getFile(getClass(), "test_encrypted_empty_pass.pem"), null);
+            }
+        });
     }
 
     @Test
@@ -87,12 +98,17 @@ public abstract class SslContextTest {
         newSslContext(crtFile, keyFile, null);
     }
 
-    @Test(expected = SSLException.class)
+    @Test
     public void testSslContextWithUnencryptedPrivateKeyEmptyPass() throws SSLException {
-        File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
-        File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        final File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        final File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
-        newSslContext(crtFile, keyFile, "");
+        assertThrows(SSLException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                newSslContext(crtFile, keyFile, "");
+            }
+        });
     }
 
     @Test
@@ -108,7 +124,7 @@ public abstract class SslContextTest {
         } catch (IllegalArgumentException e) {
             exception = e;
         }
-        assumeNotNull(exception);
+        assumeTrue(exception != null);
         File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
         File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
@@ -116,9 +132,15 @@ public abstract class SslContextTest {
         assertFalse(sslContext.cipherSuites().contains(unsupportedCipher));
     }
 
-    @Test(expected = CertificateException.class)
+    @Test
     public void testUnsupportedParams() throws CertificateException {
-        SslContext.toX509Certificates(new File(getClass().getResource("ec_params_unsupported.pem").getFile()));
+        assertThrows(CertificateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toX509Certificates(
+                        new File(getClass().getResource("ec_params_unsupported.pem").getFile()));
+            }
+        });
     }
 
     protected abstract SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException;

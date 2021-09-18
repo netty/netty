@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,8 @@ import javax.net.ssl.SSLEngine;
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final boolean AVAILABLE = Conscrypt.isAvailable() ||
                                              JdkAlpnSslUtils.supportsAlpn() ||
-                                             JettyAlpnSslEngine.isAvailable();
+                                             JettyAlpnSslEngine.isAvailable() ||
+                                             BouncyCastle.isAvailable();
 
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
 
@@ -121,7 +122,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
             throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
                     + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
                     + " For Jetty-ALPN, see "
-                    + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
+                    + "https://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
         }
     }
 
@@ -132,6 +133,9 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
             if (Conscrypt.isEngineSupported(engine)) {
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
                         : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
+            }
+            if (BouncyCastle.isInUse(engine)) {
+                return new BouncyCastleAlpnSslEngine(engine, applicationNegotiator, isServer);
             }
             // ALPN support was recently backported to Java8 as
             // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8230977.

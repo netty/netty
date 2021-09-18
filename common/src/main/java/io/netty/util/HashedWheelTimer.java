@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,10 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -70,12 +73,12 @@ import static io.netty.util.internal.StringUtil.simpleClassName;
  * <h3>Implementation Details</h3>
  *
  * {@link HashedWheelTimer} is based on
- * <a href="http://cseweb.ucsd.edu/users/varghese/">George Varghese</a> and
+ * <a href="https://cseweb.ucsd.edu/users/varghese/">George Varghese</a> and
  * Tony Lauck's paper,
- * <a href="http://cseweb.ucsd.edu/users/varghese/PAPERS/twheel.ps.Z">'Hashed
+ * <a href="https://cseweb.ucsd.edu/users/varghese/PAPERS/twheel.ps.Z">'Hashed
  * and Hierarchical Timing Wheels: data structures to efficiently implement a
  * timer facility'</a>.  More comprehensive slides are located
- * <a href="http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt">here</a>.
+ * <a href="https://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt">here</a>.
  */
 public class HashedWheelTimer implements Timer {
 
@@ -243,10 +246,10 @@ public class HashedWheelTimer implements Timer {
             long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
             long maxPendingTimeouts) {
 
-        ObjectUtil.checkNotNull(threadFactory, "threadFactory");
-        ObjectUtil.checkNotNull(unit, "unit");
-        ObjectUtil.checkPositive(tickDuration, "tickDuration");
-        ObjectUtil.checkPositive(ticksPerWheel, "ticksPerWheel");
+        checkNotNull(threadFactory, "threadFactory");
+        checkNotNull(unit, "unit");
+        checkPositive(tickDuration, "tickDuration");
+        checkPositive(ticksPerWheel, "ticksPerWheel");
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
@@ -296,14 +299,8 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
-        if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel must be greater than 0: " + ticksPerWheel);
-        }
-        if (ticksPerWheel > 1073741824) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel may not be greater than 2^30: " + ticksPerWheel);
-        }
+        //ticksPerWheel may not be greater than 2^30
+        checkInRange(ticksPerWheel, 1, 1073741824, "ticksPerWheel");
 
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
@@ -401,8 +398,8 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        ObjectUtil.checkNotNull(task, "task");
-        ObjectUtil.checkNotNull(unit, "unit");
+        checkNotNull(task, "task");
+        checkNotNull(unit, "unit");
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 
@@ -439,7 +436,7 @@ public class HashedWheelTimer implements Timer {
         if (logger.isErrorEnabled()) {
             String resourceType = simpleClassName(HashedWheelTimer.class);
             logger.error("You are creating too many " + resourceType + " instances. " +
-                    resourceType + " is a shared resource that must be reused across the JVM," +
+                    resourceType + " is a shared resource that must be reused across the JVM, " +
                     "so that only a few instances are created.");
         }
     }

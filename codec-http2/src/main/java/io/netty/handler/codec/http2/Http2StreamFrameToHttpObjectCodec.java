@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -78,7 +78,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return (msg instanceof Http2HeadersFrame) || (msg instanceof Http2DataFrame);
+        return msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame;
     }
 
     @Override
@@ -162,7 +162,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                     return;
                 } else {
                     throw new EncoderException(
-                            HttpResponseStatus.CONTINUE.toString() + " must be a FullHttpResponse");
+                            HttpResponseStatus.CONTINUE + " must be a FullHttpResponse");
                 }
             }
         }

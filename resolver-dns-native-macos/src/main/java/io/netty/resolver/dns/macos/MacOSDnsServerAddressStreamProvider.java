@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,18 +19,19 @@ import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -42,6 +43,16 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
 
+    private static final Comparator<DnsResolver> RESOLVER_COMPARATOR =
+            new Comparator<DnsResolver>() {
+                @Override
+                public int compare(DnsResolver r1, DnsResolver r2) {
+                    // Note: order is descending (from higher to lower) so entries with lower search order override
+                    // entries with higher search order.
+                    return r1.searchOrder() < r2.searchOrder() ? 1 : (r1.searchOrder() == r2.searchOrder() ? 0 : -1);
+                }
+            };
+
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     private static final InternalLogger logger =
@@ -51,6 +62,16 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     private static final long REFRESH_INTERVAL = TimeUnit.SECONDS.toNanos(10);
 
     static {
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
+
+        // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
+        // NETTY_JNI_UTIL_FIND_CLASS.
+        ClassInitializerUtil.tryLoadClasses(MacOSDnsServerAddressStreamProvider.class,
+                // netty_resolver_dns_macos
+                byte[].class, String.class
+        );
+
         Throwable cause = null;
         try {
             loadNativeLibrary();
@@ -61,9 +82,8 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
     }
 
     private static void loadNativeLibrary() {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("mac")) {
-            throw new IllegalStateException("Only supported on MacOS");
+        if (!PlatformDependent.isOsx()) {
+            throw new IllegalStateException("Only supported on MacOS/OSX");
         }
         String staticLibName = "netty_resolver_dns_native_macos";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
@@ -109,6 +129,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         if (resolvers == null || resolvers.length == 0) {
             return Collections.emptyMap();
         }
+        Arrays.sort(resolvers, RESOLVER_COMPARATOR);
         Map<String, DnsServerAddresses> resolverMap = new HashMap<String, DnsServerAddresses>(resolvers.length);
         for (DnsResolver resolver: resolvers) {
             // Skip mdns

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -461,8 +461,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return;
         }
         promise = promise.unvoid();
-        // Avoid NotYetConnectedException
-        if (!ctx.channel().isActive()) {
+        // Avoid NotYetConnectedException and avoid sending before connection preface
+        if (!ctx.channel().isActive() || !prefaceSent()) {
             ctx.close(promise);
             return;
         }
@@ -876,7 +876,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause, ChannelPromise promise) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        int lastKnownStream = connection().remote().lastStreamCreated();
+        int lastKnownStream;
+        if (cause != null && cause.shutdownHint() == Http2Exception.ShutdownHint.HARD_SHUTDOWN) {
+            // The hard shutdown could have been triggered during header processing, before updating
+            // lastStreamCreated(). Specifically, any connection errors encountered by Http2FrameReader or HPACK
+            // decoding will fail to update the last known stream. So we must be pessimistic.
+            // https://github.com/netty/netty/issues/10670
+            lastKnownStream = Integer.MAX_VALUE;
+        } else {
+            lastKnownStream = connection().remote().lastStreamCreated();
+        }
         return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toByteBuf(ctx, cause), promise);
     }
 
@@ -934,7 +943,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
         private final ChannelPromise promise;
-        private final ScheduledFuture<?> timeoutTask;
+        private final Future<?> timeoutTask;
         private boolean closed;
 
         ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {

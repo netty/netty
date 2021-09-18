@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,8 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,13 +33,14 @@ import static io.netty.util.internal.StringUtil.toHexStringPadded;
 import static io.netty.util.internal.StringUtil.unescapeCsv;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class StringUtilTest {
 
@@ -160,23 +162,26 @@ public class StringUtilTest {
         return sp;
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void escapeCsvNull() {
-        StringUtil.escapeCsv(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                StringUtil.escapeCsv(null);
+            }
+        });
     }
 
     @Test
     public void escapeCsvEmpty() {
         CharSequence value = "";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test
     public void escapeCsvUnquoted() {
         CharSequence value = "something";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test
@@ -252,8 +257,7 @@ public class StringUtilTest {
     @Test
     public void escapeCsvQuoted() {
         CharSequence value = "\"foo,goo\"";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test
@@ -407,29 +411,54 @@ public class StringUtilTest {
         assertEquals("hello,netty", unescapeCsv("\"hello,netty\""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvWithSingleQuote() {
-        unescapeCsv("\"");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsv("\"");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvWithOddQuote() {
-        unescapeCsv("\"\"\"");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsv("\"\"\"");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvWithCRAndWithoutQuote() {
-        unescapeCsv("\r");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsv("\r");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvWithLFAndWithoutQuote() {
-        unescapeCsv("\n");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsv("\n");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvWithCommaAndWithoutQuote() {
-        unescapeCsv(",");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsv(",");
+            }
+        });
     }
 
     @Test
@@ -464,29 +493,54 @@ public class StringUtilTest {
         assertEquals(Arrays.asList("a\rb", "c\nd"), unescapeCsvFields("\"a\rb\",\"c\nd\""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvFieldsWithCRWithoutQuote() {
-        unescapeCsvFields("a,\r");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsvFields("a,\r");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvFieldsWithLFWithoutQuote() {
-        unescapeCsvFields("a,\r");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsvFields("a,\r");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvFieldsWithQuote() {
-        unescapeCsvFields("a,\"");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsvFields("a,\"");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvFieldsWithQuote2() {
-        unescapeCsvFields("\",a");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsvFields("\",a");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void unescapeCsvFieldsWithQuote3() {
-        unescapeCsvFields("a\"b,a");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                unescapeCsvFields("a\"b,a");
+            }
+        });
     }
 
     @Test

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,18 +14,6 @@
  * under the License.
  */
 package io.netty.testsuite.transport;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.Test;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -39,10 +27,22 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class AbstractSingleThreadEventLoopTest {
 
-    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelsRegistered() throws Exception {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
@@ -61,15 +61,22 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
             assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(2, registeredChannels(loop));
+                checkNumRegisteredChannels(loop, 2);
             }
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(1, registeredChannels(loop));
+                checkNumRegisteredChannels(loop, 1);
             }
         } finally {
             group.shutdownGracefully();
+        }
+    }
+
+    private static void checkNumRegisteredChannels(SingleThreadEventLoop loop, int numChannels) throws Exception {
+        // We need to loop as some EventLoop implementations may need some time to update the counter correctly.
+        while (registeredChannels(loop) != numChannels) {
+            Thread.sleep(50);
         }
     }
 
@@ -99,7 +106,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
     }
 
     // Copied from AbstractEventLoopTest
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownGracefullyNoQuietPeriod() throws Exception {
         EventLoopGroup loop = newEventLoopGroup();
         ServerBootstrap b = new ServerBootstrap();
