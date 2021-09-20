@@ -51,8 +51,7 @@ public class CompressionHandler implements ChannelHandler {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (compressor != null) {
-            ByteBuf buffer = compressor.finish(ctx.alloc());
-            ctx.writeAndFlush(buffer);
+            compressor.close();
             compressor = null;
         }
     }
@@ -84,18 +83,21 @@ public class CompressionHandler implements ChannelHandler {
 
     @Override
     public Future<Void> close(ChannelHandlerContext ctx) {
+        if (compressor == null) {
+            return ctx.close();
+        }
         ByteBuf buffer = compressor.finish(ctx.alloc());
         if (!buffer.isReadable()) {
             buffer.release();
             return ctx.close();
         }
         Promise<Void> promise = ctx.newPromise();
-        Future<Void> f = ctx.writeAndFlush(buffer).addListener(ctx, (c, __) -> c.close().cascadeTo(promise));
+        Future<Void> f = ctx.writeAndFlush(buffer).addListener(ctx, (c, ignore) -> c.close().cascadeTo(promise));
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
             Future<?> sF =  ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
                     10, TimeUnit.SECONDS); // FIXME: Magic number
-            f.addListener(sF, (scheduledFuture, __) -> scheduledFuture.cancel());
+            f.addListener(sF, (scheduledFuture, ignore) -> scheduledFuture.cancel());
         }
         return promise.asFuture();
     }

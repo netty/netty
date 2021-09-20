@@ -217,7 +217,7 @@ public final class FastLzDecompressor implements Decompressor {
     }
 
     private void streamCorrupted(String message) {
-        currentState = State.DONE;
+        currentState = State.CORRUPTED;
         throw new DecompressionException(message);
     }
 }

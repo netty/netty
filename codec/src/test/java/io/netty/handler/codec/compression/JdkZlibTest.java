@@ -520,7 +520,6 @@ public class JdkZlibTest {
         } catch (DecompressionException e) {
             assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
             assertEquals(maxAllocation, alloc.getMaxAllocation());
-            //assertTrue(decoder.isClosed());
             assertFalse(chDecoder.finish());
         }
     }
