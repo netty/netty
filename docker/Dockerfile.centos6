@@ -29,12 +29,12 @@ ENV JAVA_VERSION $java_version
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
-    yes | sdk install java $JAVA_VERSION /jdk && \
+    yes | sdk install java $JAVA_VERSION && \
     rm -rf $HOME/.sdkman/archives/* && \
     rm -rf $HOME/.sdkman/tmp/*"
 
-RUN echo 'export JAVA_HOME="/jdk"' >> ~/.bashrc
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 
 # when the JDK is GraalVM install native-image
-RUN if [ -O /jdk/bin/gu ]; then /jdk/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi
+RUN if [ -O /root/.sdkman/candidates/java/current/bin/gu ]; then /root/.sdkman/candidates/java/current/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi
