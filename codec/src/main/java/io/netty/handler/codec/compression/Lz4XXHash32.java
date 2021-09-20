@@ -25,7 +25,7 @@ import java.util.zip.Checksum;
 
 /**
  * A special-purpose {@link ByteBufChecksum} implementation for use with
- * {@link Lz4FrameEncoder} and {@link Lz4FrameDecoder}.
+ * {@link Lz4Compressor} and {@link Lz4Decompressor}.
  *
  * {@link StreamingXXHash32#asChecksum()} has a particularly nasty implementation
  * of {@link Checksum#update(int)} that allocates a single-element byte array for
@@ -43,7 +43,7 @@ import java.util.zip.Checksum;
  * {@link XXHash32#hash(ByteBuffer, int)} method that is efficient and does exactly
  * what we need, with a caveat that we can only invoke it once before having to reset.
  * This, however, is fine for our purposes, given the way we use it in
- * {@link Lz4FrameEncoder} and {@link Lz4FrameDecoder}:
+ * {@link Lz4Compressor} and {@link Lz4Decompressor}:
  * {@code reset()}, followed by one {@code update()}, followed by {@code getValue()}.
  */
 public final class Lz4XXHash32 extends ByteBufChecksum {

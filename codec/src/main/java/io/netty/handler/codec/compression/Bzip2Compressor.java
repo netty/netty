@@ -16,14 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 
-import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
@@ -37,7 +35,41 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
-public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
+public final class Bzip2Compressor implements Compressor {
+
+    /**
+     * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
+     * @param blockSizeMultiplier
+     *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
+     *        Larger block sizes require more memory for both compression and decompression,
+     *        but give better compression ratios. {@code 9} will usually be the best value to use.
+     */
+    private Bzip2Compressor(final int blockSizeMultiplier) {
+        streamBlockSize = blockSizeMultiplier * BASE_BLOCK_SIZE;
+    }
+
+    /**
+     * Creates a new bzip2 compressor factory with the maximum (900,000 byte) block size.
+     */
+    public static Supplier<Bzip2Compressor> newFactory() {
+        return newFactory(MAX_BLOCK_SIZE);
+    }
+
+    /**
+     * Creates a new bzip2 compressor factory with the specified {@code blockSizeMultiplier}.
+     * @param blockSizeMultiplier
+     *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
+     *        Larger block sizes require more memory for both compression and decompression,
+     *        but give better compression ratios. {@code 9} will usually be the best value to use.
+     */
+    public static Supplier<Bzip2Compressor> newFactory(final int blockSizeMultiplier) {
+        if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
+            throw new IllegalArgumentException(
+                    "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
+        }
+        return () -> new Bzip2Compressor(blockSizeMultiplier);
+    }
+
     /**
      * Current state of stream.
      */
@@ -75,39 +107,9 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      */
     private volatile boolean finished;
 
-    /**
-     * Used to interact with its {@link ChannelPipeline} and other handlers.
-     */
-    private volatile ChannelHandlerContext ctx;
-
-    /**
-     * Creates a new bzip2 encoder with the maximum (900,000 byte) block size.
-     */
-    public Bzip2Encoder() {
-        this(MAX_BLOCK_SIZE);
-    }
-
-    /**
-     * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
-     * @param blockSizeMultiplier
-     *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
-     *        Larger block sizes require more memory for both compression and decompression,
-     *        but give better compression ratios. {@code 9} will usually be the best value to use.
-     */
-    public Bzip2Encoder(final int blockSizeMultiplier) {
-        if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
-            throw new IllegalArgumentException(
-                    "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
-        }
-        streamBlockSize = blockSizeMultiplier * BASE_BLOCK_SIZE;
-    }
-
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (finished) {
-            out.writeBytes(in);
-            return;
-        }
+    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+        ByteBuf out = allocator.buffer();
 
         for (;;) {
             switch (currentState) {
@@ -123,7 +125,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                     // fall through
                 case WRITE_DATA:
                     if (!in.isReadable()) {
-                        return;
+                        return out;
                     }
                     Bzip2BlockCompressor blockCompressor = this.blockCompressor;
                     final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
@@ -133,7 +135,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                         if (in.isReadable()) {
                             break;
                         } else {
-                            return;
+                            return out;
                         }
                     }
                     currentState = State.CLOSE_BLOCK;
@@ -160,79 +162,40 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream has been reached.
-     */
-    public boolean isClosed() {
+    @Override
+    public ByteBuf finish(ByteBufAllocator allocator) {
+        if (finished) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+        finished = true;
+        final ByteBuf footer = allocator.buffer();
+        try {
+            closeBlock(footer);
+
+            final int streamCRC = this.streamCRC;
+            final Bzip2BitWriter writer = this.writer;
+            try {
+                writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_1);
+                writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_2);
+                writer.writeInt(footer, streamCRC);
+                writer.flush(footer);
+            } finally {
+                blockCompressor = null;
+            }
+            return footer;
+        } catch (Throwable cause) {
+            footer.release();
+            throw cause;
+        }
+    }
+
+    @Override
+    public boolean isFinished() {
         return finished;
     }
 
-    /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     *
-     * The returned {@link Future} will be notified once the operation completes.
-     */
-    public Future<Void> close() {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx);
-        } else {
-            Promise<Void> promise = ctx.newPromise();
-            executor.execute(() -> {
-                Future<Void> f = finishEncode(ctx());
-                f.cascadeTo(promise);
-            });
-            return promise.asFuture();
-        }
-    }
-
     @Override
-    public Future<Void> close(final ChannelHandlerContext ctx) {
-        Future<Void> f = finishEncode(ctx);
-        if (f.isDone()) {
-            return ctx.close();
-        }
-        Promise<Void> promise = ctx.newPromise();
-        f.addListener(f1 -> ctx.close().cascadeTo(promise));
-        // Ensure the channel is closed even if the write operation completes in time.
-        ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
-                10, TimeUnit.SECONDS); // FIXME: Magic number
-        return promise.asFuture();
-    }
-
-    private Future<Void> finishEncode(final ChannelHandlerContext ctx) {
-        if (finished) {
-            return ctx.newSucceededFuture();
-        }
+    public void close() {
         finished = true;
-
-        final ByteBuf footer = ctx.alloc().buffer();
-        closeBlock(footer);
-
-        final int streamCRC = this.streamCRC;
-        final Bzip2BitWriter writer = this.writer;
-        try {
-            writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_1);
-            writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_2);
-            writer.writeInt(footer, streamCRC);
-            writer.flush(footer);
-        } finally {
-            blockCompressor = null;
-        }
-        return ctx.writeAndFlush(footer);
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 }

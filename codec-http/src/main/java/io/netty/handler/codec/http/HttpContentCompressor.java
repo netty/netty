@@ -18,22 +18,21 @@ package io.netty.handler.codec.http;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.compression.Brotli;
-import io.netty.handler.codec.compression.BrotliEncoder;
+import io.netty.handler.codec.compression.BrotliCompressor;
 import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionHandler;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
-import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdCompressor;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
 
@@ -384,13 +383,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
+     * Compression Encoder Factory that creates encoders
      * used to compress http content for gzip content encoding
      */
     private final class GzipEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.GZIP, gzipOptions.compressionLevel(),
                     gzipOptions.windowBits(), gzipOptions.memLevel());
@@ -398,13 +397,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
+     * Compression Encoder Factory that creates encoders
      * used to compress http content for deflate content encoding
      */
     private final class DeflateEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
                     deflateOptions.windowBits(), deflateOptions.memLevel());
@@ -412,27 +411,27 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link BrotliEncoder}s
+     * Compression Encoder Factory that creates {@link BrotliCompressor}s
      * used to compress http content for br content encoding
      */
     private final class BrEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return new BrotliEncoder(brotliOptions.parameters());
+        public ChannelHandler createEncoder() {
+            return new CompressionHandler(BrotliCompressor.newFactory(brotliOptions.parameters()));
         }
     }
 
     /**
-     * Compression Encoder Factory for create {@link ZstdEncoder}
+     * Compression Encoder Factory for create {@link ZstdCompressor}
      * used to compress http content for zstd content encoding
      */
     private final class ZstdEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return new ZstdEncoder(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize());
+        public ChannelHandler createEncoder() {
+            return new CompressionHandler(ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
     }
 }

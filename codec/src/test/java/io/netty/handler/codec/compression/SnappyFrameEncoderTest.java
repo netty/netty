@@ -29,7 +29,7 @@ public class SnappyFrameEncoderTest {
 
     @BeforeEach
     public void setUp() {
-        channel = new EmbeddedChannel(new SnappyFrameEncoder());
+        channel = new EmbeddedChannel(new CompressionHandler(SnappyCompressor.newFactory()));
     }
 
     @Test

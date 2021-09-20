@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
  * Core of FastLZ compression algorithm.
  *
  * This class provides methods for compression and decompression of buffers and saves
- * constants which use by {@link FastLzFrameEncoder} and {@link FastLzFrameDecoder}.
+ * constants which use by {@link FastLzCompressor} and {@link FastLzDecompressor}.
  *
  * This is refactored code of <a href="https://code.google.com/p/jfastlz/">jfastlz</a>
  * library written by William Kinney.

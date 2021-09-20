@@ -16,13 +16,11 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -31,12 +29,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
-public class JdkZlibEncoder extends ZlibEncoder {
-
+public final class JdkZlibCompressor implements Compressor {
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
-    private volatile boolean finished;
-    private volatile ChannelHandlerContext ctx;
 
     /*
      * GZIP support
@@ -44,6 +39,18 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private final CRC32 crc = new CRC32();
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
+    private boolean finished;
+
+    private JdkZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
+        this.wrapper = wrapper;
+        deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+    }
+
+    private JdkZlibCompressor(int compressionLevel, byte[] dictionary) {
+        wrapper = ZlibWrapper.ZLIB;
+        deflater = new Deflater(compressionLevel);
+        deflater.setDictionary(dictionary);
+    }
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6})
@@ -51,8 +58,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder() {
-        this(6);
+    public static Supplier<JdkZlibCompressor> newFactory() {
+        return newFactory(6);
     }
 
     /**
@@ -66,8 +73,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(int compressionLevel) {
-        this(ZlibWrapper.ZLIB, compressionLevel);
+    public static Supplier<JdkZlibCompressor> newFactory(int compressionLevel) {
+        return newFactory(ZlibWrapper.ZLIB, compressionLevel);
     }
 
     /**
@@ -76,12 +83,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(ZlibWrapper wrapper) {
-        this(wrapper, 6);
-    }
-
-    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        this(wrapper, compressionLevel, false);
+    public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper) {
+        return newFactory(wrapper, 6);
     }
 
     /**
@@ -92,12 +95,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
-     * @param preferDirectBuffers {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
-     *                              decompression, or {@code false} if heap allocated {@link ByteBuf}s should be used.
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel, boolean preferDirectBuffers) {
+    public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper, int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -106,11 +107,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
+                            "allowed for compression.");
         }
 
-        this.wrapper = wrapper;
-        deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        return () -> new JdkZlibCompressor(wrapper, compressionLevel);
     }
 
     /**
@@ -123,8 +123,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(byte[] dictionary) {
-        this(6, dictionary);
+    public static Supplier<JdkZlibCompressor> newFactory(byte[] dictionary) {
+        return newFactory(6, dictionary);
     }
 
     /**
@@ -141,57 +141,25 @@ public class JdkZlibEncoder extends ZlibEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
+    public static Supplier<JdkZlibCompressor> newFactory(int compressionLevel, byte[] dictionary) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         requireNonNull(dictionary, "dictionary");
 
-        wrapper = ZlibWrapper.ZLIB;
-        deflater = new Deflater(compressionLevel);
-        deflater.setDictionary(dictionary);
+        return () -> new JdkZlibCompressor(compressionLevel, dictionary);
     }
 
     @Override
-    public Future<Void> close() {
-        ChannelHandlerContext ctx = ctx();
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            return finishEncode(ctx);
-        } else {
-            Promise<Void> p = ctx.newPromise();
-            executor.execute(() -> {
-                Future<Void> f = finishEncode(ctx());
-                f.cascadeTo(p);
-            });
-            return p.asFuture();
-        }
-    }
-
-    private ChannelHandlerContext ctx() {
-        ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
-        return ctx;
-    }
-
-    @Override
-    public boolean isClosed() {
-        return finished;
-    }
-
-    @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
+    public ByteBuf compress(ByteBuf uncompressed, ByteBufAllocator allocator) throws CompressionException {
         if (finished) {
-            out.writeBytes(uncompressed);
-            return;
+            return Unpooled.EMPTY_BUFFER;
         }
 
         int len = uncompressed.readableBytes();
         if (len == 0) {
-            return;
+            return Unpooled.EMPTY_BUFFER;
         }
 
         int offset;
@@ -208,37 +176,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             offset = 0;
         }
 
-        if (writeHeader) {
-            writeHeader = false;
-            if (wrapper == ZlibWrapper.GZIP) {
-                out.writeBytes(gzipHeader);
-            }
-        }
-
-        if (wrapper == ZlibWrapper.GZIP) {
-            crc.update(inAry, offset, len);
-        }
-
-        deflater.setInput(inAry, offset, len);
-        for (;;) {
-            deflate(out);
-            if (deflater.needsInput()) {
-                // Consumed everything
-                break;
-            } else {
-                if (!out.isWritable()) {
-                    // We did not consume everything but the buffer is not writable anymore. Increase the capacity to
-                    // make more room.
-                    out.ensureWritable(out.writerIndex());
-                }
-            }
-        }
-    }
-
-    @Override
-    protected final ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg,
-                                           boolean preferDirect) throws Exception {
-        int sizeEstimate = (int) Math.ceil(msg.readableBytes() * 1.001) + 12;
+        int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
         if (writeHeader) {
             switch (wrapper) {
                 case GZIP:
@@ -251,60 +189,88 @@ public class JdkZlibEncoder extends ZlibEncoder {
                     // no op
             }
         }
-        return ctx.alloc().buffer(sizeEstimate);
+        ByteBuf out = allocator.buffer(sizeEstimate);
+        try {
+            if (writeHeader) {
+                writeHeader = false;
+                if (wrapper == ZlibWrapper.GZIP) {
+                    out.writeBytes(gzipHeader);
+                }
+            }
+
+            if (wrapper == ZlibWrapper.GZIP) {
+                crc.update(inAry, offset, len);
+            }
+
+            deflater.setInput(inAry, offset, len);
+            for (;;) {
+                deflate(out);
+                if (deflater.needsInput()) {
+                    // Consumed everything
+                    break;
+                } else {
+                    if (!out.isWritable()) {
+                        // We did not consume everything but the buffer is not writable anymore. Increase the
+                        // capacity to make more room.
+                        out.ensureWritable(out.writerIndex());
+                    }
+                }
+            }
+            return out;
+        } catch (Throwable cause) {
+            out.release();
+            throw cause;
+        }
     }
 
     @Override
-    public Future<Void> close(final ChannelHandlerContext ctx) {
-        Future<Void> f = finishEncode(ctx);
-        if (f.isDone()) {
-            return ctx.close();
-        }
-        Promise<Void> promise = ctx.newPromise();
-        f.addListener(f1 -> ctx.close().cascadeTo(promise));
-        // Ensure the channel is closed even if the write operation completes in time.
-        ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
-                10, TimeUnit.SECONDS); // FIXME: Magic number
-        return promise.asFuture();
-    }
-
-    private Future<Void> finishEncode(final ChannelHandlerContext ctx) {
+    public ByteBuf finish(ByteBufAllocator allocator) {
         if (finished) {
-            return ctx.newSucceededFuture();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         finished = true;
-        ByteBuf footer = ctx.alloc().heapBuffer();
-        if (writeHeader && wrapper == ZlibWrapper.GZIP) {
-            // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
-            writeHeader = false;
-            footer.writeBytes(gzipHeader);
-        }
-
-        deflater.finish();
-
-        while (!deflater.finished()) {
-            deflate(footer);
-            if (!footer.isWritable()) {
-                // no more space so write it to the channel and continue
-                ctx.write(footer);
-                footer = ctx.alloc().heapBuffer();
+        ByteBuf footer = allocator.heapBuffer();
+        try {
+            if (writeHeader && wrapper == ZlibWrapper.GZIP) {
+                // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
+                writeHeader = false;
+                footer.writeBytes(gzipHeader);
             }
+
+            deflater.finish();
+
+            while (!deflater.finished()) {
+                deflate(footer);
+            }
+            if (wrapper == ZlibWrapper.GZIP) {
+                int crcValue = (int) crc.getValue();
+                int uncBytes = deflater.getTotalIn();
+                footer.writeByte(crcValue);
+                footer.writeByte(crcValue >>> 8);
+                footer.writeByte(crcValue >>> 16);
+                footer.writeByte(crcValue >>> 24);
+                footer.writeByte(uncBytes);
+                footer.writeByte(uncBytes >>> 8);
+                footer.writeByte(uncBytes >>> 16);
+                footer.writeByte(uncBytes >>> 24);
+            }
+            deflater.end();
+            return footer;
+        } catch (Throwable cause) {
+            footer.release();
+            throw cause;
         }
-        if (wrapper == ZlibWrapper.GZIP) {
-            int crcValue = (int) crc.getValue();
-            int uncBytes = deflater.getTotalIn();
-            footer.writeByte(crcValue);
-            footer.writeByte(crcValue >>> 8);
-            footer.writeByte(crcValue >>> 16);
-            footer.writeByte(crcValue >>> 24);
-            footer.writeByte(uncBytes);
-            footer.writeByte(uncBytes >>> 8);
-            footer.writeByte(uncBytes >>> 16);
-            footer.writeByte(uncBytes >>> 24);
-        }
-        deflater.end();
-        return ctx.writeAndFlush(footer);
+    }
+
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    @Override
+    public void close() {
+        finished = true;
     }
 
     private void deflate(ByteBuf out) {
@@ -330,10 +296,5 @@ public class JdkZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "Don't know how to deflate buffer without array or NIO buffer count of 1: " + out);
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 }

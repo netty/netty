@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 /**
- * Constants for both the {@link Bzip2Encoder} and the {@link Bzip2Decoder}.
+ * Constants for both the {@link Bzip2Compressor} and the {@link Bzip2Decompressor}.
  */
 final class Bzip2Constants {
 

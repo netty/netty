@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
@@ -23,5 +24,5 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * used to compress http content
  */
 interface CompressionEncoderFactory {
-    MessageToByteEncoder<ByteBuf> createEncoder();
+    ChannelHandler createEncoder();
 }

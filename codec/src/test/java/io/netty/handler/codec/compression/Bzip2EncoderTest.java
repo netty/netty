@@ -30,7 +30,7 @@ public class Bzip2EncoderTest extends AbstractEncoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new Bzip2Encoder(MIN_BLOCK_SIZE));
+        return new EmbeddedChannel(new CompressionHandler(Bzip2Compressor.newFactory(MIN_BLOCK_SIZE)));
     }
 
     @Override

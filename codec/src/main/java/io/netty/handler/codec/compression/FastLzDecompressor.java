@@ -16,20 +16,20 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.buffer.ByteBufAllocator;
 
+import java.util.function.Supplier;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.FastLz.*;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
+ * Uncompresses a {@link ByteBuf} encoded by {@link FastLzCompressor} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameDecoder extends ByteToMessageDecoder {
+public final class FastLzDecompressor implements Decompressor {
     /**
      * Current state of decompression.
      */
@@ -37,6 +37,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
         INIT_BLOCK,
         INIT_BLOCK_PARAMS,
         DECOMPRESS_DATA,
+        DONE,
         CORRUPTED
     }
 
@@ -73,15 +74,19 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
      */
     private int currentChecksum;
 
-    /**
-     * Creates the fastest FastLZ decoder without checksum calculation.
-     */
-    public FastLzFrameDecoder() {
-        this(false);
+    private FastLzDecompressor(Checksum checksum) {
+        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 
     /**
-     * Creates a FastLZ decoder with calculation of checksums as specified.
+     * Creates the fastest FastLZ decompressor factoryFastLZ decompressor factory without checksum calculation.
+     */
+    public static Supplier<FastLzDecompressor> newFactory() {
+        return newFactory(false);
+    }
+
+    /**
+     * Creates a FastLZ decompressor factory with calculation of checksums as specified.
      *
      * @param validateChecksums
      *        If true, the checksum field will be validated against the actual
@@ -90,33 +95,32 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
      *        Note, that in this case decoder will use {@link java.util.zip.Adler32}
      *        as a default checksum calculator.
      */
-    public FastLzFrameDecoder(boolean validateChecksums) {
-        this(validateChecksums ? new Adler32() : null);
+    public static Supplier<FastLzDecompressor> newFactory(boolean validateChecksums) {
+        return newFactory(validateChecksums ? new Adler32() : null);
     }
 
     /**
-     * Creates a FastLZ decoder with specified checksum calculator.
+     * Creates a FastLZ decompressor factory with specified checksum calculator.
      *
      * @param checksum
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you do not want to validate checksum of each block.
      */
-    public FastLzFrameDecoder(Checksum checksum) {
-        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+    public static Supplier<FastLzDecompressor> newFactory(Checksum checksum) {
+        return () -> new FastLzDecompressor(checksum);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        try {
-            switch (currentState) {
+    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+        switch (currentState) {
             case INIT_BLOCK:
                 if (in.readableBytes() < 4) {
-                    break;
+                    return null;
                 }
 
                 final int magic = in.readUnsignedMedium();
                 if (magic != MAGIC_NUMBER) {
-                    throw new DecompressionException("unexpected block identifier");
+                    streamCorrupted("unexpected block identifier");
                 }
 
                 final byte options = in.readByte();
@@ -127,7 +131,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                 // fall through
             case INIT_BLOCK_PARAMS:
                 if (in.readableBytes() < 2 + (isCompressed ? 2 : 0) + (hasChecksum ? 4 : 0)) {
-                    break;
+                    return null;
                 }
                 currentChecksum = hasChecksum ? in.readInt() : 0;
                 chunkLength = in.readUnsignedShort();
@@ -138,23 +142,22 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
             case DECOMPRESS_DATA:
                 final int chunkLength = this.chunkLength;
                 if (in.readableBytes() < chunkLength) {
-                    break;
+                    return null;
                 }
 
                 final int idx = in.readerIndex();
                 final int originalLength = this.originalLength;
 
                 ByteBuf output = null;
-
                 try {
                     if (isCompressed) {
 
-                        output = ctx.alloc().buffer(originalLength);
+                        output = allocator.buffer(originalLength);
                         int outputOffset = output.writerIndex();
-                        final int decompressedBytes = decompress(in, idx, chunkLength,
+                        final int decompressedBytes = FastLz.decompress(in, idx, chunkLength,
                                 output, outputOffset, originalLength);
                         if (originalLength != decompressedBytes) {
-                            throw new DecompressionException(String.format(
+                            streamCorrupted(String.format(
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
                                     originalLength, decompressedBytes));
                         }
@@ -169,36 +172,48 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                         checksum.update(output, output.readerIndex(), output.readableBytes());
                         final int checksumResult = (int) checksum.getValue();
                         if (checksumResult != currentChecksum) {
-                            throw new DecompressionException(String.format(
+                            streamCorrupted(String.format(
                                     "stream corrupted: mismatching checksum: %d (expected: %d)",
                                     checksumResult, currentChecksum));
                         }
                     }
 
+                    final ByteBuf data;
                     if (output.readableBytes() > 0) {
-                        ctx.fireChannelRead(output);
+                        data = output;
+                        output = null;
                     } else {
-                        output.release();
+                        data = null;
                     }
-                    output = null;
                     in.skipBytes(chunkLength);
 
                     currentState = State.INIT_BLOCK;
+                    return data;
                 } finally {
                     if (output != null) {
                         output.release();
                     }
                 }
-                break;
             case CORRUPTED:
-                in.skipBytes(in.readableBytes());
-                break;
+            case DONE:
+                return null;
             default:
                 throw new IllegalStateException();
-            }
-        } catch (Exception e) {
-            currentState = State.CORRUPTED;
-            throw e;
         }
+    }
+
+    @Override
+    public boolean isFinished() {
+        return currentState == State.DONE || currentState == State.CORRUPTED;
+    }
+
+    @Override
+    public void close() {
+        currentState = State.DONE;
+    }
+
+    private void streamCorrupted(String message) {
+        currentState = State.DONE;
+        throw new DecompressionException(message);
     }
 }

@@ -83,7 +83,7 @@ public class BrotliDecoderTest {
 
     @BeforeEach
     public void initChannel() {
-        channel = new EmbeddedChannel(new BrotliDecoder());
+        channel = new EmbeddedChannel(new DecompressionHandler(BrotliDecompressor.newFactory()));
     }
 
     @AfterEach

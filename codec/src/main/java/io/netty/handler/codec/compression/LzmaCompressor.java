@@ -16,16 +16,18 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.buffer.Unpooled;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import lzma.sdk.lzma.Base;
 import lzma.sdk.lzma.Encoder;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.Supplier;
 
 import static lzma.sdk.lzma.Encoder.*;
 
@@ -36,9 +38,8 @@ import static lzma.sdk.lzma.Encoder.*;
  * and <a href="https://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
  * or documents in <a href="https://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
  */
-public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LzmaFrameEncoder.class);
+public final class LzmaCompressor implements Compressor {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LzmaCompressor.class);
 
     private static final int MEDIUM_DICTIONARY_SIZE = 1 << 16;
 
@@ -81,19 +82,54 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private static boolean warningLogged;
 
+    private boolean finished;
+
+    /**
+     * Creates LZMA encoder with specified settings.
+     *
+     * @param lc
+     *        the number of "literal context" bits, available values [0, 8], default value {@value #DEFAULT_LC}.
+     * @param lp
+     *        the number of "literal position" bits, available values [0, 4], default value {@value #DEFAULT_LP}.
+     * @param pb
+     *        the number of "position" bits, available values [0, 4], default value {@value #DEFAULT_PB}.
+     * @param dictionarySize
+     *        available values [0, {@link java.lang.Integer#MAX_VALUE}],
+     *        default value is {@value #MEDIUM_DICTIONARY_SIZE}.
+     * @param endMarkerMode
+     *        indicates should {@link LzmaCompressor} use end of stream marker or not.
+     *        Note, that {@link LzmaCompressor} always sets size of uncompressed data
+     *        in LZMA header, so EOS marker is unnecessary. But you may use it for
+     *        better portability. For full description see "LZMA Decoding modes" section
+     *        of LZMA-Specification.txt in official LZMA SDK.
+     * @param numFastBytes
+     *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
+     */
+    private LzmaCompressor(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
+        encoder = new Encoder();
+        encoder.setDictionarySize(dictionarySize);
+        encoder.setEndMarkerMode(endMarkerMode);
+        encoder.setMatchFinder(DEFAULT_MATCH_FINDER);
+        encoder.setNumFastBytes(numFastBytes);
+        encoder.setLcLpPb(lc, lp, pb);
+
+        properties = (byte) ((pb * 5 + lp) * 9 + lc);
+        littleEndianDictionarySize = Integer.reverseBytes(dictionarySize);
+    }
+
     /**
      * Creates LZMA encoder with default settings.
      */
-    public LzmaFrameEncoder() {
-        this(MEDIUM_DICTIONARY_SIZE);
+    public static Supplier<LzmaCompressor> newFactory() {
+        return newFactory(LzmaCompressor.MEDIUM_DICTIONARY_SIZE);
     }
 
     /**
      * Creates LZMA encoder with specified {@code lc}, {@code lp}, {@code pb}
      * values and the medium dictionary size of {@value #MEDIUM_DICTIONARY_SIZE}.
      */
-    public LzmaFrameEncoder(int lc, int lp, int pb) {
-        this(lc, lp, pb, MEDIUM_DICTIONARY_SIZE);
+    public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb) {
+        return newFactory(lc, lp, pb, LzmaCompressor.MEDIUM_DICTIONARY_SIZE);
     }
 
     /**
@@ -102,15 +138,16 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * {@code lp} = {@value #DEFAULT_LP},
      * {@code pb} = {@value #DEFAULT_PB}.
      */
-    public LzmaFrameEncoder(int dictionarySize) {
-        this(DEFAULT_LC, DEFAULT_LP, DEFAULT_PB, dictionarySize);
+    public static Supplier<LzmaCompressor> newFactory(int dictionarySize) {
+        return newFactory(LzmaCompressor.DEFAULT_LC, LzmaCompressor.DEFAULT_LP,
+                LzmaCompressor.DEFAULT_PB, dictionarySize);
     }
 
     /**
      * Creates LZMA encoder with specified {@code lc}, {@code lp}, {@code pb} values and custom dictionary size.
      */
-    public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize) {
-        this(lc, lp, pb, dictionarySize, false, MEDIUM_FAST_BYTES);
+    public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb, int dictionarySize) {
+        return newFactory(lc, lp, pb, dictionarySize, false, LzmaCompressor.MEDIUM_FAST_BYTES);
     }
 
     /**
@@ -126,15 +163,16 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        available values [0, {@link java.lang.Integer#MAX_VALUE}],
      *        default value is {@value #MEDIUM_DICTIONARY_SIZE}.
      * @param endMarkerMode
-     *        indicates should {@link LzmaFrameEncoder} use end of stream marker or not.
-     *        Note, that {@link LzmaFrameEncoder} always sets size of uncompressed data
+     *        indicates should {@link LzmaCompressor} use end of stream marker or not.
+     *        Note, that {@link LzmaCompressor} always sets size of uncompressed data
      *        in LZMA header, so EOS marker is unnecessary. But you may use it for
      *        better portability. For full description see "LZMA Decoding modes" section
      *        of LZMA-Specification.txt in official LZMA SDK.
      * @param numFastBytes
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
      */
-    public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
+    public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb, int dictionarySize,
+                                                      boolean endMarkerMode, int numFastBytes) {
         if (lc < 0 || lc > 8) {
             throw new IllegalArgumentException("lc: " + lc + " (expected: 0-8)");
         }
@@ -161,34 +199,35 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             ));
         }
 
-        encoder = new Encoder();
-        encoder.setDictionarySize(dictionarySize);
-        encoder.setEndMarkerMode(endMarkerMode);
-        encoder.setMatchFinder(DEFAULT_MATCH_FINDER);
-        encoder.setNumFastBytes(numFastBytes);
-        encoder.setLcLpPb(lc, lp, pb);
-
-        properties = (byte) ((pb * 5 + lp) * 9 + lc);
-        littleEndianDictionarySize = Integer.reverseBytes(dictionarySize);
+        return () -> new LzmaCompressor(lc, lp, pb, dictionarySize, endMarkerMode, numFastBytes);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
         final int length = in.readableBytes();
-        try (InputStream bbIn = new ByteBufInputStream(in);
-             ByteBufOutputStream bbOut = new ByteBufOutputStream(out)) {
-            bbOut.writeByte(properties);
-            bbOut.writeInt(littleEndianDictionarySize);
-            bbOut.writeLong(Long.reverseBytes(length));
-            encoder.code(bbIn, bbOut, -1, -1, null);
+        ByteBuf out = allocateBuffer(in, allocator);
+        try {
+            try (InputStream bbIn = new ByteBufInputStream(in);
+                 ByteBufOutputStream bbOut = new ByteBufOutputStream(out)) {
+                bbOut.writeByte(properties);
+                bbOut.writeInt(littleEndianDictionarySize);
+                bbOut.writeLong(Long.reverseBytes(length));
+                encoder.code(bbIn, bbOut, -1, -1, null);
+            }
+        } catch (IOException e) {
+            out.release();
+            throw new CompressionException(e);
+        } catch (Throwable cause) {
+            out.release();
+            throw cause;
         }
+        return out;
     }
 
-    @Override
-    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf in, boolean preferDirect) throws Exception {
+    private static ByteBuf allocateBuffer(ByteBuf in, ByteBufAllocator allocator) {
         final int length = in.readableBytes();
         final int maxOutputLength = maxOutputBufferLength(length);
-        return ctx.alloc().ioBuffer(maxOutputLength);
+        return allocator.ioBuffer(maxOutputLength);
     }
 
     /**
@@ -208,5 +247,21 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             factor = 1.02;
         }
         return 13 + (int) (inputLength * factor);
+    }
+
+    @Override
+    public ByteBuf finish(ByteBufAllocator allocator) {
+        finished = true;
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    @Override
+    public void close() {
+        finished = true;
     }
 }

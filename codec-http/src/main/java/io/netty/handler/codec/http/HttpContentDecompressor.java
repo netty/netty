@@ -23,7 +23,8 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
-import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.BrotliDecompressor;
+import io.netty.handler.codec.compression.DecompressionHandler;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
@@ -69,7 +70,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-              ctx.channel().config(), new BrotliDecoder());
+              ctx.channel().config(), new DecompressionHandler(BrotliDecompressor.newFactory()));
         }
 
         // 'identity' or unsupported

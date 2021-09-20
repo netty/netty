@@ -48,7 +48,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @Override
     public EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new ZstdEncoder());
+        return new EmbeddedChannel(new CompressionHandler(ZstdCompressor.newFactory()));
     }
 
     @ParameterizedTest

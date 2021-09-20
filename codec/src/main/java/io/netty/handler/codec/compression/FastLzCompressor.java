@@ -16,9 +16,10 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
+import java.util.function.Supplier;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
@@ -29,7 +30,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public final class FastLzCompressor implements Compressor {
     /**
      * Compression level.
      */
@@ -40,11 +41,29 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private final ByteBufChecksum checksum;
 
+    private boolean finished;
+
+    /**
+     * Creates a FastLZ encoder with specified compression level and checksum calculator.
+     *
+     * @param level supports only these values:
+     *        0 - Encoder will choose level automatically depending on the length of the input buffer.
+     *        1 - Level 1 is the fastest compression and generally useful for short data.
+     *        2 - Level 2 is slightly slower but it gives better compression ratio.
+     * @param checksum
+     *        the {@link Checksum} instance to use to check data for integrity.
+     *        You may set {@code null} if you don't want to validate checksum of each block.
+     */
+    private FastLzCompressor(int level, Checksum checksum) {
+        this.level = level;
+        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+    }
+
     /**
      * Creates a FastLZ encoder without checksum calculator and with auto detection of compression level.
      */
-    public FastLzFrameEncoder() {
-        this(LEVEL_AUTO, null);
+    public static Supplier<FastLzCompressor> newFactory() {
+        return newFactory(LEVEL_AUTO, null);
     }
 
     /**
@@ -55,8 +74,8 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        1 - Level 1 is the fastest compression and generally useful for short data.
      *        2 - Level 2 is slightly slower but it gives better compression ratio.
      */
-    public FastLzFrameEncoder(int level) {
-        this(level, null);
+    public static Supplier<FastLzCompressor> newFactory(int level) {
+        return newFactory(level, null);
     }
 
     /**
@@ -66,11 +85,11 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param validateChecksums
      *        If true, the checksum of each block will be calculated and this value
      *        will be added to the header of block.
-     *        By default {@link FastLzFrameEncoder} uses {@link java.util.zip.Adler32}
+     *        By default {@link FastLzCompressor} uses {@link java.util.zip.Adler32}
      *        for checksum calculation.
      */
-    public FastLzFrameEncoder(boolean validateChecksums) {
-        this(LEVEL_AUTO, validateChecksums ? new Adler32() : null);
+    public static Supplier<FastLzCompressor> newFactory(boolean validateChecksums) {
+        return newFactory(LEVEL_AUTO, validateChecksums ? new Adler32() : null);
     }
 
     /**
@@ -84,22 +103,22 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
-    public FastLzFrameEncoder(int level, Checksum checksum) {
+    public static Supplier<FastLzCompressor> newFactory(int level, Checksum checksum) {
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
                     "level: %d (expected: %d or %d or %d)", level, LEVEL_AUTO, LEVEL_1, LEVEL_2));
         }
-        this.level = level;
-        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        return () -> new FastLzCompressor(level, checksum);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
         final ByteBufChecksum checksum = this.checksum;
 
+        ByteBuf out = allocator.buffer();
         for (;;) {
             if (!in.isReadable()) {
-                return;
+                return out;
             }
             final int idx = in.readerIndex();
             final int length = Math.min(in.readableBytes(), MAX_CHUNK_LENGTH);
@@ -134,7 +153,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 final int maxOutputLength = calculateOutputBufferLength(length);
                 out.ensureWritable(outputOffset + 4 + maxOutputLength);
                 final int outputPtr = outputOffset + 4;
-                final int compressedLength = compress(in, in.readerIndex(), length, out, outputPtr, level);
+                final int compressedLength = FastLz.compress(in, in.readerIndex(), length, out, outputPtr, level);
 
                 if (compressedLength < length) {
                     blockType = BLOCK_TYPE_COMPRESSED;
@@ -156,4 +175,21 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             in.skipBytes(length);
         }
     }
+
+    @Override
+    public ByteBuf finish(ByteBufAllocator allocator) {
+        finished = true;
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    @Override
+    public void close() {
+        finished = true;
+    }
+
 }

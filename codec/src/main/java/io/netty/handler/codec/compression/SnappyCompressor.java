@@ -16,8 +16,10 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+
+import java.util.function.Supplier;
 
 import static io.netty.handler.codec.compression.Snappy.*;
 
@@ -26,7 +28,13 @@ import static io.netty.handler.codec.compression.Snappy.*;
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
-public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public final class SnappyCompressor implements Compressor {
+    private enum State {
+        Init,
+        Started,
+        Finished
+    }
+
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -43,47 +51,77 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     };
 
     private final Snappy snappy = new Snappy();
-    private boolean started;
+    private State state = State.Init;
+
+    private SnappyCompressor() { }
+
+    public static Supplier<SnappyCompressor> newFactory() {
+        return SnappyCompressor::new;
+    }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (!in.isReadable()) {
-            return;
+    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+        if (!in.isReadable() || state == State.Finished) {
+            return Unpooled.EMPTY_BUFFER;
         }
 
-        if (!started) {
-            started = true;
-            out.writeBytes(STREAM_START);
-        }
-
-        int dataLength = in.readableBytes();
-        if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
-            for (;;) {
-                final int lengthIdx = out.writerIndex() + 1;
-                if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
-                    ByteBuf slice = in.readSlice(dataLength);
-                    writeUnencodedChunk(slice, out, dataLength);
-                    break;
-                }
-
-                out.writeInt(0);
-                if (dataLength > Short.MAX_VALUE) {
-                    ByteBuf slice = in.readSlice(Short.MAX_VALUE);
-                    calculateAndWriteChecksum(slice, out);
-                    snappy.encode(slice, out, Short.MAX_VALUE);
-                    setChunkLength(out, lengthIdx);
-                    dataLength -= Short.MAX_VALUE;
-                } else {
-                    ByteBuf slice = in.readSlice(dataLength);
-                    calculateAndWriteChecksum(slice, out);
-                    snappy.encode(slice, out, dataLength);
-                    setChunkLength(out, lengthIdx);
-                    break;
-                }
+        // TODO: Make some smart decision about the initial capacity.
+        ByteBuf out = allocator.buffer();
+        try {
+            if (state == State.Init) {
+                state = State.Started;
+                out.writeBytes(STREAM_START);
             }
-        } else {
-            writeUnencodedChunk(in, out, dataLength);
+
+            int dataLength = in.readableBytes();
+            if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
+                for (;;) {
+                    final int lengthIdx = out.writerIndex() + 1;
+                    if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
+                        ByteBuf slice = in.readSlice(dataLength);
+                        writeUnencodedChunk(slice, out, dataLength);
+                        break;
+                    }
+
+                    out.writeInt(0);
+                    if (dataLength > Short.MAX_VALUE) {
+                        ByteBuf slice = in.readSlice(Short.MAX_VALUE);
+                        calculateAndWriteChecksum(slice, out);
+                        snappy.encode(slice, out, Short.MAX_VALUE);
+                        setChunkLength(out, lengthIdx);
+                        dataLength -= Short.MAX_VALUE;
+                    } else {
+                        ByteBuf slice = in.readSlice(dataLength);
+                        calculateAndWriteChecksum(slice, out);
+                        snappy.encode(slice, out, dataLength);
+                        setChunkLength(out, lengthIdx);
+                        break;
+                    }
+                }
+            } else {
+                writeUnencodedChunk(in, out, dataLength);
+            }
+            return out;
+        } catch (Throwable cause) {
+            out.release();
+            throw cause;
         }
+    }
+
+    @Override
+    public ByteBuf finish(ByteBufAllocator allocator) {
+        state = State.Finished;
+        return Unpooled.EMPTY_BUFFER;
+    }
+
+    @Override
+    public boolean isFinished() {
+        return state == State.Finished;
+    }
+
+    @Override
+    public void close() {
+        state = State.Finished;
     }
 
     private static void writeUnencodedChunk(ByteBuf in, ByteBuf out, int dataLength) {

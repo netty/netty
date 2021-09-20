@@ -44,7 +44,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new Lz4FrameDecoder(true));
+        return new EmbeddedChannel(new DecompressionHandler(Lz4Decompressor.newFactory(true)));
     }
 
     @Test
