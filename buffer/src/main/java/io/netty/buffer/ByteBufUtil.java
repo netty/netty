@@ -246,10 +246,10 @@ public final class ByteBufUtil {
         }
 
         // When the needle has only one byte that can be read,
-        // the firstIndexOf method needs to be called
+        // the ByteBuf.indexOf() can be used
         if (m == 1) {
-            return firstIndexOf((AbstractByteBuf) haystack, haystack.readerIndex(),
-                    haystack.writerIndex(), needle.getByte(needle.readerIndex()));
+            return haystack.indexOf(haystack.readerIndex(), haystack.writerIndex(),
+                          needle.getByte(needle.readerIndex()));
         }
 
         int i;
