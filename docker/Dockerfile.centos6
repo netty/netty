@@ -17,7 +17,8 @@ RUN yum install -y \
  openssl-devel \
  tar \
  unzip \
- wget
+ wget \
+ zip
 
 
 # Downloading and installing SDKMAN!
