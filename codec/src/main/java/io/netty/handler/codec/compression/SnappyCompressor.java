@@ -55,6 +55,11 @@ public final class SnappyCompressor implements Compressor {
 
     private SnappyCompressor() { }
 
+    /**
+     * Creates a new snappy compressor factory.
+     *
+     * @return  the new instance.
+     */
     public static Supplier<SnappyCompressor> newFactory() {
         return SnappyCompressor::new;
     }

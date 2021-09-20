@@ -91,7 +91,7 @@ public final class Lz4Compressor implements Compressor {
     private boolean finished;
 
     /**
-     * Creates the fastest LZ4 encoder with default block size (64 KB)
+     * Creates the fastest LZ4 compressor factory with default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
      * <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      */
@@ -100,12 +100,13 @@ public final class Lz4Compressor implements Compressor {
     }
 
     /**
-     * Creates a new LZ4 encoder with hight or fast compression, default block size (64 KB)
+     * Creates a new LZ4 compressor factory with high or fast compression, default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
      * <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      *
      * @param highCompressor  if {@code true} codec will use compressor which requires more memory
      *                        and is slower but compresses more efficiently
+     * @return the factory.
      */
     public static Supplier<Lz4Compressor> newFactory(boolean highCompressor) {
         return newFactory(LZ4Factory.fastestInstance(), highCompressor,
@@ -113,7 +114,7 @@ public final class Lz4Compressor implements Compressor {
     }
 
     /**
-     * Creates a new customizable LZ4 encoder.
+     * Creates a new customizable LZ4 compressor factory.
      *
      * @param factory         user customizable {@link LZ4Factory} instance
      *                        which may be JNI bindings to the original C implementation, a pure Java implementation
@@ -123,6 +124,7 @@ public final class Lz4Compressor implements Compressor {
      * @param blockSize       the maximum number of bytes to try to compress at once,
      *                        must be >= 64 and <= 32 M
      * @param checksum        the {@link Checksum} instance to use to check data for integrity
+     * @return the factory.
      */
     public static Supplier<Lz4Compressor> newFactory(LZ4Factory factory, boolean highCompressor,
                                                      int blockSize, Checksum checksum) {
@@ -130,7 +132,7 @@ public final class Lz4Compressor implements Compressor {
     }
 
     /**
-     * Creates a new customizable LZ4 encoder.
+     * Creates a new customizable LZ4 compressor factory.
      *
      * @param factory         user customizable {@link LZ4Factory} instance
      *                        which may be JNI bindings to the original C implementation, a pure Java implementation
@@ -141,6 +143,7 @@ public final class Lz4Compressor implements Compressor {
      *                        must be >= 64 and <= 32 M
      * @param checksum        the {@link Checksum} instance to use to check data for integrity
      * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
+     * @return the factory.
      */
     public static Supplier<Lz4Compressor> newFactory(LZ4Factory factory, boolean highCompressor, int blockSize,
                                                      Checksum checksum, int maxEncodeSize) {

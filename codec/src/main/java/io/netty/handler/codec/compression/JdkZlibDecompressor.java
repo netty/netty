@@ -96,63 +96,72 @@ public final class JdkZlibDecompressor implements Decompressor {
     }
 
     /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
+     * Creates a zlib decompressor factory with the default wrapper ({@link ZlibWrapper#ZLIB}).
+     *
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory() {
         return newFactory(ZlibWrapper.ZLIB, null, false, 0);
     }
 
     /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB})
+     * Creates a zlib decompressor factory with the default wrapper ({@link ZlibWrapper#ZLIB})
      * and the specified maximum buffer allocation.
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory(int maxAllocation) {
         return newFactory(ZlibWrapper.ZLIB, null, false, maxAllocation);
     }
 
     /**
-     * Creates a new instance with the specified preset dictionary. The wrapper
+     * Creates a zlib decompressor factory with the specified preset dictionary. The wrapper
      * is always {@link ZlibWrapper#ZLIB} because it is the only format that
      * supports the preset dictionary.
+     *
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary) {
         return newFactory(ZlibWrapper.ZLIB, dictionary, false, 0);
     }
 
     /**
-     * Creates a new instance with the specified preset dictionary and maximum buffer allocation.
+     * Creates zlib decompressor factory with the specified preset dictionary and maximum buffer allocation.
      * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
      * supports the preset dictionary.
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary, int maxAllocation) {
         return newFactory(ZlibWrapper.ZLIB, dictionary, false, maxAllocation);
     }
 
     /**
-     * Creates a new instance with the specified wrapper.
+     * Creates zlib decompressor factory with the specified wrapper.
      * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
      * supported atm.
+     *
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper) {
         return newFactory(wrapper, null, false, 0);
     }
 
     /**
-     * Creates a new instance with the specified wrapper and maximum buffer allocation.
+     * Creates zlib decompressor factory with the specified wrapper and maximum buffer allocation.
      * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
      * supported atm.
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
      */
     public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, int maxAllocation) {
         return newFactory(wrapper, null, false, maxAllocation);

@@ -64,7 +64,7 @@ public final class LzfCompressor implements Compressor {
     private boolean finished;
 
     /**
-     * Creates a new LZF encoder with specified settings.
+     * Creates a new LZF compressor with specified settings.
      *
      * @param safeInstance          If {@code true} encoder will use {@link ChunkEncoder} that only uses standard
      *                              JDK access methods, and should work on all Java platforms and JVMs.
@@ -88,30 +88,32 @@ public final class LzfCompressor implements Compressor {
     }
 
     /**
-     * Creates a new LZF encoder with the most optimal available methods for underlying data access.
+     * Creates a new LZF compressor factory with the most optimal available methods for underlying data access.
      * It will "unsafe" instance if one can be used on current JVM.
      * It should be safe to call this constructor as implementations are dynamically loaded; however, on some
-     * non-standard platforms it may be necessary to use {@link #LzfCompressor(boolean)} with {@code true} param.
+     * non-standard platforms it may be necessary to use {@link #newFactory(boolean)} with {@code true} param.
+     * @return the factory.
      */
     public static Supplier<LzfCompressor> newFactory() {
         return newFactory(false);
     }
 
     /**
-     * Creates a new LZF encoder with specified encoding instance.
+     * Creates a new LZF compressor factory with specified encoding instance.
      *
      * @param safeInstance If {@code true} encoder will use {@link ChunkEncoder} that only uses
      *                     standard JDK access methods, and should work on all Java platforms and JVMs.
      *                     Otherwise encoder will try to use highly optimized {@link ChunkEncoder}
      *                     implementation that uses Sun JDK's {@link sun.misc.Unsafe}
      *                     class (which may be included by other JDK's as well).
+     * @return the factory.
      */
     public static Supplier<LzfCompressor> newFactory(boolean safeInstance) {
         return newFactory(safeInstance, MAX_CHUNK_LEN);
     }
 
     /**
-     * Creates a new LZF encoder with specified encoding instance and compressThreshold.
+     * Creates a new LZF compressor factory with specified encoding instance and compressThreshold.
      *
      * @param safeInstance      If {@code true} encoder will use {@link ChunkEncoder} that only uses standard
      *                          JDK access methods, and should work on all Java platforms and JVMs.
@@ -120,25 +122,27 @@ public final class LzfCompressor implements Compressor {
      *                          class (which may be included by other JDK's as well).
      * @param totalLength       Expected total length of content to compress; only matters for outgoing messages
      *                          that is smaller than maximum chunk size (64k), to optimize encoding hash tables.
+     * @return the factory.
      */
     public static Supplier<LzfCompressor> newFactory(boolean safeInstance, int totalLength) {
         return newFactory(safeInstance, totalLength, LzfCompressor.MIN_BLOCK_TO_COMPRESS);
     }
 
     /**
-     * Creates a new LZF encoder with specified total length of encoded chunk. You can configure it to encode
+     * Creates a new LZF compressor factory with specified total length of encoded chunk. You can configure it to encode
      * your data flow more efficient if you know the average size of messages that you send.
      *
      * @param totalLength Expected total length of content to compress;
      *                    only matters for outgoing messages that is smaller than maximum chunk size (64k),
      *                    to optimize encoding hash tables.
+     * @return the factory.
      */
     public static Supplier<LzfCompressor> newFactory(int totalLength) {
         return newFactory(false, totalLength);
     }
 
     /**
-     * Creates a new LZF encoder with specified settings.
+     * Creates a new LZF compressor factory with specified settings.
      *
      * @param safeInstance          If {@code true} encoder will use {@link ChunkEncoder} that only uses standard JDK
      *                              access methods, and should work on all Java platforms and JVMs.
@@ -150,6 +154,7 @@ public final class LzfCompressor implements Compressor {
      * @param compressThreshold     Compress threshold for LZF format. When the amount of input data is less than
      *                              compressThreshold, we will construct an uncompressed output according
      *                              to the LZF format.
+     * @return the factory.
      */
     public static Supplier<LzfCompressor> newFactory(boolean safeInstance, int totalLength, int compressThreshold) {
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {

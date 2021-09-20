@@ -23,14 +23,18 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * {@link ByteToMessageDecoder} that uses a {@link Decompressor} for decompressing incoming {@link ByteBuf}.
+ * {@link ByteToMessageDecoder} that uses a {@link Decompressor} for decompressing incoming {@link ByteBuf}s.
  */
 public class DecompressionHandler extends ByteToMessageDecoder {
 
     private final Supplier<? extends Decompressor> decompressorSupplier;
-
     private Decompressor decompressor;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param decompressorSupplier  the {@link Supplier} that is used to create the {@link Decompressor}.
+     */
     public DecompressionHandler(Supplier<? extends Decompressor> decompressorSupplier) {
         this.decompressorSupplier = Objects.requireNonNull(decompressorSupplier, "decompressorSupplier");
     }

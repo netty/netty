@@ -66,7 +66,7 @@ public final class SnappyDecompressor implements Decompressor {
     }
 
     /**
-     * Creates a new snappy-framed decoder with validation of checksums
+     * Creates a new snappy decompressor with validation of checksums
      * as specified.
      *
      * @param validateChecksums
@@ -79,22 +79,25 @@ public final class SnappyDecompressor implements Decompressor {
     }
 
     /**
-     * Creates a new snappy-framed decoder with validation of checksums
+     * Creates a new snappy decompressor factory with validation of checksums
      * turned OFF. To turn checksum validation on, please use the alternate
      * {@link #SnappyDecompressor(boolean)} constructor.
+     *
+     * @return the factory.
      */
     public static Supplier<SnappyDecompressor> newFactory() {
         return newFactory(false);
     }
 
     /**
-     * Creates a new snappy-framed decoder with validation of checksums
+     * Creates a new snappy decompressor factory with validation of checksums
      * as specified.
      *
      * @param validateChecksums
      *        If true, the checksum field will be validated against the actual
      *        uncompressed data, and if the checksums do not match, a suitable
      *        {@link DecompressionException} will be thrown
+     * @return the factory.
      */
     public static Supplier<SnappyDecompressor> newFactory(boolean validateChecksums) {
         return () -> new SnappyDecompressor(validateChecksums);

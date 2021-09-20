@@ -53,9 +53,10 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a zlib compressor factory with the default compression level ({@code 6})
      * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
+     * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory() {
@@ -63,7 +64,7 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * Creates a zlib compressor factory with the specified {@code compressionLevel}
      * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @param compressionLevel
@@ -78,9 +79,10 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a zlib compressor factory with the default compression level ({@code 6})
      * and the specified wrapper.
      *
+     * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper) {
@@ -88,14 +90,14 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * Creates a zlib compressor factory with the specified {@code compressionLevel}
      * and the specified wrapper.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
-     *
+     * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper, int compressionLevel) {
@@ -114,13 +116,13 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a zlib compressor factory with the default compression level ({@code 6})
      * and the specified preset dictionary.  The wrapper is always
      * {@link ZlibWrapper#ZLIB} because it is the only format that supports
      * the preset dictionary.
      *
      * @param dictionary  the preset dictionary
-     *
+     * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory(byte[] dictionary) {
@@ -128,7 +130,7 @@ public final class JdkZlibCompressor implements Compressor {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * Creates a zlib compressor factory with the specified {@code compressionLevel}
      * and the specified preset dictionary.  The wrapper is always
      * {@link ZlibWrapper#ZLIB} because it is the only format that supports
      * the preset dictionary.
@@ -138,7 +140,7 @@ public final class JdkZlibCompressor implements Compressor {
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
      * @param dictionary  the preset dictionary
-     *
+     * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory(int compressionLevel, byte[] dictionary) {

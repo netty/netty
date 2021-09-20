@@ -44,16 +44,19 @@ public final class BrotliDecompressor implements Decompressor {
     private final DecoderJNI.Wrapper decoder;
 
     /**
-     * Creates a new factory for {@link BrotliDecompressor} with a default 8kB input buffer
+     * Creates a new factory for {@link BrotliDecompressor}s with a default 8kB input buffer
+     *
+     * @return the factory.
      */
     public static Supplier<BrotliDecompressor> newFactory() {
         return newFactory(8 * 1024);
     }
 
     /**
-     * Creates a new factory for {@link BrotliDecompressor}.
+     * Creates a new factory for {@link BrotliDecompressor}s.
      *
      * @param inputBufferSize desired size of the input buffer in bytes
+     * @return the factory.
      */
     public static Supplier<BrotliDecompressor> newFactory(int inputBufferSize) {
         ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");

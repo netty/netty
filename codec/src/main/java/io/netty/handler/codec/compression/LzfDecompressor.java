@@ -83,7 +83,7 @@ public final class LzfDecompressor implements Decompressor {
     private boolean isCompressed;
 
     /**
-     * Creates a new LZF decoder with specified decoding instance.
+     * Creates a new LZF decompressor with specified decoding instance.
      *
      * @param safeInstance
      *        If {@code true} decoder will use {@link ChunkDecoder} that only uses standard JDK access methods,
@@ -100,23 +100,26 @@ public final class LzfDecompressor implements Decompressor {
     }
 
     /**
-     * Creates a new LZF decoder with the most optimal available methods for underlying data access.
+     * Creates a new LZF decompressor factory with the most optimal available methods for underlying data access.
      * It will "unsafe" instance if one can be used on current JVM.
      * It should be safe to call this constructor as implementations are dynamically loaded; however, on some
      * non-standard platforms it may be necessary to use {@link #LzfDecompressor(boolean)} with {@code true} param.
+     *
+     * @return the factory.
      */
     public static Supplier<LzfDecompressor> newFactory() {
         return newFactory(false);
     }
 
     /**
-     * Creates a new LZF decoder with specified decoding instance.
+     * Creates a new LZF decompressor factory with specified decoding instance.
      *
      * @param safeInstance
      *        If {@code true} decoder will use {@link ChunkDecoder} that only uses standard JDK access methods,
      *        and should work on all Java platforms and JVMs.
      *        Otherwise decoder will try to use highly optimized {@link ChunkDecoder} implementation that uses
      *        Sun JDK's {@link sun.misc.Unsafe} class (which may be included by other JDK's as well).
+     * @return the factory.
      */
     public static Supplier<LzfDecompressor> newFactory(boolean safeInstance) {
         return () -> new LzfDecompressor(safeInstance);

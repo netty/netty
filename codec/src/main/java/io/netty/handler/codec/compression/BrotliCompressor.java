@@ -48,6 +48,7 @@ public final class BrotliCompressor implements Compressor {
      * Create a new {@link BrotliCompressor} factory
      *
      * @param parameters {@link Encoder.Parameters} Instance
+     * @return the factory.
      */
     public static Supplier<BrotliCompressor> newFactory(Encoder.Parameters parameters) {
         Objects.requireNonNull(parameters, "parameters");
@@ -58,6 +59,7 @@ public final class BrotliCompressor implements Compressor {
      * Create a new {@link BrotliCompressor} factory
      *
      * @param brotliOptions {@link BrotliOptions} to use.
+     * @return the factory.
      */
     public static Supplier<BrotliCompressor> newFactory(BrotliOptions brotliOptions) {
         return newFactory(brotliOptions.parameters());
@@ -68,6 +70,8 @@ public final class BrotliCompressor implements Compressor {
      *
      * with {@link Encoder.Parameters#setQuality(int)} set to 4
      * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
+     *
+     * @return the factory.
      */
     public static Supplier<BrotliCompressor> newFactory() {
         return newFactory(BrotliOptions.DEFAULT);

@@ -85,7 +85,7 @@ public final class LzmaCompressor implements Compressor {
     private boolean finished;
 
     /**
-     * Creates LZMA encoder with specified settings.
+     * Creates LZMA compressor with specified settings.
      *
      * @param lc
      *        the number of "literal context" bits, available values [0, 8], default value {@value #DEFAULT_LC}.
@@ -118,25 +118,31 @@ public final class LzmaCompressor implements Compressor {
     }
 
     /**
-     * Creates LZMA encoder with default settings.
+     * Creates LZMA compressor factory with default settings.
+     *
+     * @return the factory.
      */
     public static Supplier<LzmaCompressor> newFactory() {
         return newFactory(LzmaCompressor.MEDIUM_DICTIONARY_SIZE);
     }
 
     /**
-     * Creates LZMA encoder with specified {@code lc}, {@code lp}, {@code pb}
+     * Creates LZMA compressor factory with specified {@code lc}, {@code lp}, {@code pb}
      * values and the medium dictionary size of {@value #MEDIUM_DICTIONARY_SIZE}.
+     *
+     * @return the factory.
      */
     public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb) {
         return newFactory(lc, lp, pb, LzmaCompressor.MEDIUM_DICTIONARY_SIZE);
     }
 
     /**
-     * Creates LZMA encoder with specified dictionary size and default values of
+     * Creates LZMA compressor factory with specified dictionary size and default values of
      * {@code lc} = {@value #DEFAULT_LC},
      * {@code lp} = {@value #DEFAULT_LP},
      * {@code pb} = {@value #DEFAULT_PB}.
+     *
+     * @return the factory.
      */
     public static Supplier<LzmaCompressor> newFactory(int dictionarySize) {
         return newFactory(LzmaCompressor.DEFAULT_LC, LzmaCompressor.DEFAULT_LP,
@@ -144,14 +150,17 @@ public final class LzmaCompressor implements Compressor {
     }
 
     /**
-     * Creates LZMA encoder with specified {@code lc}, {@code lp}, {@code pb} values and custom dictionary size.
+     * Creates LZMA compressor factory with specified {@code lc}, {@code lp}, {@code pb} values and custom
+     * dictionary size.
+     *
+     * @return the factory.
      */
     public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb, int dictionarySize) {
         return newFactory(lc, lp, pb, dictionarySize, false, LzmaCompressor.MEDIUM_FAST_BYTES);
     }
 
     /**
-     * Creates LZMA encoder with specified settings.
+     * Creates LZMA compressor factory with specified settings.
      *
      * @param lc
      *        the number of "literal context" bits, available values [0, 8], default value {@value #DEFAULT_LC}.
@@ -170,6 +179,7 @@ public final class LzmaCompressor implements Compressor {
      *        of LZMA-Specification.txt in official LZMA SDK.
      * @param numFastBytes
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
+     * @return the factory.
      */
     public static Supplier<LzmaCompressor> newFactory(int lc, int lp, int pb, int dictionarySize,
                                                       boolean endMarkerMode, int numFastBytes) {

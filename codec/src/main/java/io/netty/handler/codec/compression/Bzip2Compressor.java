@@ -38,7 +38,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 public final class Bzip2Compressor implements Compressor {
 
     /**
-     * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
+     * Creates a new bzip2 compressor with the specified {@code blockSizeMultiplier}.
      * @param blockSizeMultiplier
      *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
      *        Larger block sizes require more memory for both compression and decompression,
@@ -50,6 +50,8 @@ public final class Bzip2Compressor implements Compressor {
 
     /**
      * Creates a new bzip2 compressor factory with the maximum (900,000 byte) block size.
+     *
+     * @return the factory.
      */
     public static Supplier<Bzip2Compressor> newFactory() {
         return newFactory(MAX_BLOCK_SIZE);
@@ -57,10 +59,12 @@ public final class Bzip2Compressor implements Compressor {
 
     /**
      * Creates a new bzip2 compressor factory with the specified {@code blockSizeMultiplier}.
+     *
      * @param blockSizeMultiplier
      *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
      *        Larger block sizes require more memory for both compression and decompression,
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
+     * @return the factory.
      */
     public static Supplier<Bzip2Compressor> newFactory(final int blockSizeMultiplier) {
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {

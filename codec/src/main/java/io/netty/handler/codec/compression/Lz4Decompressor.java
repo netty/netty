@@ -87,7 +87,7 @@ public final class Lz4Decompressor implements Decompressor {
     private int currentChecksum;
 
     /**
-     * Creates a new customizable LZ4 decoder.
+     * Creates a new customizable LZ4 decompressor factory.
      *
      * @param factory   user customizable {@link LZ4Factory} instance
      *                  which may be JNI bindings to the original C implementation, a pure Java implementation
@@ -101,31 +101,34 @@ public final class Lz4Decompressor implements Decompressor {
     }
 
     /**
-     * Creates the fastest LZ4 decoder.
+     * Creates the fastest LZ4 decompressor factory.
      *
      * Note that by default, validation of the checksum header in each chunk is
      * DISABLED for performance improvements. If performance is less of an issue,
      * or if you would prefer the safety that checksum validation brings, please
-     * use the {@link #Lz4Decompressor(boolean)} constructor with the argument
+     * use the {@link #newFactory(boolean)} constructor with the argument
      * set to {@code true}.
+     *
+     * @return the factory.
      */
     public static Supplier<Lz4Decompressor> newFactory() {
         return newFactory(false);
     }
 
     /**
-     * Creates a LZ4 decoder with fastest decoder instance available on your machine.
+     * Creates a LZ4 decompressor factory with fastest decoder instance available on your machine.
      *
      * @param validateChecksums  if {@code true}, the checksum field will be validated against the actual
      *                           uncompressed data, and if the checksums do not match, a suitable
      *                           {@link DecompressionException} will be thrown
+     * @return the factory.
      */
     public static Supplier<Lz4Decompressor> newFactory(boolean validateChecksums) {
         return newFactory(LZ4Factory.fastestInstance(), validateChecksums);
     }
 
     /**
-     * Creates a new LZ4 decoder with customizable implementation.
+     * Creates a LZ4 decompressor factory with customizable implementation.
      *
      * @param factory            user customizable {@link LZ4Factory} instance
      *                           which may be JNI bindings to the original C implementation, a pure Java implementation
@@ -135,19 +138,21 @@ public final class Lz4Decompressor implements Decompressor {
      *                           {@link DecompressionException} will be thrown. In this case encoder will use
      *                           xxhash hashing for Java, based on Yann Collet's work available at
      *                           <a href="https://github.com/Cyan4973/xxHash">Github</a>.
+     * @return the factory.
      */
     public static Supplier<Lz4Decompressor> newFactory(LZ4Factory factory, boolean validateChecksums) {
         return newFactory(factory, validateChecksums ? new Lz4XXHash32(DEFAULT_SEED) : null);
     }
 
     /**
-     * Creates a new customizable LZ4 decoder.
+     * Creates a customizable LZ4 decompressor factory.
      *
      * @param factory   user customizable {@link LZ4Factory} instance
      *                  which may be JNI bindings to the original C implementation, a pure Java implementation
      *                  or a Java implementation that uses the {@link sun.misc.Unsafe}
      * @param checksum  the {@link Checksum} instance to use to check data for integrity.
      *                  You may set {@code null} if you do not want to validate checksum of each block
+     * @return the factory.
      */
     public static Supplier<Lz4Decompressor> newFactory(LZ4Factory factory, Checksum checksum) {
         requireNonNull(factory, "factory");

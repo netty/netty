@@ -41,31 +41,37 @@ public final class ZstdCompressor implements Compressor {
     private boolean finished;
 
     /**
-     * Creates a new Zstd encoder.
+     * Creates a new Zstd compressor factory.
      *
      * Please note that if you use the default constructor, the default BLOCK_SIZE and MAX_BLOCK_SIZE
      * will be used. If you want to specify BLOCK_SIZE and MAX_BLOCK_SIZE yourself,
-     * please use {@link ZstdCompressor (int,int)} constructor
+     * please use the {@link #newFactory(int,int)} method.
+     *
+     * @return the factory.
      */
     public static Supplier<ZstdCompressor> newFactory() {
         return newFactory(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE);
     }
 
     /**
-     * Creates a new Zstd encoder.
+     * Creates a new Zstd compressor factory.
+     *
      *  @param  compressionLevel
      *            specifies the level of the compression
+     * @return the factory.
      */
     public static Supplier<ZstdCompressor> newFactory(int compressionLevel) {
         return newFactory(compressionLevel, DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE);
     }
 
     /**
-     * Creates a new Zstd encoder.
+     * Creates a new Zstd compressor factory.
+     *
      *  @param  blockSize
      *            is used to calculate the compressionLevel
      *  @param  maxEncodeSize
      *            specifies the size of the largest compressed object
+     * @return the factory.
      */
     public static Supplier<ZstdCompressor> newFactory(int blockSize, int maxEncodeSize) {
         return newFactory(DEFAULT_COMPRESSION_LEVEL, blockSize, maxEncodeSize);
@@ -78,6 +84,7 @@ public final class ZstdCompressor implements Compressor {
      *           specifies the size of the largest compressed object
      * @param  compressionLevel
      *           specifies the level of the compression
+     * @return the factory.
      */
     public static Supplier<ZstdCompressor> newFactory(int compressionLevel, int blockSize, int maxEncodeSize) {
         ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");

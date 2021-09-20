@@ -79,7 +79,9 @@ public final class FastLzDecompressor implements Decompressor {
     }
 
     /**
-     * Creates the fastest FastLZ decompressor factoryFastLZ decompressor factory without checksum calculation.
+     * Creates the fastest FastLZ decompressor factory without checksum calculation.
+     *
+     * @return the factory.
      */
     public static Supplier<FastLzDecompressor> newFactory() {
         return newFactory(false);
@@ -94,6 +96,7 @@ public final class FastLzDecompressor implements Decompressor {
      *        {@link DecompressionException} will be thrown.
      *        Note, that in this case decoder will use {@link java.util.zip.Adler32}
      *        as a default checksum calculator.
+     * @return the factory.
      */
     public static Supplier<FastLzDecompressor> newFactory(boolean validateChecksums) {
         return newFactory(validateChecksums ? new Adler32() : null);
@@ -105,6 +108,7 @@ public final class FastLzDecompressor implements Decompressor {
      * @param checksum
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you do not want to validate checksum of each block.
+     * @return the factory.
      */
     public static Supplier<FastLzDecompressor> newFactory(Checksum checksum) {
         return () -> new FastLzDecompressor(checksum);

@@ -27,14 +27,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
- * {@link ChannelHandler} which uses a {@link Compressor} for compress the written {@link ByteBuf}.
+ * {@link ChannelHandler} which uses a {@link Compressor} for compressing the written {@link ByteBuf}s.
  */
 public class CompressionHandler implements ChannelHandler {
 
     private final Supplier<? extends Compressor> compressorSupplier;
-
     private Compressor compressor;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param compressorSupplier  the {@link Supplier} that is used to create the {@link Compressor}.
+     */
     public CompressionHandler(Supplier<? extends Compressor> compressorSupplier) {
         this.compressorSupplier = Objects.requireNonNull(compressorSupplier, "compressorSupplier");
     }

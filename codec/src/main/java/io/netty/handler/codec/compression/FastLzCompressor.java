@@ -60,26 +60,29 @@ public final class FastLzCompressor implements Compressor {
     }
 
     /**
-     * Creates a FastLZ encoder without checksum calculator and with auto detection of compression level.
+     * Creates a FastLZ compressor factory without checksum calculator and with auto detection of compression level.
+     *
+     * @return the factory.
      */
     public static Supplier<FastLzCompressor> newFactory() {
         return newFactory(LEVEL_AUTO, null);
     }
 
     /**
-     * Creates a FastLZ encoder with specified compression level and without checksum calculator.
+     * Creates a FastLZ compressor factory with specified compression level and without checksum calculator.
      *
      * @param level supports only these values:
      *        0 - Encoder will choose level automatically depending on the length of the input buffer.
      *        1 - Level 1 is the fastest compression and generally useful for short data.
      *        2 - Level 2 is slightly slower but it gives better compression ratio.
+     * @return the factory.
      */
     public static Supplier<FastLzCompressor> newFactory(int level) {
         return newFactory(level, null);
     }
 
     /**
-     * Creates a FastLZ encoder with auto detection of compression
+     * Creates a FastLZ compressor factory with auto detection of compression
      * level and calculation of checksums as specified.
      *
      * @param validateChecksums
@@ -87,13 +90,14 @@ public final class FastLzCompressor implements Compressor {
      *        will be added to the header of block.
      *        By default {@link FastLzCompressor} uses {@link java.util.zip.Adler32}
      *        for checksum calculation.
+     * @return the factory.
      */
     public static Supplier<FastLzCompressor> newFactory(boolean validateChecksums) {
         return newFactory(LEVEL_AUTO, validateChecksums ? new Adler32() : null);
     }
 
     /**
-     * Creates a FastLZ encoder with specified compression level and checksum calculator.
+     * Creates a FastLZ compressor factory with specified compression level and checksum calculator.
      *
      * @param level supports only these values:
      *        0 - Encoder will choose level automatically depending on the length of the input buffer.
@@ -102,6 +106,7 @@ public final class FastLzCompressor implements Compressor {
      * @param checksum
      *        the {@link Checksum} instance to use to check data for integrity.
      *        You may set {@code null} if you don't want to validate checksum of each block.
+     * @return the factory.
      */
     public static Supplier<FastLzCompressor> newFactory(int level, Checksum checksum) {
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
