@@ -16,6 +16,7 @@ RUN yum install -y \
  make \
  openssl-devel \
  tar \
+ unzip \
  wget
 
 
