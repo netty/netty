@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -51,6 +50,7 @@ public class CompressionHandler implements ChannelHandler {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (compressor != null) {
+            finish(ctx, false);
             compressor.close();
             compressor = null;
         }
@@ -59,10 +59,7 @@ public class CompressionHandler implements ChannelHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (compressor != null) {
-            // Just drop the trailer on the floor as there is no way to send it to the remote peer after the channel
-            // became inactive.
-            ByteBuf buffer = compressor.finish(ctx.alloc());
-            buffer.release();
+            compressor.close();
             compressor = null;
         }
         ctx.fireChannelInactive();
@@ -70,35 +67,49 @@ public class CompressionHandler implements ChannelHandler {
 
     @Override
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        if (compressor == null || compressor.isFinished()) {
+        if (compressor == null || compressor.isFinished() || !(msg instanceof ByteBuf)) {
             return ctx.write(msg);
         }
-        ByteBuf buffer = compressor.compress((ByteBuf) msg, ctx.alloc());
+        ByteBuf input = (ByteBuf) msg;
         try {
+            ByteBuf buffer = compressor.compress(input, ctx.alloc());
             return ctx.write(buffer);
         } finally {
-            ReferenceCountUtil.release(msg);
+            input.release();
         }
     }
 
     @Override
     public Future<Void> close(ChannelHandlerContext ctx) {
-        if (compressor == null) {
-            return ctx.close();
+        return finish(ctx, true);
+    }
+
+    private Future<Void> finish(ChannelHandlerContext ctx, boolean closeCtx) {
+        if (compressor == null || compressor.isFinished()) {
+            if (closeCtx) {
+                return ctx.close();
+            }
+            return ctx.newSucceededFuture();
         }
         ByteBuf buffer = compressor.finish(ctx.alloc());
         if (!buffer.isReadable()) {
             buffer.release();
-            return ctx.close();
+            if (closeCtx) {
+                return ctx.close();
+            }
+            return ctx.newSucceededFuture();
         }
-        Promise<Void> promise = ctx.newPromise();
-        Future<Void> f = ctx.writeAndFlush(buffer).addListener(ctx, (c, ignore) -> c.close().cascadeTo(promise));
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            Future<?> sF =  ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
-                    10, TimeUnit.SECONDS); // FIXME: Magic number
-            f.addListener(sF, (scheduledFuture, ignore) -> scheduledFuture.cancel());
+        if (closeCtx) {
+            Promise<Void> promise = ctx.newPromise();
+            Future<Void> f = ctx.writeAndFlush(buffer).addListener(ctx, (c, ignore) -> c.close().cascadeTo(promise));
+            if (!f.isDone()) {
+                // Ensure the channel is closed even if the write operation completes in time.
+                Future<?> sF =  ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
+                        10, TimeUnit.SECONDS); // FIXME: Magic number
+                f.addListener(sF, (scheduledFuture, ignore) -> scheduledFuture.cancel());
+            }
+            return promise.asFuture();
         }
-        return promise.asFuture();
+        return ctx.write(buffer);
     }
 }

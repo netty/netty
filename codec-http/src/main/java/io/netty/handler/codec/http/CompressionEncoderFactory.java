@@ -15,12 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
- * Compression Encoder Factory for create {@link MessageToByteEncoder}
+ * Compression Encoder Factory for create {@link ChannelHandler}
  * used to compress http content
  */
 interface CompressionEncoderFactory {

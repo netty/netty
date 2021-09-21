@@ -40,17 +40,19 @@ public interface Decompressor extends AutoCloseable {
      * @param allocator     the {@link ByteBufAllocator} that is used to allocate a new buffer (if needed) to write the
      *                      decompressed bytes too.
      * @return              the {@link ByteBuf} that contains the decompressed data. The caller of this method takes
-     *                      ownership of the buffer.
-     * @throws DecompressionException   thrown if an decoding error was encountered.
+     *                      ownership of the buffer. The return value will be {@code null} if there is not enough data
+     *                      readable in the input to make any progress. In this case the user should call it again once
+     *                      there is more data ready to be consumed.
+     * @throws DecompressionException   thrown if an decompression error was encountered.
      */
     ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException;
 
     /**
      * Returns {@code} true if the decompressor was closed. This might be because someone explicit called
      * {@link #close()} or the decompressor implementation did decide to close itself due a decompression error which
-     * cant be recovered.
+     * can't be recovered.
      *
-     * @return if the decompressor was closed.
+     * @return {@code true} if the decompressor was closed, {@code false} otherwise..
      */
     boolean isFinished();
 
