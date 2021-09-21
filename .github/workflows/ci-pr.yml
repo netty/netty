@@ -144,9 +144,6 @@ jobs:
           - setup: linux-x86_64-java11-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm111.yaml run build-leak"
-          - setup: linux-x86_64-java16
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.116.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.116.yaml run build-leak"
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.117.yaml run build-leak"
