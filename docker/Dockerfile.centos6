@@ -25,7 +25,8 @@ RUN yum install -y \
  perl \
  tar \
  unzip \
- wget
+ wget \
+ zip
 
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
@@ -42,13 +43,22 @@ RUN wget -q https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-Li
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
 RUN wget -q https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
 
-ARG java_version=adopt@1.8.0-275
-ENV JAVA_VERSION $java_version
-# installing java with jabba
-RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install $JAVA_VERSION -o /jdk" bash
 
-RUN echo 'export JAVA_HOME="/jdk"' >> ~/.bashrc
-RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io" | bash
+
+ARG java_version="8.0.302-zulu"
+ENV JAVA_VERSION $java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 
 # install rust and setup PATH
 run curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -60,7 +70,7 @@ RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
 
 # Prepare our own build
 ENV PATH /opt/apache-maven-3.6.3/bin/:$PATH
-ENV JAVA_HOME /jdk/
+ENV JAVA_HOME /root/.sdkman/candidates/java/current
 
 # This is workaround to be able to compile boringssl with -DOPENSSL_C11_ATOMIC as while we use a recent gcc installation it still needs some
 # help to define static_assert(...) as otherwise the compilation will fail due the system installed assert.h which missed this definition.
