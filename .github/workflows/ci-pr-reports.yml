@@ -31,8 +31,8 @@ jobs:
         ignore-if-missing: [false]
         include:
           - setup: linux-x86_64-java11
-          - setup: linux-x86_64-java16
           - setup: linux-x86_64-java11-boringssl
+          - setup: linux-x86_64-java17
           - setup: windows-x86_64-java11-boringssl
     continue-on-error: ${{ matrix.ignore-if-missing }}
     steps:
