@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * {@link ChannelHandler} which uses a {@link Compressor} for compressing the written {@link ByteBuf}s.
  */
-public class CompressionHandler implements ChannelHandler {
+public final class CompressionHandler implements ChannelHandler {
 
     private final Supplier<? extends Compressor> compressorSupplier;
     private final long closeWriteTimeout;

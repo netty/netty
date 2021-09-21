@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 /**
  * {@link ByteToMessageDecoder} that uses a {@link Decompressor} for decompressing incoming {@link ByteBuf}s.
  */
-public class DecompressionHandler extends ByteToMessageDecoder {
+public final class DecompressionHandler extends ByteToMessageDecoder {
 
     private final Supplier<? extends Decompressor> decompressorSupplier;
     private final boolean discardBytesAfterFinished;
@@ -54,13 +54,13 @@ public class DecompressionHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+    protected void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded0(ctx);
         decompressor = decompressorSupplier.get();
     }
 
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (decompressor == null) {
             ctx.fireChannelRead(in.readRetainedSlice(in.readableBytes()));
             return;
@@ -83,7 +83,7 @@ public class DecompressionHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
             super.handlerRemoved0(ctx);
         } finally {
@@ -92,7 +92,7 @@ public class DecompressionHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public final void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         try {
             super.channelInactive(ctx);
         } finally {
@@ -105,9 +105,5 @@ public class DecompressionHandler extends ByteToMessageDecoder {
             decompressor.close();
             decompressor = null;
         }
-    }
-
-    private boolean shouldDiscard() {
-        return decompressor == null || decompressor.isFinished();
     }
 }

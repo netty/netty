@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,6 +25,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
+import io.netty.handler.codec.compression.Decompressor;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
@@ -614,14 +617,31 @@ public class HttpContentDecoderTest {
     public void testCleanupThrows() {
         HttpContentDecoder decoder = new HttpContentDecoder() {
             @Override
-            protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
-                return new EmbeddedChannel(new ChannelHandler() {
+            protected Decompressor newContentDecoder(String contentEncoding) {
+                return new Decompressor() {
                     @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                        ctx.fireExceptionCaught(new DecoderException());
-                        ctx.fireChannelInactive();
+                    public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
+                        if (input.isReadable()) {
+                            return input.readRetainedSlice(input.readableBytes());
+                        }
+                        return null;
                     }
-                });
+
+                    @Override
+                    public boolean isFinished() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isClosed() {
+                        return false;
+                    }
+
+                    @Override
+                    public void close() {
+                        throw new DecoderException();
+                    }
+                };
             }
         };
 

@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,7 +25,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.compression.CompressionException;
+import io.netty.handler.codec.compression.Compressor;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -48,13 +50,37 @@ public class HttpContentEncoderTest {
     private static final class TestEncoder extends HttpContentEncoder {
         @Override
         protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
-            return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
+            return new Result("test", new Compressor() {
+                private boolean finished;
                 @Override
-                protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-                    out.writeBytes(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
-                    in.skipBytes(in.readableBytes());
+                public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+                    ByteBuf out = allocator.buffer();
+                    out.writeBytes(String.valueOf(input.readableBytes()).getBytes(CharsetUtil.US_ASCII));
+                    input.skipBytes(input.readableBytes());
+                    return out;
                 }
-            }));
+
+                @Override
+                public ByteBuf finish(ByteBufAllocator allocator) {
+                    finished = true;
+                    return Unpooled.EMPTY_BUFFER;
+                }
+
+                @Override
+                public boolean isFinished() {
+                    return finished;
+                }
+
+                @Override
+                public void close() {
+                    finished = true;
+                }
+
+                @Override
+                public boolean isClosed() {
+                    return finished;
+                }
+            });
         }
     }
 
@@ -402,14 +428,32 @@ public class HttpContentEncoderTest {
         HttpContentEncoder encoder = new HttpContentEncoder() {
             @Override
             protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
-                return new Result("myencoding", new EmbeddedChannel(
-                        new ChannelHandler() {
+                return new Result("myencoding", new Compressor() {
                     @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                        ctx.fireExceptionCaught(new EncoderException());
-                        ctx.fireChannelInactive();
+                    public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+                        return input.retainedSlice();
                     }
-                }));
+
+                    @Override
+                    public ByteBuf finish(ByteBufAllocator allocator) {
+                        return Unpooled.EMPTY_BUFFER;
+                    }
+
+                    @Override
+                    public boolean isFinished() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isClosed() {
+                        return false;
+                    }
+
+                    @Override
+                    public void close() {
+                        throw new EncoderException();
+                    }
+                });
             }
         };
 
