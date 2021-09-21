@@ -747,7 +747,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         do {
             Component component = components[++componentId];
             // It's important to use srcBuf and NOT buf as we need to return the "original" source buffer and not the
-            // unwrapped one as otherwise me could loose the ability to correctly update the reference count on the
+            // unwrapped one as otherwise we could loose the ability to correctly update the reference count on the
             // returned buffer.
             slice = component.srcBuf.slice(component.srcIdx(component.offset),
                     Math.min(component.length(), bytesToSlice));
