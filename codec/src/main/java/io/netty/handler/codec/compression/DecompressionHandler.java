@@ -52,7 +52,7 @@ public class DecompressionHandler extends ByteToMessageDecoder {
             return;
         }
 
-        for (;;) {
+        while (!decompressor.isFinished()) {
             int idx = in.readerIndex();
             ByteBuf decompressed = decompressor.decompress(in, ctx.alloc());
             if (decompressed != null) {

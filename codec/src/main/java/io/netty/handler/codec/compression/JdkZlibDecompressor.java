@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
@@ -194,8 +195,11 @@ public final class JdkZlibDecompressor implements Decompressor {
 
     @Override
     public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+        if (closed) {
+            throw new DecompressionException("Decompressor closed");
+        }
         if (finished) {
-            return null;
+            return Unpooled.EMPTY_BUFFER;
         }
 
         int readableBytes = in.readableBytes();

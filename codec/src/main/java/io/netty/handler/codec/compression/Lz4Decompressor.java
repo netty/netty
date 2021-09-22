@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -161,9 +162,14 @@ public final class Lz4Decompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator)  throws DecompressionException {
+    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
         try {
             switch (currentState) {
+                case CORRUPTED:
+                case FINISHED:
+                    return Unpooled.EMPTY_BUFFER;
+                case CLOSED:
+                    throw new DecompressionException("Decompressor closed");
                 case INIT_BLOCK:
                     if (in.readableBytes() < HEADER_LENGTH) {
                         return null;
@@ -268,10 +274,6 @@ public final class Lz4Decompressor implements Decompressor {
                             uncompressed.release();
                         }
                     }
-                case FINISHED:
-                case CORRUPTED:
-                case CLOSED:
-                     return null;
                 default:
                     throw new IllegalStateException();
             }

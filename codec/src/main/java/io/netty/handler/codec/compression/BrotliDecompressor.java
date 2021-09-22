@@ -19,6 +19,7 @@ package io.netty.handler.codec.compression;
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -104,38 +105,43 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
-        if (state != State.PROCESSING) {
-            return null;
-        }
+        switch (state) {
+            case CLOSED:
+                throw new DecompressionException("Decompressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                for (;;) {
+                    switch (decoder.getStatus()) {
+                        case DONE:
+                            state = State.FINISHED;
+                            return null;
+                        case OK:
+                            decoder.push(0);
+                            break;
+                        case NEEDS_MORE_INPUT:
+                            if (decoder.hasOutput()) {
+                                return pull(allocator);
+                            }
 
-        for (;;) {
-            switch (decoder.getStatus()) {
-                case DONE:
-                    state = State.FINISHED;
-                    return null;
-                case OK:
-                    decoder.push(0);
-                    break;
-                case NEEDS_MORE_INPUT:
-                    if (decoder.hasOutput()) {
-                        return pull(allocator);
+                            if (!input.isReadable()) {
+                                return null;
+                            }
+
+                            ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
+                            decoderInputBuffer.clear();
+                            int readBytes = readBytes(input, decoderInputBuffer);
+                            decoder.push(readBytes);
+                            break;
+                        case NEEDS_MORE_OUTPUT:
+                            return pull(allocator);
+                        default:
+                            state = State.FINISHED;
+                            throw new DecompressionException("Brotli stream corrupted");
                     }
-
-                    if (!input.isReadable()) {
-                        return null;
-                    }
-
-                    ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
-                    decoderInputBuffer.clear();
-                    int readBytes = readBytes(input, decoderInputBuffer);
-                    decoder.push(readBytes);
-                    break;
-                case NEEDS_MORE_OUTPUT:
-                    return pull(allocator);
-                default:
-                    state = State.FINISHED;
-                    throw new DecompressionException("Brotli stream corrupted");
-            }
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 

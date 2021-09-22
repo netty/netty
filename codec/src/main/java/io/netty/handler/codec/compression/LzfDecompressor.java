@@ -21,6 +21,7 @@ import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.util.function.Supplier;
 
@@ -130,6 +131,11 @@ public final class LzfDecompressor implements Decompressor {
     public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
         try {
             switch (currentState) {
+                case FINISHED:
+                case CORRUPTED:
+                    return Unpooled.EMPTY_BUFFER;
+                case CLOSED:
+                    throw new DecompressionException("Decompressor closed");
                 case INIT_BLOCK:
                     if (in.readableBytes() < HEADER_LEN_NOT_COMPRESSED) {
                         return null;
@@ -245,10 +251,6 @@ public final class LzfDecompressor implements Decompressor {
                         currentState = State.INIT_BLOCK;
                     }
 
-                    return null;
-                case FINISHED:
-                case CORRUPTED:
-                case CLOSED:
                     return null;
                 default:
                     throw new IllegalStateException();

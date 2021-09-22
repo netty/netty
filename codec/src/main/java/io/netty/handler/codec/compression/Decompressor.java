@@ -43,7 +43,8 @@ public interface Decompressor extends AutoCloseable {
      *                      ownership of the buffer. The return value will be {@code null} if there is not enough data
      *                      readable in the input to make any progress. In this case the user should call it again once
      *                      there is more data ready to be consumed.
-     * @throws DecompressionException   thrown if an decompression error was encountered.
+     * @throws DecompressionException   thrown if an decompression error was encountered or the decompressor was closed
+     *                                  before.
      */
     ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException;
 
@@ -58,10 +59,15 @@ public interface Decompressor extends AutoCloseable {
     /**
      * Return {@code true} if the decompressor was closed, {@code false} otherwise.
      *
-     * @return
+     * @return if {@link #close()} was called.
      */
     boolean isClosed();
 
+    /**
+     * Close the decompressor. After this method was called {@link #isFinished()}
+     * will return {@code true} as well and it is not allowed to call {@link #decompress(ByteBuf, ByteBufAllocator)}
+     * anymore.
+     */
     @Override
     void close();
 }

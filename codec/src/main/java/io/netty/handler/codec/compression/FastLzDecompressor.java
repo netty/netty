@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.util.function.Supplier;
 import java.util.zip.Adler32;
@@ -118,6 +119,11 @@ public final class FastLzDecompressor implements Decompressor {
     @Override
     public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
         switch (currentState) {
+            case CLOSED:
+                throw new DecompressionException("Decompressor closed");
+            case DONE:
+            case CORRUPTED:
+                return Unpooled.EMPTY_BUFFER;
             case INIT_BLOCK:
                 if (in.readableBytes() < 4) {
                     return null;
@@ -199,9 +205,6 @@ public final class FastLzDecompressor implements Decompressor {
                         output.release();
                     }
                 }
-            case CORRUPTED:
-            case DONE:
-                return null;
             default:
                 throw new IllegalStateException();
         }

@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.util.function.Supplier;
 
@@ -108,162 +109,161 @@ public final class SnappyDecompressor implements Decompressor {
     public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator)
             throws DecompressionException {
         switch (state) {
-            case DECODING:
-                break;
-            case CORRUPTED:
             case FINISHED:
+            case CORRUPTED:
+                return Unpooled.EMPTY_BUFFER;
             case CLOSED:
-                return null;
-            default:
-                throw new Error();
-        }
+                throw new DecompressionException("Decompressor closed");
+            case DECODING:
+                if (numBytesToSkip != 0) {
+                    // The last chunkType we detected was RESERVED_SKIPPABLE and we still have some bytes to skip.
+                    int skipBytes = Math.min(numBytesToSkip, in.readableBytes());
+                    in.skipBytes(skipBytes);
+                    numBytesToSkip -= skipBytes;
 
-        if (numBytesToSkip != 0) {
-            // The last chunkType we detected was RESERVED_SKIPPABLE and we still have some bytes to skip.
-            int skipBytes = Math.min(numBytesToSkip, in.readableBytes());
-            in.skipBytes(skipBytes);
-            numBytesToSkip -= skipBytes;
-
-            // Let's return and try again.
-            return null;
-        }
-
-        int idx = in.readerIndex();
-        final int inSize = in.readableBytes();
-        if (inSize < 4) {
-            // We need to be at least able to read the chunk type identifier (one byte),
-            // and the length of the chunk (3 bytes) in order to proceed
-            return null;
-        }
-
-        final int chunkTypeVal = in.getUnsignedByte(idx);
-        final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
-        final int chunkLength = in.getUnsignedMediumLE(idx + 1);
-
-        switch (chunkType) {
-            case STREAM_IDENTIFIER:
-                if (chunkLength != SNAPPY_IDENTIFIER_LEN) {
-                    streamCorrupted("Unexpected length of stream identifier: " + chunkLength);
-                }
-
-                if (inSize < 4 + SNAPPY_IDENTIFIER_LEN) {
+                    // Let's return and try again.
                     return null;
                 }
 
-                in.skipBytes(4);
-                int offset = in.readerIndex();
-                in.skipBytes(SNAPPY_IDENTIFIER_LEN);
-
-                checkByte(in.getByte(offset++), (byte) 's');
-                checkByte(in.getByte(offset++), (byte) 'N');
-                checkByte(in.getByte(offset++), (byte) 'a');
-                checkByte(in.getByte(offset++), (byte) 'P');
-                checkByte(in.getByte(offset++), (byte) 'p');
-                checkByte(in.getByte(offset), (byte) 'Y');
-
-                started = true;
-                return null;
-            case RESERVED_SKIPPABLE:
-                if (!started) {
-                    streamCorrupted("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
-                }
-
-                in.skipBytes(4);
-
-                int skipBytes = Math.min(chunkLength, in.readableBytes());
-                in.skipBytes(skipBytes);
-                if (skipBytes != chunkLength) {
-                    // We could skip all bytes, let's store the remaining so we can do so once we receive more
-                    // data.
-                    numBytesToSkip = chunkLength - skipBytes;
-                }
-                return null;
-            case RESERVED_UNSKIPPABLE:
-                // The spec mandates that reserved unskippable chunks must immediately
-                // return an error, as we must assume that we cannot decode the stream
-                // correctly
-                streamCorrupted(
-                        "Found reserved unskippable chunk type: 0x" + Integer.toHexString(chunkTypeVal));
-            case UNCOMPRESSED_DATA:
-                if (!started) {
-                    streamCorrupted("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
-                }
-                if (chunkLength > MAX_UNCOMPRESSED_DATA_SIZE) {
-                    streamCorrupted("Received UNCOMPRESSED_DATA larger than " +
-                            MAX_UNCOMPRESSED_DATA_SIZE + " bytes");
-                }
-
-                if (inSize < 4 + chunkLength) {
+                int idx = in.readerIndex();
+                final int inSize = in.readableBytes();
+                if (inSize < 4) {
+                    // We need to be at least able to read the chunk type identifier (one byte),
+                    // and the length of the chunk (3 bytes) in order to proceed
                     return null;
                 }
 
-                in.skipBytes(4);
-                if (validateChecksums) {
-                    int checksum = in.readIntLE();
-                    try {
-                        validateChecksum(checksum, in, in.readerIndex(), chunkLength - 4);
-                    } catch (DecompressionException e) {
-                        state = State.CORRUPTED;
-                        throw e;
-                    }
-                } else {
-                    in.skipBytes(4);
-                }
-                return in.readRetainedSlice(chunkLength - 4);
-            case COMPRESSED_DATA:
-                if (!started) {
-                    streamCorrupted("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
-                }
+                final int chunkTypeVal = in.getUnsignedByte(idx);
+                final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
+                final int chunkLength = in.getUnsignedMediumLE(idx + 1);
 
-                if (chunkLength > MAX_COMPRESSED_CHUNK_SIZE) {
-                    streamCorrupted("Received COMPRESSED_DATA that contains" +
-                            " chunk that exceeds " + MAX_COMPRESSED_CHUNK_SIZE + " bytes");
-                }
+                switch (chunkType) {
+                    case STREAM_IDENTIFIER:
+                        if (chunkLength != SNAPPY_IDENTIFIER_LEN) {
+                            streamCorrupted("Unexpected length of stream identifier: " + chunkLength);
+                        }
 
-                if (inSize < 4 + chunkLength) {
-                    return null;
-                }
+                        if (inSize < 4 + SNAPPY_IDENTIFIER_LEN) {
+                            return null;
+                        }
 
-                in.skipBytes(4);
-                int checksum = in.readIntLE();
+                        in.skipBytes(4);
+                        int offset = in.readerIndex();
+                        in.skipBytes(SNAPPY_IDENTIFIER_LEN);
 
-                int uncompressedSize = snappy.getPreamble(in);
-                if (uncompressedSize > MAX_DECOMPRESSED_DATA_SIZE) {
-                    streamCorrupted("Received COMPRESSED_DATA that contains" +
-                            " uncompressed data that exceeds " + MAX_DECOMPRESSED_DATA_SIZE + " bytes");
-                }
+                        checkByte(in.getByte(offset++), (byte) 's');
+                        checkByte(in.getByte(offset++), (byte) 'N');
+                        checkByte(in.getByte(offset++), (byte) 'a');
+                        checkByte(in.getByte(offset++), (byte) 'P');
+                        checkByte(in.getByte(offset++), (byte) 'p');
+                        checkByte(in.getByte(offset), (byte) 'Y');
 
-                ByteBuf uncompressed = allocator.buffer(uncompressedSize, MAX_DECOMPRESSED_DATA_SIZE);
-                try {
-                    if (validateChecksums) {
-                        int oldWriterIndex = in.writerIndex();
+                        started = true;
+                        return null;
+                    case RESERVED_SKIPPABLE:
+                        if (!started) {
+                            streamCorrupted("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
+                        }
+
+                        in.skipBytes(4);
+
+                        int skipBytes = Math.min(chunkLength, in.readableBytes());
+                        in.skipBytes(skipBytes);
+                        if (skipBytes != chunkLength) {
+                            // We could skip all bytes, let's store the remaining so we can do so once we receive more
+                            // data.
+                            numBytesToSkip = chunkLength - skipBytes;
+                        }
+                        return null;
+                    case RESERVED_UNSKIPPABLE:
+                        // The spec mandates that reserved unskippable chunks must immediately
+                        // return an error, as we must assume that we cannot decode the stream
+                        // correctly
+                        streamCorrupted(
+                                "Found reserved unskippable chunk type: 0x" + Integer.toHexString(chunkTypeVal));
+                    case UNCOMPRESSED_DATA:
+                        if (!started) {
+                            streamCorrupted("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        }
+                        if (chunkLength > MAX_UNCOMPRESSED_DATA_SIZE) {
+                            streamCorrupted("Received UNCOMPRESSED_DATA larger than " +
+                                    MAX_UNCOMPRESSED_DATA_SIZE + " bytes");
+                        }
+
+                        if (inSize < 4 + chunkLength) {
+                            return null;
+                        }
+
+                        in.skipBytes(4);
+                        if (validateChecksums) {
+                            int checksum = in.readIntLE();
+                            try {
+                                validateChecksum(checksum, in, in.readerIndex(), chunkLength - 4);
+                            } catch (DecompressionException e) {
+                                state = State.CORRUPTED;
+                                throw e;
+                            }
+                        } else {
+                            in.skipBytes(4);
+                        }
+                        return in.readRetainedSlice(chunkLength - 4);
+                    case COMPRESSED_DATA:
+                        if (!started) {
+                            streamCorrupted("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        }
+
+                        if (chunkLength > MAX_COMPRESSED_CHUNK_SIZE) {
+                            streamCorrupted("Received COMPRESSED_DATA that contains" +
+                                    " chunk that exceeds " + MAX_COMPRESSED_CHUNK_SIZE + " bytes");
+                        }
+
+                        if (inSize < 4 + chunkLength) {
+                            return null;
+                        }
+
+                        in.skipBytes(4);
+                        int checksum = in.readIntLE();
+
+                        int uncompressedSize = snappy.getPreamble(in);
+                        if (uncompressedSize > MAX_DECOMPRESSED_DATA_SIZE) {
+                            streamCorrupted("Received COMPRESSED_DATA that contains" +
+                                    " uncompressed data that exceeds " + MAX_DECOMPRESSED_DATA_SIZE + " bytes");
+                        }
+
+                        ByteBuf uncompressed = allocator.buffer(uncompressedSize, MAX_DECOMPRESSED_DATA_SIZE);
                         try {
-                            in.writerIndex(in.readerIndex() + chunkLength - 4);
-                            snappy.decode(in, uncompressed);
+                            if (validateChecksums) {
+                                int oldWriterIndex = in.writerIndex();
+                                try {
+                                    in.writerIndex(in.readerIndex() + chunkLength - 4);
+                                    snappy.decode(in, uncompressed);
+                                } finally {
+                                    in.writerIndex(oldWriterIndex);
+                                }
+                                try {
+                                    validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
+                                } catch (DecompressionException e) {
+                                    state = State.CORRUPTED;
+                                    throw e;
+                                }
+                            } else {
+                                snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
+                            }
+                            snappy.reset();
+                            ByteBuf buffer = uncompressed;
+                            uncompressed = null;
+                            return buffer;
                         } finally {
-                            in.writerIndex(oldWriterIndex);
+                            if (uncompressed != null) {
+                                uncompressed.release();
+                            }
                         }
-                        try {
-                            validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
-                        } catch (DecompressionException e) {
-                            state = State.CORRUPTED;
-                            throw e;
-                        }
-                    } else {
-                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
-                    }
-                    snappy.reset();
-                    ByteBuf buffer = uncompressed;
-                    uncompressed = null;
-                    return buffer;
-                } finally {
-                    if (uncompressed != null) {
-                        uncompressed.release();
-                    }
+                    default:
+                        streamCorrupted("Unexpected state");
+                        return null;
                 }
             default:
-                streamCorrupted("Unexpected state");
-                return null;
+                throw new IllegalStateException();
         }
     }
 
