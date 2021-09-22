@@ -1479,6 +1479,64 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testDecomposeReturnNonUnwrappedBuffer() {
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(1024);
+        buf.writeZero(1024);
+        ByteBuf sliced = buf.retainedSlice(100, 200);
+        sliced.retain();
+        assertEquals(2, sliced.refCnt());
+        CompositeByteBuf composite = newCompositeBuffer();
+        composite.addComponents(true, sliced);
+
+        List<ByteBuf> bufferList = composite.decompose(0, 100);
+        assertEquals(1, bufferList.size());
+        ByteBuf decomposed = bufferList.get(0);
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        decomposed.release();
+
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+
+        composite.release();
+        buf.release();
+
+        for (ByteBuf buffer: bufferList) {
+            assertEquals(0, buffer.refCnt());
+        }
+    }
+
+    @Test
+    public void testDecomposeReturnNonUnwrappedBuffers() {
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(1024);
+        buf.writeZero(1024);
+        ByteBuf sliced = buf.retainedSlice(100, 200);
+        ByteBuf sliced2 = buf.retainedSlice(400, 100);
+        sliced.retain();
+        sliced2.retain();
+        assertEquals(2, sliced.refCnt());
+        CompositeByteBuf composite = compositeBuffer();
+        composite.addComponents(true, sliced);
+        composite.addComponents(true, sliced2);
+
+        List<ByteBuf> bufferList = composite.decompose(100, 150);
+        assertEquals(2, bufferList.size());
+        ByteBuf decomposed = bufferList.get(0);
+        ByteBuf decomposed2 = bufferList.get(1);
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        decomposed.release();
+        decomposed2.release();
+
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        assertSame(sliced2.refCnt(), decomposed2.refCnt());
+
+        composite.release();
+        buf.release();
+
+        for (ByteBuf buffer: bufferList) {
+            assertEquals(0, buffer.refCnt());
+        }
+    }
+
+    @Test
     public void testComponentsLessThanLowerBound() {
         try {
             new CompositeByteBuf(ALLOC, true, 0);
