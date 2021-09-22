@@ -40,7 +40,14 @@ public final class BrotliDecompressor implements Decompressor {
         }
     }
 
-    private boolean finished;
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    };
+
+    private State state = State.PROCESSING;
+
     private final DecoderJNI.Wrapper decoder;
 
     /**
@@ -97,15 +104,14 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
-        if (finished) {
+        if (state != State.PROCESSING) {
             return null;
         }
 
         for (;;) {
             switch (decoder.getStatus()) {
                 case DONE:
-                    finished = true;
-                    decoder.destroy();
+                    state = State.FINISHED;
                     return null;
                 case OK:
                     decoder.push(0);
@@ -127,8 +133,7 @@ public final class BrotliDecompressor implements Decompressor {
                 case NEEDS_MORE_OUTPUT:
                     return pull(allocator);
                 default:
-                    finished = true;
-                    decoder.destroy();
+                    state = State.FINISHED;
                     throw new DecompressionException("Brotli stream corrupted");
             }
         }
@@ -136,13 +141,18 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public boolean isFinished() {
-        return finished;
+        return state == State.FINISHED || isClosed();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        if (!finished) {
-            finished = true;
+        if (state != State.FINISHED) {
+            state = State.FINISHED;
             decoder.destroy();
         }
     }

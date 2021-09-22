@@ -38,7 +38,14 @@ public final class ZstdCompressor implements Compressor {
     private final int blockSize;
     private final int compressionLevel;
     private final int maxEncodeSize;
-    private boolean finished;
+
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private State state = State.PROCESSING;
 
     /**
      * Creates a new Zstd compressor factory.
@@ -126,7 +133,7 @@ public final class ZstdCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (!in.isReadable()) {
+        if (!in.isReadable() || state != State.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
         ByteBuf out = allocateBuffer(allocator, in);
@@ -141,18 +148,31 @@ public final class ZstdCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        finished = true;
+        if (state == State.PROCESSING) {
+            state = State.FINISHED;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        state = State.CLOSED;
     }
 
     private void compressData(ByteBuf in, ByteBuf out) {

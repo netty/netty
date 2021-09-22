@@ -41,7 +41,8 @@ public final class Bzip2Decompressor implements Decompressor {
         RECEIVE_SELECTORS,
         RECEIVE_HUFFMAN_LENGTH,
         DECODE_HUFFMAN_DATA,
-        EOF
+        EOF,
+        CLOSED
     }
     private State currentState = State.INIT;
 
@@ -342,12 +343,16 @@ public final class Bzip2Decompressor implements Decompressor {
      */
     @Override
     public boolean isFinished() {
-        return currentState == State.EOF;
+        return currentState == State.EOF || currentState == State.CLOSED;
     }
 
     @Override
     public void close() {
-        currentState = State.EOF;
+        currentState = State.CLOSED;
     }
 
+    @Override
+    public boolean isClosed() {
+        return currentState == State.CLOSED;
+    }
 }

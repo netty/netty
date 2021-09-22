@@ -18,8 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 
 import java.util.function.Supplier;
 
@@ -106,13 +104,20 @@ public final class Bzip2Compressor implements Compressor {
      */
     private Bzip2BlockCompressor blockCompressor;
 
-    /**
-     * (@code true} if the compressed stream has been finished, otherwise {@code false}.
-     */
-    private volatile boolean finished;
+    private enum CompressorState {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private CompressorState compressorState = CompressorState.PROCESSING;
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+        if (compressorState != CompressorState.PROCESSING) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
         ByteBuf out = allocator.buffer();
 
         for (;;) {
@@ -168,10 +173,10 @@ public final class Bzip2Compressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (finished) {
+        if (compressorState != CompressorState.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
-        finished = true;
+        compressorState = CompressorState.FINISHED;
         final ByteBuf footer = allocator.buffer();
         try {
             closeBlock(footer);
@@ -195,11 +200,22 @@ public final class Bzip2Compressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (compressorState) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return compressorState == CompressorState.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        compressorState = CompressorState.CLOSED;
     }
 }

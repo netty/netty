@@ -85,10 +85,13 @@ public final class Lz4Compressor implements Compressor {
      */
     private final int maxEncodeSize;
 
-    /**
-     * Indicates if the compressed stream has been finished.
-     */
-    private boolean finished;
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private State state = State.PROCESSING;
 
     /**
      * Creates the fastest LZ4 compressor factory with default block size (64 KB)
@@ -206,7 +209,7 @@ public final class Lz4Compressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
-        if (finished || !input.isReadable()) {
+        if (state != State.PROCESSING || !input.isReadable()) {
             return Unpooled.EMPTY_BUFFER;
         }
 
@@ -225,10 +228,10 @@ public final class Lz4Compressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (finished) {
+        if (state != State.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
-        finished = true;
+        state = State.FINISHED;
 
         final ByteBuf footer = allocator.buffer(HEADER_LENGTH);
         footer.ensureWritable(HEADER_LENGTH);
@@ -245,19 +248,28 @@ public final class Lz4Compressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        state = State.CLOSED;
     }
 
     /**
      *
-     * Encodes the input buffer into {@link #blockSize} chunks in the output buffer. Data is only compressed and
-     * written once we hit the {@link #blockSize}; else, it is copied into the backing {@link #buffer} to await
-     * more data.
+     * Encodes the input buffer into {@link #blockSize} chunks in the output buffer.
      */
     private void compressData(ByteBuf in, ByteBuf out) {
         int inReaderIndex = in.readerIndex();

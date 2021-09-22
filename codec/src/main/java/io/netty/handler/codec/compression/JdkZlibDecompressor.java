@@ -65,6 +65,8 @@ public final class JdkZlibDecompressor implements Decompressor {
     private int xlen = -1;
 
     private boolean finished;
+    private boolean closed;
+
     private boolean decideZlibOrNone;
 
     private JdkZlibDecompressor(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated,
@@ -543,9 +545,15 @@ public final class JdkZlibDecompressor implements Decompressor {
 
     @Override
     public void close() {
+        closed = true;
+        finished = true;
         if (inflater != null) {
             inflater.end();
         }
     }
 
+    @Override
+    public boolean isClosed() {
+        return closed;
+    }
 }

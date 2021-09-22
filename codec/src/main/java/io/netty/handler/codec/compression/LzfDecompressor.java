@@ -46,7 +46,8 @@ public final class LzfDecompressor implements Decompressor {
         INIT_ORIGINAL_LENGTH,
         DECOMPRESS_DATA,
         CORRUPTED,
-        FINISHED
+        FINISHED,
+        CLOSED
     }
 
     private State currentState = State.INIT_BLOCK;
@@ -247,6 +248,7 @@ public final class LzfDecompressor implements Decompressor {
                     return null;
                 case FINISHED:
                 case CORRUPTED:
+                case CLOSED:
                     return null;
                 default:
                     throw new IllegalStateException();
@@ -269,11 +271,23 @@ public final class LzfDecompressor implements Decompressor {
 
     @Override
     public boolean isFinished() {
-        return currentState == State.FINISHED || currentState == State.CORRUPTED;
+        switch (currentState) {
+            case FINISHED:
+            case CLOSED:
+            case CORRUPTED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return currentState == State.CLOSED;
     }
 
     @Override
     public void close() {
-        currentState = State.FINISHED;
+        currentState = State.CLOSED;
     }
 }

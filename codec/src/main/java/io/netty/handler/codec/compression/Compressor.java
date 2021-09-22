@@ -58,6 +58,13 @@ public interface Compressor extends AutoCloseable {
      */
     boolean isFinished();
 
+    /**
+     * Return {@code true} if the decompressor was closed, {@code false} otherwise.
+     *
+     * @return
+     */
+    boolean isClosed();
+
     /**#
      * Close the compressor. After this method was called {@link #isFinished()}
      * will return {@code true} as well.

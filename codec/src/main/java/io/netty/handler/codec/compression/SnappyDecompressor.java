@@ -41,7 +41,7 @@ public final class SnappyDecompressor implements Decompressor {
         RESERVED_UNSKIPPABLE,
         RESERVED_SKIPPABLE,
         CORRUPTED,
-        FINISHED
+        FINISHED,
     }
 
     private static final int SNAPPY_IDENTIFIER_LEN = 6;
@@ -62,7 +62,8 @@ public final class SnappyDecompressor implements Decompressor {
     private enum State {
         DECODING,
         FINISHED,
-        CORRUPTED
+        CORRUPTED,
+        CLOSED
     }
 
     /**
@@ -111,6 +112,7 @@ public final class SnappyDecompressor implements Decompressor {
                 break;
             case CORRUPTED:
             case FINISHED:
+            case CLOSED:
                 return null;
             default:
                 throw new Error();
@@ -299,7 +301,19 @@ public final class SnappyDecompressor implements Decompressor {
 
     @Override
     public boolean isFinished() {
-        return state == State.FINISHED || state == State.CORRUPTED ;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+            case CORRUPTED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override

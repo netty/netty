@@ -48,13 +48,19 @@ public interface Decompressor extends AutoCloseable {
     ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException;
 
     /**
-     * Returns {@code} true if the decompressor was closed. This might be because someone explicit called
-     * {@link #close()} or the decompressor implementation did decide to close itself due a decompression error which
-     * can't be recovered.
+     * Returns {@code} true if the decompressor was finish. This might be because the decompressor was explicitly closed
+     * or the end of the compressed stream was detected.
      *
-     * @return {@code true} if the decompressor was closed, {@code false} otherwise..
+     * @return {@code true} if the decompressor is done with decompressing the stream.
      */
     boolean isFinished();
+
+    /**
+     * Return {@code true} if the decompressor was closed, {@code false} otherwise.
+     *
+     * @return
+     */
+    boolean isClosed();
 
     @Override
     void close();

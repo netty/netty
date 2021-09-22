@@ -38,8 +38,14 @@ public final class JdkZlibCompressor implements Compressor {
      */
     private final CRC32 crc = new CRC32();
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
+
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+    private State state = State.PROCESSING;
     private boolean writeHeader = true;
-    private boolean finished;
 
     private JdkZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
         this.wrapper = wrapper;
@@ -155,7 +161,7 @@ public final class JdkZlibCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf uncompressed, ByteBufAllocator allocator) throws CompressionException {
-        if (finished) {
+        if (state != State.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
 
@@ -227,11 +233,11 @@ public final class JdkZlibCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (finished) {
+        if (state != State.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        finished = true;
+        state = State.FINISHED;
         ByteBuf footer = allocator.heapBuffer();
         try {
             if (writeHeader && wrapper == ZlibWrapper.GZIP) {
@@ -267,12 +273,26 @@ public final class JdkZlibCompressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        if (state == State.PROCESSING) {
+            deflater.end();
+        }
+        state = State.CLOSED;
     }
 
     private void deflate(ByteBuf out) {

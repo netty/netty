@@ -38,7 +38,8 @@ public final class FastLzDecompressor implements Decompressor {
         INIT_BLOCK_PARAMS,
         DECOMPRESS_DATA,
         DONE,
-        CORRUPTED
+        CORRUPTED,
+        CLOSED
     }
 
     private State currentState = State.INIT_BLOCK;
@@ -208,12 +209,17 @@ public final class FastLzDecompressor implements Decompressor {
 
     @Override
     public boolean isFinished() {
-        return currentState == State.DONE || currentState == State.CORRUPTED;
+        return currentState == State.DONE || currentState == State.CORRUPTED || currentState == State.CLOSED;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return currentState == State.CLOSED;
     }
 
     @Override
     public void close() {
-        currentState = State.DONE;
+         currentState = State.CLOSED;
     }
 
     private void streamCorrupted(String message) {

@@ -41,7 +41,13 @@ public final class FastLzCompressor implements Compressor {
      */
     private final ByteBufChecksum checksum;
 
-    private boolean finished;
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private State state = State.PROCESSING;
 
     /**
      * Creates a FastLZ encoder with specified compression level and checksum calculator.
@@ -118,6 +124,9 @@ public final class FastLzCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+        if (state != State.PROCESSING) {
+            return Unpooled.EMPTY_BUFFER;
+        }
         final ByteBufChecksum checksum = this.checksum;
 
         ByteBuf out = allocator.buffer();
@@ -183,18 +192,30 @@ public final class FastLzCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        finished = true;
+        if (state == State.PROCESSING) {
+            state = State.FINISHED;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        state = State.CLOSED;
     }
-
 }

@@ -32,7 +32,8 @@ public final class SnappyCompressor implements Compressor {
     private enum State {
         Init,
         Started,
-        Finished
+        Finished,
+        Closed
     }
 
     /**
@@ -66,8 +67,14 @@ public final class SnappyCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (!in.isReadable() || state == State.Finished) {
-            return Unpooled.EMPTY_BUFFER;
+        switch (state) {
+            case Finished:
+            case Closed:
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                if (!in.isReadable()) {
+                    return Unpooled.EMPTY_BUFFER;
+                }
         }
 
         // TODO: Make some smart decision about the initial capacity.
@@ -115,18 +122,35 @@ public final class SnappyCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        state = State.Finished;
+        switch (state) {
+            case Finished:
+            case Closed:
+                break;
+            default:
+                state = State.Finished;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return state == State.Finished;
+        switch (state) {
+            case Finished:
+            case Closed:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.Closed;
     }
 
     @Override
     public void close() {
-        state = State.Finished;
+        state = State.Closed;
     }
 
     private static void writeUnencodedChunk(ByteBuf in, ByteBuf out, int dataLength) {

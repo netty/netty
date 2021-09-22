@@ -82,7 +82,13 @@ public final class LzmaCompressor implements Compressor {
      */
     private static boolean warningLogged;
 
-    private boolean finished;
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private State state = State.PROCESSING;
 
     /**
      * Creates LZMA compressor with specified settings.
@@ -261,17 +267,30 @@ public final class LzmaCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        finished = true;
+        if (state == State.PROCESSING) {
+            state = State.FINISHED;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
+        state = State.CLOSED;
     }
 }

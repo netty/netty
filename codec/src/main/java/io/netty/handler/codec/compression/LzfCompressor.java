@@ -61,7 +61,13 @@ public final class LzfCompressor implements Compressor {
      */
     private final BufferRecycler recycler;
 
-    private boolean finished;
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    }
+
+    private State state = State.PROCESSING;
 
     /**
      * Creates a new LZF compressor with specified settings.
@@ -172,7 +178,7 @@ public final class LzfCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (finished) {
+        if (state != State.PROCESSING) {
             return Unpooled.EMPTY_BUFFER;
         }
         final int length = in.readableBytes();
@@ -262,18 +268,33 @@ public final class LzfCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        finished = true;
+        if (state == State.PROCESSING) {
+            state = State.FINISHED;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return finished;
+        switch (state) {
+            case FINISHED:
+            case CLOSED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        finished = true;
-        encoder.close();
+        if (state != State.CLOSED) {
+            state = State.CLOSED;
+            encoder.close();
+        }
     }
 }

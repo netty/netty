@@ -33,7 +33,14 @@ import java.util.function.Supplier;
  */
 public final class BrotliCompressor implements Compressor {
     private final Encoder.Parameters parameters;
-    private boolean closed;
+
+    private enum State {
+        PROCESSING,
+        FINISHED,
+        CLOSED
+    };
+
+    private State state = State.PROCESSING;
 
     /**
      * Create a new {@link BrotliCompressor} Instance
@@ -79,7 +86,7 @@ public final class BrotliCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
-        if (closed || !input.isReadable()) {
+        if (state != State.PROCESSING || !input.isReadable()) {
             return Unpooled.EMPTY_BUFFER;
         }
         byte[] uncompressed = ByteBufUtil.getBytes(input, input.readerIndex(), input.readableBytes(), false);
@@ -88,25 +95,37 @@ public final class BrotliCompressor implements Compressor {
             input.skipBytes(input.readableBytes());
             return Unpooled.wrappedBuffer(compressed);
         } catch (IOException e) {
-            closed = true;
+            state = State.FINISHED;
             throw new CompressionException(e);
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        closed = true;
+        if (state == State.PROCESSING) {
+            state = State.FINISHED;
+        }
         return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
     public boolean isFinished() {
-        return closed;
+        switch (state) {
+            case CLOSED:
+            case FINISHED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return state == State.CLOSED;
     }
 
     @Override
     public void close() {
-        closed = true;
+        state = State.CLOSED;
     }
-
 }
