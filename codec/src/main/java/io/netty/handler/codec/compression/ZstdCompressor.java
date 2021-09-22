@@ -133,25 +133,40 @@ public final class ZstdCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (!in.isReadable() || state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        ByteBuf out = allocateBuffer(allocator, in);
-        try {
-            compressData(in, out);
-            return out;
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                if (!in.isReadable()) {
+                    return Unpooled.EMPTY_BUFFER;
+                }
+                ByteBuf out = allocateBuffer(allocator, in);
+                try {
+                    compressData(in, out);
+                    return out;
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state == State.PROCESSING) {
-            state = State.FINISHED;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

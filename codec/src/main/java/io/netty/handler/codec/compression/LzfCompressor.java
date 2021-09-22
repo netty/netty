@@ -178,61 +178,67 @@ public final class LzfCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        final int length = in.readableBytes();
-        final int idx = in.readerIndex();
-        final byte[] input;
-        final int inputPtr;
-        if (in.hasArray()) {
-            input = in.array();
-            inputPtr = in.arrayOffset() + idx;
-        } else {
-            input = recycler.allocInputBuffer(length);
-            in.getBytes(idx, input, 0, length);
-            inputPtr = 0;
-        }
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                final int length = in.readableBytes();
+                final int idx = in.readerIndex();
+                final byte[] input;
+                final int inputPtr;
+                if (in.hasArray()) {
+                    input = in.array();
+                    inputPtr = in.arrayOffset() + idx;
+                } else {
+                    input = recycler.allocInputBuffer(length);
+                    in.getBytes(idx, input, 0, length);
+                    inputPtr = 0;
+                }
 
-        // Estimate may apparently under-count by one in some cases.
-        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length) + 1;
-        ByteBuf out = allocator.heapBuffer(maxOutputLength);
-        try {
-            out.ensureWritable(maxOutputLength);
-            final byte[] output;
-            final int outputPtr;
-            if (out.hasArray()) {
-                output = out.array();
-                outputPtr = out.arrayOffset() + out.writerIndex();
-            } else {
-                output = new byte[maxOutputLength];
-                outputPtr = 0;
-            }
+                // Estimate may apparently under-count by one in some cases.
+                final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length) + 1;
+                ByteBuf out = allocator.heapBuffer(maxOutputLength);
+                try {
+                    out.ensureWritable(maxOutputLength);
+                    final byte[] output;
+                    final int outputPtr;
+                    if (out.hasArray()) {
+                        output = out.array();
+                        outputPtr = out.arrayOffset() + out.writerIndex();
+                    } else {
+                        output = new byte[maxOutputLength];
+                        outputPtr = 0;
+                    }
 
-            final int outputLength;
-            if (length >= compressThreshold) {
-                // compress.
-                outputLength = encodeCompress(input, inputPtr, length, output, outputPtr);
-            } else {
-                // not compress.
-                outputLength = encodeNonCompress(input, inputPtr, length, output, outputPtr);
-            }
+                    final int outputLength;
+                    if (length >= compressThreshold) {
+                        // compress.
+                        outputLength = encodeCompress(input, inputPtr, length, output, outputPtr);
+                    } else {
+                        // not compress.
+                        outputLength = encodeNonCompress(input, inputPtr, length, output, outputPtr);
+                    }
 
-            if (out.hasArray()) {
-                out.writerIndex(out.writerIndex() + outputLength);
-            } else {
-                out.writeBytes(output, 0, outputLength);
-            }
+                    if (out.hasArray()) {
+                        out.writerIndex(out.writerIndex() + outputLength);
+                    } else {
+                        out.writeBytes(output, 0, outputLength);
+                    }
 
-            in.skipBytes(length);
+                    in.skipBytes(length);
 
-            if (!in.hasArray()) {
-                recycler.releaseInputBuffer(input);
-            }
-            return out;
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
+                    if (!in.hasArray()) {
+                        recycler.releaseInputBuffer(input);
+                    }
+                    return out;
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 
@@ -268,10 +274,16 @@ public final class LzfCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state == State.PROCESSING) {
-            state = State.FINISHED;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

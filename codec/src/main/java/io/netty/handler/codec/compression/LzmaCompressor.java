@@ -220,24 +220,34 @@ public final class LzmaCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        final int length = in.readableBytes();
-        ByteBuf out = allocateBuffer(in, allocator);
-        try {
-            try (InputStream bbIn = new ByteBufInputStream(in);
-                 ByteBufOutputStream bbOut = new ByteBufOutputStream(out)) {
-                bbOut.writeByte(properties);
-                bbOut.writeInt(littleEndianDictionarySize);
-                bbOut.writeLong(Long.reverseBytes(length));
-                encoder.code(bbIn, bbOut, -1, -1, null);
-            }
-        } catch (IOException e) {
-            out.release();
-            throw new CompressionException(e);
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+
+                final int length = in.readableBytes();
+                ByteBuf out = allocateBuffer(in, allocator);
+                try {
+                    try (InputStream bbIn = new ByteBufInputStream(in);
+                         ByteBufOutputStream bbOut = new ByteBufOutputStream(out)) {
+                        bbOut.writeByte(properties);
+                        bbOut.writeInt(littleEndianDictionarySize);
+                        bbOut.writeLong(Long.reverseBytes(length));
+                        encoder.code(bbIn, bbOut, -1, -1, null);
+                    }
+                } catch (IOException e) {
+                    out.release();
+                    throw new CompressionException(e);
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
+                }
+                return out;
+            default:
+                throw new IllegalStateException();
         }
-        return out;
     }
 
     private static ByteBuf allocateBuffer(ByteBuf in, ByteBufAllocator allocator) {
@@ -267,10 +277,16 @@ public final class LzmaCompressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state == State.PROCESSING) {
-            state = State.FINISHED;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

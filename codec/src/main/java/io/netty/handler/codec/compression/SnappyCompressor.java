@@ -69,67 +69,69 @@ public final class SnappyCompressor implements Compressor {
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
         switch (state) {
             case Finished:
-            case Closed:
                 return Unpooled.EMPTY_BUFFER;
+            case Closed:
+                throw new CompressionException("Compressor closed");
             default:
-                if (!in.isReadable()) {
-                    return Unpooled.EMPTY_BUFFER;
-                }
-        }
-
-        // TODO: Make some smart decision about the initial capacity.
-        ByteBuf out = allocator.buffer();
-        try {
-            if (state == State.Init) {
-                state = State.Started;
-                out.writeBytes(STREAM_START);
-            }
-
-            int dataLength = in.readableBytes();
-            if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
-                for (;;) {
-                    final int lengthIdx = out.writerIndex() + 1;
-                    if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
-                        ByteBuf slice = in.readSlice(dataLength);
-                        writeUnencodedChunk(slice, out, dataLength);
-                        break;
+                // TODO: Make some smart decision about the initial capacity.
+                ByteBuf out = allocator.buffer();
+                try {
+                    if (state == State.Init) {
+                        state = State.Started;
+                        out.writeBytes(STREAM_START);
+                    } else if (state != State.Started) {
+                        throw new IllegalStateException();
                     }
 
-                    out.writeInt(0);
-                    if (dataLength > Short.MAX_VALUE) {
-                        ByteBuf slice = in.readSlice(Short.MAX_VALUE);
-                        calculateAndWriteChecksum(slice, out);
-                        snappy.encode(slice, out, Short.MAX_VALUE);
-                        setChunkLength(out, lengthIdx);
-                        dataLength -= Short.MAX_VALUE;
+                    int dataLength = in.readableBytes();
+                    if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
+                        for (;;) {
+                            final int lengthIdx = out.writerIndex() + 1;
+                            if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
+                                ByteBuf slice = in.readSlice(dataLength);
+                                writeUnencodedChunk(slice, out, dataLength);
+                                break;
+                            }
+
+                            out.writeInt(0);
+                            if (dataLength > Short.MAX_VALUE) {
+                                ByteBuf slice = in.readSlice(Short.MAX_VALUE);
+                                calculateAndWriteChecksum(slice, out);
+                                snappy.encode(slice, out, Short.MAX_VALUE);
+                                setChunkLength(out, lengthIdx);
+                                dataLength -= Short.MAX_VALUE;
+                            } else {
+                                ByteBuf slice = in.readSlice(dataLength);
+                                calculateAndWriteChecksum(slice, out);
+                                snappy.encode(slice, out, dataLength);
+                                setChunkLength(out, lengthIdx);
+                                break;
+                            }
+                        }
                     } else {
-                        ByteBuf slice = in.readSlice(dataLength);
-                        calculateAndWriteChecksum(slice, out);
-                        snappy.encode(slice, out, dataLength);
-                        setChunkLength(out, lengthIdx);
-                        break;
+                        writeUnencodedChunk(in, out, dataLength);
                     }
+                    return out;
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
                 }
-            } else {
-                writeUnencodedChunk(in, out, dataLength);
-            }
-            return out;
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
         switch (state) {
-            case Finished:
             case Closed:
-                break;
-            default:
+                throw new CompressionException("Compressor closed");
+            case Finished:
+            case Init:
+            case Started:
                 state = State.Finished;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

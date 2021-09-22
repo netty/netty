@@ -209,41 +209,56 @@ public final class Lz4Compressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
-        if (state != State.PROCESSING || !input.isReadable()) {
-            return Unpooled.EMPTY_BUFFER;
-        }
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                if (!input.isReadable()) {
+                    return Unpooled.EMPTY_BUFFER;
+                }
 
-        ByteBuf out = allocateBuffer(allocator, input);
-        try {
-            // We need to compress as long as we have input to read as we are limited by the blockSize that is used.
-            while (input.isReadable()) {
-                compressData(input, out);
-            }
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
+                ByteBuf out = allocateBuffer(allocator, input);
+                try {
+                    // We need to compress as long as we have input to read as we are limited by the blockSize that
+                    // is used.
+                    while (input.isReadable()) {
+                        compressData(input, out);
+                    }
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
+                }
+                return out;
+            default:
+                throw new IllegalStateException();
         }
-        return out;
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+
+                final ByteBuf footer = allocator.buffer(HEADER_LENGTH);
+                footer.ensureWritable(HEADER_LENGTH);
+                final int idx = footer.writerIndex();
+                footer.setLong(idx, MAGIC_NUMBER);
+                footer.setByte(idx + TOKEN_OFFSET, (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel));
+                footer.setInt(idx + COMPRESSED_LENGTH_OFFSET, 0);
+                footer.setInt(idx + DECOMPRESSED_LENGTH_OFFSET, 0);
+                footer.setInt(idx + CHECKSUM_OFFSET, 0);
+
+                footer.writerIndex(idx + HEADER_LENGTH);
+                return footer;
+            default:
+                throw new IllegalStateException();
         }
-        state = State.FINISHED;
-
-        final ByteBuf footer = allocator.buffer(HEADER_LENGTH);
-        footer.ensureWritable(HEADER_LENGTH);
-        final int idx = footer.writerIndex();
-        footer.setLong(idx, MAGIC_NUMBER);
-        footer.setByte(idx + TOKEN_OFFSET, (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel));
-        footer.setInt(idx + COMPRESSED_LENGTH_OFFSET, 0);
-        footer.setInt(idx + DECOMPRESSED_LENGTH_OFFSET, 0);
-        footer.setInt(idx + CHECKSUM_OFFSET, 0);
-
-        footer.writerIndex(idx + HEADER_LENGTH);
-        return footer;
     }
 
     @Override

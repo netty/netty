@@ -86,26 +86,41 @@ public final class BrotliCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
-        if (state != State.PROCESSING || !input.isReadable()) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        byte[] uncompressed = ByteBufUtil.getBytes(input, input.readerIndex(), input.readableBytes(), false);
-        try {
-            byte[] compressed = Encoder.compress(uncompressed, parameters);
-            input.skipBytes(input.readableBytes());
-            return Unpooled.wrappedBuffer(compressed);
-        } catch (IOException e) {
-            state = State.FINISHED;
-            throw new CompressionException(e);
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                if (!input.isReadable()) {
+                    return Unpooled.EMPTY_BUFFER;
+                }
+                byte[] uncompressed = ByteBufUtil.getBytes(input, input.readerIndex(), input.readableBytes(), false);
+                try {
+                    byte[] compressed = Encoder.compress(uncompressed, parameters);
+                    input.skipBytes(input.readableBytes());
+                    return Unpooled.wrappedBuffer(compressed);
+                } catch (IOException e) {
+                    state = State.FINISHED;
+                    throw new CompressionException(e);
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state == State.PROCESSING) {
-            state = State.FINISHED;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

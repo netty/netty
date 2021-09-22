@@ -33,7 +33,8 @@ public interface Compressor extends AutoCloseable {
      *                      compressed bytes too.
      * @return              the {@link ByteBuf} that contains the compressed data. The caller of this method takes
      *                      ownership of the buffer. The return value will <strong>never</strong> be {@code null}.
-     * @throws CompressionException   thrown if an compression error was encountered.
+     * @throws CompressionException   thrown if an compression error was encountered or the compressor was closed
+     * already.
      */
     ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException;
 
@@ -44,8 +45,10 @@ public interface Compressor extends AutoCloseable {
      * @return  the {@link ByteBuf} which represent the end of the compression stream, which might be empty if the
      *          compressor don't need a trailer to signal the end. The caller of this method takes
      *          ownership of the buffer. The return value will <strong>never</strong> be {@code null}.
+     * @throws CompressionException   thrown if an compression error was encountered or the compressor was closed
+     * already.
      */
-    ByteBuf finish(ByteBufAllocator allocator);
+    ByteBuf finish(ByteBufAllocator allocator) throws CompressionException;
 
     /**
      * Returns {@code} true if the compressor was finished or closed. This might happen because someone explicit called
@@ -67,8 +70,9 @@ public interface Compressor extends AutoCloseable {
 
     /**#
      * Close the compressor. After this method was called {@link #isFinished()}
-     * will return {@code true} as well.
-     */
+     * will return {@code true} as well and it is not allowed to call {@link #compress(ByteBuf, ByteBufAllocator)} or
+     * {@link #finish(ByteBufAllocator)} anymore
+-     */
     @Override
     void close();
 }

@@ -161,113 +161,122 @@ public final class JdkZlibCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf uncompressed, ByteBufAllocator allocator) throws CompressionException {
-        if (state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        int len = uncompressed.readableBytes();
-        if (len == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        int offset;
-        byte[] inAry;
-        if (uncompressed.hasArray()) {
-            // if it is backed by an array we not need to to do a copy at all
-            inAry = uncompressed.array();
-            offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
-            // skip all bytes as we will consume all of them
-            uncompressed.skipBytes(len);
-        } else {
-            inAry = new byte[len];
-            uncompressed.readBytes(inAry);
-            offset = 0;
-        }
-
-        int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
-        if (writeHeader) {
-            switch (wrapper) {
-                case GZIP:
-                    sizeEstimate += gzipHeader.length;
-                    break;
-                case ZLIB:
-                    sizeEstimate += 2; // first two magic bytes
-                    break;
-                default:
-                    // no op
-            }
-        }
-        ByteBuf out = allocator.buffer(sizeEstimate);
-        try {
-            if (writeHeader) {
-                writeHeader = false;
-                if (wrapper == ZlibWrapper.GZIP) {
-                    out.writeBytes(gzipHeader);
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                int len = uncompressed.readableBytes();
+                if (len == 0) {
+                    return Unpooled.EMPTY_BUFFER;
                 }
-            }
 
-            if (wrapper == ZlibWrapper.GZIP) {
-                crc.update(inAry, offset, len);
-            }
-
-            deflater.setInput(inAry, offset, len);
-            for (;;) {
-                deflate(out);
-                if (deflater.needsInput()) {
-                    // Consumed everything
-                    break;
+                int offset;
+                byte[] inAry;
+                if (uncompressed.hasArray()) {
+                    // if it is backed by an array we not need to to do a copy at all
+                    inAry = uncompressed.array();
+                    offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
+                    // skip all bytes as we will consume all of them
+                    uncompressed.skipBytes(len);
                 } else {
-                    if (!out.isWritable()) {
-                        // We did not consume everything but the buffer is not writable anymore. Increase the
-                        // capacity to make more room.
-                        out.ensureWritable(out.writerIndex());
+                    inAry = new byte[len];
+                    uncompressed.readBytes(inAry);
+                    offset = 0;
+                }
+
+                int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
+                if (writeHeader) {
+                    switch (wrapper) {
+                        case GZIP:
+                            sizeEstimate += gzipHeader.length;
+                            break;
+                        case ZLIB:
+                            sizeEstimate += 2; // first two magic bytes
+                            break;
+                        default:
+                            // no op
                     }
                 }
-            }
-            return out;
-        } catch (Throwable cause) {
-            out.release();
-            throw cause;
+                ByteBuf out = allocator.buffer(sizeEstimate);
+                try {
+                    if (writeHeader) {
+                        writeHeader = false;
+                        if (wrapper == ZlibWrapper.GZIP) {
+                            out.writeBytes(gzipHeader);
+                        }
+                    }
+
+                    if (wrapper == ZlibWrapper.GZIP) {
+                        crc.update(inAry, offset, len);
+                    }
+
+                    deflater.setInput(inAry, offset, len);
+                    for (;;) {
+                        deflate(out);
+                        if (deflater.needsInput()) {
+                            // Consumed everything
+                            break;
+                        } else {
+                            if (!out.isWritable()) {
+                                // We did not consume everything but the buffer is not writable anymore. Increase the
+                                // capacity to make more room.
+                                out.ensureWritable(out.writerIndex());
+                            }
+                        }
+                    }
+                    return out;
+                } catch (Throwable cause) {
+                    out.release();
+                    throw cause;
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                ByteBuf footer = allocator.heapBuffer();
+                try {
+                    if (writeHeader && wrapper == ZlibWrapper.GZIP) {
+                        // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
+                        writeHeader = false;
+                        footer.writeBytes(gzipHeader);
+                    }
 
-        state = State.FINISHED;
-        ByteBuf footer = allocator.heapBuffer();
-        try {
-            if (writeHeader && wrapper == ZlibWrapper.GZIP) {
-                // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
-                writeHeader = false;
-                footer.writeBytes(gzipHeader);
-            }
+                    deflater.finish();
 
-            deflater.finish();
-
-            while (!deflater.finished()) {
-                deflate(footer);
-            }
-            if (wrapper == ZlibWrapper.GZIP) {
-                int crcValue = (int) crc.getValue();
-                int uncBytes = deflater.getTotalIn();
-                footer.writeByte(crcValue);
-                footer.writeByte(crcValue >>> 8);
-                footer.writeByte(crcValue >>> 16);
-                footer.writeByte(crcValue >>> 24);
-                footer.writeByte(uncBytes);
-                footer.writeByte(uncBytes >>> 8);
-                footer.writeByte(uncBytes >>> 16);
-                footer.writeByte(uncBytes >>> 24);
-            }
-            deflater.end();
-            return footer;
-        } catch (Throwable cause) {
-            footer.release();
-            throw cause;
+                    while (!deflater.finished()) {
+                        deflate(footer);
+                    }
+                    if (wrapper == ZlibWrapper.GZIP) {
+                        int crcValue = (int) crc.getValue();
+                        int uncBytes = deflater.getTotalIn();
+                        footer.writeByte(crcValue);
+                        footer.writeByte(crcValue >>> 8);
+                        footer.writeByte(crcValue >>> 16);
+                        footer.writeByte(crcValue >>> 24);
+                        footer.writeByte(uncBytes);
+                        footer.writeByte(uncBytes >>> 8);
+                        footer.writeByte(uncBytes >>> 16);
+                        footer.writeByte(uncBytes >>> 24);
+                    }
+                    deflater.end();
+                    return footer;
+                } catch (Throwable cause) {
+                    footer.release();
+                    throw cause;
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 

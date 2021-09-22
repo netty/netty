@@ -114,48 +114,52 @@ public final class Bzip2Compressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (compressorState != CompressorState.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        ByteBuf out = allocator.buffer();
-
-        for (;;) {
-            switch (currentState) {
-                case INIT:
-                    out.ensureWritable(4);
-                    out.writeMedium(MAGIC_NUMBER);
-                    out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
-                    currentState = State.INIT_BLOCK;
-                    // fall through
-                case INIT_BLOCK:
-                    blockCompressor = new Bzip2BlockCompressor(writer, streamBlockSize);
-                    currentState = State.WRITE_DATA;
-                    // fall through
-                case WRITE_DATA:
-                    if (!in.isReadable()) {
-                        return out;
-                    }
-                    Bzip2BlockCompressor blockCompressor = this.blockCompressor;
-                    final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
-                    final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
-                    in.skipBytes(bytesWritten);
-                    if (!blockCompressor.isFull()) {
-                        if (in.isReadable()) {
+        switch (compressorState) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                ByteBuf out = allocator.buffer();
+                for (;;) {
+                    switch (currentState) {
+                        case INIT:
+                            out.ensureWritable(4);
+                            out.writeMedium(MAGIC_NUMBER);
+                            out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
+                            currentState = State.INIT_BLOCK;
+                            // fall through
+                        case INIT_BLOCK:
+                            blockCompressor = new Bzip2BlockCompressor(writer, streamBlockSize);
+                            currentState = State.WRITE_DATA;
+                            // fall through
+                        case WRITE_DATA:
+                            if (!in.isReadable()) {
+                                return out;
+                            }
+                            Bzip2BlockCompressor blockCompressor = this.blockCompressor;
+                            final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
+                            final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
+                            in.skipBytes(bytesWritten);
+                            if (!blockCompressor.isFull()) {
+                                if (in.isReadable()) {
+                                    break;
+                                } else {
+                                    return out;
+                                }
+                            }
+                            currentState = State.CLOSE_BLOCK;
+                            // fall through
+                        case CLOSE_BLOCK:
+                            closeBlock(out);
+                            currentState = State.INIT_BLOCK;
                             break;
-                        } else {
-                            return out;
-                        }
+                        default:
+                            throw new IllegalStateException();
                     }
-                    currentState = State.CLOSE_BLOCK;
-                    // fall through
-                case CLOSE_BLOCK:
-                    closeBlock(out);
-                    currentState = State.INIT_BLOCK;
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 
@@ -173,28 +177,34 @@ public final class Bzip2Compressor implements Compressor {
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (compressorState != CompressorState.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        compressorState = CompressorState.FINISHED;
-        final ByteBuf footer = allocator.buffer();
-        try {
-            closeBlock(footer);
+        switch (compressorState) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                compressorState = CompressorState.FINISHED;
+                final ByteBuf footer = allocator.buffer();
+                try {
+                    closeBlock(footer);
 
-            final int streamCRC = this.streamCRC;
-            final Bzip2BitWriter writer = this.writer;
-            try {
-                writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_1);
-                writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_2);
-                writer.writeInt(footer, streamCRC);
-                writer.flush(footer);
-            } finally {
-                blockCompressor = null;
-            }
-            return footer;
-        } catch (Throwable cause) {
-            footer.release();
-            throw cause;
+                    final int streamCRC = this.streamCRC;
+                    final Bzip2BitWriter writer = this.writer;
+                    try {
+                        writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_1);
+                        writer.writeBits(footer, 24, END_OF_STREAM_MAGIC_2);
+                        writer.writeInt(footer, streamCRC);
+                        writer.flush(footer);
+                    } finally {
+                        blockCompressor = null;
+                    }
+                    return footer;
+                } catch (Throwable cause) {
+                    footer.release();
+                    throw cause;
+                }
+            default:
+                throw new IllegalStateException();
         }
     }
 

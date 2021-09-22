@@ -124,78 +124,90 @@ public final class FastLzCompressor implements Compressor {
 
     @Override
     public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
-        if (state != State.PROCESSING) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        final ByteBufChecksum checksum = this.checksum;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+                return Unpooled.EMPTY_BUFFER;
+            case PROCESSING:
+                final ByteBufChecksum checksum = this.checksum;
+                ByteBuf out = allocator.buffer();
+                for (;;) {
+                    if (!in.isReadable()) {
+                        return out;
+                    }
+                    final int idx = in.readerIndex();
+                    final int length = Math.min(in.readableBytes(), MAX_CHUNK_LENGTH);
 
-        ByteBuf out = allocator.buffer();
-        for (;;) {
-            if (!in.isReadable()) {
-                return out;
-            }
-            final int idx = in.readerIndex();
-            final int length = Math.min(in.readableBytes(), MAX_CHUNK_LENGTH);
+                    final int outputIdx = out.writerIndex();
+                    out.setMedium(outputIdx, MAGIC_NUMBER);
+                    int outputOffset = outputIdx + CHECKSUM_OFFSET + (checksum != null ? 4 : 0);
 
-            final int outputIdx = out.writerIndex();
-            out.setMedium(outputIdx, MAGIC_NUMBER);
-            int outputOffset = outputIdx + CHECKSUM_OFFSET + (checksum != null ? 4 : 0);
+                    final byte blockType;
+                    final int chunkLength;
+                    if (length < MIN_LENGTH_TO_COMPRESSION) {
+                        blockType = BLOCK_TYPE_NON_COMPRESSED;
 
-            final byte blockType;
-            final int chunkLength;
-            if (length < MIN_LENGTH_TO_COMPRESSION) {
-                blockType = BLOCK_TYPE_NON_COMPRESSED;
+                        out.ensureWritable(outputOffset + 2 + length);
+                        final int outputPtr = outputOffset + 2;
 
-                out.ensureWritable(outputOffset + 2 + length);
-                final int outputPtr = outputOffset + 2;
+                        if (checksum != null) {
+                            checksum.reset();
+                            checksum.update(in, idx, length);
+                            out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
+                        }
+                        out.setBytes(outputPtr, in, idx, length);
+                        chunkLength = length;
+                    } else {
+                        // try to compress
+                        if (checksum != null) {
+                            checksum.reset();
+                            checksum.update(in, idx, length);
+                            out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
+                        }
 
-                if (checksum != null) {
-                    checksum.reset();
-                    checksum.update(in, idx, length);
-                    out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
+                        final int maxOutputLength = calculateOutputBufferLength(length);
+                        out.ensureWritable(outputOffset + 4 + maxOutputLength);
+                        final int outputPtr = outputOffset + 4;
+                        final int compressedLength =
+                                FastLz.compress(in, in.readerIndex(), length, out, outputPtr, level);
+
+                        if (compressedLength < length) {
+                            blockType = BLOCK_TYPE_COMPRESSED;
+                            chunkLength = compressedLength;
+
+                            out.setShort(outputOffset, chunkLength);
+                            outputOffset += 2;
+                        } else {
+                            blockType = BLOCK_TYPE_NON_COMPRESSED;
+                            out.setBytes(outputOffset + 2, in, idx, length);
+                            chunkLength = length;
+                        }
+                    }
+                    out.setShort(outputOffset, length);
+
+                    out.setByte(outputIdx + OPTIONS_OFFSET,
+                            blockType | (checksum != null ? BLOCK_WITH_CHECKSUM : BLOCK_WITHOUT_CHECKSUM));
+                    out.writerIndex(outputOffset + 2 + chunkLength);
+                    in.skipBytes(length);
                 }
-                out.setBytes(outputPtr, in, idx, length);
-                chunkLength = length;
-            } else {
-                // try to compress
-                if (checksum != null) {
-                    checksum.reset();
-                    checksum.update(in, idx, length);
-                    out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
-                }
-
-                final int maxOutputLength = calculateOutputBufferLength(length);
-                out.ensureWritable(outputOffset + 4 + maxOutputLength);
-                final int outputPtr = outputOffset + 4;
-                final int compressedLength = FastLz.compress(in, in.readerIndex(), length, out, outputPtr, level);
-
-                if (compressedLength < length) {
-                    blockType = BLOCK_TYPE_COMPRESSED;
-                    chunkLength = compressedLength;
-
-                    out.setShort(outputOffset, chunkLength);
-                    outputOffset += 2;
-                } else {
-                    blockType = BLOCK_TYPE_NON_COMPRESSED;
-                    out.setBytes(outputOffset + 2, in, idx, length);
-                    chunkLength = length;
-                }
-            }
-            out.setShort(outputOffset, length);
-
-            out.setByte(outputIdx + OPTIONS_OFFSET,
-                    blockType | (checksum != null ? BLOCK_WITH_CHECKSUM : BLOCK_WITHOUT_CHECKSUM));
-            out.writerIndex(outputOffset + 2 + chunkLength);
-            in.skipBytes(length);
+            default:
+                throw new IllegalStateException();
         }
     }
 
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
-        if (state == State.PROCESSING) {
-            state = State.FINISHED;
+        switch (state) {
+            case CLOSED:
+                throw new CompressionException("Compressor closed");
+            case FINISHED:
+            case PROCESSING:
+                state = State.FINISHED;
+                return Unpooled.EMPTY_BUFFER;
+            default:
+                throw new IllegalStateException();
         }
-        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
