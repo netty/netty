@@ -90,6 +90,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         if (acquires == 0) {
             tracer.drop(acquires);
             drop.drop(impl());
+            makeInaccessible();
         }
         acquires--;
         tracer.close(acquires);
@@ -115,6 +116,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
             throw notSendableException();
         }
         var owned = tracer.send(prepareSend(), acquires);
+        makeInaccessible();
         acquires = -2; // Close without dropping. This also ignore future double-free attempts.
         return new SendFromOwned<I, T>(owned, drop, getClass());
     }
@@ -198,6 +200,14 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      * @return This resource instance in a deactivated state.
      */
     protected abstract Owned<T> prepareSend();
+
+    /**
+     * Called when this resource needs to be considered inaccessible.
+     * This is called at the correct points when the resource is being closed or sent,
+     * and can be used to set further traps for accesses that makes accessibility checks cheap.
+     */
+    protected void makeInaccessible() {
+    }
 
     /**
      * Get access to the underlying {@link Drop} object.
