@@ -1122,6 +1122,15 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         return super.isOwned() && allConstituentsAreOwned();
     }
 
+    @Override
+    public CompositeBuffer touch(Object hint) {
+        super.touch(hint);
+        for (Buffer buf : bufs) {
+            buf.touch(hint);
+        }
+        return this;
+    }
+
     private boolean allConstituentsAreOwned() {
         boolean result = true;
         for (Buffer buf : bufs) {

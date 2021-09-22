@@ -188,6 +188,14 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         return acquires >= 0;
     }
 
+    @Override
+    public I touch(Object hint) {
+        if (isAccessible()) {
+            tracer.touch(acquires, hint);
+        }
+        return self();
+    }
+
     /**
      * Prepare this instance for ownership transfer. This method is called from {@link #send()} in the sending thread.
      * This method should put this resource in a deactivated state where it is no longer accessible from the currently

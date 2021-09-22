@@ -146,4 +146,11 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
     public boolean isAccessible() {
         return buf.isAccessible();
     }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public T touch(Object hint) {
+        buf.touch(hint);
+        return (T) this;
+    }
 }
