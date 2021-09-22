@@ -65,14 +65,20 @@ public class DecompressionHandler extends ByteToMessageDecoder {
 
     @Override
     protected final void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved0(ctx);
-        closeDecompressor();
+        try {
+            super.handlerRemoved0(ctx);
+        } finally {
+            closeDecompressor();
+        }
     }
 
     @Override
     public final void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-        closeDecompressor();
+        try {
+            super.channelInactive(ctx);
+        } finally {
+            closeDecompressor();
+        }
     }
 
     private void closeDecompressor() {

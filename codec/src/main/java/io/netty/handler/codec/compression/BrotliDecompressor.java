@@ -107,11 +107,9 @@ public final class BrotliDecompressor implements Decompressor {
                     finished = true;
                     decoder.destroy();
                     return null;
-
                 case OK:
                     decoder.push(0);
                     break;
-
                 case NEEDS_MORE_INPUT:
                     if (decoder.hasOutput()) {
                         return pull(allocator);
@@ -126,7 +124,6 @@ public final class BrotliDecompressor implements Decompressor {
                     int readBytes = readBytes(input, decoderInputBuffer);
                     decoder.push(readBytes);
                     break;
-
                 case NEEDS_MORE_OUTPUT:
                     return pull(allocator);
                 default:

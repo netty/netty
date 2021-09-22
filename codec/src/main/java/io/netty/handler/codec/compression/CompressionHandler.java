@@ -21,9 +21,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link ChannelHandler} which uses a {@link Compressor} for compressing the written {@link ByteBuf}s.
@@ -39,7 +40,7 @@ public class CompressionHandler implements ChannelHandler {
      * @param compressorSupplier  the {@link Supplier} that is used to create the {@link Compressor}.
      */
     public CompressionHandler(Supplier<? extends Compressor> compressorSupplier) {
-        this.compressorSupplier = Objects.requireNonNull(compressorSupplier, "compressorSupplier");
+        this.compressorSupplier = requireNonNull(compressorSupplier, "compressorSupplier");
     }
 
     @Override
@@ -50,17 +51,18 @@ public class CompressionHandler implements ChannelHandler {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (compressor != null) {
-            finish(ctx, false);
-            compressor.close();
-            compressor = null;
+            try {
+                finish(ctx, false);
+            } finally {
+                closeCompressor();
+            }
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (compressor != null) {
-            compressor.close();
-            compressor = null;
+            closeCompressor();
         }
         ctx.fireChannelInactive();
     }
@@ -86,18 +88,12 @@ public class CompressionHandler implements ChannelHandler {
 
     private Future<Void> finish(ChannelHandlerContext ctx, boolean closeCtx) {
         if (compressor == null || compressor.isFinished()) {
-            if (closeCtx) {
-                return ctx.close();
-            }
-            return ctx.newSucceededFuture();
+            return closeCtx ? ctx.close() : ctx.newSucceededFuture();
         }
         ByteBuf buffer = compressor.finish(ctx.alloc());
         if (!buffer.isReadable()) {
             buffer.release();
-            if (closeCtx) {
-                return ctx.close();
-            }
-            return ctx.newSucceededFuture();
+            return closeCtx ? ctx.close() : ctx.newSucceededFuture();
         }
         if (closeCtx) {
             Promise<Void> promise = ctx.newPromise();
@@ -111,5 +107,10 @@ public class CompressionHandler implements ChannelHandler {
             return promise.asFuture();
         }
         return ctx.write(buffer);
+    }
+
+    private void closeCompressor() {
+        compressor.close();
+        compressor = null;
     }
 }
