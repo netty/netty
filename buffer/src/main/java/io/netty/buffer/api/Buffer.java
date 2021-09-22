@@ -15,7 +15,10 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.Statics;
+
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * A life cycled buffer of memory, with separate reader and writer offsets.
@@ -118,6 +121,19 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     int readerOffset();
 
     /**
+     * Set the reader offset to {@code readerOffset() + delta}.
+     *
+     * @param delta to accumulate.
+     * @return This Buffer.
+     * @throws IndexOutOfBoundsException if the new reader offset is less than zero or greater than the current
+     * {@link #writerOffset()}.
+     * @throws BufferClosedException if this buffer is closed.
+     */
+    default Buffer skipReadable(int delta) {
+        return readerOffset(readerOffset() + delta);
+    }
+
+    /**
      * Set the reader offset. Make the next read happen from the given offset into the buffer.
      *
      * @param offset The reader offset to set.
@@ -134,6 +150,20 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return The current writer offset.
      */
     int writerOffset();
+
+    /**
+     * Set the write offset to {@code writerOffset() + delta}.
+     *
+     * @param delta to accumulate.
+     * @return This Buffer.
+     * @throws IndexOutOfBoundsException if the new writer offset is less than the current {@link #readerOffset()} or
+     * greater than {@link #capacity()}.
+     * @throws BufferClosedException if this buffer is closed.
+     * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
+     */
+    default Buffer skipWritable(int delta) {
+        return writerOffset(writerOffset() + delta);
+    }
 
     /**
      * Set the writer offset. Make the next write happen at the given offset.
@@ -251,6 +281,33 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this or the destination buffer is closed.
      */
     void copyInto(int srcPos, Buffer dest, int destPos, int length);
+
+    /**
+     * Writes into this buffer, all the bytes from the given {@code source} using the passed {@code charset}.
+     * This updates the {@linkplain #writerOffset() write offset} of this buffer.
+     *
+     * @param source {@link CharSequence} to read from.
+     * @param charset {@link Charset} to use for writing.
+     * @return This buffer.
+     */
+    default Buffer writeCharSequence(CharSequence source, Charset charset) {
+        Statics.writeCharSequence(source, this, charset);
+        return this;
+    }
+
+    /**
+     * Reads a {@link CharSequence} of the passed {@code length} using the passed {@link Charset}.
+     * This updates the {@linkplain #readerOffset()} reader offset} of this buffer.
+     *
+     * @param length of {@link CharSequence} to read.
+     * @param charset of the bytes to be read.
+     * @return {@link CharSequence} read from this buffer.
+     * @throws IndexOutOfBoundsException if the passed {@code length} is more than the {@linkplain #readableBytes()} of
+     * this buffer.
+     */
+    default CharSequence readCharSequence(int length, Charset charset) {
+        return Statics.readCharSequence(this, length, charset);
+    }
 
     /**
      * Writes into this buffer, all the readable bytes from the given buffer.
@@ -481,6 +538,108 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this buffer is closed.
      */
     Buffer copy(int offset, int length);
+
+    /**
+     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #readerOffset()} reader offset}
+     * position.
+     * <p>
+     * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
+     * captured and returned in a new buffer, that will hold its own ownership of that region. This allows the returned
+     * buffer to be independently {@linkplain #send() sent} to other threads.
+     * <p>
+     * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + offset}, and have its
+     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code offset}.
+     * <p>
+     * The memory region in the returned buffer will become inaccessible through this buffer. This buffer will have its
+     * capacity reduced by the capacity of the returned buffer, read offset will become zero and relative position of
+     * write offset will be preserved from the provided {@code offset}, even though their position in memory remain
+     * unchanged.
+     * <p>
+     * Effectively, the following transformation takes place:
+     * <pre>{@code
+     *         This buffer:
+     *          +------------------------------------------+
+     *         0|   |r/o    offset        |w/o             |cap
+     *          +---+---------+-----------+----------------+
+     *         /   /         / \          \                \
+     *        /   /         /   \          \                \
+     *       /   /         /     \          \                \
+     *      /   /         /       \          \                \
+     *     /   /         /         \          \                \
+     *    +---+---------+           +----------+----------------+
+     *    |   |r/o      |w/o & cap  |r/o      w/o               |cap
+     *    +---+---------+           +---------------------------+
+     *    Returned buffer.                   This buffer.
+     * }</pre>
+     * When the buffers are in this state, both of the split parts retain an atomic reference count on the
+     * underlying memory. This means that shared underlying memory will not be deallocated or returned to a pool, until
+     * all the split parts have been closed.
+     * <p>
+     * Composite buffers have it a little easier, in that at most only one of the constituent buffers will actually be
+     * split. If the split point lands perfectly between two constituent buffers, then a composite buffer can
+     * simply split its internal array in two.
+     * <p>
+     * Split buffers support all operations that normal buffers do, including {@link #ensureWritable(int)}.
+     * <p>
+     * See the <a href="#split">Splitting buffers</a> section for details.
+     *
+     * @return A new buffer with independent and exclusive ownership over the previously read and readable bytes from
+     * this buffer.
+     */
+    default Buffer readSplit(int offset) {
+        return split(readerOffset() + offset);
+    }
+
+    /**
+     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #writerOffset()} writer offset}
+     * position.
+     * <p>
+     * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
+     * captured and returned in a new buffer, that will hold its own ownership of that region. This allows the returned
+     * buffer to be independently {@linkplain #send() sent} to other threads.
+     * <p>
+     * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + offset}, and have its
+     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code offset}.
+     * <p>
+     * The memory region in the returned buffer will become inaccessible through this buffer. This buffer will have its
+     * capacity reduced by the capacity of the returned buffer, read offset will become zero and relative position of
+     * write offset will be preserved from the provided {@code offset}, even though their position in memory remain
+     * unchanged.
+     * <p>
+     * Effectively, the following transformation takes place:
+     * <pre>{@code
+     *         This buffer:
+     *          +------------------------------------------+
+     *         0|   |r/o  |w/o  offset                     |cap
+     *          +---+----+-------+-------------------------+
+     *         /   /    /       / \                        \
+     *        /   /    /       /   \                        \
+     *       /   /    /       /     \                        \
+     *      /   /    /       /       \                        \
+     *     /   /    /       /         \                        \
+     *    +---+----+-------+           +------------------------+
+     *    |   |r/o  |w/o   | cap       |r/o & w/o               |cap
+     *    +---+----+-------+           +------------------------+
+     *    Returned buffer.                   This buffer.
+     * }</pre>
+     * When the buffers are in this state, both of the split parts retain an atomic reference count on the
+     * underlying memory. This means that shared underlying memory will not be deallocated or returned to a pool, until
+     * all the split parts have been closed.
+     * <p>
+     * Composite buffers have it a little easier, in that at most only one of the constituent buffers will actually be
+     * split. If the split point lands perfectly between two constituent buffers, then a composite buffer can
+     * simply split its internal array in two.
+     * <p>
+     * Split buffers support all operations that normal buffers do, including {@link #ensureWritable(int)}.
+     * <p>
+     * See the <a href="#split">Splitting buffers</a> section for details.
+     *
+     * @return A new buffer with independent and exclusive ownership over the previously read and readable bytes from
+     * this buffer.
+     */
+    default Buffer writeSplit(int offset) {
+        return split(writerOffset() + offset);
+    }
 
     /**
      * Splits the buffer into two, at the {@linkplain #writerOffset() write offset} position.

@@ -40,6 +40,7 @@ import java.util.SplittableRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -308,6 +309,12 @@ public abstract class BufferTestSupport {
     @AfterAll
     static void stopExecutor() throws IOException {
         executor.shutdown();
+    }
+
+    static void writeRandomBytes(Buffer buf, int length) {
+        byte[] data = new byte[length];
+        ThreadLocalRandom.current().nextBytes(data);
+        buf.writeBytes(data);
     }
 
     public static void verifyInaccessible(Buffer buf) {

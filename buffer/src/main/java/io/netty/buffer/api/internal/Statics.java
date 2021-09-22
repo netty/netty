@@ -19,6 +19,7 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.Drop;
+import io.netty.util.AsciiString;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -27,7 +28,10 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.concurrent.atomic.LongAdder;
+
+import static io.netty.util.CharsetUtil.US_ASCII;
 
 public interface Statics {
     LongAdder MEM_USAGE_NATIVE = new LongAdder();
@@ -210,5 +214,26 @@ public interface Statics {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     static void unsafeSetDrop(ResourceSupport<?, ?> obj, Drop<?> replacement) {
         obj.unsafeSetDrop((Drop) replacement);
+    }
+
+    static CharSequence readCharSequence(Buffer source, int length, Charset charset) {
+        byte[] data = new byte[length];
+        source.copyInto(source.readerOffset(), data, 0, length);
+        source.skipReadable(length);
+        if (US_ASCII.equals(charset)) {
+            return new AsciiString(data);
+        }
+        return new String(data, 0, length, charset);
+    }
+
+    static void writeCharSequence(CharSequence source, Buffer destination, Charset charset) {
+        if (US_ASCII.equals(charset) && source instanceof AsciiString) {
+            AsciiString asciiString = (AsciiString) source;
+            destination.writeBytes(asciiString.array(), asciiString.arrayOffset(), source.length());
+            return;
+        }
+        // TODO: Copy optimized writes from ByteBufUtil
+        byte[] bytes = source.toString().getBytes(charset);
+        destination.writeBytes(bytes);
     }
 }
