@@ -64,7 +64,7 @@ public interface Compressor extends AutoCloseable {
     /**
      * Return {@code true} if the decompressor was closed, {@code false} otherwise.
      *
-     * @return
+     * @return {@code true} if the decompressor was closed, {@code false} otherwise.
      */
     boolean isClosed();
 
