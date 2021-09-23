@@ -24,6 +24,7 @@ import io.netty.util.concurrent.Promise;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -32,6 +33,8 @@ import static java.util.Objects.requireNonNull;
 public class CompressionHandler implements ChannelHandler {
 
     private final Supplier<? extends Compressor> compressorSupplier;
+    private final long closeWriteTimeout;
+    private final TimeUnit closeWriteTimeoutUnit;
     private Compressor compressor;
 
     /**
@@ -40,7 +43,22 @@ public class CompressionHandler implements ChannelHandler {
      * @param compressorSupplier  the {@link Supplier} that is used to create the {@link Compressor}.
      */
     public CompressionHandler(Supplier<? extends Compressor> compressorSupplier) {
+        this(compressorSupplier, 10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param compressorSupplier    the {@link Supplier} that is used to create the {@link Compressor}.
+     * @param closeWriteTimeout     the amount to wait before we will close even tho the write of the trailer was not
+     *                              finished yet.
+     * @param closeWriteTimeoutUnit the unit of the timeout.
+     */
+    public CompressionHandler(Supplier<? extends Compressor> compressorSupplier,
+                              long closeWriteTimeout, TimeUnit closeWriteTimeoutUnit) {
         this.compressorSupplier = requireNonNull(compressorSupplier, "compressorSupplier");
+        this.closeWriteTimeout = checkPositive(closeWriteTimeout, "closeWriteTimeout");
+        this.closeWriteTimeoutUnit = requireNonNull(closeWriteTimeoutUnit, "closeWriteTimeoutUnit");
     }
 
     @Override
@@ -101,7 +119,7 @@ public class CompressionHandler implements ChannelHandler {
             if (!f.isDone()) {
                 // Ensure the channel is closed even if the write operation completes in time.
                 Future<?> sF =  ctx.executor().schedule(() -> ctx.close().cascadeTo(promise),
-                        10, TimeUnit.SECONDS); // FIXME: Magic number
+                        closeWriteTimeout, closeWriteTimeoutUnit);
                 f.addListener(sF, (scheduledFuture, ignore) -> scheduledFuture.cancel());
             }
             return promise.asFuture();
