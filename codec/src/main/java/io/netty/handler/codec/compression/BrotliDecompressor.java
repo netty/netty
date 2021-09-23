@@ -147,7 +147,7 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public boolean isFinished() {
-        return state == State.FINISHED || isClosed();
+        return state != State.PROCESSING;
     }
 
     @Override

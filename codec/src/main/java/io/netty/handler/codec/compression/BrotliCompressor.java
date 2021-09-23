@@ -38,7 +38,7 @@ public final class BrotliCompressor implements Compressor {
         PROCESSING,
         FINISHED,
         CLOSED
-    };
+    }
 
     private State state = State.PROCESSING;
 
@@ -125,13 +125,7 @@ public final class BrotliCompressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        switch (state) {
-            case CLOSED:
-            case FINISHED:
-                return true;
-            default:
-                return false;
-        }
+        return state != State.PROCESSING;
     }
 
     @Override

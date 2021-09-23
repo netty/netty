@@ -222,7 +222,7 @@ public final class FastLzDecompressor implements Decompressor {
 
     @Override
     public void close() {
-         currentState = State.CLOSED;
+        currentState = State.CLOSED;
     }
 
     private void streamCorrupted(String message) {

@@ -167,75 +167,78 @@ public final class JdkZlibCompressor implements Compressor {
             case FINISHED:
                 return Unpooled.EMPTY_BUFFER;
             case PROCESSING:
-                int len = uncompressed.readableBytes();
-                if (len == 0) {
-                    return Unpooled.EMPTY_BUFFER;
-                }
-
-                int offset;
-                byte[] inAry;
-                if (uncompressed.hasArray()) {
-                    // if it is backed by an array we not need to to do a copy at all
-                    inAry = uncompressed.array();
-                    offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
-                    // skip all bytes as we will consume all of them
-                    uncompressed.skipBytes(len);
-                } else {
-                    inAry = new byte[len];
-                    uncompressed.readBytes(inAry);
-                    offset = 0;
-                }
-
-                int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
-                if (writeHeader) {
-                    switch (wrapper) {
-                        case GZIP:
-                            sizeEstimate += gzipHeader.length;
-                            break;
-                        case ZLIB:
-                            sizeEstimate += 2; // first two magic bytes
-                            break;
-                        default:
-                            // no op
-                    }
-                }
-                ByteBuf out = allocator.buffer(sizeEstimate);
-                try {
-                    if (writeHeader) {
-                        writeHeader = false;
-                        if (wrapper == ZlibWrapper.GZIP) {
-                            out.writeBytes(gzipHeader);
-                        }
-                    }
-
-                    if (wrapper == ZlibWrapper.GZIP) {
-                        crc.update(inAry, offset, len);
-                    }
-
-                    deflater.setInput(inAry, offset, len);
-                    for (;;) {
-                        deflate(out);
-                        if (deflater.needsInput()) {
-                            // Consumed everything
-                            break;
-                        } else {
-                            if (!out.isWritable()) {
-                                // We did not consume everything but the buffer is not writable anymore. Increase the
-                                // capacity to make more room.
-                                out.ensureWritable(out.writerIndex());
-                            }
-                        }
-                    }
-                    return out;
-                } catch (Throwable cause) {
-                    out.release();
-                    throw cause;
-                }
+                return compressData(uncompressed, allocator);
             default:
                 throw new IllegalStateException();
         }
     }
 
+    private ByteBuf compressData(ByteBuf uncompressed, ByteBufAllocator allocator) {
+        int len = uncompressed.readableBytes();
+        if (len == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        int offset;
+        byte[] inAry;
+        if (uncompressed.hasArray()) {
+            // if it is backed by an array we not need to to do a copy at all
+            inAry = uncompressed.array();
+            offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
+            // skip all bytes as we will consume all of them
+            uncompressed.skipBytes(len);
+        } else {
+            inAry = new byte[len];
+            uncompressed.readBytes(inAry);
+            offset = 0;
+        }
+
+        int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
+        if (writeHeader) {
+            switch (wrapper) {
+                case GZIP:
+                    sizeEstimate += gzipHeader.length;
+                    break;
+                case ZLIB:
+                    sizeEstimate += 2; // first two magic bytes
+                    break;
+                default:
+                    // no op
+            }
+        }
+        ByteBuf out = allocator.buffer(sizeEstimate);
+        try {
+            if (writeHeader) {
+                writeHeader = false;
+                if (wrapper == ZlibWrapper.GZIP) {
+                    out.writeBytes(gzipHeader);
+                }
+            }
+
+            if (wrapper == ZlibWrapper.GZIP) {
+                crc.update(inAry, offset, len);
+            }
+
+            deflater.setInput(inAry, offset, len);
+            for (;;) {
+                deflate(out);
+                if (deflater.needsInput()) {
+                    // Consumed everything
+                    break;
+                } else {
+                    if (!out.isWritable()) {
+                        // We did not consume everything but the buffer is not writable anymore. Increase the
+                        // capacity to make more room.
+                        out.ensureWritable(out.writerIndex());
+                    }
+                }
+            }
+            return out;
+        } catch (Throwable cause) {
+            out.release();
+            throw cause;
+        }
+    }
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
         switch (state) {
@@ -282,13 +285,7 @@ public final class JdkZlibCompressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        switch (state) {
-            case FINISHED:
-            case CLOSED:
-                return true;
-            default:
-                return false;
-        }
+        return state != State.PROCESSING;
     }
 
     @Override

@@ -288,13 +288,7 @@ public final class LzfCompressor implements Compressor {
 
     @Override
     public boolean isFinished() {
-        switch (state) {
-            case FINISHED:
-            case CLOSED:
-                return true;
-            default:
-                return false;
-        }
+        return state != State.PROCESSING;
     }
 
     @Override
