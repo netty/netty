@@ -32,7 +32,8 @@ public class BufferCharSequenceTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void readCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(32)) {
             String data = "Hello World";
             buf.writeBytes(data.getBytes(US_ASCII));
             assertEquals(data.length(), buf.writerOffset());
@@ -48,7 +49,8 @@ public class BufferCharSequenceTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void writeCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(32)) {
             AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
             buf.writeCharSequence(data, US_ASCII);
             assertEquals(data.length(), buf.writerOffset());
@@ -64,7 +66,8 @@ public class BufferCharSequenceTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void readAndWriteCharSequence(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(32)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(32)) {
             AsciiString data = new AsciiString("Hello world".getBytes(US_ASCII));
             buf.writeCharSequence(data, US_ASCII);
             assertEquals(data.length(), buf.writerOffset());

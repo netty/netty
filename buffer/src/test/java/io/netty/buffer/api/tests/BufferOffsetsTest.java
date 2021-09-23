@@ -192,7 +192,8 @@ public class BufferOffsetsTest extends BufferTestSupport {
     }
 
     private void skipReadable(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);
 
             for (int i = 0; i < readBytes; i++) {
@@ -217,7 +218,8 @@ public class BufferOffsetsTest extends BufferTestSupport {
     }
 
     private void skipWritable(Fixture fixture, int capacity, int writeBytes, int offset) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);
 
             buf.skipWritable(offset);
