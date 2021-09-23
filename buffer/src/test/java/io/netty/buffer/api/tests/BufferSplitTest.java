@@ -46,7 +46,8 @@ public class BufferSplitTest extends BufferTestSupport {
     }
 
     private void readSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);
             assertEquals(writeBytes, buf.writerOffset());
 
@@ -92,7 +93,8 @@ public class BufferSplitTest extends BufferTestSupport {
     }
 
     private void writeSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);
             assertEquals(writeBytes, buf.writerOffset());
             for (int i = 0; i < readBytes; i++) {
@@ -126,7 +128,8 @@ public class BufferSplitTest extends BufferTestSupport {
 
     private static void splitPostFullOrRead(Fixture fixture, boolean read) {
         final int capacity = 3;
-        try (BufferAllocator allocator = fixture.createAllocator(); Buffer buf = allocator.allocate(capacity)) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, capacity);
             assertEquals(buf.capacity(), buf.writerOffset());
             if (read) {
