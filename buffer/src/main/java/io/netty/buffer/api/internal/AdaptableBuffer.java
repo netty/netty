@@ -71,7 +71,8 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
     }
 
     @Override
-    public ReferenceCounted touch(Object hint) {
+    public AdaptableBuffer<T> touch(Object hint) {
+        super.touch(hint);
         return this;
     }
 

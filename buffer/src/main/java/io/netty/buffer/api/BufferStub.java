@@ -452,4 +452,10 @@ public class BufferStub implements Buffer {
     public boolean isAccessible() {
         return delegate.isAccessible();
     }
+
+    @Override
+    public Buffer touch(Object hint) {
+        delegate.touch(hint);
+        return this;
+    }
 }
