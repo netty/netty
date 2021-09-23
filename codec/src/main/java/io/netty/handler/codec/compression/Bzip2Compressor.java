@@ -166,6 +166,7 @@ public final class Bzip2Compressor implements Compressor {
             }
         }
     }
+
     /**
      * Close current block and update {@link #streamCRC}.
      */

@@ -239,6 +239,7 @@ public final class JdkZlibCompressor implements Compressor {
             throw cause;
         }
     }
+
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
         switch (state) {

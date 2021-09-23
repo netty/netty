@@ -199,6 +199,7 @@ public final class FastLzCompressor implements Compressor {
             in.skipBytes(length);
         }
     }
+
     @Override
     public ByteBuf finish(ByteBufAllocator allocator) {
         switch (state) {
