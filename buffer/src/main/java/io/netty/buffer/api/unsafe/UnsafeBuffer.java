@@ -57,7 +57,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl allocatorControl,
                         Drop<UnsafeBuffer> drop) {
-        super(new MakeInaccessibleOnDrop(ArcDrop.wrap(drop)));
+        super(ArcDrop.wrap(drop));
         this.memory = memory;
         base = memory.base;
         baseOffset = offset;
@@ -68,7 +68,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     UnsafeBuffer(UnsafeBuffer parent) {
-        super(new MakeInaccessibleOnDrop(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop()))));
+        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())));
         control = parent.control;
         memory = parent.memory;
         base = parent.base;
@@ -1070,7 +1070,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         AllocatorControl control = this.control;
         long baseOffset = this.baseOffset;
         int rsize = this.rsize;
-        makeInaccessible();
         return new Owned<UnsafeBuffer>() {
             @Override
             public UnsafeBuffer transferOwnership(Drop<UnsafeBuffer> drop) {
@@ -1087,44 +1086,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
-    protected Drop<UnsafeBuffer> unsafeGetDrop() {
-        MakeInaccessibleOnDrop drop = (MakeInaccessibleOnDrop) super.unsafeGetDrop();
-        return drop.delegate;
-    }
-
-    @Override
-    protected void unsafeSetDrop(Drop<UnsafeBuffer> replacement) {
-        super.unsafeSetDrop(new MakeInaccessibleOnDrop(replacement));
-    }
-
-    private static final class MakeInaccessibleOnDrop implements Drop<UnsafeBuffer> {
-        final Drop<UnsafeBuffer> delegate;
-
-        private MakeInaccessibleOnDrop(Drop<UnsafeBuffer> delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void drop(UnsafeBuffer buf) {
-            try {
-                delegate.drop(buf);
-            } finally {
-                buf.makeInaccessible();
-            }
-        }
-
-        @Override
-        public void attach(UnsafeBuffer buf) {
-            delegate.attach(buf);
-        }
-
-        @Override
-        public String toString() {
-            return "MakeInaccessibleOnDrop(" + delegate + ')';
-        }
-    }
-
-    void makeInaccessible() {
+    protected void makeInaccessible() {
         roff = 0;
         woff = 0;
         rsize = CLOSED_SIZE;

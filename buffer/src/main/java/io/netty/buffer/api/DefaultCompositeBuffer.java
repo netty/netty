@@ -44,7 +44,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     private static final Drop<DefaultCompositeBuffer> COMPOSITE_DROP = new Drop<>() {
         @Override
         public void drop(DefaultCompositeBuffer buf) {
-            buf.makeInaccessible();
             RuntimeException re = null;
             for (Buffer b : buf.bufs) {
                 try {
@@ -1096,7 +1095,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             throw throwable;
         }
         boolean readOnly = this.readOnly;
-        makeInaccessible();
         return drop -> {
             Buffer[] received = new Buffer[sends.length];
             for (int i = 0; i < sends.length; i++) {
@@ -1109,7 +1107,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         };
     }
 
-    private void makeInaccessible() {
+    @Override
+    protected void makeInaccessible() {
         capacity = 0;
         roff = 0;
         woff = 0;

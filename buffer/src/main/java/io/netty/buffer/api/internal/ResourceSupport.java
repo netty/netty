@@ -19,6 +19,7 @@ import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.Owned;
 import io.netty.buffer.api.Resource;
 import io.netty.buffer.api.Send;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Objects;
 
@@ -28,6 +29,7 @@ import java.util.Objects;
  * @param <I> The public interface for the resource.
  * @param <T> The concrete implementation of the resource.
  */
+@UnstableApi
 public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceSupport<I, T>> implements Resource<I> {
     private int acquires; // Closed if negative.
     private Drop<T> drop;
@@ -87,12 +89,18 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         if (acquires == -1) {
             throw attachTrace(new IllegalStateException("Double-free: Resource already closed and dropped."));
         }
-        if (acquires == 0) {
-            tracer.drop(acquires);
-            drop.drop(impl());
-        }
+        int acq = acquires;
         acquires--;
-        tracer.close(acquires);
+        tracer.close(acq);
+        if (acq == 0) {
+            // The 'acquires' was 0, now decremented to -1, which means we need to drop.
+            tracer.drop(0);
+            try {
+                drop.drop(impl());
+            } finally {
+                makeInaccessible();
+            }
+        }
     }
 
     /**
@@ -114,9 +122,13 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         if (!isOwned()) {
             throw notSendableException();
         }
-        var owned = tracer.send(prepareSend(), acquires);
-        acquires = -2; // Close without dropping. This also ignore future double-free attempts.
-        return new SendFromOwned<I, T>(owned, drop, getClass());
+        try {
+            var owned = tracer.send(prepareSend(), acquires);
+            return new SendFromOwned<I, T>(owned, drop, getClass());
+        } finally {
+            acquires = -2; // Close without dropping. This also ignore future double-free attempts.
+            makeInaccessible();
+        }
     }
 
     /**
@@ -198,6 +210,16 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      * @return This resource instance in a deactivated state.
      */
     protected abstract Owned<T> prepareSend();
+
+    /**
+     * Called when this resource needs to be considered inaccessible.
+     * This is called at the correct points, by the {@link ResourceSupport} class,
+     * when the resource is being closed or sent,
+     * and can be used to set further traps for accesses that makes accessibility checks cheap.
+     * There would normally not be any reason to call this directly from a sub-class.
+     */
+    protected void makeInaccessible() {
+    }
 
     /**
      * Get access to the underlying {@link Drop} object.

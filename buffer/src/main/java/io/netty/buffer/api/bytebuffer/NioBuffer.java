@@ -53,7 +53,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     private boolean constBuffer;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
-        super(new MakeInaccessibleOnDrop(ArcDrop.wrap(drop)));
+        super(ArcDrop.wrap(drop));
         this.base = base;
         rmem = memory;
         wmem = memory;
@@ -64,7 +64,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
      * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
      */
     NioBuffer(NioBuffer parent) {
-        super(new MakeInaccessibleOnDrop(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop()))));
+        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())));
         control = parent.control;
         base = parent.base;
         rmem = bbslice(parent.rmem, 0, parent.rmem.capacity()); // Need to slice to get independent byte orders.
@@ -73,44 +73,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         roff = parent.roff;
         woff = parent.woff;
         constBuffer = true;
-    }
-
-    private static final class MakeInaccessibleOnDrop implements Drop<NioBuffer> {
-        final Drop<NioBuffer> delegate;
-
-        private MakeInaccessibleOnDrop(Drop<NioBuffer> delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void drop(NioBuffer buf) {
-            try {
-                delegate.drop(buf);
-            } finally {
-                buf.makeInaccessible();
-            }
-        }
-
-        @Override
-        public void attach(NioBuffer buf) {
-            delegate.attach(buf);
-        }
-
-        @Override
-        public String toString() {
-            return "MakeInaccessibleOnDrop(" + delegate + ')';
-        }
-    }
-
-    @Override
-    protected Drop<NioBuffer> unsafeGetDrop() {
-        MakeInaccessibleOnDrop drop = (MakeInaccessibleOnDrop) super.unsafeGetDrop();
-        return drop.delegate;
-    }
-
-    @Override
-    protected void unsafeSetDrop(Drop<NioBuffer> replacement) {
-        super.unsafeSetDrop(new MakeInaccessibleOnDrop(replacement));
     }
 
     @Override
@@ -945,7 +907,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         var isConst = constBuffer;
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
-        makeInaccessible();
         return new Owned<NioBuffer>() {
             @Override
             public NioBuffer transferOwnership(Drop<NioBuffer> drop) {
@@ -961,7 +922,8 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         };
     }
 
-    void makeInaccessible() {
+    @Override
+    protected void makeInaccessible() {
         base = CLOSED_BUFFER;
         rmem = CLOSED_BUFFER;
         wmem = CLOSED_BUFFER;
