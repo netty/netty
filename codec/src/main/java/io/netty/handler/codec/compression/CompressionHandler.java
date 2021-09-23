@@ -35,6 +35,7 @@ public class CompressionHandler implements ChannelHandler {
     private final Supplier<? extends Compressor> compressorSupplier;
     private final long closeWriteTimeout;
     private final TimeUnit closeWriteTimeoutUnit;
+    private final boolean discardBytesAfterFinished;
     private Compressor compressor;
 
     /**
@@ -43,22 +44,26 @@ public class CompressionHandler implements ChannelHandler {
      * @param compressorSupplier  the {@link Supplier} that is used to create the {@link Compressor}.
      */
     public CompressionHandler(Supplier<? extends Compressor> compressorSupplier) {
-        this(compressorSupplier, 10, TimeUnit.SECONDS);
+        this(compressorSupplier, 10, TimeUnit.SECONDS, true);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param compressorSupplier    the {@link Supplier} that is used to create the {@link Compressor}.
-     * @param closeWriteTimeout     the amount to wait before we will close even tho the write of the trailer was not
-     *                              finished yet.
-     * @param closeWriteTimeoutUnit the unit of the timeout.
+     * @param compressorSupplier        the {@link Supplier} that is used to create the {@link Compressor}.
+     * @param closeWriteTimeout         the amount to wait before we will close even tho the write of the trailer was
+     *                                  not finished yet.
+     * @param closeWriteTimeoutUnit     the unit of the timeout.
+     * @param discardBytesAfterFinished {@code true} if the bytes should be discarded after the {@link Compressor}
+     *                                  finished the compression of the whole stream.
      */
     public CompressionHandler(Supplier<? extends Compressor> compressorSupplier,
-                              long closeWriteTimeout, TimeUnit closeWriteTimeoutUnit) {
+                              long closeWriteTimeout, TimeUnit closeWriteTimeoutUnit,
+                              boolean discardBytesAfterFinished) {
         this.compressorSupplier = requireNonNull(compressorSupplier, "compressorSupplier");
         this.closeWriteTimeout = checkPositive(closeWriteTimeout, "closeWriteTimeout");
         this.closeWriteTimeoutUnit = requireNonNull(closeWriteTimeoutUnit, "closeWriteTimeoutUnit");
+        this.discardBytesAfterFinished = discardBytesAfterFinished;
     }
 
     @Override
@@ -87,10 +92,17 @@ public class CompressionHandler implements ChannelHandler {
 
     @Override
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        if (compressor == null || compressor.isFinished() || !(msg instanceof ByteBuf)) {
+        if (compressor == null || !(msg instanceof ByteBuf)) {
             return ctx.write(msg);
         }
         ByteBuf input = (ByteBuf) msg;
+        if (compressor.isFinished()) {
+            if (discardBytesAfterFinished) {
+                input.release();
+                return ctx.newSucceededFuture();
+            }
+            return ctx.write(msg);
+        }
         try {
             ByteBuf buffer = compressor.compress(input, ctx.alloc());
             return ctx.write(buffer);

@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 public class DecompressionHandler extends ByteToMessageDecoder {
 
     private final Supplier<? extends Decompressor> decompressorSupplier;
+    private final boolean discardBytesAfterFinished;
     private Decompressor decompressor;
 
     /**
@@ -36,7 +37,20 @@ public class DecompressionHandler extends ByteToMessageDecoder {
      * @param decompressorSupplier  the {@link Supplier} that is used to create the {@link Decompressor}.
      */
     public DecompressionHandler(Supplier<? extends Decompressor> decompressorSupplier) {
+        this(decompressorSupplier, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param decompressorSupplier          the {@link Supplier} that is used to create the {@link Decompressor}.
+     * @param discardBytesAfterFinished     {@code true} if the bytes should be discarded after the {@link Compressor}
+     *                                      finished the compression of the whole stream.
+     */
+    public DecompressionHandler(Supplier<? extends Decompressor> decompressorSupplier,
+                                boolean discardBytesAfterFinished) {
         this.decompressorSupplier = Objects.requireNonNull(decompressorSupplier, "decompressorSupplier");
+        this.discardBytesAfterFinished = discardBytesAfterFinished;
     }
 
     @Override
@@ -47,11 +61,10 @@ public class DecompressionHandler extends ByteToMessageDecoder {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        if (shouldDiscard()) {
-            in.skipBytes(in.readableBytes());
+        if (decompressor == null) {
+            ctx.fireChannelRead(in.readRetainedSlice(in.readableBytes()));
             return;
         }
-
         while (!decompressor.isFinished()) {
             int idx = in.readerIndex();
             ByteBuf decompressed = decompressor.decompress(in, ctx.alloc());
@@ -60,6 +73,12 @@ public class DecompressionHandler extends ByteToMessageDecoder {
             } else if (idx == in.readerIndex()) {
                 return;
             }
+        }
+        assert decompressor.isFinished();
+        if (discardBytesAfterFinished) {
+            in.skipBytes(in.readableBytes());
+        } else {
+            ctx.fireChannelRead(in.readRetainedSlice(in.readableBytes()));
         }
     }
 
