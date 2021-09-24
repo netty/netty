@@ -474,7 +474,7 @@ public final class ByteBufUtil {
     private static long compareUintLittleEndian(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp = bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            long comp = uintFromLE(bufferA.getUnsignedIntLE(aIndex)) - uintFromLE(bufferB.getUnsignedIntLE(bIndex));
             if (comp != 0) {
                 return comp;
             }
@@ -485,7 +485,9 @@ public final class ByteBufUtil {
     private static long compareUintBigEndianA(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            long a = bufferA.getUnsignedInt(aIndex);
+            long b = uintFromLE(bufferB.getUnsignedIntLE(bIndex));
+            long comp =  a - b;
             if (comp != 0) {
                 return comp;
             }
@@ -496,12 +498,18 @@ public final class ByteBufUtil {
     private static long compareUintBigEndianB(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedInt(bIndex);
+            long a = uintFromLE(bufferA.getUnsignedIntLE(aIndex));
+            long b = bufferB.getUnsignedInt(bIndex);
+            long comp =  a - b;
             if (comp != 0) {
                 return comp;
             }
         }
         return 0;
+    }
+
+    private static long uintFromLE(long value) {
+        return Long.reverseBytes(value) >>> Integer.SIZE;
     }
 
     private static final class SWARByteSearch {
