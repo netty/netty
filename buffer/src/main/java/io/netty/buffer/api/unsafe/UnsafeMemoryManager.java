@@ -62,7 +62,7 @@ public class UnsafeMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return new UnsafeBuffer(memory, 0, size32, allocatorControl, convert(drop));
+        return createBuffer(memory, size32, allocatorControl, drop);
     }
 
     @Override
@@ -86,7 +86,16 @@ public class UnsafeMemoryManager implements MemoryManager {
     @Override
     public Buffer recoverMemory(AllocatorControl allocatorControl, Object recoverableMemory, Drop<Buffer> drop) {
         UnsafeMemory memory = (UnsafeMemory) recoverableMemory;
-        return new UnsafeBuffer(memory, 0, memory.size, allocatorControl, convert(drop));
+        int size = memory.size;
+        return createBuffer(memory, size, allocatorControl, drop);
+    }
+
+    private static UnsafeBuffer createBuffer(UnsafeMemory memory, int size, AllocatorControl allocatorControl,
+                                             Drop<Buffer> drop) {
+        Drop<UnsafeBuffer> concreteDrop = convert(drop);
+        UnsafeBuffer unsafeBuffer = new UnsafeBuffer(memory, 0, size, allocatorControl, concreteDrop);
+        concreteDrop.attach(unsafeBuffer);
+        return unsafeBuffer;
     }
 
     @Override

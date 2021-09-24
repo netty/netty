@@ -585,7 +585,7 @@ final class PoolChunk implements PoolChunkMetric {
         @Override
         public <BufferType extends Buffer> Drop<BufferType> drop() {
             PooledDrop pooledDrop = new PooledDrop(chunk.arena, chunk, threadCache, handle, maxLength);
-            return (Drop<BufferType>) CleanerDrop.wrap(pooledDrop);
+            return (Drop<BufferType>) CleanerDrop.wrap(pooledDrop, chunk.arena.manager);
         }
     }
 

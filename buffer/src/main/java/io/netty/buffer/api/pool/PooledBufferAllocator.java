@@ -19,6 +19,7 @@ import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.Statics;
@@ -302,7 +303,9 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         PooledAllocatorControl control = new PooledAllocatorControl();
         control.parent = this;
         UntetheredMemory memory = allocate(control, size);
-        Buffer buffer = manager.recoverMemory(control, memory.memory(), memory.drop());
+        Drop<Buffer> drop = memory.drop();
+        Buffer buffer = manager.recoverMemory(control, memory.memory(), drop);
+        drop.attach(buffer);
         return buffer.fill((byte) 0);
     }
 
