@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.ref.Cleaner;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader.Provider;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,7 +39,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CleanerDropTest {
     static Stream<MemoryManager> managers() {
-        return MemoryManager.availableManagers().map(Provider::get);
+        return MemoryManager.availableManagers().flatMap(provider -> {
+            try {
+                return Stream.of(provider.get());
+            } catch (ServiceConfigurationError | Exception ignore) {
+                // Provider.get() may throw for unavailable implementations.
+                return Stream.empty();
+            }
+        });
     }
 
     static Stream<Supplier<BufferAllocator>> allocators() {
