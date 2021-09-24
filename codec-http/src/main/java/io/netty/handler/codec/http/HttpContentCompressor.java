@@ -17,19 +17,17 @@ package io.netty.handler.codec.http;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliCompressor;
 import io.netty.handler.codec.compression.BrotliOptions;
-import io.netty.handler.codec.compression.CompressionHandler;
 import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.Compressor;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.JdkZlibCompressor;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdCompressor;
@@ -55,8 +53,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int windowBits;
     private final int memLevel;
     private final int contentSizeThreshold;
-    private ChannelHandlerContext ctx;
-    private final Map<String, CompressionEncoderFactory> factories;
+    private final Map<String, Supplier<? extends Compressor>> factories;
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
@@ -198,30 +195,28 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.brotliOptions = brotliOptions;
         this.zstdOptions = zstdOptions;
 
-        this.factories = new HashMap<String, CompressionEncoderFactory>();
+        this.factories = new HashMap<>();
 
         if (this.gzipOptions != null) {
-            this.factories.put("gzip", new GzipEncoderFactory());
+            this.factories.put("gzip", JdkZlibCompressor.newFactory(
+                    ZlibWrapper.GZIP, gzipOptions.compressionLevel()));
         }
         if (this.deflateOptions != null) {
-            this.factories.put("deflate", new DeflateEncoderFactory());
+            this.factories.put("deflate", JdkZlibCompressor.newFactory(
+                    ZlibWrapper.ZLIB, deflateOptions.compressionLevel()));
         }
         if (this.brotliOptions != null) {
-            this.factories.put("br", new BrEncoderFactory());
+            this.factories.put("br", BrotliCompressor.newFactory(brotliOptions.parameters()));
         }
         if (this.zstdOptions != null) {
-            this.factories.put("zstd", new ZstdEncoderFactory());
+            this.factories.put("zstd", ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
 
         this.compressionLevel = -1;
         this.windowBits = -1;
         this.memLevel = -1;
         supportsCompressionOptions = true;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
     }
 
     @Override
@@ -246,15 +241,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
                 return null;
             }
 
-            CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
+            Supplier<? extends Compressor> compressorFactory = factories.get(targetContentEncoding);
 
-            if (encoderFactory == null) {
+            if (compressorFactory == null) {
                 throw new Error();
             }
 
-            return new Result(targetContentEncoding,
-                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                            ctx.channel().config(), encoderFactory.createEncoder()));
+            return new Result(targetContentEncoding, compressorFactory.get());
         } else {
             ZlibWrapper wrapper = determineWrapper(acceptEncoding);
             if (wrapper == null) {
@@ -274,10 +267,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
 
             return new Result(
-                    targetContentEncoding,
-                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                            wrapper, compressionLevel, windowBits, memLevel)));
+                    targetContentEncoding, JdkZlibCompressor.newFactory(wrapper, compressionLevel).get());
         }
     }
 
@@ -380,58 +370,5 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
         return null;
-    }
-
-    /**
-     * Compression Encoder Factory that creates encoders
-     * used to compress http content for gzip content encoding
-     */
-    private final class GzipEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public ChannelHandler createEncoder() {
-            return ZlibCodecFactory.newZlibEncoder(
-                    ZlibWrapper.GZIP, gzipOptions.compressionLevel(),
-                    gzipOptions.windowBits(), gzipOptions.memLevel());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory that creates encoders
-     * used to compress http content for deflate content encoding
-     */
-    private final class DeflateEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public ChannelHandler createEncoder() {
-            return ZlibCodecFactory.newZlibEncoder(
-                    ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
-                    deflateOptions.windowBits(), deflateOptions.memLevel());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory that creates {@link BrotliCompressor}s
-     * used to compress http content for br content encoding
-     */
-    private final class BrEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public ChannelHandler createEncoder() {
-            return new CompressionHandler(BrotliCompressor.newFactory(brotliOptions.parameters()));
-        }
-    }
-
-    /**
-     * Compression Encoder Factory for create {@link ZstdCompressor}
-     * used to compress http content for zstd content encoding
-     */
-    private final class ZstdEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public ChannelHandler createEncoder() {
-            return new CompressionHandler(ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
-        }
     }
 }

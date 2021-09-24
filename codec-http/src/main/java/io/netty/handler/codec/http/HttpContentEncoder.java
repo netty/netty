@@ -18,11 +18,13 @@ package io.netty.handler.codec.http;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.codec.compression.Compressor;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -67,7 +69,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private static final int CONTINUE_CODE = HttpResponseStatus.CONTINUE.code();
 
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<>();
-    private EmbeddedChannel encoder;
+    private Compressor compressor;
     private State state = State.AWAIT_HEADERS;
 
     @Override
@@ -109,7 +111,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         switch (state) {
             case AWAIT_HEADERS: {
                 ensureHeaders(msg);
-                assert encoder == null;
+                assert compressor == null;
 
                 final HttpResponse res = (HttpResponse) msg;
                 final int code = res.status().code();
@@ -173,7 +175,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     break;
                 }
 
-                encoder = result.contentEncoder();
+                compressor = result.contentCompressor();
 
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
@@ -187,7 +189,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     out.add(newRes);
 
                     ensureContent(res);
-                    encodeFullResponse(newRes, (HttpContent) res, out);
+                    encodeFullResponse(newRes, ctx.alloc(), (HttpContent) res, out);
                     break;
                 } else {
                     // Make the response chunked to simplify content transformation.
@@ -206,7 +208,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case AWAIT_CONTENT: {
                 ensureContent(msg);
-                if (encodeContent((HttpContent) msg, out)) {
+                if (encodeContent((HttpContent) msg, ctx.alloc(), out)) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
@@ -223,9 +225,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encodeFullResponse(HttpResponse newRes, HttpContent content, List<Object> out) {
+    private void encodeFullResponse(HttpResponse newRes, ByteBufAllocator allocator,
+                                    HttpContent content, List<Object> out) {
         int existingMessages = out.size();
-        encodeContent(content, out);
+        encodeContent(content, allocator, out);
 
         if (HttpUtil.isContentLengthSet(newRes)) {
             // adjust the content-length header
@@ -264,13 +267,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private boolean encodeContent(HttpContent c, List<Object> out) {
+    private boolean encodeContent(HttpContent c, ByteBufAllocator allocator, List<Object> out) {
         ByteBuf content = c.content();
 
-        encode(content, out);
+        encode(content, allocator, out);
 
         if (c instanceof LastHttpContent) {
-            finishEncode(out);
+            finishEncode(allocator, out);
             LastHttpContent last = (LastHttpContent) c;
 
             // Generate an additional chunk if the decoder produced
@@ -315,10 +318,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     private void cleanup() {
-        if (encoder != null) {
+        if (compressor != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            encoder.finishAndReleaseAll();
-            encoder = null;
+            compressor.close();
         }
     }
 
@@ -332,51 +334,43 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(ByteBuf in, List<Object> out) {
-        // call retain here as it will call release after its written to the channel
-        encoder.writeOutbound(in.retain());
-        fetchEncoderOutput(out);
+    private void encode(ByteBuf in, ByteBufAllocator allocator, List<Object> out) {
+        ByteBuf compressed = compressor.compress(in, allocator);
+        if (!compressed.isReadable()) {
+            compressed.release();
+            return;
+        }
+        out.add(new DefaultHttpContent(compressed));
     }
 
-    private void finishEncode(List<Object> out) {
-        if (encoder.finish()) {
-            fetchEncoderOutput(out);
+    private void finishEncode(ByteBufAllocator allocator, List<Object> out) {
+        ByteBuf trailer = compressor.finish(allocator);
+        if (!trailer.isReadable()) {
+            trailer.release();
+            return;
         }
-        encoder = null;
-    }
-
-    private void fetchEncoderOutput(List<Object> out) {
-        for (;;) {
-            ByteBuf buf = encoder.readOutbound();
-            if (buf == null) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            out.add(new DefaultHttpContent(buf));
-        }
+        out.add(new DefaultHttpContent(trailer));
+        compressor = null;
     }
 
     public static final class Result {
         private final String targetContentEncoding;
-        private final EmbeddedChannel contentEncoder;
+        private final Compressor contentCompressor;
 
-        public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
+        public Result(String targetContentEncoding, Compressor contentCompressor) {
             requireNonNull(targetContentEncoding, "targetContentEncoding");
-            requireNonNull(contentEncoder, "contentEncoder");
+            requireNonNull(contentCompressor, "contentCompressor");
 
             this.targetContentEncoding = targetContentEncoding;
-            this.contentEncoder = contentEncoder;
+            this.contentCompressor = contentCompressor;
         }
 
         public String targetContentEncoding() {
             return targetContentEncoding;
         }
 
-        public EmbeddedChannel contentEncoder() {
-            return contentEncoder;
+        public Compressor contentCompressor() {
+            return contentCompressor;
         }
     }
 }

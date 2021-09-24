@@ -17,16 +17,16 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.compression.Decompressor;
 import io.netty.util.ReferenceCountUtil;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
- * {@link EmbeddedChannel}, which is created by {@link #newContentDecoder(String)}.
+ * {@link Decompressor}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
  * header is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
@@ -47,7 +47,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     static final String IDENTITY = HttpHeaderValues.IDENTITY.toString();
 
     protected ChannelHandlerContext ctx;
-    private EmbeddedChannel decoder;
+    private Decompressor decompressor;
     private boolean continueResponse;
     private boolean needRead = true;
 
@@ -94,9 +94,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     contentEncoding = IDENTITY;
                 }
             }
-            decoder = newContentDecoder(contentEncoding);
+            decompressor = newContentDecoder(contentEncoding);
 
-            if (decoder == null) {
+            if (decompressor == null) {
                 if (message instanceof HttpContent) {
                     ((HttpContent) message).retain();
                 }
@@ -151,7 +151,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
         if (msg instanceof HttpContent) {
             final HttpContent c = (HttpContent) msg;
-            if (decoder == null) {
+            if (decompressor == null) {
                 fireChannelRead(ctx, c.retain());
             } else {
                 decodeContent(ctx, c);
@@ -162,10 +162,25 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private void decodeContent(ChannelHandlerContext ctx, HttpContent c) {
         ByteBuf content = c.content();
 
-        decode(ctx, content);
+        assert decompressor != null;
+
+        while (!decompressor.isFinished()) {
+            int idx = content.readerIndex();
+            ByteBuf decompressed = decompressor.decompress(content, ctx.alloc());
+            if (decompressed != null) {
+                if (!decompressed.isReadable()) {
+                    decompressed.release();
+                    return;
+                }
+                ctx.fireChannelRead(new DefaultHttpContent(decompressed));
+            } else if (idx == content.readerIndex()) {
+                break;
+            }
+        }
 
         if (c instanceof LastHttpContent) {
-            finishDecode(ctx);
+            decompressor.close();
+            decompressor = null;
 
             LastHttpContent last = (LastHttpContent) c;
             // Generate an additional chunk if the decoder produced
@@ -194,15 +209,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     /**
-     * Returns a new {@link EmbeddedChannel} that decodes the HTTP message
+     * Returns a new {@link Decompressor} that decodes the HTTP message
      * content encoded in the specified <tt>contentEncoding</tt>.
      *
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
-     * @return a new {@link EmbeddedChannel} if the specified encoding is supported.
+     * @return a new {@link Decompressor} if the specified encoding is supported.
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract Decompressor newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.
@@ -236,10 +251,10 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     private void cleanup() {
-        if (decoder != null) {
-            // Clean-up the previous decoder if not cleaned up correctly.
-            decoder.finishAndReleaseAll();
-            decoder = null;
+        if (decompressor != null) {
+            // Clean-up the previous decompressor if not cleaned up correctly.
+            decompressor.close();
+            decompressor = null;
         }
     }
 
@@ -250,33 +265,6 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // If cleanup throws any error we need to propagate it through the pipeline
             // so we don't fail to propagate pipeline events.
             ctx.fireExceptionCaught(cause);
-        }
-    }
-
-    private void decode(ChannelHandlerContext ctx, ByteBuf in) {
-        // call retain here as it will call release after its written to the channel
-        decoder.writeInbound(in.retain());
-        fetchDecoderOutput(ctx);
-    }
-
-    private void finishDecode(ChannelHandlerContext ctx) {
-        if (decoder.finish()) {
-            fetchDecoderOutput(ctx);
-        }
-        decoder = null;
-    }
-
-    private void fetchDecoderOutput(ChannelHandlerContext ctx) {
-        for (;;) {
-            ByteBuf buf = decoder.readInbound();
-            if (buf == null) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            ctx.fireChannelRead(new DefaultHttpContent(buf));
         }
     }
 
