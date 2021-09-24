@@ -25,8 +25,8 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -40,7 +40,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
     private static final ByteBuf CONNECTION_PREFACE = unreleasableBuffer(connectionPrefaceBuf()).asReadOnly();
 
     private final HttpServerCodec httpServerCodec;
-    private final HttpServerUpgradeHandler httpServerUpgradeHandler;
+    private final HttpServerUpgradeHandler<?> httpServerUpgradeHandler;
     private final ChannelHandler http2ServerHandler;
 
     /**
@@ -53,7 +53,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
      *                           when starting HTTP/2 by prior knowledge
      */
     public CleartextHttp2ServerUpgradeHandler(HttpServerCodec httpServerCodec,
-                                              HttpServerUpgradeHandler httpServerUpgradeHandler,
+                                              HttpServerUpgradeHandler<?> httpServerUpgradeHandler,
                                               ChannelHandler http2ServerHandler) {
         this.httpServerCodec = requireNonNull(httpServerCodec, "httpServerCodec");
         this.httpServerUpgradeHandler = requireNonNull(httpServerUpgradeHandler, "httpServerUpgradeHandler");
@@ -64,7 +64,8 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
     public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
         ctx.pipeline()
                 .addAfter(ctx.name(), null, httpServerUpgradeHandler)
-                .addAfter(ctx.name(), null, httpServerCodec);
+                .addAfter(ctx.name(), null, httpServerCodec)
+                .addAfter(ctx.name(), null, BYTEBUF_TO_BUFFER_HANDLER);
     }
 
     /**

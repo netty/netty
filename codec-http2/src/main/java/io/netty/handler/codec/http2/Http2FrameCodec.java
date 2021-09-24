@@ -253,9 +253,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
             ctx.executor().execute(() -> ctx.fireUserEventTriggered(evt));
         } else if (evt instanceof UpgradeEvent) {
-            UpgradeEvent upgrade = (UpgradeEvent) evt;
-            try {
-                onUpgradeEvent(ctx, upgrade.retain());
+            try (UpgradeEvent upgrade = (UpgradeEvent) evt) {
+                ctx.fireUserEventTriggered(evt);
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
@@ -267,9 +266,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), HTTP_UPGRADE_STREAM_ID);
                 stream.setProperty(upgradeKey, true);
                 InboundHttpToHttp2Adapter.handle(
-                        ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest().retain());
-            } finally {
-                upgrade.release();
+                        ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest());
             }
         } else {
             ctx.fireUserEventTriggered(evt);
@@ -676,10 +673,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             }
             return stream;
         }
-    }
-
-    private void onUpgradeEvent(ChannelHandlerContext ctx, UpgradeEvent evt) {
-        ctx.fireUserEventTriggered(evt);
     }
 
     private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,

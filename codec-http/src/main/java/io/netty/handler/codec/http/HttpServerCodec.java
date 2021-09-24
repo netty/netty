@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
@@ -111,7 +111,7 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         }
 
         @Override
-        protected void decode(final ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        protected void decode(final ChannelHandlerContext ctx, Buffer buffer) throws Exception {
             super.decode(context, buffer);
         }
 

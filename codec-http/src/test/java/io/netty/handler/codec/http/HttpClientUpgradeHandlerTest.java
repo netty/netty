@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.api.Send;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -54,7 +55,8 @@ public class HttpClientUpgradeHandlerTest {
         }
 
         @Override
-        public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception {
+        public void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse) throws Exception {
+            upgradeResponse.close();
         }
     }
 
@@ -75,19 +77,21 @@ public class HttpClientUpgradeHandlerTest {
     public void testSuccessfulUpgrade() {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
-        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        HttpClientUpgradeHandler<?> handler = new HttpClientUpgradeHandler<DefaultHttpContent>(sourceCodec,
+                upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         channel.pipeline().addFirst("upgrade", handler);
 
         assertTrue(
-            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
+            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                    channel.bufferAllocator().allocate(0))));
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
         assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
         assertTrue(request.headers().contains("connection", "upgrade", false));
-        assertTrue(request.release());
+        request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
         HttpResponse upgradeResponse =
@@ -95,15 +99,16 @@ public class HttpClientUpgradeHandlerTest {
 
         upgradeResponse.headers().add(HttpHeaderNames.UPGRADE, "fancyhttp");
         assertFalse(channel.writeInbound(upgradeResponse));
-        assertFalse(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertFalse(channel.writeInbound(new EmptyLastHttpContent(channel.bufferAllocator())));
 
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL, catcher.getUserEvent());
         assertNull(channel.pipeline().get("upgrade"));
 
-        assertTrue(channel.writeInbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
+        assertTrue(channel.writeInbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                channel.bufferAllocator().allocate(0))));
         FullHttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
-        assertTrue(response.release());
+        response.close();
         assertFalse(channel.finish());
     }
 
@@ -111,26 +116,28 @@ public class HttpClientUpgradeHandlerTest {
     public void testUpgradeRejected() {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
-        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        HttpClientUpgradeHandler<?> handler =
+                new HttpClientUpgradeHandler<DefaultHttpContent>(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         channel.pipeline().addFirst("upgrade", handler);
 
         assertTrue(
-            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
+            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                    channel.bufferAllocator().allocate(0))));
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
         assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
         assertTrue(request.headers().contains("connection", "upgrade", false));
-        assertTrue(request.release());
+        request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
         HttpResponse upgradeResponse =
             new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
         upgradeResponse.headers().add(HttpHeaderNames.UPGRADE, "fancyhttp");
         assertTrue(channel.writeInbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
-        assertTrue(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.writeInbound(new EmptyLastHttpContent(channel.bufferAllocator())));
 
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED, catcher.getUserEvent());
         assertNull(channel.pipeline().get("upgrade"));
@@ -138,9 +145,9 @@ public class HttpClientUpgradeHandlerTest {
         HttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
 
-        LastHttpContent last = channel.readInbound();
-        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, last);
-        assertFalse(last.release());
+        LastHttpContent<?> last = channel.readInbound();
+        assertEquals(new EmptyLastHttpContent(channel.bufferAllocator()), last);
+        last.close();
         assertFalse(channel.finish());
     }
 
@@ -148,19 +155,21 @@ public class HttpClientUpgradeHandlerTest {
     public void testEarlyBailout() {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
-        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        HttpClientUpgradeHandler<?> handler =
+                new HttpClientUpgradeHandler<DefaultHttpContent>(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         channel.pipeline().addFirst("upgrade", handler);
 
         assertTrue(
-            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
+            channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                    channel.bufferAllocator().allocate(0))));
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
         assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
         assertTrue(request.headers().contains("connection", "upgrade", false));
-        assertTrue(request.release());
+        request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
         HttpResponse upgradeResponse =
@@ -180,12 +189,14 @@ public class HttpClientUpgradeHandlerTest {
     public void dontStripConnectionHeaders() {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
-        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        HttpClientUpgradeHandler<?> handler =
+                new HttpClientUpgradeHandler<DefaultHttpContent>(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         channel.pipeline().addFirst("upgrade", handler);
 
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                channel.bufferAllocator().allocate(0));
         request.headers().add("connection", "extra");
         request.headers().add("extra", "value");
         assertTrue(channel.writeOutbound(request));
@@ -193,7 +204,7 @@ public class HttpClientUpgradeHandlerTest {
 
         List<String> connectionHeaders = readRequest.headers().getAll("connection");
         assertTrue(connectionHeaders.contains("extra"));
-        assertTrue(readRequest.release());
+        readRequest.close();
         assertFalse(channel.finish());
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -127,8 +128,9 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS, validateHeaders);
+    protected HttpMessage createInvalidMessage(ChannelHandlerContext ctx) {
+        return new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS, ctx.bufferAllocator().allocate(0),
+                validateHeaders);
     }
 
     @Override

@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
@@ -31,23 +32,24 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.internal.PlatformDependent.throwException;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract Disk HttpData implementation
  */
-public abstract class AbstractDiskHttpData extends AbstractHttpData {
+public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> extends AbstractHttpData<R> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractDiskHttpData.class);
+    private final BufferAllocator allocator;
 
     private File file;
     private boolean isRenamed;
     private FileChannel fileChannel;
 
-    protected AbstractDiskHttpData(String name, Charset charset, long size) {
+    protected AbstractDiskHttpData(BufferAllocator allocator, String name, Charset charset, long size) {
         super(name, charset, size);
+        this.allocator = requireNonNull(allocator, "allocator");
     }
 
     /**
@@ -103,9 +105,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     }
 
     @Override
-    public void setContent(ByteBuf buffer) throws IOException {
+    public void setContent(Buffer buffer) throws IOException {
         requireNonNull(buffer, "buffer");
-        try {
+        try (buffer) {
             size = buffer.readableBytes();
             checkSize(size);
             if (definedSize > 0 && definedSize < size) {
@@ -127,31 +129,32 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 }
                 return;
             }
+            // Release the buffer as it was retained before and we not need a reference to it at all
+            // See https://github.com/netty/netty/issues/1516
             try (RandomAccessFile accessFile = new RandomAccessFile(file, "rw")) {
                 accessFile.setLength(0);
                 FileChannel localfileChannel = accessFile.getChannel();
-                ByteBuffer byteBuffer = buffer.nioBuffer();
-                int written = 0;
-                while (written < size) {
-                    written += localfileChannel.write(byteBuffer);
-                }
-                buffer.readerIndex(buffer.readerIndex() + written);
+                buffer.forEachReadable(0, (componentIdx, component) -> {
+                    final ByteBuffer buf = component.readableBuffer();
+                    while (buf.hasRemaining()) {
+                        buffer.skipReadable(localfileChannel.write(buf));
+                    }
+                    return true;
+                });
                 localfileChannel.force(false);
             }
             setCompleted();
-        } finally {
-            // Release the buffer as it was retained before and we not need a reference to it at all
-            // See https://github.com/netty/netty/issues/1516
-            buffer.release();
         }
     }
 
     @Override
-    public void addContent(ByteBuf buffer, boolean last)
+    public void addContent(Buffer buffer, boolean last)
             throws IOException {
         if (buffer != null) {
-            try {
-                int localsize = buffer.readableBytes();
+            // Release the buffer as it was retained before and we not need a reference to it at all
+            // See https://github.com/netty/netty/issues/1516
+            try (buffer) {
+                final int localsize = buffer.readableBytes();
                 checkSize(size + localsize);
                 if (definedSize > 0 && definedSize < size + localsize) {
                     throw new IOException("Out of size: " + (size + localsize) +
@@ -164,25 +167,18 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                     fileChannel = accessFile.getChannel();
                 }
-                int remaining = localsize;
-                long position = fileChannel.position();
-                int index = buffer.readerIndex();
-                while (remaining > 0) {
-                    int written = buffer.getBytes(index, fileChannel, position, remaining);
-                    if (written < 0) {
-                        break;
+                buffer.forEachReadable(0, (componentIdx, component) -> {
+                    final long position = fileChannel.position();
+                    final ByteBuffer buf = component.readableBuffer();
+                    int written = 0;
+                    while (buf.hasRemaining()) {
+                        written += fileChannel.write(buf);
                     }
-                    remaining -= written;
-                    position += written;
-                    index += written;
-                }
-                fileChannel.position(position);
-                buffer.readerIndex(index);
-                size += localsize - remaining;
-            } finally {
-                // Release the buffer as it was retained before and we not need a reference to it at all
-                // See https://github.com/netty/netty/issues/1516
-                buffer.release();
+                    buffer.skipReadable(written);
+                    fileChannel.position(position + written);
+                    size -= written;
+                    return true;
+                });
             }
         }
         if (last) {
@@ -296,18 +292,19 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     }
 
     @Override
-    public ByteBuf getByteBuf() throws IOException {
+    public Buffer getBuffer() throws IOException {
         if (file == null) {
-            return EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
         byte[] array = readFrom(file);
-        return wrappedBuffer(array);
+        // TODO: This may be optimized to reduce memory copies
+        return allocator.allocate(array.length).writeBytes(array);
     }
 
     @Override
-    public ByteBuf getChunk(int length) throws IOException {
+    public Buffer getChunk(int length) throws IOException {
         if (file == null || length == 0) {
-            return EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
         if (fileChannel == null) {
             RandomAccessFile accessFile = new RandomAccessFile(file, "r");
@@ -331,12 +328,13 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             throw e;
         }
         if (read == 0) {
-            return EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
         byteBuffer.flip();
-        ByteBuf buffer = wrappedBuffer(byteBuffer);
-        buffer.readerIndex(0);
-        buffer.writerIndex(read);
+        final Buffer buffer = allocator.allocate(byteBuffer.remaining());
+        while (byteBuffer.hasRemaining()) {
+            buffer.writeByte(byteBuffer.get());
+        }
         return buffer;
     }
 
@@ -450,12 +448,20 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     }
 
     @Override
-    public HttpData touch() {
-        return this;
+    public void close() {
+        try {
+            fileChannel.close();
+        } catch (IOException e) {
+            throwException(e);
+        }
     }
 
     @Override
-    public HttpData touch(Object hint) {
-        return this;
+    public boolean isAccessible() {
+        return fileChannel.isOpen();
+    }
+
+    protected BufferAllocator allocator() {
+        return allocator;
     }
 }

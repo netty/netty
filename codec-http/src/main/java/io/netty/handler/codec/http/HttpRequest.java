@@ -15,6 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+
 /**
  * An HTTP request.
  *
@@ -23,25 +29,16 @@ package io.netty.handler.codec.http;
  * Unlike the Servlet API, a query string is constructed and decomposed by
  * {@link QueryStringEncoder} and {@link QueryStringDecoder}.
  *
- * {@link io.netty.handler.codec.http.cookie.Cookie} support is also provided
- * separately via {@link io.netty.handler.codec.http.cookie.ServerCookieDecoder},
- * {@link io.netty.handler.codec.http.cookie.ClientCookieDecoder},
- * {@link io.netty.handler.codec.http.cookie.ServerCookieEncoder},
- * and {@link io.netty.handler.codec.http.cookie.ClientCookieEncoder}.
+ * {@link Cookie} support is also provided separately via {@link ServerCookieDecoder}, {@link ClientCookieDecoder},
+ * {@link ServerCookieEncoder}, and {@link ClientCookieEncoder}.
  *
  * @see HttpResponse
- * @see io.netty.handler.codec.http.cookie.ServerCookieDecoder
- * @see io.netty.handler.codec.http.cookie.ClientCookieDecoder
- * @see io.netty.handler.codec.http.cookie.ServerCookieEncoder
- * @see io.netty.handler.codec.http.cookie.ClientCookieEncoder
+ * @see ServerCookieDecoder
+ * @see ClientCookieDecoder
+ * @see ServerCookieEncoder
+ * @see ClientCookieEncoder
  */
 public interface HttpRequest extends HttpMessage {
-
-    /**
-     * @deprecated Use {@link #method()} instead.
-     */
-    @Deprecated
-    HttpMethod getMethod();
 
     /**
      * Returns the {@link HttpMethod} of this {@link HttpRequest}.
@@ -54,12 +51,6 @@ public interface HttpRequest extends HttpMessage {
      * Set the {@link HttpMethod} of this {@link HttpRequest}.
      */
     HttpRequest setMethod(HttpMethod method);
-
-    /**
-     * @deprecated Use {@link #uri()} instead.
-     */
-    @Deprecated
-    String getUri();
 
     /**
      * Returns the requested URI (or alternatively, path)

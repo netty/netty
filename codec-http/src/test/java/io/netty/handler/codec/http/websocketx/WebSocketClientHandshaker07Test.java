@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class WebSocketClientHandshaker07Test extends WebSocketClientHandshakerTest {
@@ -33,12 +34,9 @@ public class WebSocketClientHandshaker07Test extends WebSocketClientHandshakerTe
         WebSocketClientHandshaker handshaker = newHandshaker(uri, null,
                 new DefaultHttpHeaders().set(HttpHeaderNames.HOST, "test.netty.io"), false);
 
-        FullHttpRequest request = handshaker.newHandshakeRequest();
-        try {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
             assertEquals("/", request.uri());
             assertEquals("test.netty.io", request.headers().get(HttpHeaderNames.HOST));
-        } finally {
-            request.release();
         }
     }
 

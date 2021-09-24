@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
@@ -35,9 +34,10 @@ public class HttpInvalidMessageTest {
     private final Random rnd = new Random();
 
     @Test
-    public void testRequestWithBadInitialLine() throws Exception {
+    public void testRequestWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         HttpRequest req = ch.readInbound();
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
@@ -46,12 +46,16 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testRequestWithBadHeader() throws Exception {
+    public void testRequestWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("GET /maybe-something HTTP/1.0\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("GET /maybe-something HTTP/1.0\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("\r\n", CharsetUtil.UTF_8));
         HttpRequest req = ch.readInbound();
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
@@ -62,9 +66,10 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testResponseWithBadInitialLine() throws Exception {
+    public void testResponseWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
         HttpResponse res = ch.readInbound();
         DecoderResult dr = res.decoderResult();
         assertFalse(dr.isSuccess());
@@ -73,12 +78,16 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testResponseWithBadHeader() throws Exception {
+    public void testResponseWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 200 Maybe OK\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("HTTP/1.0 200 Maybe OK\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("\r\n", CharsetUtil.UTF_8));
         HttpResponse res = ch.readInbound();
         DecoderResult dr = res.decoderResult();
         assertFalse(dr.isSuccess());
@@ -89,16 +98,19 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testBadChunk() throws Exception {
+    public void testBadChunk() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.UTF_8));
-        ch.writeInbound(Unpooled.copiedBuffer("BAD_LENGTH\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("GET / HTTP/1.0\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().allocate(32)
+                .writeCharSequence("BAD_LENGTH\r\n", CharsetUtil.UTF_8));
 
         HttpRequest req = ch.readInbound();
         assertTrue(req.decoderResult().isSuccess());
 
-        LastHttpContent chunk = ch.readInbound();
+        LastHttpContent<?> chunk = ch.readInbound();
         DecoderResult dr = chunk.decoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
@@ -110,13 +122,15 @@ public class HttpInvalidMessageTest {
         byte[] data = new byte[1048576];
         rnd.nextBytes(data);
 
-        ByteBuf buf = Unpooled.wrappedBuffer(data);
-        for (int i = 0; i < 4096; i ++) {
-            buf.setIndex(0, data.length);
-            ch.writeInbound(buf.retain());
-            ch.checkException();
-            assertNull(ch.readInbound());
+        try (Buffer buf = ch.bufferAllocator().allocate(data.length).writeBytes(data)) {
+            buf.readerOffset(0);
+            buf.writerOffset(0);
+            for (int i = 0; i < 4096; i++) {
+                buf.writerOffset(data.length);
+                ch.writeInbound(buf.copy());
+                ch.checkException();
+                assertNull(ch.readInbound());
+            }
         }
-        buf.release();
     }
 }

@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -43,7 +43,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private ByteBuf expectedChallengeResponseBytes;
+    private Buffer expectedChallengeResponseBytes;
 
     /**
      * Creates a new instance with the specified destination WebSocket location and version to initiate.
@@ -135,7 +135,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *
      */
     @Override
-    protected FullHttpRequest newHandshakeRequest() {
+    protected FullHttpRequest newHandshakeRequest(BufferAllocator allocator) {
         // Make keys
         int spaces1 = ThreadLocalRandom.current().nextInt(1, 13);
         int spaces2 = ThreadLocalRandom.current().nextInt(1, 13);
@@ -171,13 +171,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         System.arraycopy(number1Array, 0, challenge, 0, 4);
         System.arraycopy(number2Array, 0, challenge, 4, 4);
         System.arraycopy(key3, 0, challenge, 8, 8);
-        expectedChallengeResponseBytes = Unpooled.wrappedBuffer(WebSocketUtil.md5(challenge));
+        final byte[] challengeData = WebSocketUtil.md5(challenge);
+        expectedChallengeResponseBytes = allocator.allocate(challengeData.length).writeBytes(challengeData);
 
         URI wsURL = uri();
 
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
-                Unpooled.wrappedBuffer(key3));
+                allocator.allocate(key3.length).writeBytes(key3));
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
@@ -243,7 +244,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
-        ByteBuf challenge = response.content();
+        Buffer challenge = response.payload();
         if (!challenge.equals(expectedChallengeResponseBytes)) {
             throw new WebSocketClientHandshakeException("Invalid challenge", response);
         }

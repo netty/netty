@@ -17,8 +17,11 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import static io.netty.util.ByteProcessor.FIND_ASCII_SPACE;
@@ -634,9 +637,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             .toString();
     }
 
-    void encode(ByteBuf buf) {
+    void encode(Buffer buf) {
         if (bytes == null) {
-            ByteBufUtil.copy(codeAsText, buf);
+            buf.writeCharSequence(codeAsText, CharsetUtil.US_ASCII);
             buf.writeByte(SP);
             buf.writeCharSequence(reasonPhrase, CharsetUtil.US_ASCII);
         } else {

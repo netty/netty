@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static java.util.Objects.requireNonNull;
-
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
@@ -27,6 +26,8 @@ import io.netty.util.internal.StringUtil;
 
 import java.nio.charset.Charset;
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -39,60 +40,52 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     static final int DEFAULT_DISCARD_THRESHOLD = 10 * 1024 * 1024;
 
     private final InterfaceHttpPostRequestDecoder decoder;
+    private final BufferAllocator allocator;
 
     /**
      *
-     * @param request
-     *            the request to decode
-     * @throws NullPointerException
-     *             for request
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
+     * @param allocator to allocate new buffers.
+     * @param request the request to decode
+     * @throws NullPointerException for request
+     * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
-    public HttpPostRequestDecoder(HttpRequest request) {
-        this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
+    public HttpPostRequestDecoder(BufferAllocator allocator, HttpRequest request) {
+        this(allocator, new DefaultHttpDataFactory(allocator, DefaultHttpDataFactory.MINSIZE), request,
+                HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
      *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @throws NullPointerException
-     *             for request or factory
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
+     * @param allocator to allocate new buffers.
+     * @param factory the factory used to create InterfaceHttpData
+     * @param request the request to decode
+     * @throws NullPointerException for request or factory
+     * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) {
-        this(factory, request, HttpConstants.DEFAULT_CHARSET);
+    public HttpPostRequestDecoder(BufferAllocator allocator, HttpDataFactory factory, HttpRequest request) {
+        this(allocator, factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
      *
-     * @param factory
-     *            the factory used to create InterfaceHttpData
-     * @param request
-     *            the request to decode
-     * @param charset
-     *            the charset to use as default
-     * @throws NullPointerException
-     *             for request or charset or factory
-     * @throws ErrorDataDecoderException
-     *             if the default charset was wrong when decoding or other
-     *             errors
+     * @param allocator to allocate new buffers.
+     * @param factory the factory used to create InterfaceHttpData
+     * @param request the request to decode
+     * @param charset the charset to use as default
+     * @throws NullPointerException for request or charset or factory
+     * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
+    public HttpPostRequestDecoder(BufferAllocator allocator, HttpDataFactory factory, HttpRequest request,
+                                  Charset charset) {
+        this.allocator = requireNonNull(allocator, "allocator");
         requireNonNull(factory, "factory");
         requireNonNull(request, "request");
         requireNonNull(charset, "charset");
         // Fill default values
         if (isMultipart(request)) {
-            decoder = new HttpPostMultipartRequestDecoder(factory, request, charset);
+            decoder = new HttpPostMultipartRequestDecoder(allocator, factory, request, charset);
         } else {
-            decoder = new HttpPostStandardRequestDecoder(factory, request, charset);
+            decoder = new HttpPostStandardRequestDecoder(allocator, factory, request, charset);
         }
     }
 
@@ -204,22 +197,22 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     }
 
     @Override
-    public List<InterfaceHttpData> getBodyHttpDatas() {
+    public List<InterfaceHttpData<?>> getBodyHttpDatas() {
         return decoder.getBodyHttpDatas();
     }
 
     @Override
-    public List<InterfaceHttpData> getBodyHttpDatas(String name) {
+    public List<InterfaceHttpData<?>> getBodyHttpDatas(String name) {
         return decoder.getBodyHttpDatas(name);
     }
 
     @Override
-    public InterfaceHttpData getBodyHttpData(String name) {
+    public InterfaceHttpData<?> getBodyHttpData(String name) {
         return decoder.getBodyHttpData(name);
     }
 
     @Override
-    public InterfaceHttpPostRequestDecoder offer(HttpContent content) {
+    public InterfaceHttpPostRequestDecoder offer(HttpContent<?> content) {
         return decoder.offer(content);
     }
 
@@ -229,12 +222,12 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     }
 
     @Override
-    public InterfaceHttpData next() {
+    public InterfaceHttpData<?> next() {
         return decoder.next();
     }
 
     @Override
-    public InterfaceHttpData currentPartialHttpData() {
+    public InterfaceHttpData<?> currentPartialHttpData() {
         return decoder.currentPartialHttpData();
     }
 
@@ -249,7 +242,7 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
     }
 
     @Override
-    public void removeHttpDataFromClean(InterfaceHttpData data) {
+    public void removeHttpDataFromClean(InterfaceHttpData<?> data) {
         decoder.removeHttpDataFromClean(data);
     }
 

@@ -14,13 +14,13 @@
  */
 package io.netty.example.http2.helloworld.client;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -123,7 +123,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     private void configureClearText(SocketChannel ch) {
         HttpClientCodec sourceCodec = new HttpClientCodec();
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
-        HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
+        HttpClientUpgradeHandler<?> upgradeHandler =
+                new HttpClientUpgradeHandler<DefaultHttpContent>(sourceCodec, upgradeCodec, 65536);
 
         ch.pipeline().addLast(sourceCodec,
                               upgradeHandler,
@@ -139,7 +140,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             DefaultFullHttpRequest upgradeRequest =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                            ctx.bufferAllocator().allocate(0));
 
             // Set HOST header as the remote peer may require it.
             InetSocketAddress remote = (InetSocketAddress) ctx.channel().remoteAddress();

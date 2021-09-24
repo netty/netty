@@ -16,9 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 
 /**
  * Encodes an {@link HttpResponse} or an {@link HttpContent} into
@@ -32,11 +32,11 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
+    protected void encodeInitialLine(Buffer buf, HttpResponse response) throws Exception {
         response.protocolVersion().encode(buf);
         buf.writeByte(SP);
         response.status().encode(buf);
-        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+        buf.writeShort(CRLF_SHORT);
     }
 
     @Override

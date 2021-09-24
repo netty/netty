@@ -15,10 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBufConvertible;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -28,15 +26,14 @@ import io.netty.util.internal.StringUtil;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 
-import static io.netty.buffer.Unpooled.directBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpContent} into
- * a {@link ByteBuf}.
+ * a {@link Buffer}.
  *
  * <h3>Extensibility</h3>
  *
@@ -48,13 +45,10 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
-    static final int CRLF_SHORT = (CR << 8) | LF;
+    static final short CRLF_SHORT = (CR << 8) | LF;
     private static final int ZERO_CRLF_MEDIUM = ('0' << 16) | CRLF_SHORT;
+    private static final byte[] CRLF = {CR, LF};
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(
-            directBuffer(2).writeByte(CR).writeByte(LF)).asReadOnly();
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(
-            directBuffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF)).asReadOnly();
     private static final float HEADERS_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_WEIGHT_HISTORICAL = 1 - HEADERS_WEIGHT_NEW;
     private static final float TRAILERS_WEIGHT_NEW = HEADERS_WEIGHT_NEW;
@@ -64,6 +58,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final int ST_CONTENT_NON_CHUNK = 1;
     private static final int ST_CONTENT_CHUNK = 2;
     private static final int ST_CONTENT_ALWAYS_EMPTY = 3;
+
+    private Supplier<Buffer> crlfBufferSupplier;
+    private Supplier<Buffer> zeroCrlfCrlfBufferSupplier;
 
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = ST_INIT;
@@ -82,7 +79,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-        ByteBuf buf = null;
+        Buffer buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
@@ -92,7 +89,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             H m = (H) msg;
 
-            buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
+            buf = ctx.bufferAllocator().allocate((int) headersEncodedSizeAccumulator);
             // Encode the message.
             encodeInitialLine(buf, m);
             state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
@@ -101,7 +98,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
             encodeHeaders(m.headers(), buf);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
 
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                             HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
@@ -109,18 +106,15 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:
         //
-        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ch, ChannelFutureListeners.CLOSE);
+        //     ch.write(ctx.bufferAllocator().allocate(0)).addListener(ch, ChannelFutureListeners.CLOSE);
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
-        if (msg instanceof ByteBufConvertible) {
-            final ByteBuf potentialEmptyBuf = ((ByteBufConvertible) msg).asByteBuf();
-            if (!potentialEmptyBuf.isReadable()) {
-                out.add(potentialEmptyBuf.retain());
-                return;
-            }
+        if (msg instanceof Buffer && ((Buffer) msg).readableBytes() == 0) {
+            out.add(((Buffer) msg).split());
+            return;
         }
 
-        if (msg instanceof HttpContent || msg instanceof ByteBufConvertible || msg instanceof FileRegion) {
+        if (msg instanceof HttpContent || msg instanceof Buffer || msg instanceof FileRegion) {
             switch (state) {
                 case ST_INIT:
                     throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
@@ -130,13 +124,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     if (contentLength > 0) {
                         if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
                             // merge into other buffer for performance reasons
-                            buf.writeBytes(((HttpContent) msg).content());
+                            buf.writeBytes(((HttpContent<?>) msg).payload());
                             out.add(buf);
                         } else {
                             if (buf != null) {
                                 out.add(buf);
                             }
-                            out.add(encodeAndRetain(msg));
+                            out.add(encode(msg));
                         }
 
                         if (msg instanceof LastHttpContent) {
@@ -153,14 +147,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                         // We allocated a buffer so add it now.
                         out.add(buf);
                     } else {
-                        // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown as we did not write anything
-                        // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
-                        // propagated as the caller of the encode(...) method will release the original
-                        // buffer.
-                        // Writing an empty buffer will not actually write anything on the wire, so if there is a user
-                        // error with msg it will not be visible externally
-                        out.add(Unpooled.EMPTY_BUFFER);
+                        // Need to produce some output otherwise an IllegalStateException will be thrown as we did not
+                        // write anything. Writing an empty buffer will not actually write anything on the wire, so if
+                        // there is a user error with msg it will not be visible externally
+                        out.add(ctx.bufferAllocator().allocate(0));
                     }
 
                     break;
@@ -185,9 +175,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     /**
-     * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
+     * Encode the {@link HttpHeaders} into a {@link Buffer}.
      */
-    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
+    protected void encodeHeaders(HttpHeaders headers, Buffer buf) {
         Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> header = iter.next();
@@ -198,23 +188,23 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
         if (contentLength > 0) {
             String lengthHex = Long.toHexString(contentLength);
-            ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
+            Buffer buf = ctx.bufferAllocator().allocate(lengthHex.length() + 2);
             buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
             out.add(buf);
-            out.add(encodeAndRetain(msg));
-            out.add(CRLF_BUF.duplicate());
+            out.add(encode(msg));
+            out.add(crlfBuffer(ctx.bufferAllocator()));
         }
 
         if (msg instanceof LastHttpContent) {
-            HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
+            HttpHeaders headers = ((LastHttpContent<?>) msg).trailingHeaders();
             if (headers.isEmpty()) {
-                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+                out.add(zeroCrlfCrlfBuffer(ctx.bufferAllocator()));
             } else {
-                ByteBuf buf = ctx.alloc().buffer((int) trailersEncodedSizeAccumulator);
-                ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM);
+                Buffer buf = ctx.bufferAllocator().allocate((int) trailersEncodedSizeAccumulator);
+                buf.writeMedium(ZERO_CRLF_MEDIUM);
                 encodeHeaders(headers, buf);
-                ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+                buf.writeShort(CRLF_SHORT);
                 trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                                  TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
                 out.add(buf);
@@ -222,7 +212,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
             // IllegalStateException will be thrown
-            out.add(encodeAndRetain(msg));
+            out.add(encode(msg));
         }
     }
 
@@ -246,15 +236,15 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof HttpObject || msg instanceof ByteBufConvertible || msg instanceof FileRegion;
+        return msg instanceof HttpObject || msg instanceof Buffer || msg instanceof FileRegion;
     }
 
-    private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof ByteBufConvertible) {
-            return ((ByteBufConvertible) msg).asByteBuf().retain();
+    private static Object encode(Object msg) {
+        if (msg instanceof Buffer) {
+            return msg;
         }
         if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().retain();
+            return ((HttpContent<?>) msg).payload();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).retain();
@@ -264,10 +254,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     private static long contentLength(Object msg) {
         if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().readableBytes();
+            return ((HttpContent<?>) msg).payload().readableBytes();
         }
-        if (msg instanceof ByteBufConvertible) {
-            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
+        if (msg instanceof Buffer) {
+            return ((Buffer) msg).readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();
@@ -285,10 +275,19 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         return (readableBytes << 2) / 3;
     }
 
-    @Deprecated
-    protected static void encodeAscii(String s, ByteBuf buf) {
-        buf.writeCharSequence(s, CharsetUtil.US_ASCII);
+    protected abstract void encodeInitialLine(Buffer buf, H message) throws Exception;
+
+    protected Buffer crlfBuffer(BufferAllocator allocator) {
+        if (crlfBufferSupplier == null) {
+            crlfBufferSupplier = allocator.constBufferSupplier(CRLF);
+        }
+        return crlfBufferSupplier.get();
     }
 
-    protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
+    protected Buffer zeroCrlfCrlfBuffer(BufferAllocator allocator) {
+        if (zeroCrlfCrlfBufferSupplier == null) {
+            zeroCrlfCrlfBufferSupplier = allocator.constBufferSupplier(ZERO_CRLF_CRLF);
+        }
+        return zeroCrlfCrlfBufferSupplier.get();
+    }
 }

@@ -15,11 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.*;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,13 +32,15 @@ public class HttpServerExpectContinueHandlerTest {
     public void shouldRespondToExpectedHeader() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpServerExpectContinueHandler() {
             @Override
-            protected HttpResponse acceptMessage(HttpRequest request) {
-                HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+            protected HttpResponse acceptMessage(BufferAllocator allocator, HttpRequest request) {
+                HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE,
+                        allocator.allocate(0));
                 response.headers().set("foo", "bar");
                 return response;
             }
         });
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         HttpUtil.set100ContinueExpected(request, true);
 
         channel.writeInbound(request);
@@ -57,19 +61,20 @@ public class HttpServerExpectContinueHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(
             new HttpServerExpectContinueHandler() {
                 @Override
-                protected HttpResponse acceptMessage(HttpRequest request) {
+                protected HttpResponse acceptMessage(BufferAllocator allocator, HttpRequest request) {
                     return null;
                 }
 
                 @Override
-                protected HttpResponse rejectResponse(HttpRequest request) {
+                protected HttpResponse rejectResponse(BufferAllocator allocator, HttpRequest request) {
                     return new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                            HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                            HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, allocator.allocate(0));
                 }
             }
         );
 
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         HttpUtil.set100ContinueExpected(request, true);
 
         channel.writeInbound(request);

@@ -16,8 +16,10 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 import io.netty.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
 
@@ -28,7 +30,7 @@ import static io.netty.handler.codec.http.HttpConstants.SP;
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
     private static final char QUESTION_MARK = '?';
-    private static final int SLASH_AND_SPACE_SHORT = (SLASH << 8) | SP;
+    private static final short SLASH_AND_SPACE_SHORT = (SLASH << 8) | SP;
     private static final int SPACE_SLASH_AND_SPACE_MEDIUM = (SP << 16) | SLASH_AND_SPACE_SHORT;
 
     @Override
@@ -37,15 +39,15 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
-        ByteBufUtil.copy(request.method().asciiName(), buf);
+    protected void encodeInitialLine(Buffer buf, HttpRequest request) throws Exception {
+        buf.writeCharSequence(request.method().asciiName(), StandardCharsets.US_ASCII);
 
         String uri = request.uri();
 
         if (uri.isEmpty()) {
             // Add " / " as absolute path if uri is not present.
             // See https://tools.ietf.org/html/rfc2616#section-5.1.2
-            ByteBufUtil.writeMediumBE(buf, SPACE_SLASH_AND_SPACE_MEDIUM);
+            buf.writeMedium(SPACE_SLASH_AND_SPACE_MEDIUM);
         } else {
             CharSequence uriCharSequence = uri;
             boolean needSlash = false;
@@ -68,13 +70,13 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
             buf.writeByte(SP).writeCharSequence(uriCharSequence, CharsetUtil.UTF_8);
             if (needSlash) {
                 // write "/ " after uri
-                ByteBufUtil.writeShortBE(buf, SLASH_AND_SPACE_SHORT);
+                buf.writeShort(SLASH_AND_SPACE_SHORT);
             } else {
                 buf.writeByte(SP);
             }
         }
 
         request.protocolVersion().encode(buf);
-        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+        buf.writeShort(CRLF_SHORT);
     }
 }

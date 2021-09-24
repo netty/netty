@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -31,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.Collections;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -75,7 +75,7 @@ public class HttpServerUpgradeHandlerTest {
             private boolean writeFlushed;
 
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 assertFalse(inReadCall);
                 assertFalse(writeUpgradeMessage);
 
@@ -106,43 +106,43 @@ public class HttpServerUpgradeHandlerTest {
             }
         };
 
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory);
 
         EmbeddedChannel channel = new EmbeddedChannel(testInStackFrame, httpServerCodec, upgradeHandler);
 
-        String upgradeString = "GET / HTTP/1.1\r\n" +
+        byte[] upgradeString = ("GET / HTTP/1.1\r\n" +
             "Host: example.com\r\n" +
             "Connection: Upgrade, HTTP2-Settings\r\n" +
             "Upgrade: nextprotocol\r\n" +
-            "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
-        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+            "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n").getBytes(US_ASCII);
+        Buffer upgrade = channel.bufferAllocator().allocate(upgradeString.length).writeBytes(upgradeString);
 
         assertFalse(channel.writeInbound(upgrade));
         assertNull(channel.pipeline().get(HttpServerCodec.class));
         assertNotNull(channel.pipeline().get("marker"));
 
         channel.flushOutbound();
-        ByteBuf upgradeMessage = channel.readOutbound();
-        String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
-            "connection: upgrade\r\n" +
-            "upgrade: nextprotocol\r\n\r\n";
-        assertEquals(expectedHttpResponse, upgradeMessage.toString(CharsetUtil.US_ASCII));
-        assertTrue(upgradeMessage.release());
+        try (Buffer upgradeMessage = channel.readOutbound()) {
+            String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
+                    "connection: upgrade\r\n" +
+                    "upgrade: nextprotocol\r\n\r\n";
+            assertEquals(expectedHttpResponse, upgradeMessage.toString(CharsetUtil.US_ASCII));
+            assertTrue(upgradeMessage.isAccessible());
+        }
         assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
     public void skippedUpgrade() {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
-        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                fail("Should never be invoked");
-                return null;
-            }
+        final UpgradeCodecFactory factory = protocol -> {
+            fail("Should never be invoked");
+            return null;
         };
 
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory) {
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory) {
             @Override
             protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
                 return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false);
@@ -151,11 +151,11 @@ public class HttpServerUpgradeHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
 
-        String upgradeString = "GET / HTTP/1.1\r\n" +
+        byte[] upgradeString = ("GET / HTTP/1.1\r\n" +
                                "Host: example.com\r\n" +
                                "Connection: Upgrade\r\n" +
-                               "Upgrade: do-not-upgrade\r\n\r\n";
-        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+                               "Upgrade: do-not-upgrade\r\n\r\n").getBytes(US_ASCII);
+        Buffer upgrade = channel.bufferAllocator().allocate(upgradeString.length).writeBytes(upgradeString);
 
         // The upgrade request should not be passed to the next handler without any processing.
         assertTrue(channel.writeInbound(upgrade));
@@ -178,22 +178,18 @@ public class HttpServerUpgradeHandlerTest {
     @Test
     public void upgradeFail() {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
-        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new TestUpgradeCodec();
-            }
-        };
+        final UpgradeCodecFactory factory = protocol -> new TestUpgradeCodec();
 
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory);
 
         EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
 
         // Build a h2c upgrade request, but without connection header.
-        String upgradeString = "GET / HTTP/1.1\r\n" +
+        byte[] upgradeString = ("GET / HTTP/1.1\r\n" +
                                "Host: example.com\r\n" +
-                               "Upgrade: h2c\r\n\r\n";
-        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+                               "Upgrade: h2c\r\n\r\n").getBytes(US_ASCII);
+        Buffer upgrade = channel.bufferAllocator().allocate(upgradeString.length).writeBytes(upgradeString);
 
         assertTrue(channel.writeInbound(upgrade));
         assertNotNull(channel.pipeline().get(HttpServerCodec.class));

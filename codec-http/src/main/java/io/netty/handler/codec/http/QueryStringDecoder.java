@@ -280,11 +280,8 @@ public class QueryStringDecoder {
         }
         String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
-        List<String> values = params.get(name);
-        if (values == null) {
-            values = new ArrayList<>(1);  // Often there's only 1 value.
-            params.put(name, values);
-        }
+        List<String> values = params.computeIfAbsent(name, k -> new ArrayList<>(1));
+        // Often there's only 1 value.
         values.add(value);
         return true;
     }

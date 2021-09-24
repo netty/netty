@@ -15,8 +15,7 @@
  */
 package io.netty.example.http.websocketx.server;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -30,8 +29,8 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpMethod.GET;
@@ -57,20 +56,22 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
         if (!req.decoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.EMPTY_BUFFER));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
+                    ctx.bufferAllocator().allocate(0)));
             return;
         }
 
         // Allow only GET methods.
         if (!GET.equals(req.method())) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, Unpooled.EMPTY_BUFFER));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN,
+                    ctx.bufferAllocator().allocate(0)));
             return;
         }
 
         // Send the index page
         if ("/".equals(req.uri()) || "/index.html".equals(req.uri())) {
             String webSocketLocation = getWebSocketLocation(ctx.pipeline(), req, websocketPath);
-            ByteBuf content = WebSocketServerIndexPage.getContent(webSocketLocation);
+            Buffer content = WebSocketServerIndexPage.getContent(ctx.bufferAllocator(), webSocketLocation);
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
             res.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
@@ -78,7 +79,8 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
 
             sendHttpResponse(ctx, req, res);
         } else {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND, Unpooled.EMPTY_BUFFER));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND,
+                    ctx.bufferAllocator().allocate(0)));
         }
     }
 
@@ -91,10 +93,8 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
     private static void sendHttpResponse(ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.status().code() != 200) {
-            ByteBuf buf = Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8);
-            res.content().writeBytes(buf);
-            buf.release();
-            HttpUtil.setContentLength(res, res.content().readableBytes());
+            res.payload().writeCharSequence(res.status().toString(), CharsetUtil.UTF_8);
+            HttpUtil.setContentLength(res, res.payload().readableBytes());
         }
 
         // Send the response and close the connection if necessary.

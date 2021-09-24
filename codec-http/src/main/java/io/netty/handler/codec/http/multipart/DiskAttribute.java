@@ -15,20 +15,20 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelException;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Disk implementation of Attributes
  */
-public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
+public class DiskAttribute extends AbstractDiskHttpData<DiskAttribute> implements Attribute<DiskAttribute> {
     public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
@@ -44,57 +44,60 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     /**
      * Constructor used for huge Attribute
      */
-    public DiskAttribute(String name) {
-        this(name, HttpConstants.DEFAULT_CHARSET);
+    public DiskAttribute(BufferAllocator allocator, String name) {
+        this(allocator, name, HttpConstants.DEFAULT_CHARSET);
     }
 
-    public DiskAttribute(String name, String baseDir, boolean deleteOnExit) {
-        this(name, HttpConstants.DEFAULT_CHARSET);
+    public DiskAttribute(BufferAllocator allocator, String name, String baseDir, boolean deleteOnExit) {
+        this(allocator, name, HttpConstants.DEFAULT_CHARSET);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
     }
 
-    public DiskAttribute(String name, long definedSize) {
-        this(name, definedSize, HttpConstants.DEFAULT_CHARSET, baseDirectory, deleteOnExitTemporaryFile);
+    public DiskAttribute(BufferAllocator allocator, String name, long definedSize) {
+        this(allocator, name, definedSize, HttpConstants.DEFAULT_CHARSET, baseDirectory, deleteOnExitTemporaryFile);
     }
 
-    public DiskAttribute(String name, long definedSize, String baseDir, boolean deleteOnExit) {
-        this(name, definedSize, HttpConstants.DEFAULT_CHARSET);
+    public DiskAttribute(BufferAllocator allocator, String name, long definedSize, String baseDir,
+                         boolean deleteOnExit) {
+        this(allocator, name, definedSize, HttpConstants.DEFAULT_CHARSET);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
     }
 
-    public DiskAttribute(String name, Charset charset) {
-        this(name, charset, baseDirectory, deleteOnExitTemporaryFile);
+    public DiskAttribute(BufferAllocator allocator, String name, Charset charset) {
+        this(allocator, name, charset, baseDirectory, deleteOnExitTemporaryFile);
     }
 
-    public DiskAttribute(String name, Charset charset, String baseDir, boolean deleteOnExit) {
-        super(name, charset, 0);
+    public DiskAttribute(BufferAllocator allocator, String name, Charset charset, String baseDir,
+                         boolean deleteOnExit) {
+        super(allocator, name, charset, 0);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
     }
 
-    public DiskAttribute(String name, long definedSize, Charset charset) {
-        this(name, definedSize, charset, baseDirectory, deleteOnExitTemporaryFile);
+    public DiskAttribute(BufferAllocator allocator, String name, long definedSize, Charset charset) {
+        this(allocator, name, definedSize, charset, baseDirectory, deleteOnExitTemporaryFile);
     }
 
-    public DiskAttribute(String name, long definedSize, Charset charset, String baseDir, boolean deleteOnExit) {
-        super(name, charset, definedSize);
+    public DiskAttribute(BufferAllocator allocator, String name, long definedSize, Charset charset, String baseDir,
+                         boolean deleteOnExit) {
+        super(allocator, name, charset, definedSize);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
     }
 
-    public DiskAttribute(String name, String value) throws IOException {
-        this(name, value, HttpConstants.DEFAULT_CHARSET);
+    public DiskAttribute(BufferAllocator allocator, String name, String value) throws IOException {
+        this(allocator, name, value, HttpConstants.DEFAULT_CHARSET);
     }
 
-    public DiskAttribute(String name, String value, Charset charset) throws IOException {
-        this(name, value, charset, baseDirectory, deleteOnExitTemporaryFile);
+    public DiskAttribute(BufferAllocator allocator, String name, String value, Charset charset) throws IOException {
+        this(allocator, name, value, charset, baseDirectory, deleteOnExitTemporaryFile);
     }
 
-    public DiskAttribute(String name, String value, Charset charset,
+    public DiskAttribute(BufferAllocator allocator, String name, String value, Charset charset,
                          String baseDir, boolean deleteOnExit) throws IOException {
-        super(name, charset, 0); // Attribute have no default size
+        super(allocator, name, charset, 0); // Attribute have no default size
         setValue(value);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
@@ -116,7 +119,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         requireNonNull(value, "value");
         byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
-        ByteBuf buffer = wrappedBuffer(bytes);
+        Buffer buffer = allocator().allocate(bytes.length).writeBytes(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
         }
@@ -124,12 +127,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     }
 
     @Override
-    public void addContent(ByteBuf buffer, boolean last) throws IOException {
+    public void addContent(Buffer buffer, boolean last) throws IOException {
         final long newDefinedSize = size + buffer.readableBytes();
         try {
             checkSize(newDefinedSize);
         } catch (IOException e) {
-            buffer.release();
+            buffer.close();
             throw e;
         }
         if (definedSize > 0 && definedSize < newDefinedSize) {
@@ -148,7 +151,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         if (!(o instanceof Attribute)) {
             return false;
         }
-        Attribute attribute = (Attribute) o;
+        Attribute<?> attribute = (Attribute<?>) o;
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
@@ -158,10 +161,10 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
                     " with " + o.getHttpDataType());
         }
-        return compareTo((Attribute) o);
+        return compareTo((Attribute<?>) o);
     }
 
-    public int compareTo(Attribute o) {
+    public int compareTo(Attribute<?> o) {
         return getName().compareToIgnoreCase(o.getName());
     }
 
@@ -200,72 +203,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     }
 
     @Override
-    public Attribute copy() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.copy() : null);
+    public Send<DiskAttribute> send() {
+        return Send.sending(DiskAttribute.class, () -> this);
     }
 
     @Override
-    public Attribute duplicate() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.duplicate() : null);
-    }
-
-    @Override
-    public Attribute retainedDuplicate() {
-        ByteBuf content = content();
-        if (content != null) {
-            content = content.retainedDuplicate();
-            boolean success = false;
-            try {
-                Attribute duplicate = replace(content);
-                success = true;
-                return duplicate;
-            } finally {
-                if (!success) {
-                    content.release();
-                }
-            }
-        } else {
-            return replace(null);
-        }
-    }
-
-    @Override
-    public Attribute replace(ByteBuf content) {
-        DiskAttribute attr = new DiskAttribute(getName(), baseDir, deleteOnExit);
-        attr.setCharset(getCharset());
-        if (content != null) {
-            try {
-                attr.setContent(content);
-            } catch (IOException e) {
-                throw new ChannelException(e);
-            }
-        }
-        return attr;
-    }
-
-    @Override
-    public Attribute retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public Attribute retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public Attribute touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public Attribute touch(Object hint) {
-        super.touch(hint);
+    public DiskAttribute touch(Object hint) {
         return this;
     }
 }

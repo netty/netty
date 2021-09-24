@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-
 import java.io.IOException;
 
 /**
  * Attribute interface
  */
-public interface Attribute extends HttpData {
+public interface Attribute<R extends Attribute<R>> extends HttpData<R> {
     /**
      * Returns the value of this HttpData.
      */
@@ -32,28 +30,4 @@ public interface Attribute extends HttpData {
      * Sets the value of this HttpData.
      */
     void setValue(String value) throws IOException;
-
-    @Override
-    Attribute copy();
-
-    @Override
-    Attribute duplicate();
-
-    @Override
-    Attribute retainedDuplicate();
-
-    @Override
-    Attribute replace(ByteBuf content);
-
-    @Override
-    Attribute retain();
-
-    @Override
-    Attribute retain(int increment);
-
-    @Override
-    Attribute touch();
-
-    @Override
-    Attribute touch(Object hint);
 }

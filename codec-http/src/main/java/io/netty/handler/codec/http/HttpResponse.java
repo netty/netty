@@ -15,31 +15,27 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+
 /**
  * An HTTP response.
  *
  * <h3>Accessing Cookies</h3>
  * <p>
- * Unlike the Servlet API, {@link io.netty.handler.codec.http.cookie.Cookie} support is provided
- * separately via {@link io.netty.handler.codec.http.cookie.ServerCookieDecoder},
- * {@link io.netty.handler.codec.http.cookie.ClientCookieDecoder},
- * {@link io.netty.handler.codec.http.cookie.ServerCookieEncoder},
- * and {@link io.netty.handler.codec.http.cookie.ClientCookieEncoder}.
+ * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link ServerCookieDecoder},
+ * {@link ClientCookieDecoder}, {@link ServerCookieEncoder}, and {@link ClientCookieEncoder}.
  *
  * @see HttpRequest
- * @see io.netty.handler.codec.http.cookie.ServerCookieDecoder
- * @see io.netty.handler.codec.http.cookie.ClientCookieDecoder
- * @see io.netty.handler.codec.http.cookie.ServerCookieEncoder
- * @see io.netty.handler.codec.http.cookie.ClientCookieEncoder
+ * @see ServerCookieDecoder
+ * @see ClientCookieDecoder
+ * @see ServerCookieEncoder
+ * @see ClientCookieEncoder
  */
 public interface HttpResponse extends HttpMessage {
-
-    /**
-     * @deprecated Use {@link #status()} instead.
-     */
-    @Deprecated
-    HttpResponseStatus getStatus();
-
     /**
      * Returns the status of this {@link HttpResponse}.
      *

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,6 +23,7 @@ import io.netty.util.ReferenceCountUtil;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpResponseStatus.EXPECTATION_FAILED;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
@@ -45,31 +46,25 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * </blockquote>
  */
 public class HttpServerExpectContinueHandler implements ChannelHandler {
-
-    private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
-            HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
-
-    private static final FullHttpResponse ACCEPT = new DefaultFullHttpResponse(
-            HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
-
-    static {
-        EXPECTATION_FAILED.headers().set(CONTENT_LENGTH, 0);
-        ACCEPT.headers().set(CONTENT_LENGTH, 0);
-    }
-
     /**
      * Produces a {@link HttpResponse} for {@link HttpRequest}s which define an expectation. Returns {@code null} if the
-     * request should be rejected. See {@link #rejectResponse(HttpRequest)}.
+     * request should be rejected. See {@link #rejectResponse(BufferAllocator, HttpRequest)}.
      */
-    protected HttpResponse acceptMessage(@SuppressWarnings("unused") HttpRequest request) {
-        return ACCEPT.retainedDuplicate();
+    protected HttpResponse acceptMessage(BufferAllocator allocator, @SuppressWarnings("unused") HttpRequest request) {
+        return newEmptyResponse(allocator, CONTINUE);
     }
 
     /**
      * Returns the appropriate 4XX {@link HttpResponse} for the given {@link HttpRequest}.
      */
-    protected HttpResponse rejectResponse(@SuppressWarnings("unused") HttpRequest request) {
-        return EXPECTATION_FAILED.retainedDuplicate();
+    protected HttpResponse rejectResponse(BufferAllocator allocator, @SuppressWarnings("unused") HttpRequest request) {
+        return newEmptyResponse(allocator, EXPECTATION_FAILED);
+    }
+
+    private static DefaultFullHttpResponse newEmptyResponse(BufferAllocator allocator, HttpResponseStatus status) {
+        final DefaultFullHttpResponse resp = new DefaultFullHttpResponse(HTTP_1_1, status, allocator.allocate(0));
+        resp.headers().set(CONTENT_LENGTH, 0);
+        return resp;
     }
 
     @Override
@@ -78,11 +73,11 @@ public class HttpServerExpectContinueHandler implements ChannelHandler {
             HttpRequest req = (HttpRequest) msg;
 
             if (HttpUtil.is100ContinueExpected(req)) {
-                HttpResponse accept = acceptMessage(req);
+                HttpResponse accept = acceptMessage(ctx.bufferAllocator(), req);
 
                 if (accept == null) {
                     // the expectation failed so we refuse the request.
-                    HttpResponse rejection = rejectResponse(req);
+                    HttpResponse rejection = rejectResponse(ctx.bufferAllocator(), req);
                     ReferenceCountUtil.release(msg);
                     ctx.writeAndFlush(rejection).addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
                     return;

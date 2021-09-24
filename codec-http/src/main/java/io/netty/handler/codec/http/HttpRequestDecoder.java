@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.TooLongFrameException;
 
-
 /**
- * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpContent}s.
+ * Decodes {@link Buffer}s into {@link HttpRequest}s and {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -96,8 +96,9 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
+    protected HttpMessage createInvalidMessage(ChannelHandlerContext ctx) {
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request",
+                ctx.bufferAllocator().allocate(0), validateHeaders);
     }
 
     @Override

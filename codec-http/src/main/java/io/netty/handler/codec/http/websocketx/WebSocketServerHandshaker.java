@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
@@ -191,7 +192,7 @@ public abstract class WebSocketServerHandshaker {
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
         }
-        FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
+        FullHttpResponse response = newHandshakeResponse(channel.bufferAllocator(), req, responseHeaders);
         ChannelPipeline p = channel.pipeline();
         if (p.get(HttpObjectAggregator.class) != null) {
             p.remove(HttpObjectAggregator.class);
@@ -317,8 +318,8 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns a new {@link FullHttpResponse) which will be used for as response to the handshake request.
      */
-    protected abstract FullHttpResponse newHandshakeResponse(FullHttpRequest req,
-                                         HttpHeaders responseHeaders);
+    protected abstract FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
+                                                             HttpHeaders responseHeaders);
     /**
      * Performs the closing handshake.
      *

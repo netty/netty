@@ -24,7 +24,7 @@ import java.util.Set;
 
 public class EmptyHttpHeaders extends HttpHeaders {
     private static final Iterator<Entry<CharSequence, CharSequence>> EMPTY_CHARS_ITERATOR =
-            Collections.<Entry<CharSequence, CharSequence>>emptyList().iterator();
+            Collections.emptyIterator();
 
     public static final EmptyHttpHeaders INSTANCE = new EmptyHttpHeaders();
 

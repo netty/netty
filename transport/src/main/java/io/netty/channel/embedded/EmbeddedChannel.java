@@ -15,13 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import static java.util.Objects.requireNonNull;
-
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -40,10 +33,17 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+import static io.netty.util.internal.PlatformDependent.throwException;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
@@ -229,7 +229,7 @@ public class EmbeddedChannel extends AbstractChannel {
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
-            PlatformDependent.throwException(cause);
+            throwException(cause);
         }
         return future;
     }
@@ -509,7 +509,13 @@ public class EmbeddedChannel extends AbstractChannel {
                 if (msg == null) {
                     break;
                 }
-                ReferenceCountUtil.release(msg);
+                if (!ReferenceCountUtil.release(msg) && msg instanceof AutoCloseable) {
+                    try {
+                        ((AutoCloseable) msg).close();
+                    } catch (Exception e) {
+                        throwException(e);
+                    }
+                }
             }
             return true;
         }
@@ -621,7 +627,7 @@ public class EmbeddedChannel extends AbstractChannel {
         if (t != null) {
             lastException = null;
 
-            PlatformDependent.throwException(t);
+            throwException(t);
         }
     }
 

@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.api.Send;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
@@ -23,7 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
-import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * simply removes itself from the pipeline. If the upgrade is successful, upgrades the pipeline to
  * the new protocol.
  */
-public class HttpClientUpgradeHandler extends HttpObjectAggregator {
+public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObjectAggregator<C> {
 
     /**
      * User events that are fired to notify about upgrade status.
@@ -96,7 +96,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
          * @param upgradeResponse the 101 Switching Protocols response that indicates that the server
          *            has switched to this protocol.
          */
-        void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception;
+        void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse) throws Exception;
     }
 
     private final SourceCodec sourceCodec;
@@ -168,8 +168,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
             if (msg instanceof FullHttpResponse) {
                 response = (FullHttpResponse) msg;
 
-                // Need to retain since the base class will release after returning from this method.
-                tryUpgrade(ctx, response.retain());
+                tryUpgrade(ctx, response);
             } else {
                 // Call the base class to handle the aggregation of the full request.
                 super.decode(new DelegatingChannelHandlerContext(ctx) {
@@ -183,14 +182,16 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
             }
 
         } catch (Throwable t) {
-            release(response);
+            if (response != null && response.isAccessible()) {
+                response.close();
+            }
             ctx.fireExceptionCaught(t);
             removeThisHandler(ctx);
         }
     }
 
     private void tryUpgrade(ChannelHandlerContext ctx, FullHttpResponse response) {
-        try {
+        try (response) {
             CharSequence upgradeHeader = response.headers().get(HttpHeaderNames.UPGRADE);
             if (upgradeHeader != null && !AsciiString.contentEqualsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
                 throw new IllegalStateException(
@@ -199,7 +200,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
 
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);
-            upgradeCodec.upgradeTo(ctx, response);
+            upgradeCodec.upgradeTo(ctx, response.send());
 
             // Notify that the upgrade to the new protocol completed successfully.
             ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_SUCCESSFUL);
@@ -207,13 +208,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
             // We guarantee UPGRADE_SUCCESSFUL event will be arrived at the next handler
             // before http2 setting frame and http response.
             sourceCodec.upgradeFrom(ctx);
-
-            // We switched protocols, so we're done with the upgrade response.
-            // Release it and clear it from the output.
-            response.release();
             removeThisHandler(ctx);
         } catch (Throwable t) {
-            release(response);
             ctx.fireExceptionCaught(t);
             removeThisHandler(ctx);
         }

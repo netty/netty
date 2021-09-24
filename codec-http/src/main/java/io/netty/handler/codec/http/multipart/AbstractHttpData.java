@@ -15,22 +15,19 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static java.util.Objects.requireNonNull;
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.util.AbstractReferenceCounted;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Abstract HttpData implementation
  */
-public abstract class AbstractHttpData extends AbstractReferenceCounted implements HttpData {
+public abstract class AbstractHttpData<R extends AbstractHttpData<R>> implements HttpData<R> {
 
     private static final Pattern STRIP_PATTERN = Pattern.compile("(?:^\\s+|\\s+$|\\n)");
     private static final Pattern REPLACE_PATTERN = Pattern.compile("[\\r\\t]");
@@ -106,36 +103,4 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     public long definedLength() {
         return definedSize;
     }
-
-    @Override
-    public ByteBuf content() {
-        try {
-            return getByteBuf();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    protected void deallocate() {
-        delete();
-    }
-
-    @Override
-    public HttpData retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public HttpData retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public abstract HttpData touch();
-
-    @Override
-    public abstract HttpData touch(Object hint);
 }

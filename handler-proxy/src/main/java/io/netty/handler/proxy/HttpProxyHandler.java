@@ -16,7 +16,6 @@
 
 package io.netty.handler.proxy;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -40,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 
+import static io.netty.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
 import static java.util.Objects.requireNonNull;
 
 public final class HttpProxyHandler extends ProxyHandler {
@@ -135,6 +135,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     protected void addCodec(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline p = ctx.pipeline();
         String name = ctx.name();
+        p.addBefore(name, null, BYTEBUF_TO_BUFFER_HANDLER);
         p.addBefore(name, null, codecWrapper);
     }
 
@@ -162,7 +163,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         FullHttpRequest req = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
                 url,
-                Unpooled.EMPTY_BUFFER, false);
+                ctx.bufferAllocator().allocate(0), false);
 
         req.headers().set(HttpHeaderNames.HOST, hostHeader);
 

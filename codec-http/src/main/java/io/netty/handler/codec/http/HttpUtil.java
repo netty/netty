@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
+import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -23,16 +26,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import io.netty.util.AsciiString;
-import io.netty.util.CharsetUtil;
-import io.netty.util.NetUtil;
-import io.netty.util.internal.UnstableApi;
-
-import static io.netty.util.internal.StringUtil.COMMA;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.StringUtil.COMMA;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -139,7 +137,7 @@ public final class HttpUtil {
 
     /**
      * Returns the length of the content. Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
+     * not retrieved from {@link HttpContent#payload()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -168,7 +166,7 @@ public final class HttpUtil {
 
     /**
      * Returns the length of the content or the specified default value if the message does not have the {@code
-     * "Content-Length" header}. Please note that this value is not retrieved from {@link HttpContent#content()} but
+     * "Content-Length" header}. Please note that this value is not retrieved from {@link HttpContent#payload()} but
      * from the {@code "Content-Length"} header, and thus they are independent from each other.
      *
      * @param message      the message
@@ -327,13 +325,7 @@ public final class HttpUtil {
                 return;
             }
             List<CharSequence> values = new ArrayList<>(encodings);
-            Iterator<CharSequence> valuesIt = values.iterator();
-            while (valuesIt.hasNext()) {
-                CharSequence value = valuesIt.next();
-                if (HttpHeaderValues.CHUNKED.contentEqualsIgnoreCase(value)) {
-                    valuesIt.remove();
-                }
-            }
+            values.removeIf(HttpHeaderValues.CHUNKED::contentEqualsIgnoreCase);
             if (values.isEmpty()) {
                 m.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
             } else {

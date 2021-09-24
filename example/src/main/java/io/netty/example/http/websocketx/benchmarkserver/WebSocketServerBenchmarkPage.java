@@ -15,9 +15,10 @@
  */
 package io.netty.example.http.websocketx.benchmarkserver;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.util.CharsetUtil;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * Generates the benchmark HTML page which is served at http://localhost:8080/
@@ -26,9 +27,8 @@ public final class WebSocketServerBenchmarkPage {
 
     private static final String NEWLINE = "\r\n";
 
-    public static ByteBuf getContent(String webSocketLocation) {
-        return Unpooled.copiedBuffer(
-                "<html><head><title>Web Socket Performance Test</title></head>" + NEWLINE +
+    public static Buffer getContent(BufferAllocator allocator, String webSocketLocation) {
+        final byte[] content = ("<html><head><title>Web Socket Performance Test</title></head>" + NEWLINE +
                 "<body>" + NEWLINE +
                 "<h2>WebSocket Performance Test</h2>" + NEWLINE +
                 "<label>Connection Status:</label>" + NEWLINE +
@@ -182,7 +182,8 @@ public final class WebSocketServerBenchmarkPage {
                 "}" + NEWLINE +
                 "</script>" + NEWLINE +
                 "</body>" + NEWLINE +
-                "</html>" + NEWLINE, CharsetUtil.US_ASCII);
+                "</html>" + NEWLINE).getBytes(US_ASCII);
+        return allocator.allocate(content.length).writeBytes(content);
     }
 
     private WebSocketServerBenchmarkPage() {

@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Send;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
@@ -124,8 +125,9 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     @Override
-    public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse)
+    public void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse)
         throws Exception {
+        upgradeResponse.close();
         try {
             // Add the handler to the pipeline.
             ctx.pipeline().addAfter(ctx.name(), handlerName, upgradeToHandler);

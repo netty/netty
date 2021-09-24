@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -27,28 +27,12 @@ import io.netty.channel.ChannelPipeline;
  * place {@link HttpObjectAggregator} after {@link HttpObjectDecoder} in the
  * {@link ChannelPipeline}.
  */
-public interface HttpContent extends HttpObject, ByteBufHolder {
-    @Override
-    HttpContent copy();
+public interface HttpContent<R extends HttpContent<R>> extends HttpObject, Resource<R> {
 
-    @Override
-    HttpContent duplicate();
-
-    @Override
-    HttpContent retainedDuplicate();
-
-    @Override
-    HttpContent replace(ByteBuf content);
-
-    @Override
-    HttpContent retain();
-
-    @Override
-    HttpContent retain(int increment);
-
-    @Override
-    HttpContent touch();
-
-    @Override
-    HttpContent touch(Object hint);
+    /**
+     * Returns the {@link Buffer} representing the payload of the HTTP message.
+     *
+     * @return The {@link Buffer} representing the payload of the HTTP message.
+     */
+    Buffer payload();
 }

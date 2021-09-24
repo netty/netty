@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import java.util.regex.Pattern;
-
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -24,6 +23,8 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
+
+import java.util.regex.Pattern;
 
 /**
  * Decodes {@link io.netty.buffer.ByteBuf}s into RTSP messages represented in
@@ -144,14 +145,13 @@ public class RtspDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
+    protected HttpMessage createInvalidMessage(ChannelHandlerContext ctx) {
         if (isDecodingRequest) {
-            return new DefaultFullHttpRequest(RtspVersions.RTSP_1_0,
-                       RtspMethods.OPTIONS, "/bad-request", validateHeaders);
+            return new DefaultFullHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.OPTIONS, "/bad-request",
+                    ctx.bufferAllocator().allocate(0), validateHeaders);
         } else {
-            return new DefaultFullHttpResponse(RtspVersions.RTSP_1_0,
-                                               UNKNOWN_STATUS,
-                                               validateHeaders);
+            return new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, UNKNOWN_STATUS,
+                    ctx.bufferAllocator().allocate(0), validateHeaders);
         }
     }
 

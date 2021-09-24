@@ -15,10 +15,9 @@
  */
 package io.netty.microbench.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -48,6 +47,8 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+
 @State(Scope.Benchmark)
 @Fork(1)
 @Threads(1)
@@ -56,10 +57,10 @@ import org.openjdk.jmh.annotations.Warmup;
 public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     private HttpRequestEncoder encoder;
     private FullHttpRequest fullRequest;
-    private LastHttpContent lastContent;
+    private LastHttpContent<?> lastContent;
     private HttpRequest contentLengthRequest;
     private HttpRequest chunkedRequest;
-    private ByteBuf content;
+    private Buffer content;
     private ChannelHandlerContext context;
 
     @Param({ "true", "false" })
@@ -68,9 +69,9 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     @Setup(Level.Trial)
     public void setup() {
         byte[] bytes = new byte[256];
-        content = Unpooled.buffer(bytes.length);
+        content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length);
         content.writeBytes(bytes);
-        ByteBuf testContent = Unpooled.unreleasableBuffer(content.asReadOnly());
+        Buffer testContent = content.copy().makeReadOnly();
         HttpHeaders headersWithChunked = new DefaultHttpHeaders(false);
         headersWithChunked.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         HttpHeaders headersWithContentLength = new DefaultHttpHeaders(false);
@@ -95,23 +96,23 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
 
     @TearDown(Level.Trial)
     public void teardown() {
-        content.release();
+        content.close();
         content = null;
     }
 
     @Benchmark
-    public void fullMessage() throws Exception {
+    public void fullMessage() {
         encoder.write(context, fullRequest);
     }
 
     @Benchmark
-    public void contentLength() throws Exception {
+    public void contentLength() {
         encoder.write(context, contentLengthRequest);
         encoder.write(context, lastContent);
     }
 
     @Benchmark
-    public void chunked() throws Exception {
+    public void chunked() {
         encoder.write(context, chunkedRequest);
         encoder.write(context, lastContent);
     }

@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -246,7 +247,7 @@ public abstract class WebSocketClientHandshaker {
             }
         }
 
-        FullHttpRequest request = newHandshakeRequest();
+        FullHttpRequest request = newHandshakeRequest(channel.bufferAllocator());
 
         Promise<Void> promise = channel.newPromise();
         channel.writeAndFlush(request).addListener(channel, (ch, future) -> {
@@ -274,7 +275,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns a new {@link FullHttpRequest) which will be used for the handshake.
      */
-    protected abstract FullHttpRequest newHandshakeRequest();
+    protected abstract FullHttpRequest newHandshakeRequest(BufferAllocator allocator);
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.

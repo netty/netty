@@ -69,14 +69,14 @@ final class HttpMessageUtil {
         return buf;
     }
 
-    private static void appendFullCommon(StringBuilder buf, FullHttpMessage msg) {
+    private static void appendFullCommon(StringBuilder buf, FullHttpMessage<?> msg) {
         buf.append(StringUtil.simpleClassName(msg));
         buf.append("(decodeResult: ");
         buf.append(msg.decoderResult());
         buf.append(", version: ");
         buf.append(msg.protocolVersion());
         buf.append(", content: ");
-        buf.append(msg.content());
+        buf.append(msg.payload());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
     }

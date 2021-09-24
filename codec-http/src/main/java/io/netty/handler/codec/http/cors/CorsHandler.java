@@ -35,7 +35,6 @@ import java.util.List;
 import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static java.util.Objects.requireNonNull;
 
@@ -94,8 +93,9 @@ public class CorsHandler implements ChannelHandler {
         ctx.fireChannelRead(msg);
     }
 
-    private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK, true, true);
+    private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
+        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK,
+                ctx.bufferAllocator().allocate(0), true, true);
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
@@ -106,7 +106,9 @@ public class CorsHandler implements ChannelHandler {
         if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         }
-        release(request);
+        if (request instanceof AutoCloseable) {
+            ((AutoCloseable) request).close();
+        }
         respond(ctx, request, response);
     }
 
@@ -225,11 +227,13 @@ public class CorsHandler implements ChannelHandler {
         return ctx.write(msg);
     }
 
-    private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
+    private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
         HttpResponse response = new DefaultFullHttpResponse(
-                request.protocolVersion(), FORBIDDEN, ctx.alloc().buffer(0));
+                request.protocolVersion(), FORBIDDEN, ctx.bufferAllocator().allocate(0));
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
-        release(request);
+        if (request instanceof AutoCloseable) {
+            ((AutoCloseable) request).close();
+        }
         respond(ctx, request, response);
     }
 

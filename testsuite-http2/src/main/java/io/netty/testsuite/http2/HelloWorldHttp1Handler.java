@@ -15,8 +15,7 @@
  */
 package io.netty.testsuite.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -32,6 +31,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -45,19 +45,18 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest req) {
         if (HttpUtil.is100ContinueExpected(req)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, ctx.alloc().buffer(0)));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, ctx.bufferAllocator().allocate(0)));
         }
         boolean keepAlive = HttpUtil.isKeepAlive(req);
 
-        ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
-        ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ')');
+        final Buffer content = HelloWorldHttp2Handler.RESPONSE_BYTES_SUPPLIER.get()
+                .writeCharSequence(" - via " + req.protocolVersion() + " (" + establishApproach + ')', US_ASCII);
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+        response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
 
         if (!keepAlive) {
             ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
@@ -68,7 +67,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 

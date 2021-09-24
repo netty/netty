@@ -15,13 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.*;
+import java.nio.charset.StandardCharsets;
+
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,20 +38,20 @@ public class HttpServerCodecTest {
      * Testcase for https://github.com/netty/netty/issues/433
      */
     @Test
-    public void testUnfinishedChunkedHttpRequestIsLastFlag() throws Exception {
+    public void testUnfinishedChunkedHttpRequestIsLastFlag() {
 
         int maxChunkSize = 2000;
         HttpServerCodec httpServerCodec = new HttpServerCodec(1000, 1000);
         EmbeddedChannel decoderEmbedder = new EmbeddedChannel(httpServerCodec);
 
         int totalContentLength = maxChunkSize * 5;
-        decoderEmbedder.writeInbound(Unpooled.copiedBuffer(
-                "PUT /test HTTP/1.1\r\n" +
+        final byte[] data = ("PUT /test HTTP/1.1\r\n" +
                 "Content-Length: " + totalContentLength + "\r\n" +
-                "\r\n", CharsetUtil.UTF_8));
+                "\r\n").getBytes(StandardCharsets.UTF_8);
+        decoderEmbedder.writeInbound(decoderEmbedder.bufferAllocator().allocate(data.length).writeBytes(data));
 
         int offeredContentLength = (int) (maxChunkSize * 2.5);
-        decoderEmbedder.writeInbound(prepareDataChunk(offeredContentLength));
+        decoderEmbedder.writeInbound(prepareDataChunk(decoderEmbedder.bufferAllocator(), offeredContentLength));
         decoderEmbedder.finish();
 
         HttpMessage httpMessage = decoderEmbedder.readInbound();
@@ -56,64 +60,66 @@ public class HttpServerCodecTest {
         boolean empty = true;
         int totalBytesPolled = 0;
         for (;;) {
-            HttpContent httpChunk = decoderEmbedder.readInbound();
+            HttpContent<?> httpChunk = decoderEmbedder.readInbound();
             if (httpChunk == null) {
                 break;
             }
             empty = false;
-            totalBytesPolled += httpChunk.content().readableBytes();
+            totalBytesPolled += httpChunk.payload().readableBytes();
             assertFalse(httpChunk instanceof LastHttpContent);
-            httpChunk.release();
+            httpChunk.close();
         }
         assertFalse(empty);
         assertEquals(offeredContentLength, totalBytesPolled);
     }
 
     @Test
-    public void test100Continue() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec(), new HttpObjectAggregator(1024));
+    public void test100Continue() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec(),
+                new HttpObjectAggregator<DefaultHttpContent>(1024));
 
         // Send the request headers.
-        ch.writeInbound(Unpooled.copiedBuffer(
-                "PUT /upload-large HTTP/1.1\r\n" +
+        final byte[] data = ("PUT /upload-large HTTP/1.1\r\n" +
                 "Expect: 100-continue\r\n" +
-                "Content-Length: 1\r\n\r\n", CharsetUtil.UTF_8));
+                "Content-Length: 1\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+        ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data));
 
         // Ensure the aggregator generates nothing.
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Ensure the aggregator writes a 100 Continue response.
-        ByteBuf continueResponse = ch.readOutbound();
-        assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
-        continueResponse.release();
+        try (Buffer continueResponse = ch.readOutbound()) {
+            assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
+        }
 
         // But nothing more.
         assertThat(ch.readOutbound(), is(nullValue()));
 
         // Send the content of the request.
-        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 42 }));
+        ch.writeInbound(ch.bufferAllocator().allocate(1).writeBytes(new byte[]{42}));
 
         // Ensure the aggregator generates a full request.
         FullHttpRequest req = ch.readInbound();
         assertThat(req.headers().get(HttpHeaderNames.CONTENT_LENGTH), is("1"));
-        assertThat(req.content().readableBytes(), is(1));
-        assertThat(req.content().readByte(), is((byte) 42));
-        req.release();
+        assertThat(req.payload().readableBytes(), is(1));
+        assertThat(req.payload().readByte(), is((byte) 42));
+        req.close();
 
         // But nothing more.
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Send the actual response.
-        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED);
-        res.content().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
+        FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16));
+        res.payload().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
         ch.writeOutbound(res);
 
         // Ensure the encoder handles the response after handling 100 Continue.
-        ByteBuf encodedRes = ch.readOutbound();
-        assertThat(encodedRes.toString(CharsetUtil.UTF_8),
-                   is("HTTP/1.1 201 Created\r\n" + HttpHeaderNames.CONTENT_LENGTH + ": 2\r\n\r\nOK"));
-        encodedRes.release();
+        try (Buffer encodedRes = ch.readOutbound()) {
+            assertThat(encodedRes.toString(CharsetUtil.UTF_8),
+                    is("HTTP/1.1 201 Created\r\n" + HttpHeaderNames.CONTENT_LENGTH + ": 2\r\n\r\nOK"));
+        }
 
         ch.finish();
     }
@@ -123,28 +129,28 @@ public class HttpServerCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
-        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
-                "HEAD / HTTP/1.1\r\n\r\n", CharsetUtil.UTF_8)));
+        final byte[] data = "HEAD / HTTP/1.1\r\n\r\n".getBytes(StandardCharsets.UTF_8);
+        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
 
         HttpRequest request = ch.readInbound();
         assertEquals(HttpMethod.HEAD, request.method());
-        LastHttpContent content = ch.readInbound();
-        assertFalse(content.content().isReadable());
-        content.release();
+        LastHttpContent<?> content = ch.readInbound();
+        assertThat(content.payload().readableBytes(), is(0));
+        content.close();
 
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpUtil.setTransferEncodingChunked(response, true);
         assertTrue(ch.writeOutbound(response));
-        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
         assertTrue(ch.finish());
 
-        ByteBuf buf = ch.readOutbound();
+        Buffer buf = ch.readOutbound();
         assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
-        buf.release();
+        buf.close();
 
         buf = ch.readOutbound();
-        assertFalse(buf.isReadable());
-        buf.release();
+        assertEquals(buf.readableBytes(), 0);
+        buf.close();
 
         assertFalse(ch.finishAndReleaseAll());
     }
@@ -154,32 +160,33 @@ public class HttpServerCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
-        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
-                "HEAD / HTTP/1.1\r\n\r\n", CharsetUtil.UTF_8)));
+        final byte[] data = "HEAD / HTTP/1.1\r\n\r\n".getBytes(StandardCharsets.UTF_8);
+        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
 
         HttpRequest request = ch.readInbound();
         assertEquals(HttpMethod.HEAD, request.method());
-        LastHttpContent content = ch.readInbound();
-        assertFalse(content.content().isReadable());
-        content.release();
+        LastHttpContent<?> content = ch.readInbound();
+        assertThat(content.payload().readableBytes(), is(0));
+        content.close();
 
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         HttpUtil.setTransferEncodingChunked(response, true);
         assertTrue(ch.writeOutbound(response));
         assertTrue(ch.finish());
 
-        ByteBuf buf = ch.readOutbound();
-        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
-        buf.release();
+        Buffer buf = ch.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n",
+                buf.toString(CharsetUtil.US_ASCII));
+        buf.close();
 
         assertFalse(ch.finishAndReleaseAll());
     }
 
-    private static ByteBuf prepareDataChunk(int size) {
+    private static Buffer prepareDataChunk(BufferAllocator allocator, int size) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < size; ++i) {
-            sb.append('a');
-        }
-        return Unpooled.copiedBuffer(sb.toString(), CharsetUtil.UTF_8);
+        sb.append("a".repeat(Math.max(0, size)));
+        final byte[] data = sb.toString().getBytes(StandardCharsets.UTF_8);
+        return allocator.allocate(data.length).writeBytes(data);
     }
 }

@@ -16,15 +16,6 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
-import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
-import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
-import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -34,6 +25,14 @@ import io.netty.handler.codec.http.HttpUtil;
 
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
 /**
  * Handles the requests for the tiled image using HTTP 1.x as a protocol.
  */
@@ -42,7 +41,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (HttpUtil.is100ContinueExpected(request)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, ctx.bufferAllocator().allocate(0)));
         }
         super.messageReceived(ctx, request);
     }
@@ -50,7 +49,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
     @Override
     protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
-        HttpUtil.setContentLength(response, response.content().readableBytes());
+        HttpUtil.setContentLength(response, response.payload().readableBytes());
         ctx.executor().schedule(() -> {
             if (isKeepAlive(request)) {
                 if (request.protocolVersion().equals(HTTP_1_0)) {

@@ -15,78 +15,33 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Send;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The default {@link LastHttpContent} implementation.
  */
-public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
+public class DefaultLastHttpContent extends DefaultHttpObject implements LastHttpContent<DefaultLastHttpContent> {
     private final HttpHeaders trailingHeaders;
-    private final boolean validateHeaders;
+    private final Buffer payload;
 
-    public DefaultLastHttpContent() {
-        this(Unpooled.buffer(0));
+    public DefaultLastHttpContent(Buffer payload) {
+        this(payload, true);
     }
 
-    public DefaultLastHttpContent(ByteBuf content) {
-        this(content, true);
+    public DefaultLastHttpContent(Buffer payload, boolean validateHeaders) {
+        this(payload, new TrailingHttpHeaders(validateHeaders));
     }
 
-    public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
-        super(content);
-        trailingHeaders = new TrailingHttpHeaders(validateHeaders);
-        this.validateHeaders = validateHeaders;
-    }
-
-    @Override
-    public LastHttpContent copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public LastHttpContent duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public LastHttpContent retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public LastHttpContent replace(ByteBuf content) {
-        final DefaultLastHttpContent dup = new DefaultLastHttpContent(content, validateHeaders);
-        dup.trailingHeaders().set(trailingHeaders());
-        return dup;
-    }
-
-    @Override
-    public LastHttpContent retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public LastHttpContent retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public LastHttpContent touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public LastHttpContent touch(Object hint) {
-        super.touch(hint);
-        return this;
+    public DefaultLastHttpContent(Buffer payload, HttpHeaders trailingHeaders) {
+        this.payload = requireNonNull(payload, "payload");
+        this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
     }
 
     @Override
@@ -112,6 +67,33 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             buf.append(e.getValue());
             buf.append(StringUtil.NEWLINE);
         }
+    }
+
+    @Override
+    public Send<DefaultLastHttpContent> send() {
+        return payload.send().map(DefaultLastHttpContent.class,
+                payload -> new DefaultLastHttpContent(payload, trailingHeaders));
+    }
+
+    @Override
+    public void close() {
+        payload.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return payload.isAccessible();
+    }
+
+    @Override
+    public DefaultLastHttpContent touch(Object hint) {
+        payload.touch(hint);
+        return this;
+    }
+
+    @Override
+    public Buffer payload() {
+        return payload;
     }
 
     private static final class TrailingHttpHeaders extends DefaultHttpHeaders {

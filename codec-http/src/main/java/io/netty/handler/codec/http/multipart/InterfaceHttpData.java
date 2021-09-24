@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.util.ReferenceCounted;
+import io.netty.buffer.api.Resource;
 
 /**
  * Interface for all Objects that could be encoded/decoded using HttpPostRequestEncoder/Decoder
  */
-public interface InterfaceHttpData extends Comparable<InterfaceHttpData>, ReferenceCounted {
+public interface InterfaceHttpData<R extends InterfaceHttpData<R>>
+        extends Comparable<InterfaceHttpData<R>>, Resource<R> {
     enum HttpDataType {
         Attribute, FileUpload, InternalAttribute
     }
@@ -35,16 +36,4 @@ public interface InterfaceHttpData extends Comparable<InterfaceHttpData>, Refere
      * @return The HttpDataType
      */
     HttpDataType getHttpDataType();
-
-    @Override
-    InterfaceHttpData retain();
-
-    @Override
-    InterfaceHttpData retain(int increment);
-
-    @Override
-    InterfaceHttpData touch();
-
-    @Override
-    InterfaceHttpData touch(Object hint);
 }

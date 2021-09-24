@@ -46,6 +46,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -199,7 +200,8 @@ public class HttpProxyHandlerTest {
                                 public void channelActive(ChannelHandlerContext ctx) {
                                     DefaultFullHttpResponse response = new DefaultFullHttpResponse(
                                             HttpVersion.HTTP_1_1,
-                                            HttpResponseStatus.BAD_GATEWAY);
+                                            HttpResponseStatus.BAD_GATEWAY,
+                                            DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                                     response.headers().add("name", "value");
                                     response.headers().add(HttpHeaderNames.CONTENT_LENGTH, "0");
                                     ctx.writeAndFlush(response);
@@ -254,6 +256,7 @@ public class HttpProxyHandlerTest {
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class))).thenReturn(future);
+        when(ctx.bufferAllocator()).thenReturn(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),
@@ -261,8 +264,7 @@ public class HttpProxyHandlerTest {
                 ignoreDefaultPortsInConnectHostHeader);
         handler.connect(ctx, socketAddress, null);
 
-        FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx);
-        try {
+        try (FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx)) {
             assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
             assertEquals(expectedUrl, request.uri());
             HttpHeaders actualHeaders = request.headers();
@@ -274,8 +276,6 @@ public class HttpProxyHandlerTest {
                     assertEquals(headers.getAll(name), actualHeaders.getAll(name));
                 }
             }
-        } finally {
-            request.release();
         }
         verify(ctx).connect(proxyAddress, null);
     }

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -121,7 +122,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * </pre>
      */
     @Override
-    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
+    protected FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
+                                                    HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
         if (!req.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)
@@ -143,7 +145,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Create the WebSocket handshake response.
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"),
-                req.content().alloc().buffer(0));
+                allocator.allocate(0));
         if (headers != null) {
             res.headers().add(headers);
         }
@@ -176,12 +178,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                            BEGINNING_SPACE.matcher(key1).replaceAll("").length());
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key2).replaceAll("").length());
-            long c = req.content().readLong();
+            long c = req.payload().readLong();
             ByteBuf input = Unpooled.wrappedBuffer(new byte[16]).setIndex(0, 0);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            res.content().writeBytes(WebSocketUtil.md5(input.array()));
+            res.payload().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
             // Old Hixie 75 handshake getMethod with no challenge:
             res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, origin);
@@ -216,7 +218,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            the {@link ChannelHandlerContext} to use.
      * @param frame
      *            Closing Frame that was received.
-     * @return    the {@link ChannelFuture} which will be notified once the operations completes.
+     * @return    the {@link Future} which will be notified once the operations completes.
      */
     @Override
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {

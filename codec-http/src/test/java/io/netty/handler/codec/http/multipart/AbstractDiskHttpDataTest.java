@@ -15,21 +15,22 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * {@link AbstractDiskHttpData} test cases
@@ -38,7 +39,7 @@ public class AbstractDiskHttpDataTest {
 
     @Test
     public void testGetChunk() throws Exception {
-        TestHttpData test = new TestHttpData("test", UTF_8, 0);
+        TestHttpData test = new TestHttpData(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, "test", UTF_8, 0);
         try {
             File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
             tmpFile.deleteOnExit();
@@ -52,23 +53,22 @@ public class AbstractDiskHttpDataTest {
                 fos.close();
             }
             test.setContent(tmpFile);
-            ByteBuf buf1 = test.getChunk(1024);
-            assertEquals(buf1.readerIndex(), 0);
-            assertEquals(buf1.writerIndex(), 1024);
-            ByteBuf buf2 = test.getChunk(1024);
-            assertEquals(buf2.readerIndex(), 0);
-            assertEquals(buf2.writerIndex(), 1024);
-            assertFalse(Arrays.equals(ByteBufUtil.getBytes(buf1), ByteBufUtil.getBytes(buf2)),
-                    "Arrays should not be equal");
+            Buffer buf1 = test.getChunk(1024);
+            assertEquals(buf1.readerOffset(), 0);
+            assertEquals(buf1.writerOffset(), 1024);
+            Buffer buf2 = test.getChunk(1024);
+            assertEquals(buf2.readerOffset(), 0);
+            assertEquals(buf2.writerOffset(), 1024);
+            Assertions.assertNotEquals(buf1, buf2, "Arrays should not be equal");
         } finally {
             test.delete();
         }
     }
 
-    private static final class TestHttpData extends AbstractDiskHttpData {
+    private static final class TestHttpData extends AbstractDiskHttpData<TestHttpData> {
 
-        private TestHttpData(String name, Charset charset, long size) {
-            super(name, charset, size);
+        private TestHttpData(BufferAllocator allocator, String name, Charset charset, long size) {
+            super(allocator, name, charset, size);
         }
 
         @Override
@@ -97,26 +97,6 @@ public class AbstractDiskHttpDataTest {
         }
 
         @Override
-        public HttpData copy() {
-            return null;
-        }
-
-        @Override
-        public HttpData duplicate() {
-            return null;
-        }
-
-        @Override
-        public HttpData retainedDuplicate() {
-            return null;
-        }
-
-        @Override
-        public HttpData replace(ByteBuf content) {
-            return null;
-        }
-
-        @Override
         public HttpDataType getHttpDataType() {
             return null;
         }
@@ -124,6 +104,11 @@ public class AbstractDiskHttpDataTest {
         @Override
         public int compareTo(InterfaceHttpData o) {
             return 0;
+        }
+
+        @Override
+        public Send<TestHttpData> send() {
+            return Send.sending(TestHttpData.class, () -> this);
         }
     }
 }

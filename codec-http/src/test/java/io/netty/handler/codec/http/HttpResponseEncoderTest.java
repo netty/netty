@@ -15,18 +15,15 @@
 */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -37,33 +34,33 @@ public class HttpResponseEncoderTest {
     private static final FileRegion FILE_REGION = new DummyLongFileRegion();
 
     @Test
-    public void testLargeFileRegionChunked() throws Exception {
+    public void testLargeFileRegionChunked() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         assertTrue(channel.writeOutbound(response));
 
-        ByteBuf buffer = channel.readOutbound();
+        Buffer buffer = channel.readOutbound();
 
         assertEquals("HTTP/1.1 200 OK\r\n" + HttpHeaderNames.TRANSFER_ENCODING + ": " +
                 HttpHeaderValues.CHUNKED + "\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
-        buffer.release();
+        buffer.close();
         assertTrue(channel.writeOutbound(FILE_REGION));
         buffer = channel.readOutbound();
         assertEquals("80000000\r\n", buffer.toString(CharsetUtil.US_ASCII));
-        buffer.release();
+        buffer.close();
 
         FileRegion region = channel.readOutbound();
         assertSame(FILE_REGION, region);
         region.release();
         buffer = channel.readOutbound();
         assertEquals("\r\n", buffer.toString(CharsetUtil.US_ASCII));
-        buffer.release();
+        buffer.close();
 
-        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
         buffer = channel.readOutbound();
         assertEquals("0\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
-        buffer.release();
+        buffer.close();
 
         assertFalse(channel.finish());
     }
@@ -91,7 +88,7 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
-        public long transferTo(WritableByteChannel target, long position) throws IOException {
+        public long transferTo(WritableByteChannel target, long position) {
             throw new UnsupportedOperationException();
         }
 
@@ -132,42 +129,45 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testEmptyBufferBypass() throws Exception {
+    public void testEmptyBufferBypass() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
 
         // Test writing an empty buffer works when the encoder is at ST_INIT.
-        channel.writeOutbound(Unpooled.EMPTY_BUFFER);
-        ByteBuf buffer = channel.readOutbound();
-        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+        try (Buffer emptyBuffer = channel.bufferAllocator().allocate(0)) {
+            channel.writeOutbound(emptyBuffer.copy());
+            Buffer buffer = channel.readOutbound();
+            assertEquals(buffer, emptyBuffer);
 
-        // Leave the ST_INIT state.
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        assertTrue(channel.writeOutbound(response));
-        buffer = channel.readOutbound();
-        assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
-        buffer.release();
+            // Leave the ST_INIT state.
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            assertTrue(channel.writeOutbound(response));
+            buffer = channel.readOutbound();
+            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+            buffer.close();
 
-        // Test writing an empty buffer works when the encoder is not at ST_INIT.
-        channel.writeOutbound(Unpooled.EMPTY_BUFFER);
-        buffer = channel.readOutbound();
-        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+            // Test writing an empty buffer works when the encoder is not at ST_INIT.
+            channel.writeOutbound(emptyBuffer.copy());
+            buffer = channel.readOutbound();
+            assertEquals(buffer, emptyBuffer);
+        }
 
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testEmptyContentChunked() throws Exception {
+    public void testEmptyContentChunked() {
         testEmptyContent(true);
     }
 
     @Test
-    public void testEmptyContentNotChunked() throws Exception {
+    public void testEmptyContentNotChunked() {
         testEmptyContent(false);
     }
 
-    private static void testEmptyContent(boolean chunked) throws Exception {
+    private static void testEmptyContent(boolean chunked) {
         String content = "netty rocks";
-        ByteBuf contentBuffer = Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII);
+        Buffer contentBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence(content, CharsetUtil.US_ASCII);
         int length = contentBuffer.readableBytes();
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
@@ -176,74 +176,74 @@ public class HttpResponseEncoderTest {
             HttpUtil.setContentLength(response, length);
         }
         assertTrue(channel.writeOutbound(response));
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
         assertTrue(channel.writeOutbound(new DefaultLastHttpContent(contentBuffer)));
 
-        ByteBuf buffer = channel.readOutbound();
+        Buffer buffer = channel.readOutbound();
         if (!chunked) {
             assertEquals("HTTP/1.1 200 OK\r\ncontent-length: " + length + "\r\n\r\n",
                     buffer.toString(CharsetUtil.US_ASCII));
         } else {
             assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
         }
-        buffer.release();
+        buffer.close();
 
         // Test writing an empty buffer works when the encoder is not at ST_INIT.
         buffer = channel.readOutbound();
         assertEquals(0, buffer.readableBytes());
-        buffer.release();
+        buffer.close();
 
         buffer = channel.readOutbound();
         assertEquals(length, buffer.readableBytes());
-        buffer.release();
+        buffer.close();
 
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNoContent() throws Exception {
+    public void testStatusNoContent() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, null, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNoContentContentLength() throws Exception {
+    public void testStatusNoContentContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.CONTENT_LENGTH, true);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNoContentTransferEncoding() throws Exception {
+    public void testStatusNoContentTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.TRANSFER_ENCODING, true);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModified() throws Exception {
+    public void testStatusNotModified() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, null, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModifiedContentLength() throws Exception {
+    public void testStatusNotModifiedContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.CONTENT_LENGTH, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModifiedTransferEncoding() throws Exception {
+    public void testStatusNotModifiedTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.TRANSFER_ENCODING, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusInformational() throws Exception {
+    public void testStatusInformational() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -253,7 +253,7 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusInformationalContentLength() throws Exception {
+    public void testStatusInformationalContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -263,7 +263,7 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusInformationalTransferEncoding() throws Exception {
+    public void testStatusInformationalTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -282,9 +282,9 @@ public class HttpResponseEncoderTest {
         }
 
         assertTrue(channel.writeOutbound(response));
-        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
 
-        ByteBuf buffer = channel.readOutbound();
+        Buffer buffer = channel.readOutbound();
         StringBuilder responseText = new StringBuilder();
         responseText.append(HttpVersion.HTTP_1_1).append(' ').append(status.toString()).append("\r\n");
         if (!headerStripped && headerName != null) {
@@ -301,10 +301,10 @@ public class HttpResponseEncoderTest {
 
         assertEquals(responseText.toString(), buffer.toString(CharsetUtil.US_ASCII));
 
-        buffer.release();
+        buffer.close();
 
         buffer = channel.readOutbound();
-        buffer.release();
+        buffer.close();
     }
 
     @Test
@@ -336,39 +336,41 @@ public class HttpResponseEncoderTest {
         }
         assertTrue(channel.writeOutbound(request));
 
-        ByteBuf contentBuffer = Unpooled.buffer();
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
 
-        ByteBuf lastContentBuffer = Unpooled.buffer();
-        LastHttpContent last = new DefaultLastHttpContent(lastContentBuffer);
+        LastHttpContent<?> last = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         if (trailers) {
             last.trailingHeaders().set("X-Netty-Test", "true");
         }
         assertTrue(channel.writeOutbound(last));
 
-        // Ensure we only produce ByteBuf instances.
-        ByteBuf head = channel.readOutbound();
-        assertTrue(head.release());
+        try (Buffer head = channel.readOutbound()) {
+            assertTrue(head.isAccessible());
+        }
 
-        ByteBuf content = channel.readOutbound();
-        content.release();
+        try (Buffer content = channel.readOutbound()) {
+            assertTrue(content.isAccessible());
+        }
 
-        ByteBuf lastContent = channel.readOutbound();
-        lastContent.release();
+        try (Buffer lastContent = channel.readOutbound()) {
+            assertTrue(lastContent.isAccessible());
+        }
         assertFalse(channel.finish());
     }
 
     @Test
     public void testStatusResetContentTransferContentLength() {
-        testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH, Unpooled.buffer().writeLong(8));
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8).writeLong(8));
     }
 
     @Test
     public void testStatusResetContentTransferEncoding() {
-        testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING, Unpooled.buffer().writeLong(8));
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8).writeLong(8));
     }
 
-    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, ByteBuf content) {
+    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, Buffer content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
 
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.RESET_CONTENT);
@@ -380,25 +382,24 @@ public class HttpResponseEncoderTest {
 
         assertTrue(channel.writeOutbound(response));
         assertTrue(channel.writeOutbound(new DefaultHttpContent(content)));
-        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
 
-        StringBuilder responseText = new StringBuilder();
-        responseText.append(HttpVersion.HTTP_1_1).append(' ')
-                .append(HttpResponseStatus.RESET_CONTENT).append("\r\n");
-        responseText.append(HttpHeaderNames.CONTENT_LENGTH).append(": 0\r\n");
-        responseText.append("\r\n");
+        String responseText = String.valueOf(HttpVersion.HTTP_1_1) + ' ' +
+                HttpResponseStatus.RESET_CONTENT + "\r\n" +
+                HttpHeaderNames.CONTENT_LENGTH + ": 0\r\n" +
+                "\r\n";
 
         StringBuilder written = new StringBuilder();
         for (;;) {
-            ByteBuf buffer = channel.readOutbound();
-            if (buffer == null) {
-                break;
+            try (Buffer buffer = channel.readOutbound()) {
+                if (buffer == null) {
+                    break;
+                }
+                written.append(buffer.toString(CharsetUtil.US_ASCII));
             }
-            written.append(buffer.toString(CharsetUtil.US_ASCII));
-            buffer.release();
         }
 
-        assertEquals(responseText.toString(), written.toString());
+        assertEquals(responseText, written.toString());
         assertFalse(channel.finish());
     }
 }

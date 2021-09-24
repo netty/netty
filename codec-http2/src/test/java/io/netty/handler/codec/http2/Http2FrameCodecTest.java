@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
@@ -55,11 +54,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -155,7 +156,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void stateChanges() throws Exception {
+    public void stateChanges() {
         frameInboundWriter.writeInboundHeaders(1, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(1);
@@ -187,7 +188,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void headerRequestHeaderResponse() throws Exception {
+    public void headerRequestHeaderResponse() {
         frameInboundWriter.writeInboundHeaders(1, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(1);
@@ -282,7 +283,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void sendRstStream() throws Exception {
+    public void sendRstStream() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(3);
@@ -304,7 +305,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveRstStream() throws Exception {
+    public void receiveRstStream() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(3);
@@ -325,7 +326,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void sendGoAway() throws Exception {
+    public void sendGoAway() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         Http2Stream stream = frameCodec.connection().stream(3);
         assertNotNull(stream);
@@ -348,7 +349,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveGoaway() throws Exception {
+    public void receiveGoaway() {
         ByteBuf debugData = bb("foo");
         frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
         Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
@@ -389,7 +390,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void unknownFrameTypeOnConnectionStream() throws Exception {
+    public void unknownFrameTypeOnConnectionStream() {
         // handle the case where unknown frames are sent before a stream is created,
         // for example: HTTP/2 GREASE testing
         ByteBuf debugData = bb("debug");
@@ -401,7 +402,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void goAwayLastStreamIdOverflowed() throws Exception {
+    public void goAwayLastStreamIdOverflowed() {
         frameInboundWriter.writeInboundHeaders(5, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(5);
@@ -423,7 +424,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void streamErrorShouldFireExceptionForInbound() throws Exception {
+    public void streamErrorShouldFireExceptionForInbound() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(3);
@@ -438,12 +439,8 @@ public class Http2FrameCodecTest {
         Http2HeadersFrame headersFrame = inboundHandler.readInboundMessageOrUserEvent();
         assertNotNull(headersFrame);
 
-        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                inboundHandler.checkException();
-            }
-        });
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class,
+                () -> inboundHandler.checkException());
         assertEquals(streamEx, e.getCause());
 
         assertNull(inboundHandler.readInboundMessageOrUserEvent());
@@ -472,7 +469,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void windowUpdateFrameDecrementsConsumedBytes() throws Exception {
+    public void windowUpdateFrameDecrementsConsumedBytes() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
         Http2Connection connection = frameCodec.connection();
@@ -496,7 +493,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void windowUpdateMayFail() throws Exception {
+    public void windowUpdateMayFail() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         Http2Connection connection = frameCodec.connection();
         Http2Stream stream = connection.stream(3);
@@ -515,7 +512,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void inboundWindowUpdateShouldBeForwarded() throws Exception {
+    public void inboundWindowUpdateShouldBeForwarded() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         frameInboundWriter.writeInboundWindowUpdate(3, 100);
         // Connection-level window update
@@ -745,7 +742,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receivePing() throws Http2Exception {
+    public void receivePing() {
         frameInboundWriter.writeInboundPing(false, 12345L);
 
         Http2PingFrame pingFrame = inboundHandler.readInbound();
@@ -764,7 +761,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveSettings() throws Http2Exception {
+    public void receiveSettings() {
         Http2Settings settings = new Http2Settings().maxConcurrentStreams(1);
         frameInboundWriter.writeInboundSettings(settings);
 
@@ -878,16 +875,17 @@ public class Http2FrameCodecTest {
         Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
-                "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+                "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
-        assertEquals(1, upgradeEvent.refCnt());
+        assertTrue(upgradeEvent.isAccessible());
     }
 
     @Test
     public void upgradeWithoutFlowControlling() throws Exception {
         channel.pipeline().addAfter(frameCodec.ctx.name(), null, new ChannelHandler() {
             @Override
-            public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(final ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof Http2DataFrame) {
                     // Simulate consuming the frame and update the flow-controller.
                     Http2DataFrame data = (Http2DataFrame) msg;
@@ -912,9 +910,10 @@ public class Http2FrameCodecTest {
         // Check if we could make it accessible which may fail on java9.
         Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
-        String longString = new String(new char[70000]).replace("\0", "*");
+        byte[] longString = new String(new char[70000]).replace("\0", "*").getBytes(UTF_8);
         DefaultFullHttpRequest request =
-            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", bb(longString));
+            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                    DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(longString.length).writeBytes(longString));
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
             "HTTP/2", request);

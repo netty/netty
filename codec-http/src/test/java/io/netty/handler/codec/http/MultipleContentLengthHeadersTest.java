@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -30,6 +29,7 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_INITIAL_BUFF
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -66,8 +66,9 @@ public class MultipleContentLengthHeadersTest {
     public void testMultipleContentLengthHeadersBehavior(boolean allowDuplicateContentLengths,
                                                          boolean sameValue, boolean singleField) {
         EmbeddedChannel channel = newChannel(allowDuplicateContentLengths);
-        String requestStr = setupRequestString(sameValue, singleField);
-        assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
+        byte[] requestStr = setupRequestString(sameValue, singleField).getBytes(US_ASCII);
+        assertThat(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)),
+                is(true));
         HttpRequest request = channel.readInbound();
 
         if (allowDuplicateContentLengths) {
@@ -75,9 +76,9 @@ public class MultipleContentLengthHeadersTest {
                 assertValid(request);
                 List<String> contentLengths = request.headers().getAll(HttpHeaderNames.CONTENT_LENGTH);
                 assertThat(contentLengths, contains("1"));
-                LastHttpContent body = channel.readInbound();
-                assertThat(body.content().readableBytes(), is(1));
-                assertThat(body.content().readCharSequence(1, CharsetUtil.US_ASCII).toString(), is("a"));
+                LastHttpContent<?> body = channel.readInbound();
+                assertThat(body.payload().readableBytes(), is(1));
+                assertThat(body.payload().readCharSequence(1, CharsetUtil.US_ASCII).toString(), is("a"));
             } else {
                 assertInvalid(request);
             }
@@ -105,11 +106,12 @@ public class MultipleContentLengthHeadersTest {
     @Test
     public void testDanglingComma() {
         EmbeddedChannel channel = newChannel(false);
-        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+        byte[] requestStr = ("GET /some/path HTTP/1.1\r\n" +
                             "Content-Length: 1,\r\n" +
                             "Connection: close\n\n" +
-                            "ab";
-        assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
+                            "ab").getBytes(US_ASCII);
+        assertThat(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length)
+                .writeBytes(requestStr)), is(true));
         HttpRequest request = channel.readInbound();
         assertInvalid(request);
         assertThat(channel.finish(), is(false));

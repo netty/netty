@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -104,7 +106,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                 // Convert and write the headers.
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
-                endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
+                endStream = msg instanceof FullHttpMessage && ((FullHttpMessage<?>) msg).payload().readableBytes() == 0;
                 writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers,
                         endStream).cascadeTo(promiseAggregator.newPromise());
             }
@@ -117,13 +119,14 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     isLastContent = true;
 
                     // Convert any trailing headers.
-                    final LastHttpContent lastContent = (LastHttpContent) msg;
+                    final LastHttpContent<?> lastContent = (LastHttpContent<?>) msg;
                     trailers = lastContent.trailingHeaders();
                     http2Trailers = HttpConversionUtil.toHttp2Headers(trailers, validateHeaders);
                 }
 
                 // Write the data
-                final ByteBuf content = ((HttpContent) msg).content();
+                final Buffer payload = ((HttpContent<?>) msg).payload();
+                final ByteBuf content = ByteBufAdaptor.intoByteBuf(payload);
                 endStream = isLastContent && trailers.isEmpty();
                 encoder.writeData(ctx, currentStreamId, content, 0, endStream)
                         .cascadeTo(promiseAggregator.newPromise());

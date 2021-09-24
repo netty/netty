@@ -15,10 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelException;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
@@ -26,10 +24,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Disk FileUpload implementation that stores file into real files
  */
-public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
+public class DiskFileUpload extends AbstractDiskHttpData<DiskFileUpload> implements FileUpload<DiskFileUpload> {
     public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
@@ -48,9 +48,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     private String contentTransferEncoding;
 
-    public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size, String baseDir, boolean deleteOnExit) {
-        super(name, charset, size);
+    public DiskFileUpload(BufferAllocator allocator, String name, String filename, String contentType,
+                          String contentTransferEncoding, Charset charset, long size, String baseDir,
+                          boolean deleteOnExit) {
+        super(allocator, name, charset, size);
         setFilename(filename);
         setContentType(contentType);
         setContentTransferEncoding(contentTransferEncoding);
@@ -58,9 +59,9 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         this.deleteOnExit = deleteOnExit;
     }
 
-    public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
-        this(name, filename, contentType, contentTransferEncoding,
+    public DiskFileUpload(BufferAllocator allocator, String name, String filename, String contentType,
+                          String contentTransferEncoding, Charset charset, long size) {
+        this(allocator, name, filename, contentType, contentTransferEncoding,
                 charset, size, baseDirectory, deleteOnExitTemporaryFile);
     }
 
@@ -87,7 +88,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof FileUpload && FileUploadUtil.equals(this, (FileUpload) o);
+        return o instanceof FileUpload && FileUploadUtil.equals(this, (FileUpload<?>) o);
     }
 
     @Override
@@ -96,10 +97,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
                     " with " + o.getHttpDataType());
         }
-        return compareTo((FileUpload) o);
+        return compareTo((FileUpload<?>) o);
     }
 
-    public int compareTo(FileUpload o) {
+    public int compareTo(FileUpload<?> o) {
         return FileUploadUtil.compareTo(this, o);
     }
 
@@ -170,73 +171,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     @Override
-    public FileUpload copy() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.copy() : null);
+    public Send<DiskFileUpload> send() {
+        return Send.sending(DiskFileUpload.class, () -> this);
     }
 
     @Override
-    public FileUpload duplicate() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.duplicate() : null);
-    }
-
-    @Override
-    public FileUpload retainedDuplicate() {
-        ByteBuf content = content();
-        if (content != null) {
-            content = content.retainedDuplicate();
-            boolean success = false;
-            try {
-                FileUpload duplicate = replace(content);
-                success = true;
-                return duplicate;
-            } finally {
-                if (!success) {
-                    content.release();
-                }
-            }
-        } else {
-            return replace(null);
-        }
-    }
-
-    @Override
-    public FileUpload replace(ByteBuf content) {
-        DiskFileUpload upload = new DiskFileUpload(
-                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size,
-                baseDir, deleteOnExit);
-        if (content != null) {
-            try {
-                upload.setContent(content);
-            } catch (IOException e) {
-                throw new ChannelException(e);
-            }
-        }
-        return upload;
-    }
-
-    @Override
-    public FileUpload retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public FileUpload retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public FileUpload touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public FileUpload touch(Object hint) {
-        super.touch(hint);
+    public DiskFileUpload touch(Object hint) {
         return this;
     }
 }

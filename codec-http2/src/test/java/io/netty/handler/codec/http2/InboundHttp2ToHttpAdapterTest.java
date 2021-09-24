@@ -16,8 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -51,9 +50,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
@@ -133,9 +135,8 @@ public class InboundHttp2ToHttpAdapterTest {
     @Test
     public void clientRequestSingleHeaderNoDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", true);
-        try {
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -154,17 +155,14 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
     @Test
     public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries() throws Exception {
         boostrapEnv(1, 1, 1);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", true);
-        try {
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -187,17 +185,14 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
     @Test
     public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries2() throws Exception {
         boostrapEnv(1, 1, 1);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", true);
-        try {
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -219,8 +214,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
@@ -246,10 +239,10 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestOneDataFrame() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", content, true);
-        try {
+        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence(text, CharsetUtil.UTF_8);
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", hello, true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -258,7 +251,8 @@ public class InboundHttp2ToHttpAdapterTest {
                     new AsciiString("/some/path/resource2"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(hello.copy()),
+                        0, true);
                 clientChannel.flush();
             });
             awaitRequests();
@@ -266,8 +260,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
@@ -275,10 +267,10 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestMultipleDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", content, true);
-        try {
+        try (Buffer content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(32)
+                .writeCharSequence(text, CharsetUtil.UTF_8);
+             FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", content.copy(), true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -289,9 +281,9 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
                 clientHandler.encoder().writeData(
-                        ctxClient(), 3, content.retainedSlice(0, midPoint), 0, false);
+                        ctxClient(), 3, intoByteBuf(content.copy(0, midPoint)), 0, false);
                 clientHandler.encoder().writeData(
-                        ctxClient(), 3, content.retainedSlice(midPoint, text.length() - midPoint),
+                        ctxClient(), 3, intoByteBuf(content.copy(midPoint, text.length() - midPoint)),
                         0, true);
                 clientChannel.flush();
             });
@@ -300,8 +292,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
@@ -309,10 +299,9 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestMultipleEmptyDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", content, true);
-        try {
+        final Buffer content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0);
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", content, true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -321,9 +310,9 @@ public class InboundHttp2ToHttpAdapterTest {
                     new AsciiString("/some/path/resource2"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, true);
                 clientChannel.flush();
             });
             awaitRequests();
@@ -331,8 +320,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
@@ -340,10 +327,10 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestTrailingHeaders() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "some data";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", content, true);
-        try {
+        Buffer content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence(text, CharsetUtil.UTF_8);
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/some/path/resource2", content, true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -360,7 +347,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     .add(new AsciiString("foo2"), new AsciiString("goo3"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, true);
                 clientChannel.flush();
             });
@@ -369,8 +356,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
         }
     }
 
@@ -378,14 +363,16 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestStreamDependencyInHttpMessageFlow() throws Exception {
         boostrapEnv(1, 2, 1);
         final String text = "hello world big time data!";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
+        Buffer content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(32)
+                .writeCharSequence(text, CharsetUtil.UTF_8);
+
         final String text2 = "hello world big time data...number 2!!";
-        final ByteBuf content2 = Unpooled.copiedBuffer(text2.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
+        Buffer content2 = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(64)
+                .writeCharSequence(text2, CharsetUtil.UTF_8);
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
                 "/some/path/resource", content, true);
-        final FullHttpMessage request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
-                "/some/path/resource2", content2, true);
-        try {
+             FullHttpMessage<?> request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
+                "/some/path/resource2", content2, true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -404,8 +391,8 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 3, (short) 123, true, 0,
                         false);
                 clientChannel.flush(); // Headers are queued in the flow controller and so flush them.
-                clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true);
-                clientHandler.encoder().writeData(ctxClient(), 5, content2.retainedDuplicate(), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 5, intoByteBuf(content2.copy()), 0, true);
                 clientChannel.flush();
             });
             awaitRequests();
@@ -414,9 +401,6 @@ public class InboundHttp2ToHttpAdapterTest {
             capturedRequests = httpObjectCaptor.getAllValues();
             assertEquals(request, capturedRequests.get(0));
             assertEquals(request2, capturedRequests.get(1));
-        } finally {
-            request.release();
-            request2.release();
         }
     }
 
@@ -424,16 +408,17 @@ public class InboundHttp2ToHttpAdapterTest {
     public void serverRequestPushPromise() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
+        Buffer content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(32)
+                .writeCharSequence(text, CharsetUtil.UTF_8);
         final String text2 = "hello world smaller data?";
-        final ByteBuf content2 = Unpooled.copiedBuffer(text2.getBytes());
-        final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+        Buffer content2 = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(32)
+                .writeCharSequence(text2, CharsetUtil.UTF_8);
+        try (FullHttpMessage<?> response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 content, true);
-        final FullHttpMessage response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
-                content2, true);
-        final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/push/test",
-                true);
-        try {
+             FullHttpMessage<?> response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                     HttpResponseStatus.CREATED, content2, true);
+             FullHttpMessage<?> request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/push/test", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true)) {
             HttpHeaders httpHeaders = response.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
@@ -473,8 +458,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(serverConnectedChannel, () -> {
                 serverHandler.encoder().writeHeaders(ctxServer(), 3, http2Headers, 0, false);
                 serverHandler.encoder().writePushPromise(ctxServer(), 3, 2, http2Headers2, 0);
-                serverHandler.encoder().writeData(ctxServer(), 3, content.retainedDuplicate(), 0, true);
-                serverHandler.encoder().writeData(ctxServer(), 5, content2.retainedDuplicate(), 0, true);
+                serverHandler.encoder().writeData(ctxServer(), 3, intoByteBuf(content.copy()), 0, true);
+                serverHandler.encoder().writeData(ctxServer(), 5, intoByteBuf(content2.copy()), 0, true);
                 serverConnectedChannel.flush();
             });
             awaitResponses();
@@ -482,18 +467,14 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(clientListener).messageReceived(responseCaptor.capture());
             capturedResponses = responseCaptor.getAllValues();
             assertEquals(response, capturedResponses.get(0));
-        } finally {
-            request.release();
-            response.release();
-            response2.release();
         }
     }
 
     @Test
     public void serverResponseHeaderInformational() throws Exception {
         boostrapEnv(1, 2, 1, 2, 1);
-        final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/info/test",
-                true);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT,
+                "/info/test", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true);
         HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
         httpHeaders.set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
@@ -504,11 +485,17 @@ public class InboundHttp2ToHttpAdapterTest {
                 .path(new AsciiString("/info/test"))
                 .set(new AsciiString(HttpHeaderNames.EXPECT.toString()),
                      new AsciiString(HttpHeaderValues.CONTINUE.toString()));
-        final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+        final FullHttpMessage<?> response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         final String text = "a big payload";
-        final ByteBuf payload = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpMessage request2 = request.replace(payload);
-        final FullHttpMessage response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        final Buffer payload = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence(text, StandardCharsets.UTF_8);
+        final FullHttpMessage<?> request2 = new DefaultFullHttpRequest(request.protocolVersion(), request.method(),
+                request.uri(), payload, request.headers(), request.trailingHeaders());
+        final FullHttpMessage<?> response2 =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
 
         try {
             runInChannel(clientChannel, () -> {
@@ -531,7 +518,7 @@ public class InboundHttp2ToHttpAdapterTest {
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             httpHeaders.remove(HttpHeaderNames.EXPECT);
             runInChannel(clientChannel, () -> {
-                clientHandler.encoder().writeData(ctxClient(), 3, payload.retainedDuplicate(), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(payload.copy()), 0, true);
                 clientChannel.flush();
             });
 
@@ -552,8 +539,6 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener, times(2)).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(2, capturedRequests.size());
-            // We do not expect to have this header in the captured request so remove it now.
-            assertNotNull(request.headers().remove("x-http2-stream-weight"));
 
             assertEquals(request, capturedRequests.get(0));
             assertEquals(request2, capturedRequests.get(1));
@@ -565,10 +550,10 @@ public class InboundHttp2ToHttpAdapterTest {
             assertEquals(response, capturedResponses.get(0));
             assertEquals(response2, capturedResponses.get(1));
         } finally {
-            request.release();
-            request2.release();
-            response.release();
-            response2.release();
+            request.close();
+            request2.close();
+            response.close();
+            response2.close();
         }
     }
 
@@ -687,8 +672,8 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private void cleanupCapturedRequests() {
         if (capturedRequests != null) {
-            for (FullHttpMessage capturedRequest : capturedRequests) {
-                capturedRequest.release();
+            for (FullHttpMessage<?> capturedRequest : capturedRequests) {
+                capturedRequest.close();
             }
             capturedRequests = null;
         }
@@ -696,8 +681,8 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private void cleanupCapturedResponses() {
         if (capturedResponses != null) {
-            for (FullHttpMessage capturedResponse : capturedResponses) {
-                capturedResponse.release();
+            for (FullHttpMessage<?> capturedResponse : capturedResponses) {
+                capturedResponse.close();
             }
             capturedResponses = null;
         }

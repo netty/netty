@@ -20,8 +20,10 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.EmptyLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -53,22 +55,25 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) {
         if (request.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
-            ctx.fireChannelRead(request.retain());
+            ctx.fireChannelRead(new DefaultFullHttpRequest(request.protocolVersion(), request.method(), request.uri(),
+                    request.payload().copy()));
             return;
         }
 
         if (request.decoderResult().isFailure()) {
-            FullHttpResponse badRequest = new DefaultFullHttpResponse(request.protocolVersion(), BAD_REQUEST);
+            FullHttpResponse badRequest = new DefaultFullHttpResponse(request.protocolVersion(), BAD_REQUEST,
+                    ctx.bufferAllocator().allocate(0));
             sendResponse(badRequest, ctx, true);
             return;
         }
 
         if (!sendResource(request, ctx)) {
-            FullHttpResponse notFound = new DefaultFullHttpResponse(request.protocolVersion(), NOT_FOUND);
+            FullHttpResponse notFound = new DefaultFullHttpResponse(request.protocolVersion(), NOT_FOUND,
+                    ctx.bufferAllocator().allocate(0));
             notFound.headers().set(CONTENT_TYPE, TEXT_PLAIN);
             String payload = "Requested resource " + request.uri() + " not found";
-            notFound.content().writeCharSequence(payload, CharsetUtil.UTF_8);
-            HttpUtil.setContentLength(notFound, notFound.content().readableBytes());
+            notFound.payload().writeCharSequence(payload, CharsetUtil.UTF_8);
+            HttpUtil.setContentLength(notFound, notFound.payload().readableBytes());
             sendResponse(notFound, ctx, true);
         }
     }
@@ -124,7 +129,7 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
         response.headers().set(CONTENT_TYPE, contentType);
         sendResponse(response, ctx, false);
         ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
-        ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        ctx.writeAndFlush(new EmptyLastHttpContent(ctx.bufferAllocator()));
         return true;
     }
 

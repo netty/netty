@@ -15,8 +15,6 @@
  */
 package io.netty.testsuite.autobahn;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,7 +54,7 @@ public class AutobahnServerHandler implements ChannelHandler {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -67,21 +65,22 @@ public class AutobahnServerHandler implements ChannelHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req)
-            throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) {
         // Handle a bad request.
         if (!req.decoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, ctx.alloc().buffer(0)));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
+                    ctx.bufferAllocator().allocate(0)));
             return;
         }
 
         // Allow only GET methods.
         if (!GET.equals(req.method())) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, ctx.alloc().buffer(0)));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN,
+                    ctx.bufferAllocator().allocate(0)));
             return;
         }
 
@@ -123,10 +122,8 @@ public class AutobahnServerHandler implements ChannelHandler {
             ChannelHandlerContext ctx, HttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.status().code() != 200) {
-            ByteBuf buf = Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8);
-            res.content().writeBytes(buf);
-            buf.release();
-            setContentLength(res, res.content().readableBytes());
+            res.payload().writeCharSequence(res.status().toString(), CharsetUtil.UTF_8);
+            setContentLength(res, res.payload().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
@@ -137,7 +134,7 @@ public class AutobahnServerHandler implements ChannelHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         ctx.close();
     }
 

@@ -34,12 +34,6 @@ public class DefaultHttpObject implements HttpObject {
     }
 
     @Override
-    @Deprecated
-    public DecoderResult getDecoderResult() {
-        return decoderResult();
-    }
-
-    @Override
     public void setDecoderResult(DecoderResult decoderResult) {
         requireNonNull(decoderResult, "decoderResult");
         this.decoderResult = decoderResult;

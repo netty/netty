@@ -16,8 +16,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -46,6 +47,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
+
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 
 /**
  * This handler converts from {@link Http2StreamFrame} to {@link HttpObject},
@@ -94,19 +97,20 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             // 100-continue response is a special case where Http2HeadersFrame#isEndStream=false
             // but we need to decode it as a FullHttpResponse to play nice with HttpObjectAggregator.
             if (null != status && HttpResponseStatus.CONTINUE.codeAsText().contentEquals(status)) {
-                final FullHttpMessage fullMsg = newFullMessage(id, headers, ctx.alloc());
+                final FullHttpMessage<?> fullMsg = newFullMessage(id, headers, ctx.bufferAllocator());
                 ctx.fireChannelRead(fullMsg);
                 return;
             }
 
             if (headersFrame.isEndStream()) {
                 if (headers.method() == null && status == null) {
-                    LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+                    LastHttpContent<?> last = new DefaultLastHttpContent(ctx.bufferAllocator().allocate(0),
+                            validateHeaders);
                     HttpConversionUtil.addHttp2ToHttpHeaders(id, headers, last.trailingHeaders(),
                                                              HttpVersion.HTTP_1_1, true, true);
                     ctx.fireChannelRead(last);
                 } else {
-                    FullHttpMessage full = newFullMessage(id, headers, ctx.alloc());
+                    FullHttpMessage<?> full = newFullMessage(id, headers, ctx.bufferAllocator());
                     ctx.fireChannelRead(full);
                 }
             } else {
@@ -119,17 +123,20 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         } else if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
-                ctx.fireChannelRead(new DefaultLastHttpContent(dataFrame.content().retain(), validateHeaders));
+                ctx.fireChannelRead(new DefaultLastHttpContent(
+                        extractOrCopy(ctx.bufferAllocator(), dataFrame.content().retain()), validateHeaders));
             } else {
-                ctx.fireChannelRead(new DefaultHttpContent(dataFrame.content().retain()));
+                ctx.fireChannelRead(new DefaultHttpContent(extractOrCopy(ctx.bufferAllocator(),
+                        dataFrame.content().retain())));
             }
         }
     }
 
-    private void encodeLastContent(LastHttpContent last, List<Object> out) {
+    private void encodeLastContent(LastHttpContent<?> last, List<Object> out) {
         boolean needFiller = !(last instanceof FullHttpMessage) && last.trailingHeaders().isEmpty();
-        if (last.content().isReadable() || needFiller) {
-            out.add(new DefaultHttp2DataFrame(last.content().retain(), last.trailingHeaders().isEmpty()));
+        final Buffer payload = last.payload();
+        if (payload.readableBytes() > 0 || needFiller) {
+            out.add(new DefaultHttp2DataFrame(ByteBufAdaptor.intoByteBuf(payload), last.trailingHeaders().isEmpty()));
         }
         if (!last.trailingHeaders().isEmpty()) {
             Http2Headers headers = HttpConversionUtil.toHttp2Headers(last.trailingHeaders(), validateHeaders);
@@ -171,19 +178,20 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             Http2Headers headers = toHttp2Headers(ctx, (HttpMessage) obj);
             boolean noMoreFrames = false;
             if (obj instanceof FullHttpMessage) {
-                FullHttpMessage full = (FullHttpMessage) obj;
-                noMoreFrames = !full.content().isReadable() && full.trailingHeaders().isEmpty();
+                FullHttpMessage<?> full = (FullHttpMessage<?>) obj;
+                noMoreFrames = full.payload().readableBytes() == 0 && full.trailingHeaders().isEmpty();
             }
 
             out.add(new DefaultHttp2HeadersFrame(headers, noMoreFrames));
         }
 
         if (obj instanceof LastHttpContent) {
-            LastHttpContent last = (LastHttpContent) obj;
+            LastHttpContent<?> last = (LastHttpContent<?>) obj;
             encodeLastContent(last, out);
         } else if (obj instanceof HttpContent) {
-            HttpContent cont = (HttpContent) obj;
-            out.add(new DefaultHttp2DataFrame(cont.content().retain(), false));
+            HttpContent<?> cont = (HttpContent<?>) obj;
+            final Buffer payload = cont.payload();
+            out.add(new DefaultHttp2DataFrame(ByteBufAdaptor.intoByteBuf(payload), false));
         }
     }
 
@@ -204,9 +212,9 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                 HttpConversionUtil.toHttpResponse(id, headers, validateHeaders);
     }
 
-    private FullHttpMessage newFullMessage(final int id,
+    private FullHttpMessage<?> newFullMessage(final int id,
                                            final Http2Headers headers,
-                                           final ByteBufAllocator alloc) throws Http2Exception {
+                                           final BufferAllocator alloc) throws Http2Exception {
         return isServer ?
                 HttpConversionUtil.toFullHttpRequest(id, headers, alloc, validateHeaders) :
                 HttpConversionUtil.toFullHttpResponse(id, headers, alloc, validateHeaders);

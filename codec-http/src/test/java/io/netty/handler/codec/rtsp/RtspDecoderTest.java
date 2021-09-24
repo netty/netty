@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import org.junit.jupiter.api.Test;
 
-
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,27 +46,27 @@ public class RtspDecoderTest {
                       + "Session: 2777476816092819869\r\n"
                       + "x-notice: 5402 \"Session Terminated by Server\" "
                       + "event-date=20150514T075303Z\r\n"
-                      + "Range: npt=0\r\n\r\n").getBytes();
+                      + "Range: npt=0\r\n\r\n").getBytes(UTF_8);
 
         byte[] data2 = ("RTSP/1.0 200 OK\r\n" +
                         "Server: Orbit2x\r\n" +
                         "CSeq: 172\r\n" +
                         "Session: 2547019973447939919\r\n" +
-                        "\r\n").getBytes();
+                        "\r\n").getBytes(UTF_8);
 
         EmbeddedChannel ch = new EmbeddedChannel(new RtspDecoder(),
-                                            new HttpObjectAggregator(1048576));
-        ch.writeInbound(Unpooled.wrappedBuffer(data1),
-                        Unpooled.wrappedBuffer(data2));
+                                            new HttpObjectAggregator<DefaultHttpContent>(1048576));
+        ch.writeInbound(ch.bufferAllocator().allocate(data1.length).writeBytes(data1),
+                ch.bufferAllocator().allocate(data2.length).writeBytes(data2));
 
         HttpObject res1 = ch.readInbound();
         assertNotNull(res1);
         assertTrue(res1 instanceof FullHttpRequest);
-        ((FullHttpRequest) res1).release();
+        ((FullHttpRequest) res1).close();
 
         HttpObject res2 = ch.readInbound();
         assertNotNull(res2);
         assertTrue(res2 instanceof FullHttpResponse);
-        ((FullHttpResponse) res2).release();
+        ((FullHttpResponse) res2).close();
     }
 }

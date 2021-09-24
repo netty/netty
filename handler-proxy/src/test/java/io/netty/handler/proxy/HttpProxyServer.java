@@ -20,8 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.ByteBufToBufferHandler;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -37,9 +39,11 @@ import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.greaterThan;
 
 final class HttpProxyServer extends ProxyServer {
 
@@ -53,17 +57,19 @@ final class HttpProxyServer extends ProxyServer {
     }
 
     @Override
-    protected void configure(SocketChannel ch) throws Exception {
+    protected void configure(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
+            p.addLast(BYTEBUF_TO_BUFFER_HANDLER);
             p.addLast(new HttpServerCodec());
-            p.addLast(new HttpObjectAggregator(1));
+            p.addLast(new HttpObjectAggregator<DefaultHttpContent>(1));
             p.addLast(new HttpIntermediaryHandler());
             break;
         case TERMINAL:
+            p.addLast(BYTEBUF_TO_BUFFER_HANDLER);
             p.addLast(new HttpServerCodec());
-            p.addLast(new HttpObjectAggregator(1));
+            p.addLast(new HttpObjectAggregator<DefaultHttpContent>(1));
             p.addLast(new HttpTerminalHandler());
             break;
         case UNRESPONSIVE:
@@ -109,10 +115,12 @@ final class HttpProxyServer extends ProxyServer {
             FullHttpRequest req = (FullHttpRequest) msg;
             FullHttpResponse res;
             if (!authenticate(ctx, req)) {
-                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
+                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                 res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else {
-                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                 String uri = req.uri();
                 int lastColonPos = uri.lastIndexOf(':');
                 assertThat(lastColonPos, is(greaterThan(0)));
@@ -134,19 +142,22 @@ final class HttpProxyServer extends ProxyServer {
     private final class HttpTerminalHandler extends TerminalHandler {
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             FullHttpRequest req = (FullHttpRequest) msg;
             FullHttpResponse res;
             boolean sendGreeting = false;
 
             if (!authenticate(ctx, req)) {
-                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
+                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                 res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else if (!req.uri().equals(destination.getHostString() + ':' + destination.getPort())) {
-                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                 res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
             } else {
-                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+                res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
                 sendGreeting = true;
             }
 

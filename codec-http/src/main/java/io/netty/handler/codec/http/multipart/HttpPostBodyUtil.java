@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.handler.codec.http.HttpConstants;
 
 /**
@@ -83,53 +83,6 @@ final class HttpPostBodyUtil {
     }
 
     /**
-    * This class intends to decrease the CPU in seeking ahead some bytes in
-    * HttpPostRequestDecoder
-    */
-    static class SeekAheadOptimize {
-        byte[] bytes;
-        int readerIndex;
-        int pos;
-        int origPos;
-        int limit;
-        ByteBuf buffer;
-
-        /**
-         * @param buffer buffer with a backing byte array
-         */
-        SeekAheadOptimize(ByteBuf buffer) {
-            if (!buffer.hasArray()) {
-                throw new IllegalArgumentException("buffer hasn't backing byte array");
-            }
-            this.buffer = buffer;
-            bytes = buffer.array();
-            readerIndex = buffer.readerIndex();
-            origPos = pos = buffer.arrayOffset() + readerIndex;
-            limit = buffer.arrayOffset() + buffer.writerIndex();
-        }
-
-        /**
-        *
-        * @param minus this value will be used as (currentPos - minus) to set
-        * the current readerIndex in the buffer.
-        */
-        void setReadPosition(int minus) {
-            pos -= minus;
-            readerIndex = getReadPosition(pos);
-            buffer.readerIndex(readerIndex);
-        }
-
-        /**
-        *
-        * @param index raw index of the array (pos in general)
-        * @return the value equivalent of raw index to be used in readerIndex(value)
-        */
-        int getReadPosition(int index) {
-            return index - origPos + readerIndex;
-        }
-    }
-
-    /**
      * Find the first non whitespace
      * @return the rank of the first non whitespace
      */
@@ -165,9 +118,9 @@ final class HttpPostBodyUtil {
      * @return a relative position from index > 0 if LF or CRLF is found
      *         or < 0 if not found
      */
-    static int findLineBreak(ByteBuf buffer, int index) {
-        int toRead = buffer.readableBytes() - (index - buffer.readerIndex());
-        int posFirstChar = buffer.bytesBefore(index, toRead, HttpConstants.LF);
+    static int findLineBreak(Buffer buffer, int index) {
+        int toRead = buffer.readableBytes() - (index - buffer.readerOffset());
+        int posFirstChar = buffer.openCursor(index, toRead).process(value -> value == HttpConstants.LF);
         if (posFirstChar == -1) {
             // No LF, so neither CRLF
             return -1;
@@ -186,7 +139,7 @@ final class HttpPostBodyUtil {
      * @return a relative position from index > 0 if LF or CRLF is found
      *         or < 0 if not found
      */
-    static int findLastLineBreak(ByteBuf buffer, int index) {
+    static int findLastLineBreak(Buffer buffer, int index) {
         int candidate = findLineBreak(buffer, index);
         int findCRLF = 0;
         if (candidate >= 0) {
@@ -223,16 +176,16 @@ final class HttpPostBodyUtil {
      * @throws IndexOutOfBoundsException
      *         if {@code offset + delimiter.length} is greater than {@code buffer.capacity}
      */
-    static int findDelimiter(ByteBuf buffer, int index, byte[] delimiter, boolean precededByLineBreak) {
+    static int findDelimiter(Buffer buffer, int index, byte[] delimiter, boolean precededByLineBreak) {
         final int delimiterLength = delimiter.length;
-        final int readerIndex = buffer.readerIndex();
-        final int writerIndex = buffer.writerIndex();
+        final int readerIndex = buffer.readerOffset();
+        final int writerIndex = buffer.writerOffset();
         int toRead = writerIndex - index;
         int newOffset = index;
         boolean delimiterNotFound = true;
         while (delimiterNotFound && delimiterLength <= toRead) {
             // Find first position: delimiter
-            int posDelimiter = buffer.bytesBefore(newOffset, toRead, delimiter[0]);
+            int posDelimiter = buffer.openCursor(newOffset, toRead).process(value -> value == delimiter[0]);
             if (posDelimiter < 0) {
                 return -1;
             }

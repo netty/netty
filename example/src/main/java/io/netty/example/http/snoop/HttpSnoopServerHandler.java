@@ -15,8 +15,8 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -25,11 +25,11 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -42,8 +42,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> {
 
@@ -100,10 +103,10 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         if (msg instanceof HttpContent) {
-            HttpContent httpContent = (HttpContent) msg;
+            HttpContent<?> httpContent = (HttpContent<?>) msg;
 
-            ByteBuf content = httpContent.content();
-            if (content.isReadable()) {
+            Buffer content = httpContent.payload();
+            if (content.readableBytes() > 0) {
                 buf.append("CONTENT: ");
                 buf.append(content.toString(CharsetUtil.UTF_8));
                 buf.append("\r\n");
@@ -113,7 +116,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             if (msg instanceof LastHttpContent) {
                 buf.append("END OF CONTENT\r\n");
 
-                LastHttpContent trailer = (LastHttpContent) msg;
+                LastHttpContent<?> trailer = (LastHttpContent<?>) msg;
                 if (!trailer.trailingHeaders().isEmpty()) {
                     buf.append("\r\n");
                     for (CharSequence name: trailer.trailingHeaders().names()) {
@@ -148,15 +151,16 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         // Decide whether to close the connection or not.
         boolean keepAlive = HttpUtil.isKeepAlive(request);
         // Build the response object.
+        final byte[] bytes = buf.toString().getBytes(UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
-                Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
+                ctx.bufferAllocator().allocate(bytes.length).writeBytes(bytes));
 
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.payload().readableBytes());
             // Add keep alive header as per:
             // - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
@@ -185,7 +189,8 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE,
+                ctx.bufferAllocator().allocate(0));
         ctx.write(response);
     }
 
