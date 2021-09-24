@@ -334,7 +334,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
 
     UntetheredMemory allocate(PooledAllocatorControl control, int size) {
         PoolThreadCache cache = threadCache.get();
-        PoolArena arena = cache.arena;
+        PoolArena arena = cache.getArena();
 
         if (arena != null) {
             return arena.allocate(control, cache, size);
@@ -459,7 +459,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
                 return cache;
             }
             // No caching so just use 0 as sizes.
-            return new PoolThreadCache(null, 0, 0, 0, 0);
+            return new PoolThreadCache(arena, 0, 0, 0, 0);
         }
 
         @Override
