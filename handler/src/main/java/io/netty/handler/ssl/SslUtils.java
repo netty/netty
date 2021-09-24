@@ -327,15 +327,21 @@ final class SslUtils {
     // Reads a big-endian unsigned short integer from the buffer
     @SuppressWarnings("deprecation")
     private static int unsignedShortBE(ByteBuf buffer, int offset) {
-        return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getUnsignedShort(offset) : buffer.getUnsignedShortLE(offset);
+        int value = buffer.getUnsignedShort(offset);
+        if (buffer.order() == ByteOrder.LITTLE_ENDIAN) {
+            value = Integer.reverseBytes(value) >>> Short.SIZE;
+        }
+        return value;
     }
 
     // Reads a big-endian short integer from the buffer
     @SuppressWarnings("deprecation")
     private static short shortBE(ByteBuf buffer, int offset) {
-        return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getShort(offset) : buffer.getShortLE(offset);
+        short value = buffer.getShort(offset);
+        if (buffer.order() == ByteOrder.LITTLE_ENDIAN) {
+            value = Short.reverseBytes(value);
+        }
+        return value;
     }
 
     private static short unsignedByte(byte b) {
