@@ -24,7 +24,7 @@ public class LzfEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new LzfEncoder());
+        return new EmbeddedChannel(new CompressionHandler(LzfCompressor.newFactory()));
     }
 
     @Override

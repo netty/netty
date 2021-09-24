@@ -21,11 +21,11 @@ public class LzfIntegrationTest extends AbstractIntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new LzfEncoder());
+        return new EmbeddedChannel(new CompressionHandler(LzfCompressor.newFactory()));
     }
 
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new LzfDecoder());
+        return new EmbeddedChannel(new DecompressionHandler(LzfDecompressor.newFactory()));
     }
 }

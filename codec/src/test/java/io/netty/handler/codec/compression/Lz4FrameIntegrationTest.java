@@ -21,11 +21,11 @@ public class Lz4FrameIntegrationTest extends AbstractIntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new Lz4FrameEncoder());
+        return new EmbeddedChannel(new CompressionHandler(Lz4Compressor.newFactory()));
     }
 
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new Lz4FrameDecoder());
+        return new EmbeddedChannel(new DecompressionHandler(Lz4Decompressor.newFactory()));
     }
 }

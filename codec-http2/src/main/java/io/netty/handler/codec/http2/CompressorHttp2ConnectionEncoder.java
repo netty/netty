@@ -19,15 +19,16 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.compression.BrotliEncoder;
+import io.netty.handler.codec.compression.BrotliCompressor;
 import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionHandler;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdCompressor;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -257,12 +258,14 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         if (brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters()));
+                    ctx.channel().config(), new CompressionHandler(
+                            BrotliCompressor.newFactory(brotliOptions.parameters())));
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
+                    ctx.channel().config(), new CompressionHandler(
+                            ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+                                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize())));
         }
         // 'identity' or unsupported
         return null;

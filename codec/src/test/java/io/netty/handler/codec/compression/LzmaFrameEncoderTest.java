@@ -36,7 +36,7 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new LzmaFrameEncoder());
+        return new EmbeddedChannel(new CompressionHandler(LzmaCompressor.newFactory()));
     }
 
     @ParameterizedTest

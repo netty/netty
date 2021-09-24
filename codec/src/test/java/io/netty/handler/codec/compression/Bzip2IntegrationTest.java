@@ -22,12 +22,12 @@ public class Bzip2IntegrationTest extends AbstractIntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new Bzip2Encoder());
+        return new EmbeddedChannel(new CompressionHandler(Bzip2Compressor.newFactory()));
     }
 
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new Bzip2Decoder());
+        return new EmbeddedChannel(new DecompressionHandler(Bzip2Decompressor.newFactory()));
     }
 
     @Test

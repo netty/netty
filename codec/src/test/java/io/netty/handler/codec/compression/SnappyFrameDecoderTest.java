@@ -33,7 +33,7 @@ public class SnappyFrameDecoderTest {
 
     @BeforeEach
     public void initChannel() {
-        channel = new EmbeddedChannel(new SnappyFrameDecoder());
+        channel = new EmbeddedChannel(new DecompressionHandler(SnappyDecompressor.newFactory()));
     }
 
     @AfterEach
@@ -151,7 +151,7 @@ public class SnappyFrameDecoderTest {
 
     @Test
     public void testInvalidChecksumThrowsException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new DecompressionHandler(SnappyDecompressor.newFactory(true)));
         try {
             // checksum here is presented as 0
             ByteBuf in = Unpooled.wrappedBuffer(new byte[]{
@@ -167,7 +167,7 @@ public class SnappyFrameDecoderTest {
 
     @Test
     public void testInvalidChecksumDoesNotThrowException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new DecompressionHandler(SnappyDecompressor.newFactory(true)));
         try {
             // checksum here is presented as a282986f (little endian)
             ByteBuf in = Unpooled.wrappedBuffer(new byte[]{

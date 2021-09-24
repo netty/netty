@@ -31,12 +31,12 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
 
         @Override
         protected EmbeddedChannel createEncoder() {
-            return new EmbeddedChannel(new FastLzFrameEncoder(true));
+            return new EmbeddedChannel(new CompressionHandler(FastLzCompressor.newFactory(true)));
         }
 
         @Override
         protected EmbeddedChannel createDecoder() {
-            return new EmbeddedChannel(new FastLzFrameDecoder(true));
+            return new EmbeddedChannel(new DecompressionHandler(FastLzDecompressor.newFactory(true)));
         }
     }
 
@@ -44,23 +44,23 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
 
         @Override
         protected EmbeddedChannel createEncoder() {
-            return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
+            return new EmbeddedChannel(new CompressionHandler(FastLzCompressor.newFactory(rand.nextBoolean())));
         }
 
         @Override
         protected EmbeddedChannel createDecoder() {
-            return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
+            return new EmbeddedChannel(new DecompressionHandler(FastLzDecompressor.newFactory(rand.nextBoolean())));
         }
     }
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new FastLzFrameEncoder(rand.nextBoolean()));
+        return new EmbeddedChannel(new CompressionHandler(FastLzCompressor.newFactory(rand.nextBoolean())));
     }
 
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new FastLzFrameDecoder(rand.nextBoolean()));
+        return new EmbeddedChannel(new DecompressionHandler(FastLzDecompressor.newFactory(rand.nextBoolean())));
     }
 
     @Override   // test batched flow of data

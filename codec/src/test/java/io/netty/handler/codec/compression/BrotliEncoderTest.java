@@ -38,7 +38,7 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @Override
     public EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new BrotliEncoder());
+        return new EmbeddedChannel(new CompressionHandler(BrotliCompressor.newFactory()));
     }
 
     @Override

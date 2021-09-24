@@ -31,7 +31,7 @@ public class LzfDecoderTest extends AbstractDecoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new LzfDecoder());
+        return new EmbeddedChannel(new DecompressionHandler(LzfDecompressor.newFactory()));
     }
 
     @Test

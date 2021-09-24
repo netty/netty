@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -128,16 +129,16 @@ public class JdkZlibTest {
         }
     }
 
-    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
+    protected ChannelHandler createDecoder(ZlibWrapper wrapper) {
         return createDecoder(wrapper, 0);
     }
 
-    protected ZlibEncoder createEncoder(ZlibWrapper wrapper, BufferType bufferType) {
-        return new JdkZlibEncoder(wrapper, 6, bufferType == BufferType.DIRECT);
+    protected ChannelHandler createEncoder(ZlibWrapper wrapper) {
+        return new CompressionHandler(JdkZlibCompressor.newFactory(wrapper, 6));
     }
 
-    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, int maxAllocation) {
-        return new JdkZlibDecoder(wrapper, maxAllocation);
+    protected ChannelHandler createDecoder(ZlibWrapper wrapper, int maxAllocation) {
+        return new DecompressionHandler(JdkZlibDecompressor.newFactory(wrapper, maxAllocation));
     }
 
     static Stream<Arguments> compressionConfigurations() {
@@ -186,7 +187,7 @@ public class JdkZlibTest {
     @MethodSource("workingConfigurations")
     void compressionInputOutput(
             Data data, BufferType inBuf, BufferType outBuf, ZlibWrapper inWrap, ZlibWrapper outWrap) {
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(inWrap, inBuf));
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(inWrap));
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(outWrap));
         chEncoder.config().setAllocator(new UnpooledByteBufAllocator(inBuf == BufferType.DIRECT));
         chDecoder.config().setAllocator(new UnpooledByteBufAllocator(outBuf == BufferType.DIRECT));
@@ -272,7 +273,7 @@ public class JdkZlibTest {
     }
 
     private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper, BufferType.HEAP));
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
 
         try {
@@ -326,7 +327,7 @@ public class JdkZlibTest {
     }
 
     private void testCompressNone(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper, BufferType.HEAP));
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
 
         try {
@@ -444,7 +445,7 @@ public class JdkZlibTest {
     }
 
     private void testGZIPCompressOnly0(byte[] data) throws IOException {
-        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP, BufferType.HEAP));
+        EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP));
         if (data != null) {
             chEncoder.writeOutbound(Unpooled.wrappedBuffer(data));
         }
@@ -508,7 +509,7 @@ public class JdkZlibTest {
     @Test
     public void testMaxAllocation() throws Exception {
         int maxAllocation = 1024;
-        ZlibDecoder decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
+        ChannelHandler decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
         EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
@@ -519,7 +520,6 @@ public class JdkZlibTest {
         } catch (DecompressionException e) {
             assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
             assertEquals(maxAllocation, alloc.getMaxAllocation());
-            assertTrue(decoder.isClosed());
             assertFalse(chDecoder.finish());
         }
     }
@@ -547,7 +547,8 @@ public class JdkZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFully() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(
+                new DecompressionHandler(JdkZlibDecompressor.newFactory(true)));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -569,7 +570,8 @@ public class JdkZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(
+                new DecompressionHandler(JdkZlibDecompressor.newFactory(true)));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -608,7 +610,8 @@ public class JdkZlibTest {
 
         byte[] compressed = bytesOut.toByteArray();
         ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
-        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true));
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new DecompressionHandler(JdkZlibDecompressor.newFactory(ZlibWrapper.GZIP, true)));
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
         assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));

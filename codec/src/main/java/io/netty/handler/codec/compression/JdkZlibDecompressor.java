@@ -19,9 +19,10 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.buffer.Unpooled;
 
 import java.nio.ByteBuffer;
+import java.util.function.Supplier;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -30,7 +31,7 @@ import java.util.zip.Inflater;
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
-public class JdkZlibDecoder extends ZlibDecoder {
+public final class JdkZlibDecompressor implements Decompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -43,6 +44,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
     // GZIP related
     private final ByteBufChecksum crc;
     private final boolean decompressConcatenated;
+
+    /**
+     * Maximum allowed size of the decompression buffer.
+     */
+    protected final int maxAllocation;
 
     private enum GzipState {
         HEADER_START,
@@ -59,94 +65,14 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private int flags = -1;
     private int xlen = -1;
 
-    private volatile boolean finished;
+    private boolean finished;
+    private boolean closed;
 
     private boolean decideZlibOrNone;
 
-    /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
-     */
-    public JdkZlibDecoder() {
-        this(ZlibWrapper.ZLIB, null, false, 0);
-    }
-
-    /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB})
-     * and the specified maximum buffer allocation.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(int maxAllocation) {
-        this(ZlibWrapper.ZLIB, null, false, maxAllocation);
-    }
-
-    /**
-     * Creates a new instance with the specified preset dictionary. The wrapper
-     * is always {@link ZlibWrapper#ZLIB} because it is the only format that
-     * supports the preset dictionary.
-     */
-    public JdkZlibDecoder(byte[] dictionary) {
-        this(ZlibWrapper.ZLIB, dictionary, false, 0);
-    }
-
-    /**
-     * Creates a new instance with the specified preset dictionary and maximum buffer allocation.
-     * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
-     * supports the preset dictionary.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(byte[] dictionary, int maxAllocation) {
-        this(ZlibWrapper.ZLIB, dictionary, false, maxAllocation);
-    }
-
-    /**
-     * Creates a new instance with the specified wrapper.
-     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
-     * supported atm.
-     */
-    public JdkZlibDecoder(ZlibWrapper wrapper) {
-        this(wrapper, null, false, 0);
-    }
-
-    /**
-     * Creates a new instance with the specified wrapper and maximum buffer allocation.
-     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
-     * supported atm.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
-        this(wrapper, null, false, maxAllocation);
-    }
-
-    public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated) {
-        this(wrapper, null, decompressConcatenated, 0);
-    }
-
-    public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated, int maxAllocation) {
-        this(wrapper, null, decompressConcatenated, maxAllocation);
-    }
-
-    public JdkZlibDecoder(boolean decompressConcatenated) {
-        this(ZlibWrapper.GZIP, null, decompressConcatenated, 0);
-    }
-
-    public JdkZlibDecoder(boolean decompressConcatenated, int maxAllocation) {
-        this(ZlibWrapper.GZIP, null, decompressConcatenated, maxAllocation);
-    }
-
-    private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated, int maxAllocation) {
-        super(maxAllocation);
-
-        requireNonNull(wrapper, "wrapper");
-
+    private JdkZlibDecompressor(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated,
+                                int maxAllocation) {
+        this.maxAllocation = maxAllocation;
         this.decompressConcatenated = decompressConcatenated;
         switch (wrapper) {
             case GZIP:
@@ -172,28 +98,119 @@ public class JdkZlibDecoder extends ZlibDecoder {
         this.dictionary = dictionary;
     }
 
-    @Override
-    public boolean isClosed() {
-        return finished;
+    /**
+     * Creates a zlib decompressor factory with the default wrapper ({@link ZlibWrapper#ZLIB}).
+     *
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory() {
+        return newFactory(ZlibWrapper.ZLIB, null, false, 0);
+    }
+
+    /**
+     * Creates a zlib decompressor factory with the default wrapper ({@link ZlibWrapper#ZLIB})
+     * and the specified maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory(int maxAllocation) {
+        return newFactory(ZlibWrapper.ZLIB, null, false, maxAllocation);
+    }
+
+    /**
+     * Creates a zlib decompressor factory with the specified preset dictionary. The wrapper
+     * is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
+     *
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary) {
+        return newFactory(ZlibWrapper.ZLIB, dictionary, false, 0);
+    }
+
+    /**
+     * Creates zlib decompressor factory with the specified preset dictionary and maximum buffer allocation.
+     * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary, int maxAllocation) {
+        return newFactory(ZlibWrapper.ZLIB, dictionary, false, maxAllocation);
+    }
+
+    /**
+     * Creates zlib decompressor factory with the specified wrapper.
+     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
+     * supported atm.
+     *
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper) {
+        return newFactory(wrapper, null, false, 0);
+    }
+
+    /**
+     * Creates zlib decompressor factory with the specified wrapper and maximum buffer allocation.
+     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
+     * supported atm.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     * @return the factory.
+     */
+    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, int maxAllocation) {
+        return newFactory(wrapper, null, false, maxAllocation);
+    }
+
+    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, boolean decompressConcatenated) {
+        return newFactory(wrapper, null, decompressConcatenated, 0);
+    }
+
+    public static Supplier<JdkZlibDecompressor> newFactory(
+            ZlibWrapper wrapper, boolean decompressConcatenated, int maxAllocation) {
+        return newFactory(wrapper, null, decompressConcatenated, maxAllocation);
+    }
+
+    public static Supplier<JdkZlibDecompressor> newFactory(boolean decompressConcatenated) {
+        return newFactory(ZlibWrapper.GZIP, null, decompressConcatenated, 0);
+    }
+
+    public static Supplier<JdkZlibDecompressor> newFactory(boolean decompressConcatenated, int maxAllocation) {
+        return newFactory(ZlibWrapper.GZIP, null, decompressConcatenated, maxAllocation);
+    }
+
+    private static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, byte[] dictionary,
+                                                            boolean decompressConcatenated, int maxAllocation) {
+        requireNonNull(wrapper, "wrapper");
+        return () -> new JdkZlibDecompressor(wrapper, dictionary, decompressConcatenated, maxAllocation);
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+        if (closed) {
+            throw new DecompressionException("Decompressor closed");
+        }
         if (finished) {
-            // Skip data received after finished.
-            in.skipBytes(in.readableBytes());
-            return;
+            return Unpooled.EMPTY_BUFFER;
         }
 
         int readableBytes = in.readableBytes();
         if (readableBytes == 0) {
-            return;
+            return null;
         }
 
         if (decideZlibOrNone) {
             // First two bytes are needed to decide if it's a ZLIB stream.
             if (readableBytes < 2) {
-                return;
+                return null;
             }
 
             boolean nowrap = !looksLikeZlib(in.getShort(in.readerIndex()));
@@ -206,19 +223,19 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 if (gzipState == GzipState.FOOTER_START) {
                     if (!handleGzipFooter(in)) {
                         // Either there was not enough data or the input is finished.
-                        return;
+                        return null;
                     }
                     // If we consumed the footer we will start with the header again.
                     assert gzipState == GzipState.HEADER_START;
                 }
                 if (!readGZIPHeader(in)) {
                     // There was not enough data readable to read the GZIP header.
-                    return;
+                    return null;
                 }
                 // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
                 readableBytes = in.readableBytes();
                 if (readableBytes == 0) {
-                    return;
+                    return null;
                 }
             }
         }
@@ -233,7 +250,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
             }
         }
 
-        ByteBuf decompressed = prepareDecompressBuffer(ctx, null, inflater.getRemaining() << 1);
+        ByteBuf decompressed = prepareDecompressBuffer(allocator, null, inflater.getRemaining() << 1);
         try {
             boolean readFooter = false;
             while (!inflater.needsInput()) {
@@ -272,7 +289,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     }
                     break;
                 } else {
-                    decompressed = prepareDecompressBuffer(ctx, decompressed, inflater.getRemaining() << 1);
+                    decompressed = prepareDecompressBuffer(allocator, decompressed, inflater.getRemaining() << 1);
                 }
             }
 
@@ -282,14 +299,19 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 gzipState = GzipState.FOOTER_START;
                 handleGzipFooter(in);
             }
-        } catch (DataFormatException e) {
-            throw new DecompressionException("decompression failure", e);
-        } finally {
+
             if (decompressed.isReadable()) {
-                ctx.fireChannelRead(decompressed);
+                return decompressed;
             } else {
                 decompressed.release();
+                return null;
             }
+        } catch (DataFormatException e) {
+            decompressed.release();
+            throw new DecompressionException("decompression failure", e);
+        } catch (Throwable cause) {
+            decompressed.release();
+            throw cause;
         }
     }
 
@@ -305,19 +327,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
             }
         }
         return false;
-    }
-
-    @Override
-    protected void decompressionBufferExhausted(ByteBuf buffer) {
-        finished = true;
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved0(ctx);
-        if (inflater != null) {
-            inflater.end();
-        }
     }
 
     private boolean readGZIPHeader(ByteBuf in) {
@@ -416,8 +425,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * Skip bytes in the input if needed until we find the end marker {@code 0x00}.
      * @param   in the input
      * @param   flagMask the mask that should be present in the {@code flags} when we need to skip bytes.
-     * @return  {@code true} if the operation is complete and we can move to the next state, {@code false} if we need
-     *          the retry again once we have more readable bytes.
+     * @return  {@code true} if the operation is complete and we can move to the next state, {@code false} if
+     * we need to retry again once we have more readable bytes.
      */
     private boolean skipIfNeeded(ByteBuf in, int flagMask) {
         if ((flags & flagMask) != 0) {
@@ -469,8 +478,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * Verifies CRC.
      *
      * @param   in the input.
-     * @return  {@code true} if verification could be performed, {@code false} if verification could not be performed as
-     *          the input {@link ByteBuf} doesn't have enough readable bytes (4 bytes).
+     * @return  {@code true} if verification could be performed, {@code false} if verification could not be
+     * performed as the input {@link ByteBuf} doesn't have enough readable bytes (4 bytes).
      */
     private boolean verifyCrc(ByteBuf in) {
         if (in.readableBytes() < 4) {
@@ -498,5 +507,57 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private static boolean looksLikeZlib(short cmf_flg) {
         return (cmf_flg & 0x7800) == 0x7800 &&
                 cmf_flg % 31 == 0;
+    }
+
+    /**
+     * Allocate or expand the decompression buffer, without exceeding the maximum allocation.
+     * Calls {@link #decompressionBufferExhausted(ByteBuf)} if the buffer is full and cannot be expanded further.
+     */
+    protected ByteBuf prepareDecompressBuffer(ByteBufAllocator allocator, ByteBuf buffer, int preferredSize) {
+        if (buffer == null) {
+            if (maxAllocation == 0) {
+                return allocator.buffer(preferredSize);
+            }
+
+            return allocator.buffer(Math.min(preferredSize, maxAllocation), maxAllocation);
+        }
+
+        // this always expands the buffer if possible, even if the expansion is less than preferredSize
+        // we throw the exception only if the buffer could not be expanded at all
+        // this means that one final attempt to deserialize will always be made with the buffer at maxAllocation
+        if (buffer.ensureWritable(preferredSize, true) == 1) {
+            // buffer must be consumed so subclasses don't add it to output
+            // we therefore duplicate it when calling decompressionBufferExhausted() to guarantee non-interference
+            // but wait until after to consume it so the subclass can tell how much output is really in the buffer
+            decompressionBufferExhausted(buffer.duplicate());
+            buffer.skipBytes(buffer.readableBytes());
+            throw new DecompressionException(
+                    "Decompression buffer has reached maximum size: " + buffer.maxCapacity());
+        }
+
+        return buffer;
+    }
+
+    protected void decompressionBufferExhausted(ByteBuf buffer) {
+        finished = true;
+    }
+
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    @Override
+    public void close() {
+        closed = true;
+        finished = true;
+        if (inflater != null) {
+            inflater.end();
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
     }
 }
