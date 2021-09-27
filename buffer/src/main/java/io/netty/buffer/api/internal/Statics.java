@@ -19,6 +19,7 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.Drop;
+import io.netty.buffer.api.MemoryManager;
 import io.netty.util.AsciiString;
 
 import java.lang.invoke.MethodHandle;
@@ -39,6 +40,15 @@ public interface Statics {
     Drop<Buffer> NO_OP_DROP = new Drop<Buffer>() {
         @Override
         public void drop(Buffer obj) {
+        }
+
+        @Override
+        public Drop<Buffer> fork() {
+            return this;
+        }
+
+        @Override
+        public void attach(Buffer obj) {
         }
 
         @Override
@@ -71,9 +81,12 @@ public interface Statics {
         }
     }
 
-    @SuppressWarnings({"unchecked", "unused"})
-    static <T extends Buffer> Drop<T> noOpDrop() {
-        return (Drop<T>) NO_OP_DROP;
+    static <T extends Buffer> Drop<T> standardDropWrap(Drop<T> drop, MemoryManager manager) {
+        return CleanerDrop.wrap(ArcDrop.wrap(drop), manager);
+    }
+
+    static Drop<Buffer> standardDrop(MemoryManager manager) {
+        return standardDropWrap(manager.drop(), manager);
     }
 
     static VarHandle findVarHandle(Lookup lookup, Class<?> recv, String name, Class<?> type) {

@@ -608,8 +608,20 @@ public class BufferCompositionTest extends BufferTestSupport {
                     allocator.allocate(3).send(),
                     allocator.allocate(3).send(),
                     allocator.allocate(2).send());
-            Drop<Object> throwingDrop = obj -> {
-                throw new RuntimeException("Expected.");
+            Drop<Object> throwingDrop = new Drop<>() {
+                @Override
+                public void drop(Object obj) {
+                    throw new RuntimeException("Expected.");
+                }
+
+                @Override
+                public Drop<Object> fork() {
+                    return this;
+                }
+
+                @Override
+                public void attach(Object obj) {
+                }
             };
             try {
                 Statics.unsafeSetDrop((ResourceSupport<?, ?>) composite, throwingDrop);

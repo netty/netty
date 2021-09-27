@@ -78,16 +78,13 @@ public final class ArcDrop<T> implements Drop<T> {
     }
 
     @Override
+    public Drop<T> fork() {
+        return increment();
+    }
+
+    @Override
     public void attach(T obj) {
         delegate.attach(obj);
-    }
-
-    public boolean isOwned() {
-        return count <= 1;
-    }
-
-    public int countBorrows() {
-        return count - 1;
     }
 
     public Drop<T> unwrap() {

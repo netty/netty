@@ -32,9 +32,18 @@ public class UnsafeCleanerDrop implements Drop<Buffer> {
         cleaner.register(memory, new FreeAddress(address, size));
     }
 
+    private UnsafeCleanerDrop(Drop<Buffer> drop) {
+        this.drop = drop;
+    }
+
     @Override
     public void drop(Buffer obj) {
         drop.drop(obj);
+    }
+
+    @Override
+    public Drop<Buffer> fork() {
+        return new UnsafeCleanerDrop(drop.fork());
     }
 
     @Override

@@ -39,15 +39,13 @@ public class UnsafeMemoryManager implements MemoryManager {
     }
 
     @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
+    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {
         final Object base;
         final long address;
         final UnsafeMemory memory;
         final int size32 = Math.toIntExact(size);
-        if (cleaner == null) {
-            cleaner = Statics.CLEANER;
-        }
+        Cleaner cleaner = Statics.CLEANER;
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             base = null;
             address = PlatformDependent.allocateMemory(size);

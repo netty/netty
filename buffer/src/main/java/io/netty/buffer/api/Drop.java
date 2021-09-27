@@ -21,7 +21,6 @@ package io.netty.buffer.api;
  *
  * @param <T> The type of resource that can be dropped.
  */
-@FunctionalInterface
 public interface Drop<T> {
     /**
      * Dispose of the resources in the given {@link Resource} instance.
@@ -31,10 +30,19 @@ public interface Drop<T> {
     void drop(T obj);
 
     /**
+     * Branch the responsibility of dropping a resource.
+     * This drop instance will remain associated with its current resource, while the returned drop instance
+     * must be {@linkplain #attach(Object) attached} to its new resource.
+     *
+     * @return A drop instance, similar to this one, but for the purpose of being associated with a different but
+     * related resource.
+     */
+    Drop<T> fork();
+
+    /**
      * Called when the resource changes owner.
      *
      * @param obj The new {@link Resource} instance with the new owner.
      */
-    default void attach(T obj) {
-    }
+    void attach(T obj);
 }

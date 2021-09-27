@@ -19,14 +19,14 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 
 class PooledDrop implements Drop<Buffer> {
-    private final PoolArena arena;
+    private final Drop<Buffer> baseDrop;
     private final PoolChunk chunk;
     private final PoolThreadCache threadCache;
     private final long handle;
     private final int normSize;
 
-    PooledDrop(PoolArena arena, PoolChunk chunk, PoolThreadCache threadCache, long handle, int normSize) {
-        this.arena = arena;
+    PooledDrop(PoolChunk chunk, PoolThreadCache threadCache, long handle, int normSize) {
+        baseDrop = chunk.baseDrop.fork();
         this.chunk = chunk;
         this.threadCache = threadCache;
         this.handle = handle;
@@ -35,6 +35,16 @@ class PooledDrop implements Drop<Buffer> {
 
     @Override
     public void drop(Buffer obj) {
-        arena.free(chunk, handle, normSize, threadCache);
+        chunk.arena.free(chunk, handle, normSize, threadCache);
+        baseDrop.drop(chunk.base);
+    }
+
+    @Override
+    public Drop<Buffer> fork() {
+        return new PooledDrop(chunk, threadCache, handle, normSize);
+    }
+
+    @Override
+    public void attach(Buffer obj) {
     }
 }

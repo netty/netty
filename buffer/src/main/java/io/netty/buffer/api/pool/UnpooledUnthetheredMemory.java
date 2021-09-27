@@ -20,7 +20,6 @@ import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
-import io.netty.buffer.api.internal.Statics;
 
 @SuppressWarnings("unchecked")
 class UnpooledUnthetheredMemory implements AllocatorControl.UntetheredMemory {
@@ -32,7 +31,7 @@ class UnpooledUnthetheredMemory implements AllocatorControl.UntetheredMemory {
         this.manager = manager;
         PooledAllocatorControl allocatorControl = new PooledAllocatorControl();
         allocatorControl.parent = allocator;
-        buffer = manager.allocateShared(allocatorControl, size, manager.drop(), Statics.CLEANER, allocationType);
+        buffer = manager.allocateShared(allocatorControl, size, manager.drop(), allocationType);
     }
 
     @Override

@@ -25,9 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.lang.ref.Cleaner;
 import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader.Provider;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -124,9 +122,8 @@ public class CleanerDropTest {
         @Override
         public Buffer allocateShared(AllocatorControl allocatorControl, long size,
                                      Drop<Buffer> drop,
-                                     Cleaner cleaner,
                                      AllocationType allocationType) {
-            return manager.allocateShared(allocatorControl, size, drop, cleaner, allocationType);
+            return manager.allocateShared(allocatorControl, size, drop, allocationType);
         }
 
         @Override

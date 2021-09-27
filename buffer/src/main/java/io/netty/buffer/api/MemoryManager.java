@@ -21,7 +21,6 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.ref.Cleaner;
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader.Provider;
@@ -104,13 +103,12 @@ public interface MemoryManager {
      *                        requested the allocation of this buffer.
      * @param size The size of the buffer to allocate. This size is assumed to be valid for the implementation.
      * @param drop The {@link Drop} instance to use when the buffer is {@linkplain Resource#close() closed}.
-     * @param cleaner The {@link Cleaner} that the underlying memory should be attached to. Can be {@code null}.
      * @param allocationType The type of allocation to perform.
      *                      Typically, one of the {@linkplain StandardAllocationTypes}.
      * @return A {@link Buffer} instance with the given configuration.
      * @throws IllegalArgumentException For unknown {@link AllocationType}s.
      */
-    Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
+    Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                           AllocationType allocationType);
 
     /**
@@ -123,7 +121,7 @@ public interface MemoryManager {
      *
      * @param readOnlyConstParent The read-only parent buffer for which a const buffer should be created. The parent
      *                            buffer is allocated in the usual way, with
-     *                            {@link #allocateShared(AllocatorControl, long, Drop, Cleaner, AllocationType)},
+     *                            {@link #allocateShared(AllocatorControl, long, Drop, AllocationType)},
      *                            initialised with contents, and then made {@linkplain Buffer#makeReadOnly() read-only}.
      * @return A const buffer with the same size, contents, and read-only state of the given parent buffer.
      */
