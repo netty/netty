@@ -128,6 +128,22 @@ public final class ByteBufAdaptor extends ByteBuf {
         }
     }
 
+    /**
+     * Convert the given {@link Buffer} into a {@link ByteBuf} using the most optimal method.
+     * The contents of both buffers will be mirrored.
+     *
+     * @param buffer The {@link Buffer} to convert into a {@link ByteBuf}.
+     * @return A {@link ByteBuf} that uses the given {@link Buffer} as a backing store.
+     */
+    public static ByteBuf intoByteBuf(Buffer buffer) {
+        if (buffer instanceof ByteBufConvertible) {
+            ByteBufConvertible convertible = (ByteBufConvertible) buffer;
+            return convertible.asByteBuf();
+        } else {
+            return new ByteBufAdaptor(new ByteBufAllocatorAdaptor(), buffer, buffer.capacity());
+        }
+    }
+
     @Override
     public int capacity() {
         return buffer.capacity();

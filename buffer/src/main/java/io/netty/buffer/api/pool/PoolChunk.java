@@ -15,6 +15,8 @@
  */
 package io.netty.buffer.api.pool;
 
+import io.netty.buffer.api.AllocatorControl;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.internal.CleanerDrop;
 import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
@@ -141,6 +143,17 @@ final class PoolChunk implements PoolChunkMetric {
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
+    private static final AllocatorControl CONTROL = new AllocatorControl() {
+        @Override
+        public UntetheredMemory allocateUntethered(Buffer originator, int size) {
+            throw new AssertionError("PoolChunk base allocations should never need to resize.");
+        }
+
+        @Override
+        public BufferAllocator getAllocator() {
+            throw new AssertionError("PoolChunk base allocations should never need to access their allocator.");
+        }
+    };
 
     static final int IS_SUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;
     static final int IS_USED_SHIFT = SUBPAGE_BIT_LENGTH + IS_SUBPAGE_SHIFT;
@@ -177,11 +190,10 @@ final class PoolChunk implements PoolChunkMetric {
     PoolChunk prev;
     PoolChunk next;
 
-    PoolChunk(PoolArena arena, int pageSize, int pageShifts, int chunkSize,
-              int maxPageIdx) {
+    PoolChunk(PoolArena arena, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
         this.arena = arena;
         MemoryManager manager = arena.manager;
-        base = manager.allocateShared(arena, chunkSize, manager.drop(), Statics.CLEANER, arena.allocationType);
+        base = manager.allocateShared(CONTROL, chunkSize, manager.drop(), Statics.CLEANER, arena.allocationType);
         memory = manager.unwrapRecoverableMemory(base);
         baseDrop = ArcDrop.wrap(Buffer::close);
         this.pageSize = pageSize;

@@ -16,14 +16,18 @@
 package io.netty.buffer.api.tests.adaptor;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
@@ -47,6 +51,28 @@ public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf newBuffer(int capacity, int maxCapacity) {
         return alloc.buffer(capacity, maxCapacity);
+    }
+
+    @Test
+    public void byteBufOfFromOnHeapBufferMustMirrorContentsOfBuffer() {
+        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc.getOnHeap());
+    }
+
+    @Test
+    public void byteBufOfFromOffHeapBufferMustMirrorContentsOfBuffer() {
+        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc.getOffHeap());
+    }
+
+    private static void byteBufOfFromBufferMustMirrorContentsOfBuffer(BufferAllocator allocator) {
+        try (Buffer buffer = allocator.allocate(8)) {
+            buffer.writeInt(0x01020304);
+            ByteBuf byteBuf = ByteBufAdaptor.intoByteBuf(buffer);
+            assertEquals(buffer.capacity(), byteBuf.capacity());
+            assertEquals(buffer.readableBytes(), byteBuf.readableBytes());
+            assertEquals(buffer.writableBytes(), byteBuf.writableBytes());
+            assertEquals(buffer.getInt(0), byteBuf.getInt(0));
+            assertEquals(buffer.getLong(0), byteBuf.getLong(0));
+        }
     }
 
     @Disabled("This test codifies that asking to reading 0 bytes from an empty but unclosed stream should return -1, " +

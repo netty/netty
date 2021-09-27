@@ -49,27 +49,24 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     private long address; // Resolved address (baseOffset + memory.address).
     private int rsize;
     private int wsize;
-    private final AllocatorControl control;
     private boolean readOnly;
     private int roff;
     private int woff;
     private boolean constBuffer;
 
-    UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl allocatorControl,
+    UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl control,
                         Drop<UnsafeBuffer> drop) {
-        super(ArcDrop.wrap(drop));
+        super(ArcDrop.wrap(drop), control);
         this.memory = memory;
         base = memory.base;
         baseOffset = offset;
         address = memory.address + offset;
         rsize = size;
         wsize = size;
-        control = allocatorControl;
     }
 
     UnsafeBuffer(UnsafeBuffer parent) {
-        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())));
-        control = parent.control;
+        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())), parent.control);
         memory = parent.memory;
         base = parent.base;
         baseOffset = parent.baseOffset;

@@ -34,6 +34,16 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     }
 
     @Override
+    public boolean isPooling() {
+        return false;
+    }
+
+    @Override
+    public AllocationType getAllocationType() {
+        return allocationType;
+    }
+
+    @Override
     public Buffer allocate(int size) {
         if (closed) {
             throw allocatorClosedException();
@@ -78,5 +88,10 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
                 return (Drop<BufferType>) createDrop();
             }
         };
+    }
+
+    @Override
+    public BufferAllocator getAllocator() {
+        return this;
     }
 }

@@ -16,8 +16,7 @@
 package io.netty.buffer.api.pool;
 
 import io.netty.buffer.api.AllocationType;
-import io.netty.buffer.api.AllocatorControl;
-import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.util.internal.StringUtil;
 
@@ -31,7 +30,7 @@ import java.util.concurrent.atomic.LongAdder;
 import static io.netty.buffer.api.pool.PoolChunk.isSubpage;
 import static java.lang.Math.max;
 
-class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl {
+class PoolArena extends SizeClasses implements PoolArenaMetric {
     private static final VarHandle SUBPAGE_ARRAY = MethodHandles.arrayElementVarHandle(PoolSubpage[].class);
     enum SizeClass {
         Small,
@@ -258,11 +257,6 @@ class PoolArena extends SizeClasses implements PoolArenaMetric, AllocatorControl
             }
         }
         return head;
-    }
-
-    @Override
-    public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-        throw new AssertionError("PoolChunk base buffers should never need to reallocate.");
     }
 
     @Override

@@ -80,6 +80,21 @@ public interface BufferAllocator extends AutoCloseable {
     }
 
     /**
+     * Determine if this allocator is pooling and reusing its allocated memory.
+     *
+     * @return {@code true} if this allocator is pooling and reusing its memory, {@code false} otherwise.
+     */
+    boolean isPooling();
+
+    /**
+     * Get the {@link AllocationType} from this allocator.
+     * This would typically be one of the {@link StandardAllocationTypes}.
+     *
+     * @return The type of allocations performed by this allocator.
+     */
+    AllocationType getAllocationType();
+
+    /**
      * Allocate a {@link Buffer} of the given size in bytes. This method may throw an {@link OutOfMemoryError} if there
      * is not enough free memory available to allocate a {@link Buffer} of the requested size.
      * <p>

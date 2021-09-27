@@ -295,6 +295,16 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     @Override
+    public boolean isPooling() {
+        return true;
+    }
+
+    @Override
+    public AllocationType getAllocationType() {
+        return allocationType;
+    }
+
+    @Override
     public Buffer allocate(int size) {
         if (closed) {
             throw allocatorClosedException();
