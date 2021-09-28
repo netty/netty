@@ -42,7 +42,7 @@ public class ByteBufferMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return new NioBuffer(buffer, buffer, allocatorControl, convert(drop));
+        return createBuffer(buffer, allocatorControl, drop);
     }
 
     @Override
@@ -65,7 +65,14 @@ public class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public Buffer recoverMemory(AllocatorControl allocatorControl, Object recoverableMemory, Drop<Buffer> drop) {
         ByteBuffer memory = (ByteBuffer) recoverableMemory;
-        return new NioBuffer(memory, memory, allocatorControl, convert(drop));
+        return createBuffer(memory, allocatorControl, drop);
+    }
+
+    private static NioBuffer createBuffer(ByteBuffer memory, AllocatorControl allocatorControl, Drop<Buffer> drop) {
+        Drop<NioBuffer> concreteDrop = convert(drop);
+        NioBuffer nioBuffer = new NioBuffer(memory, memory, allocatorControl, concreteDrop);
+        concreteDrop.attach(nioBuffer);
+        return nioBuffer;
     }
 
     @Override

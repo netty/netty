@@ -149,7 +149,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, allocSize);
         ByteBuffer base = memory.memory();
         ByteBuffer buffer = length == 0? bbslice(base, 0, 0) : base;
-        Buffer copy = new NioBuffer(base, buffer, control, memory.drop());
+        Drop<NioBuffer> drop = memory.drop();
+        NioBuffer copy = new NioBuffer(base, buffer, control, drop);
+        drop.attach(copy);
         copyInto(offset, copy, 0, length);
         copy.writerOffset(length);
         return copy;

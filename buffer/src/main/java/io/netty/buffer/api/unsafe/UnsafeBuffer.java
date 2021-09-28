@@ -157,7 +157,9 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         int allocSize = Math.max(length, 1); // Allocators don't support allocating zero-sized buffers.
         AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, allocSize);
         UnsafeMemory unsafeMemory = memory.memory();
-        Buffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, memory.drop());
+        Drop<UnsafeBuffer> drop = memory.drop();
+        UnsafeBuffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, drop);
+        drop.attach(copy);
         copyInto(offset, copy, 0, length);
         copy.writerOffset(length);
         return copy;

@@ -15,6 +15,7 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.CleanerDrop;
 import io.netty.buffer.api.internal.Statics;
 
 import java.util.function.Supplier;
@@ -38,7 +39,11 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
             throw allocatorClosedException();
         }
         Statics.assertValidBufferSize(size);
-        return manager.allocateShared(this, size, manager.drop(), Statics.CLEANER, allocationType);
+        return manager.allocateShared(this, size, createDrop(), Statics.CLEANER, allocationType);
+    }
+
+    Drop<Buffer> createDrop() {
+        return CleanerDrop.wrap(manager.drop(), manager);
     }
 
     @Override
@@ -70,7 +75,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
 
             @Override
             public <BufferType extends Buffer> Drop<BufferType> drop() {
-                return (Drop<BufferType>) manager.drop();
+                return (Drop<BufferType>) createDrop();
             }
         };
     }
