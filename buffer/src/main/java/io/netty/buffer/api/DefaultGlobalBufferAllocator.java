@@ -64,6 +64,16 @@ public final class DefaultGlobalBufferAllocator implements BufferAllocator {
     }
 
     @Override
+    public boolean isPooling() {
+        return delegate.isPooling();
+    }
+
+    @Override
+    public AllocationType getAllocationType() {
+        return delegate.getAllocationType();
+    }
+
+    @Override
     public Buffer allocate(int size) {
         return delegate.allocate(size);
     }

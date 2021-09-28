@@ -16,9 +16,11 @@
 package io.netty.buffer.api.internal;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Drop;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.adaptor.BufferIntegratable;
 import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.buffer.api.adaptor.ByteBufAllocatorAdaptor;
@@ -27,11 +29,14 @@ import io.netty.util.ReferenceCounted;
 
 public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
         extends ResourceSupport<Buffer, T> implements BufferIntegratable, Buffer {
-    protected AdaptableBuffer(Drop<T> drop) {
-        super(drop);
-    }
 
     private volatile ByteBufAdaptor adaptor;
+    protected final AllocatorControl control;
+
+    protected AdaptableBuffer(Drop<T> drop, AllocatorControl control) {
+        super(drop);
+        this.control = control;
+    }
 
     public ByteBuf initialise(ByteBufAllocatorAdaptor alloc, int maxCapacity) {
         return new ByteBufAdaptor(alloc, this, maxCapacity);
@@ -41,7 +46,17 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
     public ByteBuf asByteBuf() {
         ByteBufAdaptor bba = adaptor;
         if (bba == null) {
-            ByteBufAllocatorAdaptor alloc = (ByteBufAllocatorAdaptor) ByteBufAllocator.DEFAULT;
+            BufferAllocator allocator = control.getAllocator();
+            final BufferAllocator onHeap;
+            final BufferAllocator offHeap;
+            if (allocator.getAllocationType() == StandardAllocationTypes.ON_HEAP) {
+                onHeap = allocator;
+                offHeap = allocator.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
+            } else {
+                onHeap = allocator.isPooling() ? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled();
+                offHeap = allocator;
+            }
+            ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(onHeap, offHeap);
             return adaptor = new ByteBufAdaptor(alloc, this, Integer.MAX_VALUE);
         }
         return bba;

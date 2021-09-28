@@ -17,6 +17,7 @@ package io.netty.buffer.api.pool;
 
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 
 class PooledAllocatorControl implements AllocatorControl {
     PooledBufferAllocator parent;
@@ -29,5 +30,10 @@ class PooledAllocatorControl implements AllocatorControl {
     @Override
     public UntetheredMemory allocateUntethered(Buffer originator, int size) {
         return parent.allocate(this, size);
+    }
+
+    @Override
+    public BufferAllocator getAllocator() {
+        return parent;
     }
 }

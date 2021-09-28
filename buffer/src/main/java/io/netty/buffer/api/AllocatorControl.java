@@ -42,6 +42,13 @@ public interface AllocatorControl {
     UntetheredMemory allocateUntethered(Buffer originator, int size);
 
     /**
+     * Get the {@link BufferAllocator} instance that is the source of this allocator control.
+     *
+     * @return The {@link BufferAllocator} controlled by this {@link AllocatorControl}.
+     */
+    BufferAllocator getAllocator();
+
+    /**
      * Memory that isn't attached to any particular buffer.
      */
     interface UntetheredMemory {

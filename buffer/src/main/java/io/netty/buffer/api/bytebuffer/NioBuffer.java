@@ -43,7 +43,6 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
-    private final AllocatorControl control;
     private ByteBuffer base;
     private ByteBuffer rmem; // For reading.
     private ByteBuffer wmem; // For writing.
@@ -53,19 +52,17 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     private boolean constBuffer;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
-        super(ArcDrop.wrap(drop));
+        super(ArcDrop.wrap(drop), control);
         this.base = base;
         rmem = memory;
         wmem = memory;
-        this.control = control;
     }
 
     /**
      * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
      */
     NioBuffer(NioBuffer parent) {
-        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())));
-        control = parent.control;
+        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())), parent.control);
         base = parent.base;
         rmem = bbslice(parent.rmem, 0, parent.rmem.capacity()); // Need to slice to get independent byte orders.
         assert parent.wmem == CLOSED_BUFFER;
