@@ -91,9 +91,4 @@ public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
     @Override
     public void testToByteBuffer2() {
     }
-
-    @Disabled("No longer allowed to allocate 0 sized buffers, except for composite buffers with no components.")
-    @Override
-    public void testLittleEndianWithExpand() {
-    }
 }
