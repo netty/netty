@@ -47,8 +47,8 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
         ByteBufAdaptor bba = adaptor;
         if (bba == null) {
             BufferAllocator allocator = control.getAllocator();
-            BufferAllocator onHeap;
-            BufferAllocator offHeap;
+            final BufferAllocator onHeap;
+            final BufferAllocator offHeap;
             if (allocator.getAllocationType() == StandardAllocationTypes.ON_HEAP) {
                 onHeap = allocator;
                 offHeap = allocator.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
