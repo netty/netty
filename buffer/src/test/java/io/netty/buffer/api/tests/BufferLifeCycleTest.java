@@ -560,8 +560,8 @@ public class BufferLifeCycleTest extends BufferTestSupport {
                     copy.resetOffsets().ensureWritable(Long.BYTES);
                     assertThat(split.capacity()).isEqualTo(Long.BYTES);
                     assertThat(copy.capacity()).isEqualTo(Long.BYTES);
-                    assertThat(split.getLong(0)).isEqualTo(0x01020304_00000000L);
-                    assertThat(copy.getLong(0)).isEqualTo(0x05060708_00000000L);
+                    assertEquals(0x01020304, split.getInt(0));
+                    assertEquals(0x05060708, copy.getInt(0));
                 }
             }
         }
