@@ -17,6 +17,7 @@ package io.netty.buffer.api.internal;
 
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 
@@ -97,6 +98,11 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
     private static final class NoOpAllocatorControl implements AllocatorControl {
         @Override
         public UntetheredMemory allocateUntethered(Buffer originator, int size) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public BufferAllocator getAllocator() {
             throw new UnsupportedOperationException();
         }
     }
