@@ -17,11 +17,10 @@ package io.netty.handler.codec.socksx.v4;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
-import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder.State;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
@@ -31,11 +30,11 @@ import io.netty.util.NetUtil;
  * other handler can remove this decoder later.  On failed decode, this decoder will discard the
  * received data, so that other handler closes the connection later.
  */
-public class Socks4ServerDecoder extends ReplayingDecoder<State> {
+public class Socks4ServerDecoder extends ByteToMessageDecoder {
 
     private static final int MAX_FIELD_LENGTH = 255;
 
-    enum State {
+    private enum State {
         START,
         READ_USERID,
         READ_DOMAIN,
@@ -43,21 +42,24 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
         FAILURE
     }
 
+    private State state = State.START;
     private Socks4CommandType type;
     private String dstAddr;
     private int dstPort;
     private String userId;
 
     public Socks4ServerDecoder() {
-        super(State.START);
         setSingleDecode(true);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case START: {
+                if (in.readableBytes() < 8) {
+                    return;
+                }
                 final int version = in.readUnsignedByte();
                 if (version != SocksVersion.SOCKS4a.byteValue()) {
                     throw new DecoderException("unsupported protocol version: " + version);
@@ -66,19 +68,27 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
                 type = Socks4CommandType.valueOf(in.readByte());
                 dstPort = in.readUnsignedShort();
                 dstAddr = NetUtil.intToIpAddress(in.readInt());
-                checkpoint(State.READ_USERID);
+                state = State.READ_USERID;
             }
             case READ_USERID: {
-                userId = readString("userid", in);
-                checkpoint(State.READ_DOMAIN);
+                String id = readString("userid", in);
+                if (id == null) {
+                    return;
+                }
+                userId = id;
+                state = State.READ_DOMAIN;
             }
             case READ_DOMAIN: {
                 // Check for Socks4a protocol marker 0.0.0.x
                 if (!"0.0.0.0".equals(dstAddr) && dstAddr.startsWith("0.0.0.")) {
-                    dstAddr = readString("dstAddr", in);
+                    String addr = readString("dstAddr", in);
+                    if (addr == null) {
+                        return;
+                    }
+                    dstAddr = addr;
                 }
                 ctx.fireChannelRead(new DefaultSocks4CommandRequest(type, dstAddr, dstPort, userId));
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
@@ -111,21 +121,26 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
         m.setDecoderResult(DecoderResult.failure(cause));
         ctx.fireChannelRead(m);
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
     }
 
     /**
      * Reads a variable-length NUL-terminated string as defined in SOCKS4.
      */
     private static String readString(String fieldName, ByteBuf in) {
-        int length = in.bytesBefore(MAX_FIELD_LENGTH + 1, (byte) 0);
-        if (length < 0) {
+        int length = in.bytesBefore(Math.min(in.readableBytes(), MAX_FIELD_LENGTH + 1), (byte) 0);
+        if (length >= 0) {
+            if (in.readableBytes() < length + 1) {
+                return null;
+            }
+            String value = in.readSlice(length).toString(CharsetUtil.US_ASCII);
+            in.skipBytes(1); // Skip the NUL.
+
+            return value;
+        }
+        if (in.readableBytes() > MAX_FIELD_LENGTH + 1) {
             throw new DecoderException("field '" + fieldName + "' longer than " + MAX_FIELD_LENGTH + " chars");
         }
-
-        String value = in.readSlice(length).toString(CharsetUtil.US_ASCII);
-        in.skipBytes(1); // Skip the NUL.
-
-        return value;
+        return null;
     }
 }

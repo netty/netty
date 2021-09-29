@@ -18,11 +18,10 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
-import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder.State;
 
 /**
  * Decodes a single {@link Socks5InitialRequest} from the inbound {@link ByteBuf}s.
@@ -30,23 +29,25 @@ import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder.State;
  * other handler can remove or replace this decoder later.  On failed decode, this decoder will
  * discard the received data, so that other handler closes the connection later.
  */
-public class Socks5InitialRequestDecoder extends ReplayingDecoder<State> {
+public class Socks5InitialRequestDecoder extends ByteToMessageDecoder {
 
-    enum State {
+    private enum State {
         INIT,
         SUCCESS,
         FAILURE
     }
 
-    public Socks5InitialRequestDecoder() {
-        super(State.INIT);
-    }
+    private State state = State.INIT;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case INIT: {
+                if (in.readableBytes() < 2) {
+                    return;
+                }
+                int readerIndex = in.readerIndex();
                 final byte version = in.readByte();
                 if (version != SocksVersion.SOCKS5.byteValue()) {
                     throw new DecoderException(
@@ -55,13 +56,17 @@ public class Socks5InitialRequestDecoder extends ReplayingDecoder<State> {
 
                 final int authMethodCnt = in.readUnsignedByte();
 
+                if (in.readableBytes() < authMethodCnt) {
+                    in.readerIndex(readerIndex);
+                    return;
+                }
                 final Socks5AuthMethod[] authMethods = new Socks5AuthMethod[authMethodCnt];
                 for (int i = 0; i < authMethodCnt; i++) {
                     authMethods[i] = Socks5AuthMethod.valueOf(in.readByte());
                 }
 
                 ctx.fireChannelRead(new DefaultSocks5InitialRequest(authMethods));
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
@@ -85,7 +90,7 @@ public class Socks5InitialRequestDecoder extends ReplayingDecoder<State> {
             cause = new DecoderException(cause);
         }
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
 
         Socks5Message m = new DefaultSocks5InitialRequest(Socks5AuthMethod.NO_AUTH);
         m.setDecoderResult(DecoderResult.failure(cause));

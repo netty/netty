@@ -18,10 +18,9 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder.State;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -30,23 +29,24 @@ import io.netty.util.CharsetUtil;
  * other handler can remove or replace this decoder later.  On failed decode, this decoder will
  * discard the received data, so that other handler closes the connection later.
  */
-public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
+public class Socks5PasswordAuthRequestDecoder extends ByteToMessageDecoder {
 
-    enum State {
+    private enum State {
         INIT,
         SUCCESS,
         FAILURE
     }
 
-    public Socks5PasswordAuthRequestDecoder() {
-        super(State.INIT);
-    }
+    private State state = State.INIT;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case INIT: {
+                if (in.readableBytes() < 3) {
+                    return;
+                }
                 final int startOffset = in.readerIndex();
                 final byte version = in.getByte(startOffset);
                 if (version != 1) {
@@ -56,13 +56,15 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
                 final int usernameLength = in.getUnsignedByte(startOffset + 1);
                 final int passwordLength = in.getUnsignedByte(startOffset + 2 + usernameLength);
                 final int totalLength = usernameLength + passwordLength + 3;
-
+                if (in.readableBytes() < totalLength) {
+                    return;
+                }
                 in.skipBytes(totalLength);
                 ctx.fireChannelRead(new DefaultSocks5PasswordAuthRequest(
                         in.toString(startOffset + 2, usernameLength, CharsetUtil.US_ASCII),
                         in.toString(startOffset + 3 + usernameLength, passwordLength, CharsetUtil.US_ASCII)));
 
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
@@ -86,7 +88,7 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
             cause = new DecoderException(cause);
         }
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
 
         Socks5Message m = new DefaultSocks5PasswordAuthRequest("", "");
         m.setDecoderResult(DecoderResult.failure(cause));

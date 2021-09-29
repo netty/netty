@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public abstract class AbstractCompatibleMarshallingDecoderTest extends AbstractMarshallingTest {
+public abstract class AbstractMarshallingDecoderTest extends AbstractMarshallingTest {
     @SuppressWarnings("RedundantStringConstructorCall")
     private final String testObject = new String("test");
 
@@ -122,7 +122,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest extends AbstractM
     }
 
     protected ChannelHandler createDecoder(int maxObjectSize) {
-        return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(),
+        return new MarshallingDecoder(createProvider(createMarshallerFactory(),
                 createMarshallingConfig()), maxObjectSize);
     }
 
