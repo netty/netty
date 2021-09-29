@@ -109,6 +109,7 @@ public final class Native {
                     boolean gnulibcFound = false;
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        logger.debug(line);
                         if (gnulibcPattern.matcher(line).find()) {
                             gnulibcFound = true;
                             break;
