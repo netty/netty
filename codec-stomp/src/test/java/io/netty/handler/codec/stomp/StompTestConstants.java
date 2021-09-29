@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.stomp;
 
+import java.util.List;
+
 public final class StompTestConstants {
     public static final String CONNECT_FRAME =
         "CONNECT\n" +
@@ -76,6 +78,23 @@ public final class StompTestConstants {
             "content-type:text/plain\n" +
             '\n' +
             "body\0";
+
+    public static final String[] SEND_FRAME_FRAGMENTS = {
+            "SEN", "D\n",
+            "destination:/queue/a\n",
+            "content-type", ":", "text/plain", "\n",
+            "\n",
+            "Client Send Hello !!!\n",
+            "\0",
+            "\n"
+    };
+
+    public static final String FRAME_WITH_CONTENT_LENGTH_WITHOUT_NULL = "SEND\n" +
+            "destination:/queue/a\n" +
+            "content-type:text/plain\n" +
+            "content-length:4\n" +
+            '\n' +
+            "body\n";
 
     private StompTestConstants() { }
 }

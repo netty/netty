@@ -191,7 +191,7 @@ public class StompSubframeDecoderTest {
         assertNotNull(frame);
         assertTrue(frame.decoderResult().isFailure());
         assertEquals("a header value or name contains a prohibited character ':', current-time:2000-01-01T00:00:00",
-                frame.decoderResult().cause().getMessage());
+                     frame.decoderResult().cause().getMessage());
     }
 
     @Test
@@ -225,5 +225,48 @@ public class StompSubframeDecoderTest {
         assertNotNull(contentSubFrame);
         assertEquals("body", contentSubFrame.content().toString(UTF_8));
         assertTrue(contentSubFrame.release());
+    }
+
+    @Test
+    void testSendFrameFragments() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+        for (String sendFragment : SEND_FRAME_FRAGMENTS) {
+            channel.writeInbound(Unpooled.wrappedBuffer(sendFragment.getBytes(UTF_8)));
+        }
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+
+        assertEquals(StompCommand.SEND, headersSubFrame.command());
+        assertTrue(headersSubFrame.headers().contains("content-type", "text/plain", true));
+
+        StompContentSubframe content = channel.readInbound();
+        String strContent = content.content().toString(UTF_8);
+        assertEquals("Client Send Hello !!!\n", strContent);
+        content.release();
+
+        StompContentSubframe lastContent = channel.readInbound();
+        assertTrue(lastContent instanceof LastStompContentSubframe);
+        lastContent.release();
+    }
+
+    @Test
+    void testSendFrameWithContentLengthWithoutNullEnd() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf invalidIncoming = Unpooled.wrappedBuffer(FRAME_WITH_CONTENT_LENGTH_WITHOUT_NULL.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(invalidIncoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+
+        StompContentSubframe lastContent = channel.readInbound();
+        assertNotNull(lastContent);
+        assertTrue(lastContent.decoderResult().isFailure());
+        assertEquals("unexpected byte in buffer 10 while expecting NULL byte",
+                     lastContent.decoderResult().cause().getMessage());
+        lastContent.release();
     }
 }
