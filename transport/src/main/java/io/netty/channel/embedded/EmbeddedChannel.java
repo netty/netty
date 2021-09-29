@@ -546,7 +546,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            loop.cancelScheduledTasks();
+            embeddedEventLoop().cancelScheduledTasks();
         }
     }
 
@@ -593,13 +593,13 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public void runPendingTasks() {
         try {
-            loop.runTasks();
+            embeddedEventLoop().runTasks();
         } catch (Exception e) {
             recordException(e);
         }
 
         try {
-            loop.runScheduledTasks();
+            embeddedEventLoop().runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
         }
@@ -612,10 +612,10 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public long runScheduledPendingTasks() {
         try {
-            return loop.runScheduledTasks();
+            return embeddedEventLoop().runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
-            return loop.nextScheduledTask();
+            return embeddedEventLoop().nextScheduledTask();
         }
     }
 
@@ -673,6 +673,14 @@ public class EmbeddedChannel extends AbstractChannel {
       }
 
       return true;
+    }
+
+    private EmbeddedEventLoop embeddedEventLoop() {
+        if (isRegistered()) {
+            return (EmbeddedEventLoop) super.eventLoop();
+        }
+
+        return loop;
     }
 
     /**
