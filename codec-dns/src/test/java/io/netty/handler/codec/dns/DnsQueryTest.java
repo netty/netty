@@ -68,7 +68,11 @@ public class DnsQueryTest {
             DatagramPacket packet = writeChannel.readOutbound();
             assertTrue(packet.content().isReadable());
             assertTrue(readChannel.writeInbound(packet));
-            assertEquals(query, readChannel.readInbound());
+
+            DnsQuery decodedDnsQuery = readChannel.readInbound();
+            assertEquals(query, decodedDnsQuery);
+            assertTrue(decodedDnsQuery.release());
+
             assertNull(writeChannel.readOutbound());
             assertNull(readChannel.readInbound());
         }
