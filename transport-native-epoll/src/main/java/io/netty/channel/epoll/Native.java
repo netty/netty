@@ -27,15 +27,20 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
+import java.util.regex.Pattern;
 
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.gnulibc;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
@@ -77,9 +82,9 @@ public final class Native {
         );
 
         try {
-            // First, try calling a side-effect free JNI method to see if the library was already
+            // First, try calling a side effect free JNI method to see if the library was already
             // loaded by the application.
-            offsetofEpollData();
+            gnulibc();
         } catch (UnsatisfiedLinkError ignore) {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
@@ -90,6 +95,41 @@ public final class Native {
                 }
             } catch (IOException ignore) {
                 // Just ignore
+            }
+        }
+        if (gnulibc() == 1) {
+            // Our binary is compiled for linking with GLIBC.
+            // Let's check that we actually have GLIBC loaded in our link mapping.
+            // If we don't, then it means we are running on a JVM/OS that's using an alternative libc, such as musl.
+            try {
+                FileInputStream fis = new FileInputStream("/proc/self/maps");
+                try {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
+                    Pattern gnulibcPattern = Pattern.compile(".*/lib/.*-linux-gnu/libc-.*\\.so");
+                    boolean gnulibcFound = false;
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (gnulibcPattern.matcher(line).find()) {
+                            gnulibcFound = true;
+                            break;
+                        }
+                    }
+                    if (!gnulibcFound) {
+                        throw new LinkageError(
+                                "Native library was compiled for linking with GLIBC, but GLIBC was not found among " +
+                                        "library mappings. This likely means the OS/JVM uses an alternative libc, " +
+                                        "such as musl. To fix, either use NIO transport, or build a native transport " +
+                                        "for your platform.");
+                    }
+                } finally {
+                    try {
+                        fis.close();
+                    } catch (IOException e) {
+                        logger.debug("Failed to close /proc/self/maps file.", e);
+                    }
+                }
+            } catch (IOException e) {
+                logger.debug("Unable to check libc compatibility.", e);
             }
         }
         Unix.registerInternal(new Runnable() {
