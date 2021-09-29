@@ -140,7 +140,7 @@ public final class ByteBufAdaptor extends ByteBuf {
             ByteBufConvertible convertible = (ByteBufConvertible) buffer;
             return convertible.asByteBuf();
         } else {
-            return new ByteBufAdaptor(new ByteBufAllocatorAdaptor(), buffer, buffer.capacity());
+            return new ByteBufAdaptor(ByteBufAllocatorAdaptor.DEFAULT_INSTANCE, buffer, buffer.capacity());
         }
     }
 

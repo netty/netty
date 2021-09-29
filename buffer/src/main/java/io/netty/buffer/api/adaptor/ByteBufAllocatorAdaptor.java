@@ -20,7 +20,10 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultGlobalBufferAllocator;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.AdaptableBuffer;
+import io.netty.buffer.api.internal.UncloseableBufferAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -28,17 +31,28 @@ import java.util.Objects;
 
 public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable {
     private static final int DEFAULT_MAX_CAPACITY = Integer.MAX_VALUE;
-    private final BufferAllocator onheap;
-    private final BufferAllocator offheap;
+    private static final BufferAllocator GLOBAL_INSTANCE_COUNTERPART = initializeGlobalCounterpart();
+    public static final ByteBufAllocatorAdaptor DEFAULT_INSTANCE = new ByteBufAllocatorAdaptor(
+            DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR, GLOBAL_INSTANCE_COUNTERPART);
+
+    private final BufferAllocator onHeap;
+    private final BufferAllocator offHeap;
     private boolean closed;
 
-    public ByteBufAllocatorAdaptor() {
-        this(BufferAllocator.onHeapPooled(), BufferAllocator.offHeapPooled());
+    private static BufferAllocator initializeGlobalCounterpart() {
+        BufferAllocator global = DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+        final BufferAllocator counterpart;
+        if (global.getAllocationType() == StandardAllocationTypes.ON_HEAP) {
+            counterpart = global.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
+        } else {
+            counterpart = global.isPooling() ? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled();
+        }
+        return new GlobalCounterpartBufferAllocator(counterpart);
     }
 
-    public ByteBufAllocatorAdaptor(BufferAllocator onheap, BufferAllocator offheap) {
-        this.onheap = Objects.requireNonNull(onheap, "The on-heap allocator cannot be null.");
-        this.offheap = Objects.requireNonNull(offheap, "The off-heap allocator cannot be null.");
+    public ByteBufAllocatorAdaptor(BufferAllocator onHeap, BufferAllocator offHeap) {
+        this.onHeap = Objects.requireNonNull(onHeap, "The on-heap allocator cannot be null.");
+        this.offHeap = Objects.requireNonNull(offHeap, "The off-heap allocator cannot be null.");
     }
 
     @Override
@@ -47,11 +61,11 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
     }
 
     public BufferAllocator getOnHeap() {
-        return onheap;
+        return onHeap;
     }
 
     public BufferAllocator getOffHeap() {
-        return offheap;
+        return offHeap;
     }
 
     public boolean isClosed() {
@@ -65,7 +79,7 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public ByteBuf buffer(int initialCapacity, int maxCapacity) {
-        return initialise(onheap.allocate(initialCapacity), maxCapacity);
+        return initialise(onHeap.allocate(initialCapacity), maxCapacity);
     }
 
     @Override
@@ -110,7 +124,7 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        return initialise(offheap.allocate(initialCapacity), maxCapacity);
+        return initialise(offHeap.allocate(initialCapacity), maxCapacity);
     }
 
     private ByteBuf initialise(Buffer buffer, int maxCapacity) {
@@ -167,10 +181,16 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
 
     @Override
     public void close() throws Exception {
-        try (onheap) {
-            try (offheap) {
+        try (onHeap) {
+            try (offHeap) {
                 closed = true;
             }
+        }
+    }
+
+    private static final class GlobalCounterpartBufferAllocator extends UncloseableBufferAllocator {
+        GlobalCounterpartBufferAllocator(BufferAllocator delegate) {
+            super(delegate, "Global buffer counter-part allocator cannot be closed explicitly.");
         }
     }
 }
