@@ -154,7 +154,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         }
     };
 
-    ByteBuf cumulation;
+    private ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
     private boolean first;
@@ -373,7 +373,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
      * {@link ChannelInputShutdownEvent}.
      */
-    void channelInputClosed(ByteToMessageDecoderContext ctx) throws Exception {
+    private void channelInputClosed(ByteToMessageDecoderContext ctx) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation);
             // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
@@ -396,7 +396,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
      */
-    void callDecode(ByteToMessageDecoderContext ctx, ByteBuf in) {
+    private void callDecode(ByteToMessageDecoderContext ctx, ByteBuf in) {
         try {
             while (in.isReadable() && !ctx.isRemoved()) {
 
@@ -457,7 +457,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      * @param in            the {@link ByteBuf} from which to read data
      * @throws Exception    is thrown if an error occurs
      */
-    final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in)
+    private void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
         decode(ctx, in);
     }
@@ -503,8 +503,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in);
     }
 
-    // Package private so we can also make use of it in ReplayingDecoder.
-    static final class ByteToMessageDecoderContext implements ChannelHandlerContext {
+    private static final class ByteToMessageDecoderContext implements ChannelHandlerContext {
         private final ChannelHandlerContext ctx;
         private int fireChannelReadCalled;
 

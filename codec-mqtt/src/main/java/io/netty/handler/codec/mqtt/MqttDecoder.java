@@ -18,10 +18,9 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.mqtt.MqttDecoder.DecoderState;
 import io.netty.handler.codec.mqtt.MqttProperties.IntegerProperty;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -46,20 +45,21 @@ import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlin
  * <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">v5.0</a>, depending on the
  * version specified in the CONNECT message that first goes through the channel.
  */
-public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
+public final class MqttDecoder extends ByteToMessageDecoder {
 
     /**
      * States of the decoder.
      * We start at READ_FIXED_HEADER, followed by
      * READ_VARIABLE_HEADER and finally READ_PAYLOAD.
      */
-    enum DecoderState {
+    private enum DecoderState {
         READ_FIXED_HEADER,
         READ_VARIABLE_HEADER,
         READ_PAYLOAD,
         BAD_MESSAGE,
     }
 
+    private DecoderState state = DecoderState.READ_FIXED_HEADER;
     private MqttFixedHeader mqttFixedHeader;
     private Object variableHeader;
     private int bytesRemainingInVariablePart;
@@ -76,18 +76,20 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     public MqttDecoder(int maxBytesInMessage, int maxClientIdLength) {
-        super(DecoderState.READ_FIXED_HEADER);
         this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
         this.maxClientIdLength = ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        switch (state()) {
+        switch (state) {
             case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(ctx, buffer);
+                if (mqttFixedHeader == null) {
+                    return;
+                }
                 bytesRemainingInVariablePart = mqttFixedHeader.remainingLength();
-                checkpoint(DecoderState.READ_VARIABLE_HEADER);
+                state = DecoderState.READ_VARIABLE_HEADER;
                 // fall through
             } catch (Exception cause) {
                 ctx.fireChannelRead(invalidMessage(cause));
@@ -95,6 +97,9 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             }
 
             case READ_VARIABLE_HEADER:  try {
+                if (buffer.readableBytes() < bytesRemainingInVariablePart) {
+                    return;
+                }
                 final Result<?> decodedVariableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
                 variableHeader = decodedVariableHeader.value;
                 if (bytesRemainingInVariablePart > maxBytesInMessage) {
@@ -102,7 +107,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                     throw new TooLongFrameException("too large message: " + bytesRemainingInVariablePart + " bytes");
                 }
                 bytesRemainingInVariablePart -= decodedVariableHeader.numberOfBytesConsumed;
-                checkpoint(DecoderState.READ_PAYLOAD);
+                state = DecoderState.READ_PAYLOAD;
                 // fall through
             } catch (Exception cause) {
                 ctx.fireChannelRead(invalidMessage(cause));
@@ -110,6 +115,9 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             }
 
             case READ_PAYLOAD: try {
+                if (buffer.readableBytes() < bytesRemainingInVariablePart) {
+                    return;
+                }
                 final Result<?> decodedPayload =
                         decodePayload(
                                 ctx,
@@ -124,7 +132,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                             "non-zero remaining payload bytes: " +
                                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
                 }
-                checkpoint(DecoderState.READ_FIXED_HEADER);
+                state = DecoderState.READ_FIXED_HEADER;
                 MqttMessage message = MqttMessageFactory.newMessage(
                         mqttFixedHeader, variableHeader, decodedPayload.value);
                 mqttFixedHeader = null;
@@ -138,7 +146,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             case BAD_MESSAGE:
                 // Keep discarding until disconnection.
-                buffer.skipBytes(actualReadableBytes());
+                buffer.skipBytes(buffer.readableBytes());
                 break;
 
             default:
@@ -148,7 +156,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     private MqttMessage invalidMessage(Throwable cause) {
-      checkpoint(DecoderState.BAD_MESSAGE);
+      state = DecoderState.BAD_MESSAGE;
       return MqttMessageFactory.newInvalidMessage(mqttFixedHeader, variableHeader, cause);
     }
 
@@ -161,9 +169,13 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
      * for more information.
      *
      * @param buffer the buffer to decode from
-     * @return the fixed header
+     * @return the fixed header or null if not enough bytes could be read.
      */
     private static MqttFixedHeader decodeFixedHeader(ChannelHandlerContext ctx, ByteBuf buffer) {
+        if (buffer.readableBytes() < 1) {
+            return null;
+        }
+        int readerIndex = buffer.readerIndex();
         short b1 = buffer.readUnsignedByte();
 
         MqttMessageType messageType = MqttMessageType.valueOf(b1 >> 4);
@@ -229,6 +241,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         short digit;
         int loops = 0;
         do {
+            if (buffer.readableBytes() < 1) {
+                buffer.readerIndex(readerIndex);
+                return null;
+            }
             digit = buffer.readUnsignedByte();
             remainingLength += (digit & 127) * multiplier;
             multiplier *= 128;

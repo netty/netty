@@ -17,31 +17,39 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksAuthResponseDecoder.State;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
-public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
+public class SocksAuthResponseDecoder extends ByteToMessageDecoder {
 
-    public SocksAuthResponseDecoder() {
-        super(State.CHECK_PROTOCOL_VERSION);
+    private enum State {
+        CHECK_PROTOCOL_VERSION,
+        READ_AUTH_RESPONSE
     }
+
+    private State state = State.CHECK_PROTOCOL_VERSION;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf)
             throws Exception {
-        switch (state()) {
+        switch (state) {
             case CHECK_PROTOCOL_VERSION: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {
                     ctx.fireChannelRead(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
-                checkpoint(State.READ_AUTH_RESPONSE);
+                state = State.READ_AUTH_RESPONSE;
             }
             case READ_AUTH_RESPONSE: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 SocksAuthStatus authStatus = SocksAuthStatus.valueOf(byteBuf.readByte());
                 ctx.fireChannelRead(new SocksAuthResponse(authStatus));
                 break;
@@ -51,10 +59,5 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
             }
         }
         ctx.pipeline().remove(this);
-    }
-
-    enum State {
-        CHECK_PROTOCOL_VERSION,
-        READ_AUTH_RESPONSE
     }
 }

@@ -16,19 +16,28 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
+import org.jboss.marshalling.MarshallerFactory;
+import org.jboss.marshalling.Marshalling;
+import org.jboss.marshalling.MarshallingConfiguration;
 
-public class RiverMarshallingEncoderTest extends RiverCompatibleMarshallingEncoderTest {
+public class RiverMarshallingEncoderTest extends AbstractMarshallingEncoderTest {
+
+    @Override
+    protected MarshallerFactory createMarshallerFactory() {
+        return Marshalling.getProvidedMarshallerFactory(RIVER_FACTORY);
+    }
+
+    @Override
+    protected MarshallingConfiguration createMarshallingConfig() {
+        // Create a configuration
+        final MarshallingConfiguration configuration = new MarshallingConfiguration();
+        configuration.setVersion(3);
+        return configuration;
+    }
 
     @Override
     protected ByteBuf truncate(ByteBuf buf) {
         buf.readInt();
         return buf;
     }
-
-    @Override
-    protected ChannelHandler createEncoder() {
-        return new MarshallingEncoder(createProvider());
-    }
-
 }

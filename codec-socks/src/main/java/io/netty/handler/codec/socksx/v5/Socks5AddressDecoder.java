@@ -35,16 +35,30 @@ public interface Socks5AddressDecoder {
 
         @Override
         public String decodeAddress(Socks5AddressType addrType, ByteBuf in) throws Exception {
+            int readableBytes = in.readableBytes();
             if (addrType == Socks5AddressType.IPv4) {
+                if (readableBytes < 4) {
+                    return null;
+                }
                 return NetUtil.intToIpAddress(in.readInt());
             }
             if (addrType == Socks5AddressType.DOMAIN) {
-                final int length = in.readUnsignedByte();
+                if (readableBytes < 1) {
+                    return null;
+                }
+                final int length = in.getUnsignedByte(in.readerIndex());
+                if (readableBytes - 1 < length) {
+                    return null;
+                }
+                in.skipBytes(1);
                 final String domain = in.toString(in.readerIndex(), length, CharsetUtil.US_ASCII);
                 in.skipBytes(length);
                 return domain;
             }
             if (addrType == Socks5AddressType.IPv6) {
+                if (readableBytes < IPv6_LEN) {
+                    return null;
+                }
                 if (in.hasArray()) {
                     final int readerIdx = in.readerIndex();
                     in.readerIndex(readerIdx + IPv6_LEN);
@@ -65,6 +79,7 @@ public interface Socks5AddressDecoder {
      *
      * @param addrType the type of the address
      * @param in the input buffer which contains the SOCKS5 address field at its reader index
+     * @return the address or {@code null} if not enough bytes are readable yet.
      */
     String decodeAddress(Socks5AddressType addrType, ByteBuf in) throws Exception;
 }

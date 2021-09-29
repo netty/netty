@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public abstract class AbstractCompatibleMarshallingEncoderTest extends AbstractMarshallingTest {
+public abstract class AbstractMarshallingEncoderTest extends AbstractMarshallingTest {
 
     @Test
     public void testMarshalling() throws Exception {
@@ -64,7 +64,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest extends AbstractM
     }
 
     protected ChannelHandler createEncoder() {
-        return new CompatibleMarshallingEncoder(createProvider());
+        return new MarshallingEncoder(createProvider());
     }
 
     protected MarshallerProvider createProvider() {

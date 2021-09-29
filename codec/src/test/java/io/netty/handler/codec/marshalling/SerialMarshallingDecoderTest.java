@@ -17,27 +17,36 @@ package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
+import org.jboss.marshalling.MarshallerFactory;
+import org.jboss.marshalling.Marshalling;
+import org.jboss.marshalling.MarshallingConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
+public class SerialMarshallingDecoderTest extends AbstractMarshallingDecoderTest {
+
+    @Override
+    protected MarshallerFactory createMarshallerFactory() {
+        return Marshalling.getProvidedMarshallerFactory(SERIAL_FACTORY);
+    }
+
+    @Override
+    protected MarshallingConfiguration createMarshallingConfig() {
+        // Create a configuration
+        final MarshallingConfiguration configuration = new MarshallingConfiguration();
+        configuration.setVersion(5);
+        return configuration;
+    }
 
     @Override
     protected ByteBuf input(byte[] input) {
         ByteBuf length = Unpooled.buffer(4);
         length.writeInt(input.length);
         return Unpooled.wrappedBuffer(length, Unpooled.wrappedBuffer(input));
-    }
-
-    @Override
-    protected ChannelHandler createDecoder(int maxObjectSize) {
-        return new MarshallingDecoder(createProvider(createMarshallerFactory(),
-                createMarshallingConfig()), maxObjectSize);
     }
 
     @Override

@@ -17,30 +17,37 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksInitResponseDecoder.State;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
-public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
+public class SocksInitResponseDecoder extends ByteToMessageDecoder {
 
-    public SocksInitResponseDecoder() {
-        super(State.CHECK_PROTOCOL_VERSION);
+    private enum State {
+        CHECK_PROTOCOL_VERSION,
+        READ_PREFERRED_AUTH_TYPE
     }
+    private State state = State.CHECK_PROTOCOL_VERSION;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
-        switch (state()) {
+        switch (state) {
             case CHECK_PROTOCOL_VERSION: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 if (byteBuf.readByte() != SocksProtocolVersion.SOCKS5.byteValue()) {
                     ctx.fireChannelRead(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
-                checkpoint(State.READ_PREFERRED_AUTH_TYPE);
+                state = State.READ_PREFERRED_AUTH_TYPE;
             }
             case READ_PREFERRED_AUTH_TYPE: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 SocksAuthScheme authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
                 ctx.fireChannelRead(new SocksInitResponse(authScheme));
                 break;
@@ -50,10 +57,5 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
             }
         }
         ctx.pipeline().remove(this);
-    }
-
-    enum State {
-        CHECK_PROTOCOL_VERSION,
-        READ_PREFERRED_AUTH_TYPE
     }
 }
