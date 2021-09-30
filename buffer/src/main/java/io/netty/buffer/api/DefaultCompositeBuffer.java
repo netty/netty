@@ -59,6 +59,15 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         @Override
+        public Drop<DefaultCompositeBuffer> fork() {
+            return this;
+        }
+
+        @Override
+        public void attach(DefaultCompositeBuffer obj) {
+        }
+
+        @Override
         public String toString() {
             return "COMPOSITE_DROP";
         }

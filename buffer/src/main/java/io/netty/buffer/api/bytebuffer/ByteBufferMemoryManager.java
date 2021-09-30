@@ -23,7 +23,6 @@ import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.Statics;
 
-import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 
 import static io.netty.buffer.api.internal.Statics.bbslice;
@@ -31,7 +30,7 @@ import static io.netty.buffer.api.internal.Statics.convert;
 
 public class ByteBufferMemoryManager implements MemoryManager {
     @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop, Cleaner cleaner,
+    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         final ByteBuffer buffer;
@@ -47,9 +46,8 @@ public class ByteBufferMemoryManager implements MemoryManager {
 
     @Override
     public Buffer allocateConstChild(Buffer readOnlyConstParent) {
-        assert readOnlyConstParent.readOnly();
         NioBuffer buf = (NioBuffer) readOnlyConstParent;
-        return new NioBuffer(buf);
+        return buf.newConstChild();
     }
 
     @Override

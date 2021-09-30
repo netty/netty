@@ -52,7 +52,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     private boolean constBuffer;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
-        super(ArcDrop.wrap(drop), control);
+        super(drop, control);
         this.base = base;
         rmem = memory;
         wmem = memory;
@@ -61,11 +61,10 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     /**
      * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
      */
-    NioBuffer(NioBuffer parent) {
-        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())), parent.control);
+    private NioBuffer(NioBuffer parent, Drop<NioBuffer> drop) {
+        super(drop, parent.control);
         base = parent.base;
-        rmem = bbslice(parent.rmem, 0, parent.rmem.capacity()); // Need to slice to get independent byte orders.
-        assert parent.wmem == CLOSED_BUFFER;
+        rmem = parent.rmem;
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
@@ -314,11 +313,10 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Cannot split a buffer that is not owned."));
         }
-        var drop = (ArcDrop<NioBuffer>) unsafeGetDrop();
-        unsafeSetDrop(new ArcDrop<>(drop));
+        var drop = unsafeGetDrop().fork();
         var splitByteBuffer = bbslice(rmem, 0, splitOffset);
-        // TODO maybe incrementing the existing ArcDrop is enough; maybe we don't need to wrap it in another ArcDrop.
-        var splitBuffer = new NioBuffer(base, splitByteBuffer, control, new ArcDrop<>(drop.increment()));
+        var splitBuffer = new NioBuffer(base, splitByteBuffer, control, drop);
+        drop.attach(splitBuffer);
         splitBuffer.woff = Math.min(woff, splitOffset);
         splitBuffer.roff = Math.min(roff, splitOffset);
         boolean readOnly = readOnly();
@@ -930,16 +928,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         woff = 0;
     }
 
-    @Override
-    public boolean isOwned() {
-        return super.isOwned() && ((ArcDrop<NioBuffer>) unsafeGetDrop()).isOwned();
-    }
-
-    @Override
-    public int countBorrows() {
-        return super.countBorrows() + ((ArcDrop<NioBuffer>) unsafeGetDrop()).countBorrows();
-    }
-
     private void checkRead(int index, int size) {
         if (index < 0 || woff < index + size) {
             throw readAccessCheckException(index);
@@ -1002,6 +990,14 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     ByteBuffer recoverable() {
         return base;
+    }
+
+    Buffer newConstChild() {
+        assert readOnly();
+        Drop<NioBuffer> drop = unsafeGetDrop().fork();
+        NioBuffer child = new NioBuffer(this, drop);
+        drop.attach(child);
+        return child;
     }
 
     private static final class ForwardNioByteCursor implements ByteCursor {

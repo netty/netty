@@ -15,13 +15,13 @@
  */
 package io.netty.buffer.api;
 
-import io.netty.buffer.api.internal.CleanerDrop;
 import io.netty.buffer.api.internal.Statics;
 
 import java.util.function.Supplier;
 
 import static io.netty.buffer.api.internal.Statics.NO_OP_DROP;
 import static io.netty.buffer.api.internal.Statics.allocatorClosedException;
+import static io.netty.buffer.api.internal.Statics.standardDrop;
 
 class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     private final MemoryManager manager;
@@ -49,11 +49,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
             throw allocatorClosedException();
         }
         Statics.assertValidBufferSize(size);
-        return manager.allocateShared(this, size, createDrop(), Statics.CLEANER, allocationType);
-    }
-
-    Drop<Buffer> createDrop() {
-        return CleanerDrop.wrap(manager.drop(), manager);
+        return manager.allocateShared(this, size, standardDrop(manager), allocationType);
     }
 
     @Override
@@ -62,7 +58,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
             throw allocatorClosedException();
         }
         Buffer constantBuffer = manager.allocateShared(
-                this, bytes.length, manager.drop(), Statics.CLEANER, allocationType);
+                this, bytes.length, standardDrop(manager), allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
@@ -76,7 +72,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     @Override
     public UntetheredMemory allocateUntethered(Buffer originator, int size) {
         Statics.assertValidBufferSize(size);
-        var buf = manager.allocateShared(this, size, NO_OP_DROP, Statics.CLEANER, allocationType);
+        var buf = manager.allocateShared(this, size, NO_OP_DROP, allocationType);
         return new UntetheredMemory() {
             @Override
             public <Memory> Memory memory() {
@@ -85,7 +81,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
 
             @Override
             public <BufferType extends Buffer> Drop<BufferType> drop() {
-                return (Drop<BufferType>) createDrop();
+                return (Drop<BufferType>) standardDrop(manager);
             }
         };
     }

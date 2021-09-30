@@ -17,6 +17,7 @@ package io.netty.buffer.api.unsafe;
 
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.ByteCursor;
 import io.netty.buffer.api.Drop;
@@ -56,7 +57,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl control,
                         Drop<UnsafeBuffer> drop) {
-        super(ArcDrop.wrap(drop), control);
+        super(drop, control);
         this.memory = memory;
         base = memory.base;
         baseOffset = offset;
@@ -65,8 +66,11 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         wsize = size;
     }
 
-    UnsafeBuffer(UnsafeBuffer parent) {
-        super(new ArcDrop<>(ArcDrop.acquire(parent.unsafeGetDrop())), parent.control);
+    /**
+     * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
+     */
+    private UnsafeBuffer(UnsafeBuffer parent, Drop<UnsafeBuffer> drop) {
+        super(drop, parent.control);
         memory = parent.memory;
         base = parent.base;
         baseOffset = parent.baseOffset;
@@ -379,10 +383,9 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Cannot split a buffer that is not owned."));
         }
-        var drop = (ArcDrop<UnsafeBuffer>) unsafeGetDrop();
-        unsafeSetDrop(new ArcDrop<>(drop));
-        // TODO maybe incrementing the existing ArcDrop is enough; maybe we don't need to wrap it in another ArcDrop.
-        var splitBuffer = new UnsafeBuffer(memory, baseOffset, splitOffset, control, new ArcDrop<>(drop.increment()));
+        var drop = unsafeGetDrop().fork();
+        var splitBuffer = new UnsafeBuffer(memory, baseOffset, splitOffset, control, drop);
+        drop.attach(splitBuffer);
         splitBuffer.woff = Math.min(woff, splitOffset);
         splitBuffer.roff = Math.min(roff, splitOffset);
         boolean readOnly = readOnly();
@@ -1093,16 +1096,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         readOnly = false;
     }
 
-    @Override
-    public boolean isOwned() {
-        return super.isOwned() && ((ArcDrop<UnsafeBuffer>) unsafeGetDrop()).isOwned();
-    }
-
-    @Override
-    public int countBorrows() {
-        return super.countBorrows() + ((ArcDrop<UnsafeBuffer>) unsafeGetDrop()).countBorrows();
-    }
-
     private void checkRead(int index, int size) {
         if (index < 0 || woff < index + size) {
             throw readAccessCheckException(index);
@@ -1400,6 +1393,14 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     Object recover() {
         return memory;
+    }
+
+    Buffer newConstChild() {
+        assert readOnly();
+        Drop<UnsafeBuffer> drop = unsafeGetDrop().fork();
+        UnsafeBuffer child = new UnsafeBuffer(this, drop);
+        drop.attach(child);
+        return child;
     }
 
     private static final class ForwardUnsafeByteCursor implements ByteCursor {

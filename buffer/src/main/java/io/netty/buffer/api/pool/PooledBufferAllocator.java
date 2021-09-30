@@ -327,7 +327,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         PooledAllocatorControl control = new PooledAllocatorControl();
         control.parent = this;
         Buffer constantBuffer = manager.allocateShared(
-                control, bytes.length, manager.drop(), Statics.CLEANER, allocationType);
+                control, bytes.length, manager.drop(), allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }

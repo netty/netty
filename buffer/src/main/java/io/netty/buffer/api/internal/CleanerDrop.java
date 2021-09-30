@@ -61,6 +61,11 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
     }
 
     @Override
+    public Drop<T> fork() {
+        return wrap(runner.drop.fork(), runner.manager);
+    }
+
+    @Override
     public String toString() {
         return "CleanerDrop(" + runner.drop + ')';
     }
