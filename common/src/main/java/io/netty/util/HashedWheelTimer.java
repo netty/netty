@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
@@ -95,8 +96,8 @@ public class HashedWheelTimer implements Timer {
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
+    private final ExecutorService timeoutTaskThreadPool = Executors.newFixedThreadPool(NettyRuntime.availableProcessors());
     private final ResourceLeakTracker<HashedWheelTimer> leak;
-    private final ThreadFactory threadFactory;
     private final Worker worker = new Worker();
     private final Thread workerThread;
 
@@ -248,7 +249,6 @@ public class HashedWheelTimer implements Timer {
             long maxPendingTimeouts) {
 
         checkNotNull(threadFactory, "threadFactory");
-        this.threadFactory = threadFactory;
         checkNotNull(unit, "unit");
         checkPositive(tickDuration, "tickDuration");
         checkPositive(ticksPerWheel, "ticksPerWheel");
@@ -576,10 +576,29 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
-    public ThreadFactory threadFactory() {
-        return threadFactory;
+    public ExecutorService timeoutTaskThreadPool() {
+        return timeoutTaskThreadPool;
     }
-    
+
+    private static final class TimeoutTaskRunnable implements Runnable {
+        private final HashedWheelTimeout timeout;
+
+        public TimeoutTaskRunnable(HashedWheelTimeout timeout) {
+            this.timeout = timeout;
+        }
+
+        @Override
+        public void run() {
+            try {
+                timeout.task().run(timeout);
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("An exception was thrown by " + TimerTask.class.getSimpleName() + '.', t);
+                }
+            }
+        }
+    }
+
     private static final class HashedWheelTimeout implements Timeout {
 
         private static final int ST_INIT = 0;
@@ -669,15 +688,7 @@ public class HashedWheelTimer implements Timer {
             }
 
             // run timeout task at new thread to avoid the worker thread blocking
-            timer.threadFactory().newThread( () -> {
-                try {
-                    task.run(this);
-                } catch (Throwable t) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("An exception was thrown by " + TimerTask.class.getSimpleName() + '.', t);
-                    }
-                }
-            }).start();
+            timer.timeoutTaskThreadPool().execute(new TimeoutTaskRunnable(this));
         }
 
         @Override

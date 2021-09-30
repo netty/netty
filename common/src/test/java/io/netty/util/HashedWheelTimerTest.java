@@ -157,7 +157,7 @@ public class HashedWheelTimerTest {
         for (int i = 0; i < scheduledTasks; i++) {
             long delay = queue.take();
             assertTrue(delay >= timeout && delay < maxTimeout,
-                "Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout);
+                "Timeout + " + i + "/" + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout);
         }
 
         timer.stop();
