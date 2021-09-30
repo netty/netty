@@ -14,28 +14,26 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.UncloseableBufferAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Locale;
-import java.util.function.Supplier;
 
 import static io.netty.buffer.api.BufferAllocator.offHeapPooled;
 import static io.netty.buffer.api.BufferAllocator.offHeapUnpooled;
 import static io.netty.buffer.api.BufferAllocator.onHeapPooled;
 import static io.netty.buffer.api.BufferAllocator.onHeapUnpooled;
-import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty.util.internal.PlatformDependent.directBufferPreferred;
-import static java.lang.Runtime.getRuntime;
 
 /**
  * A {@link BufferAllocator} which is {@link #close() disposed} when the {@link Runtime} is shutdown.
  */
-public final class DefaultGlobalBufferAllocator implements BufferAllocator {
+public final class DefaultGlobalBufferAllocator extends UncloseableBufferAllocator {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultGlobalBufferAllocator.class);
-    public static final BufferAllocator DEFAUL_GLOBAL_BUFFER_ALLOCATOR;
+    public static final BufferAllocator DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 
     static {
         String allocType = SystemPropertyUtil.get(
@@ -53,41 +51,10 @@ public final class DefaultGlobalBufferAllocator implements BufferAllocator {
             alloc = directBufferPreferred() ? offHeapPooled() : onHeapPooled();
             logger.debug("-Dio.netty.allocator.type: pooled (unknown: {})", allocType);
         }
-        DEFAUL_GLOBAL_BUFFER_ALLOCATOR = new DefaultGlobalBufferAllocator(alloc);
+        DEFAULT_GLOBAL_BUFFER_ALLOCATOR = new DefaultGlobalBufferAllocator(alloc);
     }
-
-    private final BufferAllocator delegate;
 
     private DefaultGlobalBufferAllocator(BufferAllocator delegate) {
-        this.delegate = checkNotNullWithIAE(delegate, "delegate");
-        getRuntime().addShutdownHook(new Thread(this.delegate::close));
-    }
-
-    @Override
-    public boolean isPooling() {
-        return delegate.isPooling();
-    }
-
-    @Override
-    public AllocationType getAllocationType() {
-        return delegate.getAllocationType();
-    }
-
-    @Override
-    public Buffer allocate(int size) {
-        return delegate.allocate(size);
-    }
-
-    @Override
-    public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
-        return delegate.constBufferSupplier(bytes);
-    }
-
-    /**
-     * @throws UnsupportedOperationException Close is not supported as this is a shared allocator.
-     */
-    @Override
-    public void close() {
-        throw new UnsupportedOperationException("Global buffer allocator can not be closed explicitly.");
+        super(delegate, "Global buffer allocator can not be closed explicitly.");
     }
 }

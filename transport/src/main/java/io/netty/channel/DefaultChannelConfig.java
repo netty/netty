@@ -60,7 +60,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-    private volatile BufferAllocator bufferAllocator = DefaultGlobalBufferAllocator.DEFAUL_GLOBAL_BUFFER_ALLOCATOR;
+    private volatile BufferAllocator bufferAllocator = DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
