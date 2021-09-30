@@ -96,6 +96,7 @@ public class HashedWheelTimer implements Timer {
             AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
     private final ResourceLeakTracker<HashedWheelTimer> leak;
+    private final ThreadFactory threadFactory;
     private final Worker worker = new Worker();
     private final Thread workerThread;
 
@@ -247,6 +248,7 @@ public class HashedWheelTimer implements Timer {
             long maxPendingTimeouts) {
 
         checkNotNull(threadFactory, "threadFactory");
+        this.threadFactory = threadFactory;
         checkNotNull(unit, "unit");
         checkPositive(tickDuration, "tickDuration");
         checkPositive(ticksPerWheel, "ticksPerWheel");
@@ -539,15 +541,12 @@ public class HashedWheelTimer implements Timer {
             long deadline = tickDuration * (tick + 1);
 
             for (;;) {
+                // the currentTime will be negative only if the application must keep running last more than 262 years.
                 final long currentTime = System.nanoTime() - startTime;
                 long sleepTimeMs = (deadline - currentTime + 999999) / 1000000;
 
                 if (sleepTimeMs <= 0) {
-                    if (currentTime == Long.MIN_VALUE) {
-                        return -Long.MAX_VALUE;
-                    } else {
-                        return currentTime;
-                    }
+                    return currentTime;
                 }
 
                 // Check if we run on windows, as if thats the case we will need
@@ -577,6 +576,10 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
+    public ThreadFactory threadFactory() {
+        return threadFactory;
+    }
+    
     private static final class HashedWheelTimeout implements Timeout {
 
         private static final int ST_INIT = 0;
@@ -665,13 +668,16 @@ public class HashedWheelTimer implements Timer {
                 return;
             }
 
-            try {
-                task.run(this);
-            } catch (Throwable t) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("An exception was thrown by " + TimerTask.class.getSimpleName() + '.', t);
+            // run timeout task at new thread to avoid the worker thread blocking
+            timer.threadFactory().newThread( () -> {
+                try {
+                    task.run(this);
+                } catch (Throwable t) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("An exception was thrown by " + TimerTask.class.getSimpleName() + '.', t);
+                    }
                 }
-            }
+            }).start();
         }
 
         @Override
