@@ -96,7 +96,9 @@ public class HashedWheelTimer implements Timer {
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
-    private final ExecutorService timeoutTaskThreadPool = Executors.newFixedThreadPool(NettyRuntime.availableProcessors());
+    private final ExecutorService timeoutTaskThreadPool =
+            Executors.newFixedThreadPool(NettyRuntime.availableProcessors());
+
     private final ResourceLeakTracker<HashedWheelTimer> leak;
     private final Worker worker = new Worker();
     private final Thread workerThread;
@@ -583,7 +585,7 @@ public class HashedWheelTimer implements Timer {
     private static final class TimeoutTaskRunnable implements Runnable {
         private final HashedWheelTimeout timeout;
 
-        public TimeoutTaskRunnable(HashedWheelTimeout timeout) {
+        TimeoutTaskRunnable(HashedWheelTimeout timeout) {
             this.timeout = timeout;
         }
 
