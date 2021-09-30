@@ -57,10 +57,13 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
     /**
      * Record the current access location for debugging purposes.
      * This information may be included if the resource throws a life-cycle related exception, or if it leaks.
-     * If this resource has already been closed, then this method has not effect.
+     * If this resource has already been closed, then this method has no effect.
      *
      * @param hint An optional hint about this access and its context. May be {@code null}.
      * @return This resource instance.
      */
-    T touch(Object hint);
+    @SuppressWarnings("unchecked")
+    default T touch(Object hint) {
+        return (T) this;
+    }
 }
