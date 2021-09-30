@@ -33,11 +33,13 @@ import java.nio.charset.Charset;
 import java.util.concurrent.atomic.LongAdder;
 
 import static io.netty.util.CharsetUtil.US_ASCII;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 public interface Statics {
     LongAdder MEM_USAGE_NATIVE = new LongAdder();
     Cleaner CLEANER = Cleaner.create();
-    Drop<Buffer> NO_OP_DROP = new Drop<Buffer>() {
+    Drop<Buffer> NO_OP_DROP = new Drop<>() {
         @Override
         public void drop(Buffer obj) {
         }
@@ -230,11 +232,22 @@ public interface Statics {
     }
 
     static CharSequence readCharSequence(Buffer source, int length, Charset charset) {
+        try {
+            return copyToCharSequence(source, source.readerOffset(), length, charset);
+        } finally {
+            source.skipReadable(length);
+        }
+    }
+
+    static String toString(Buffer source, Charset charset) {
+        return copyToCharSequence(source, source.readerOffset(), source.readableBytes(), charset).toString();
+    }
+
+    static CharSequence copyToCharSequence(Buffer source, int srcIdx, int length, Charset charset) {
         byte[] data = new byte[length];
-        source.copyInto(source.readerOffset(), data, 0, length);
-        source.skipReadable(length);
+        source.copyInto(srcIdx, data, 0, length);
         if (US_ASCII.equals(charset)) {
-            return new AsciiString(data);
+            return new AsciiString(data).toString();
         }
         return new String(data, 0, length, charset);
     }
@@ -248,5 +261,73 @@ public interface Statics {
         // TODO: Copy optimized writes from ByteBufUtil
         byte[] bytes = source.toString().getBytes(charset);
         destination.writeBytes(bytes);
+    }
+
+    static boolean equals(Buffer bufferA, Buffer bufferB) {
+        if (bufferA == bufferB) {
+            return true;
+        }
+        final int aLen = bufferA.readableBytes();
+        if (aLen != bufferB.readableBytes()) {
+            return false;
+        }
+        return equals(bufferA, bufferA.readerOffset(), bufferB, bufferB.readerOffset(), aLen);
+    }
+
+    static boolean equals(Buffer a, int aStartIndex, Buffer b, int bStartIndex, int length) {
+        requireNonNull(a, "a");
+        requireNonNull(b, "b");
+        // All indexes and lengths must be non-negative
+        checkPositiveOrZero(aStartIndex, "aStartIndex");
+        checkPositiveOrZero(bStartIndex, "bStartIndex");
+        checkPositiveOrZero(length, "length");
+
+        if (a.writerOffset() - length < aStartIndex || b.writerOffset() - length < bStartIndex) {
+            return false;
+        }
+
+        final int longCount = length >>> 3;
+        final int byteCount = length & 7;
+
+        for (int i = longCount; i > 0; i --) {
+            if (a.getLong(aStartIndex) != b.getLong(bStartIndex)) {
+                return false;
+            }
+            aStartIndex += 8;
+            bStartIndex += 8;
+        }
+
+        for (int i = byteCount; i > 0; i --) {
+            if (a.getByte(aStartIndex) != b.getByte(bStartIndex)) {
+                return false;
+            }
+            aStartIndex ++;
+            bStartIndex ++;
+        }
+
+        return true;
+    }
+
+    static int hashCode(Buffer buffer) {
+        final int aLen = buffer.readableBytes();
+        final int intCount = aLen >>> 2;
+        final int byteCount = aLen & 3;
+
+        int hashCode = 0;
+        int arrayIndex = buffer.readerOffset();
+        for (int i = intCount; i > 0; i --) {
+            hashCode = 31 * hashCode + buffer.getInt(arrayIndex);
+            arrayIndex += 4;
+        }
+
+        for (int i = byteCount; i > 0; i --) {
+            hashCode = 31 * hashCode + buffer.getByte(arrayIndex ++);
+        }
+
+        if (hashCode == 0) {
+            hashCode = 1;
+        }
+
+        return hashCode;
     }
 }

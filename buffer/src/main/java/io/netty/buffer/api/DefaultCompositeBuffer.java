@@ -1255,6 +1255,16 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         return i < 0? -(i + 2) : i;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Buffer && Statics.equals(this, (Buffer) o);
+    }
+
+    @Override
+    public int hashCode() {
+        return Statics.hashCode(this);
+    }
+
     // <editor-fold defaultstate="collapsed" desc="Torn buffer access.">
     private static final class TornBufferAccessor implements BufferAccessor {
         private final DefaultCompositeBuffer buf;

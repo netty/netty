@@ -16,6 +16,7 @@
 package io.netty.buffer.api;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * A stub of a {@link Buffer} implementation that implements all buffer methods by delegating them to a wrapped buffer
@@ -457,5 +458,20 @@ public class BufferStub implements Buffer {
     public Buffer touch(Object hint) {
         delegate.touch(hint);
         return this;
+    }
+
+    @Override
+    public String toString(Charset charset) {
+        return delegate.toString(charset);
+    }
+
+    @Override
+    public int hashCode() {
+        return delegate.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Buffer && delegate.equals(obj);
     }
 }
