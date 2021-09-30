@@ -55,7 +55,7 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
 public final class Native {
-    private static final boolean skipMuslCheck = SystemPropertyUtil.getBoolean("io.netty.native.musl.check", false);
+    private static final boolean checkMusl = SystemPropertyUtil.getBoolean("io.netty.native.musl.check", true);
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
     static {
@@ -98,7 +98,7 @@ public final class Native {
                 // Just ignore
             }
         }
-        if (!skipMuslCheck && gnulibc() == 1) {
+        if (checkMusl && gnulibc() == 1) {
             // Our binary is compiled for linking with GLIBC.
             // Let's check that we don't have anything that looks like Musl libc in our runtime.
             try {
