@@ -23,6 +23,7 @@ import io.netty.channel.unix.Unix;
 import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -33,7 +34,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
-import java.util.regex.Pattern;
 
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
@@ -55,6 +55,7 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
 public final class Native {
+    private static final boolean skipMuslCheck = SystemPropertyUtil.getBoolean("io.netty.native.musl.check", false);
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
     static {
@@ -97,25 +98,22 @@ public final class Native {
                 // Just ignore
             }
         }
-        if (gnulibc() == 1) {
+        if (!skipMuslCheck && gnulibc() == 1) {
             // Our binary is compiled for linking with GLIBC.
-            // Let's check that we actually have GLIBC loaded in our link mapping.
-            // If we don't, then it means we are running on a JVM/OS that's using an alternative libc, such as musl.
+            // Let's check that we don't have anything that looks like Musl libc in our runtime.
             try {
                 FileInputStream fis = new FileInputStream("/proc/self/maps");
                 try {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
-                    Pattern gnulibcPattern = Pattern.compile(".*/lib/.*-linux-gnu/libc-.*\\.so");
-                    boolean gnulibcFound = false;
+                    boolean muslFound = false;
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        logger.debug(line);
-                        if (gnulibcPattern.matcher(line).find()) {
-                            gnulibcFound = true;
+                        if (line.contains("-musl-")) {
+                            muslFound = true;
                             break;
                         }
                     }
-                    if (!gnulibcFound) {
+                    if (muslFound) {
                         throw new LinkageError(
                                 "Native library was compiled for linking with GLIBC, but GLIBC was not found among " +
                                         "library mappings. This likely means the OS/JVM uses an alternative libc, " +
