@@ -61,16 +61,14 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     /**
      * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
      */
-    NioBuffer(NioBuffer parent) {
-        super(parent.unsafeGetDrop().fork(), parent.control);
+    private NioBuffer(NioBuffer parent, Drop<NioBuffer> drop) {
+        super(drop, parent.control);
         base = parent.base;
-        rmem = bbslice(parent.rmem, 0, parent.rmem.capacity()); // Need to slice to get independent byte orders.
-        assert parent.wmem == CLOSED_BUFFER;
+        rmem = parent.rmem;
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
         constBuffer = true;
-        unsafeGetDrop().attach(this);
     }
 
     @Override
@@ -992,6 +990,14 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     ByteBuffer recoverable() {
         return base;
+    }
+
+    Buffer newConstChild() {
+        assert readOnly();
+        Drop<NioBuffer> drop = unsafeGetDrop().fork();
+        NioBuffer child = new NioBuffer(this, drop);
+        drop.attach(child);
+        return child;
     }
 
     private static final class ForwardNioByteCursor implements ByteCursor {

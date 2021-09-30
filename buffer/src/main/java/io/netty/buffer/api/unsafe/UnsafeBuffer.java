@@ -69,8 +69,8 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     /**
      * Constructor for {@linkplain BufferAllocator#constBufferSupplier(byte[]) const buffers}.
      */
-    UnsafeBuffer(UnsafeBuffer parent) {
-        super(parent.unsafeGetDrop().fork(), parent.control);
+    private UnsafeBuffer(UnsafeBuffer parent, Drop<UnsafeBuffer> drop) {
+        super(drop, parent.control);
         memory = parent.memory;
         base = parent.base;
         baseOffset = parent.baseOffset;
@@ -81,7 +81,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         roff = parent.roff;
         woff = parent.woff;
         constBuffer = true;
-        unsafeGetDrop().attach(this);
     }
 
     @Override
@@ -1394,6 +1393,14 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     Object recover() {
         return memory;
+    }
+
+    Buffer newConstChild() {
+        assert readOnly();
+        Drop<UnsafeBuffer> drop = unsafeGetDrop().fork();
+        UnsafeBuffer child = new UnsafeBuffer(this, drop);
+        drop.attach(child);
+        return child;
     }
 
     private static final class ForwardUnsafeByteCursor implements ByteCursor {

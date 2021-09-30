@@ -65,9 +65,8 @@ public class UnsafeMemoryManager implements MemoryManager {
 
     @Override
     public Buffer allocateConstChild(Buffer readOnlyConstParent) {
-        assert readOnlyConstParent.readOnly();
         UnsafeBuffer buf = (UnsafeBuffer) readOnlyConstParent;
-        return new UnsafeBuffer(buf);
+        return buf.newConstChild();
     }
 
     @Override

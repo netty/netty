@@ -46,9 +46,8 @@ public class ByteBufferMemoryManager implements MemoryManager {
 
     @Override
     public Buffer allocateConstChild(Buffer readOnlyConstParent) {
-        assert readOnlyConstParent.readOnly();
         NioBuffer buf = (NioBuffer) readOnlyConstParent;
-        return new NioBuffer(buf);
+        return buf.newConstChild();
     }
 
     @Override
