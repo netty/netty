@@ -175,6 +175,11 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     resetDecoder();
             }
         } catch (Exception e) {
+            if (lastContent != null) {
+                lastContent.release();
+                lastContent = null;
+            }
+
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
@@ -226,14 +231,13 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private static void skipControlCharacters(ByteBuf buffer) {
-        byte b;
-        for (;;) {
-            b = buffer.readByte();
-            if (b != StompConstants.CR && b != StompConstants.LF) {
-                buffer.readerIndex(buffer.readerIndex() - 1);
-                break;
-            }
+        int offset = buffer.forEachByte(ByteProcessor.FIND_NON_CRLF);
+
+        if (offset == 0) {
+            return;
         }
+
+        buffer.readerIndex(offset);
     }
 
     private void resetDecoder() {
