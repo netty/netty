@@ -231,13 +231,14 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private static void skipControlCharacters(ByteBuf buffer) {
-        int offset = buffer.forEachByte(ByteProcessor.FIND_NON_CRLF);
-
-        if (offset == 0) {
-            return;
+        byte b;
+        for (;;) {
+            b = buffer.readByte();
+            if (b != StompConstants.CR && b != StompConstants.LF) {
+                buffer.readerIndex(buffer.readerIndex() - 1);
+                break;
+            }
         }
-
-        buffer.readerIndex(offset);
     }
 
     private void resetDecoder() {
