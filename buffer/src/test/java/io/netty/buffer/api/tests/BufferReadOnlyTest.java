@@ -21,6 +21,7 @@ import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.buffer.api.Send;
 import io.netty.buffer.api.internal.ResourceSupport;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -257,7 +258,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L).makeReadOnly();
              Buffer copy = buf.copy()) {
             assertFalse(copy.readOnly());
-            assertReadableEquals(buf, copy);
+            Assertions.assertEquals(buf, copy);
             assertEquals(8, copy.readerOffset());
             copy.setLong(0, 0xA1A2A3A4A5A6A7A8L);
             assertEquals(0xA1A2A3A4A5A6A7A8L, copy.getLong(0));
