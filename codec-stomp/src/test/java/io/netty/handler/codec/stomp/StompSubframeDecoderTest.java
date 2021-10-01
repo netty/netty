@@ -243,6 +243,5 @@ public class StompSubframeDecoderTest {
         assertTrue(lastContentFrame.decoderResult().isFailure());
         assertEquals("unexpected byte in buffer 1 while expecting NULL byte",
                      lastContentFrame.decoderResult().cause().getMessage());
-
     }
 }
