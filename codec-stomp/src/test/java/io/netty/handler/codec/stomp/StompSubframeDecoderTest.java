@@ -226,4 +226,22 @@ public class StompSubframeDecoderTest {
         assertEquals("body", contentSubFrame.content().toString(UTF_8));
         assertTrue(contentSubFrame.release());
     }
+
+    @Test
+    void testFrameWithContentLengthAndWithoutNullEnding() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(FRAME_WITHOUT_NULL_ENDING.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersFrame = channel.readInbound();
+        assertNotNull(headersFrame);
+        assertFalse(headersFrame.decoderResult().isFailure());
+
+        StompContentSubframe lastContentFrame = channel.readInbound();
+        assertNotNull(lastContentFrame);
+        assertTrue(lastContentFrame.decoderResult().isFailure());
+        assertEquals("unexpected byte in buffer 1 while expecting NULL byte",
+                     lastContentFrame.decoderResult().cause().getMessage());
+    }
 }

@@ -77,5 +77,12 @@ public final class StompTestConstants {
             '\n' +
             "body\0";
 
+    public static final String FRAME_WITHOUT_NULL_ENDING = "SEND\n" +
+             "destination:/queue/a\n" +
+             "content-type:text/plain\n" +
+             "content-length:4\n" +
+             '\n' +
+             "body\1";
+
     private StompTestConstants() { }
 }
