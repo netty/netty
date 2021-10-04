@@ -105,20 +105,14 @@ public final class Native {
                 FileInputStream fis = new FileInputStream("/proc/self/maps");
                 try {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
-                    boolean muslFound = false;
                     String line;
                     while ((line = reader.readLine()) != null) {
                         if (line.contains("-musl-")) {
-                            muslFound = true;
-                            break;
+                            throw new LinkageError("Native library was compiled for linking with GLIBC, but GLIBC " +
+                                    "was not found among library mappings. This likely means the OS/JVM uses an " +
+                                    "alternative libc, such as musl. To fix, either use NIO transport, or build a " +
+                                    "native transport for your platform.");
                         }
-                    }
-                    if (muslFound) {
-                        throw new LinkageError(
-                                "Native library was compiled for linking with GLIBC, but GLIBC was not found among " +
-                                        "library mappings. This likely means the OS/JVM uses an alternative libc, " +
-                                        "such as musl. To fix, either use NIO transport, or build a native transport " +
-                                        "for your platform.");
                     }
                 } finally {
                     try {
