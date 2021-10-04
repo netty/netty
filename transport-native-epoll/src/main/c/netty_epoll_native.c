@@ -326,6 +326,7 @@ static jint netty_epoll_native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd,
     }
     return res;
 }
+
 static jint netty_epoll_native_epollCtlMod0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
     int res = epollCtl(env, efd, EPOLL_CTL_MOD, fd, flags);
     if (res < 0) {
@@ -540,6 +541,15 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     return NULL;
 }
 
+static jint netty_epoll_native_gnulibc(JNIEnv* env, jclass clazz) {
+#ifdef __GLIBC__
+    return 1;
+#else
+    // We are using an alternative libc, possibly musl but could be anything.
+    return 0;
+#endif // __GLIBC__
+}
+
 static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
     if (SYS_sendmmsg == -1) {
         return JNI_FALSE;
@@ -658,7 +668,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
   { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
   { "tcpFastopenMode", "()I", (void *) netty_epoll_native_tcpFastopenMode },
-  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
+  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion },
+  { "gnulibc", "()I", (void *) netty_epoll_native_gnulibc }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
