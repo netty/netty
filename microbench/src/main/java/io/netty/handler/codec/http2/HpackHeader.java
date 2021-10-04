@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,8 @@ import java.util.Random;
 /**
  * Helper class representing a single header entry. Used by the benchmarks.
  */
-final class HpackHeader {
+@UnstableApi
+public final class HpackHeader {
     private static final String ALPHABET =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 
