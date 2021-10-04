@@ -1033,6 +1033,7 @@
               <!-- Added to fix false-positive -->
               <exclude>io.netty.handler.codec.dns.TcpDnsQueryDecoder</exclude>
               <exclude>io.netty.handler.codec.dns.TcpDnsResponseEncoder</exclude>
+              <exclude>io.netty.channel.ServerChannelRecvByteBufAllocator</exclude>
             </excludes>
           </parameter>
         </configuration>
