@@ -191,6 +191,11 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
                     resetDecoder();
             }
         } catch (Exception e) {
+            if (lastContent != null) {
+                lastContent.release();
+                lastContent = null;
+            }
+
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             ctx.fireChannelRead(errorContent);
