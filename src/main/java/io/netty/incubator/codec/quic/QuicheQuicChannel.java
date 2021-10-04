@@ -948,7 +948,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 InetSocketAddress oldRemote = remote;
                 remote = QuicheSendInfo.getAddress(sendInfo);
                 pipeline().fireUserEventTriggered(
-                        new QuicConnectionMigrationEvent(oldRemote, remote));
+                        new QuicConnectionEvent(oldRemote, remote));
                 needWriteNow = true;
             }
 
@@ -1039,7 +1039,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 InetSocketAddress oldRemote = remote;
                 remote = QuicheSendInfo.getAddress(sendInfo);
                 pipeline().fireUserEventTriggered(
-                        new QuicConnectionMigrationEvent(oldRemote, remote));
+                        new QuicConnectionEvent(oldRemote, remote));
             }
             out.writerIndex(writerIndex + written);
             parent().write(new DatagramPacket(out, remote));
@@ -1192,7 +1192,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // Update the cached address
                     remote = sender;
                     pipeline().fireUserEventTriggered(
-                            new QuicConnectionMigrationEvent(oldRemote, sender));
+                            new QuicConnectionEvent(oldRemote, sender));
                 }
 
                 long connAddr = connection.address();

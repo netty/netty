@@ -332,12 +332,21 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndGetAddressesAfterClose() throws Throwable {
         AtomicReference<QuicChannel> acceptedRef = new AtomicReference<>();
+        AtomicReference<QuicConnectionEvent> serverEventRef = new AtomicReference<>();
         Channel server = QuicTestUtils.newServer(
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                         acceptedRef.set((QuicChannel) ctx.channel());
                         super.channelActive(ctx);
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof QuicConnectionEvent) {
+                            serverEventRef.set((QuicConnectionEvent) evt);
+                        }
+                        super.userEventTriggered(ctx, evt);
                     }
                 },
                 new ChannelInboundHandlerAdapter());
@@ -357,6 +366,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             // Check if we also can access these after the channel was closed.
             assertNotNull(quicChannel.localAddress());
             assertNotNull(quicChannel.remoteAddress());
+
+            assertNull(serverEventRef.get().oldAddress());
+            assertEquals(channel.localAddress(), serverEventRef.get().newAddress());
 
             QuicChannel accepted;
             while ((accepted = acceptedRef.get()) == null) {
