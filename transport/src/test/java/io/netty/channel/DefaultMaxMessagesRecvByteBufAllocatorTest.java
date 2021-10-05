@@ -56,7 +56,7 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
     }
 
     @Test
-    public void testIngoreReadBytes() {
+    public void testIgnoreReadBytes() {
         DefaultMaxMessagesRecvByteBufAllocator allocator = newAllocator(true);
         RecvByteBufAllocator.Handle handle = allocator.newHandle();
 
@@ -66,6 +66,11 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
         assertTrue(handle.continueReading());
         handle.incMessagesRead(1);
         assertFalse(handle.continueReading());
+
+        handle.reset(channel.config());
+        handle.attemptedBytesRead(0);
+        handle.lastBytesRead(0);
+        assertTrue(handle.continueReading());
         channel.finish();
     }
 }
