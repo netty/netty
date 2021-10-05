@@ -259,7 +259,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
              Buffer copy = buf.copy()) {
             assertFalse(copy.readOnly());
             Assertions.assertEquals(buf, copy);
-            assertEquals(8, copy.readerOffset());
+            assertEquals(0, copy.readerOffset());
             copy.setLong(0, 0xA1A2A3A4A5A6A7A8L);
             assertEquals(0xA1A2A3A4A5A6A7A8L, copy.getLong(0));
         }
