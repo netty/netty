@@ -232,11 +232,9 @@ public interface Statics {
     }
 
     static CharSequence readCharSequence(Buffer source, int length, Charset charset) {
-        try {
-            return copyToCharSequence(source, source.readerOffset(), length, charset);
-        } finally {
-            source.skipReadable(length);
-        }
+        final CharSequence charSequence = copyToCharSequence(source, source.readerOffset(), length, charset);
+        source.skipReadable(length);
+        return charSequence;
     }
 
     static String toString(Buffer source, Charset charset) {
@@ -264,6 +262,9 @@ public interface Statics {
     }
 
     static boolean equals(Buffer bufferA, Buffer bufferB) {
+        if ((bufferA == null && bufferB != null) || (bufferB == null && bufferA != null)) {
+            return false;
+        }
         if (bufferA == bufferB) {
             return true;
         }
