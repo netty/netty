@@ -31,7 +31,7 @@ import static io.netty.channel.kqueue.KQueueChannelOption.SO_ACCEPTFILTER;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
 @UnstableApi
-public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig implements ServerSocketChannelConfig {
+public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
     KQueueServerSocketChannelConfig(KQueueServerSocketChannel channel) {
         super(channel);
 
@@ -133,6 +133,12 @@ public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig i
     @Override
     public KQueueServerSocketChannelConfig setBacklog(int backlog) {
         super.setBacklog(backlog);
+        return this;
+    }
+
+    @Override
+    public KQueueServerSocketChannelConfig setTcpFastOpen(boolean enableTcpFastOpen) {
+        super.setTcpFastOpen(enableTcpFastOpen);
         return this;
     }
 
