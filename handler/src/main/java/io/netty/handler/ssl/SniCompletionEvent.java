@@ -25,16 +25,16 @@ import io.netty.util.internal.UnstableApi;
 public final class SniCompletionEvent extends SslCompletionEvent {
     private final String hostname;
 
-    SniCompletionEvent(String hostname) {
+    public SniCompletionEvent(String hostname) {
         this.hostname = hostname;
     }
 
-    SniCompletionEvent(String hostname, Throwable cause) {
+    public SniCompletionEvent(String hostname, Throwable cause) {
         super(cause);
         this.hostname = hostname;
     }
 
-    SniCompletionEvent(Throwable cause) {
+    public SniCompletionEvent(Throwable cause) {
         this(null, cause);
     }
 
