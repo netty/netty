@@ -814,8 +814,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * Changes to position and limit of the byte buffers exposed via the processed components, are not reflected back to
      * this buffer instance.
      *
-     * @param initialIndex The initial index of the iteration, and the index that will be passed to the first call to
-     *                    the {@linkplain ReadableComponentProcessor#process(int, ReadableComponent) processor}.
+     * @param initialIndex The initial index of the component for iteration, and the index that will be passed to the
+     * first call to the {@linkplain ReadableComponentProcessor#process(int, ReadableComponent) processor}.
      * @param processor The processor that will be used to process the buffer components.
      * @return The number of readable components processed, as a positive number if all readable components were
      * processed, or as a negative number if the iteration was stopped because
@@ -853,8 +853,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * Changes to position and limit of the byte buffers exposed via the processed components, are not reflected back to
      * this buffer instance.
      *
-     * @param initialIndex The initial index of the iteration, and the index that will be passed to the first call to
-     *                    the {@linkplain WritableComponentProcessor#process(int, WritableComponent) processor}.
+     * @param initialIndex The initial index of the component for iteration, and the index that will be passed to the
+     * first call to the {@linkplain WritableComponentProcessor#process(int, WritableComponent) processor}.
      * @param processor The processor that will be used to process the buffer components.
      * @return The number of writable components processed, as a positive number if all writable components were
      * processed, or as a negative number if the iteration was stopped because
@@ -862,4 +862,16 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * In any case, the number of components processed may be less than {@link #countComponents()}.
      */
     <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor) throws E;
+
+    /**
+     * Decodes this buffer's readable bytes into a string with the specified {@linkplain Charset}.
+     * <p>
+     * This method does not modify the reader or writer offset of this buffer.
+     *
+     * @param charset used for decoding.
+     * @return Buffer's readable bytes as a string.
+     */
+    default String toString(Charset charset) {
+        return Statics.toString(this, charset);
+    }
 }

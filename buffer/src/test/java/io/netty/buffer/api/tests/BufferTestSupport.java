@@ -820,14 +820,6 @@ public abstract class BufferTestSupport {
         return bs;
     }
 
-    public static void assertEquals(Buffer expected, Buffer actual) {
-        assertThat(toByteArray(actual)).containsExactly(toByteArray(expected));
-    }
-
-    public static void assertReadableEquals(Buffer expected, Buffer actual) {
-        assertThat(readByteArray(actual)).containsExactly(readByteArray(expected));
-    }
-
     public static void assertEquals(byte expected, byte actual) {
         if (expected != actual) {
             fail(String.format("expected: %1$s (0x%1$X) but was: %2$s (0x%2$X)", expected, actual));

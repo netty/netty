@@ -74,7 +74,7 @@ public class BufferCharSequenceTest extends BufferTestSupport {
             assertEquals(0, buf.readerOffset());
 
             final CharSequence read = buf.readCharSequence(data.length(), US_ASCII);
-            Assertions.assertEquals(data, read);
+            Assertions.assertEquals(data.toString(), read.toString());
             assertEquals(data.length(), buf.writerOffset());
             assertEquals(data.length(), buf.readerOffset());
         }

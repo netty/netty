@@ -17,6 +17,7 @@ package io.netty.buffer.api.tests;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -57,6 +58,6 @@ public class BufferWriteBytesCombinationsTest extends BufferTestSupport {
         assertThat(source.readerOffset()).isEqualTo(35);
         assertThat(source.writerOffset()).isEqualTo(35);
         source.readerOffset(0);
-        assertReadableEquals(source, target);
+        Assertions.assertEquals(source, target);
     }
 }
