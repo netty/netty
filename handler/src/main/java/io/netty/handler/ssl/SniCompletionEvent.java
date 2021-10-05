@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -27,7 +26,7 @@ public final class SniCompletionEvent extends SslCompletionEvent {
     private final String hostname;
 
     public SniCompletionEvent(String hostname) {
-        this.hostname = ObjectUtil.checkNotNull(hostname, "hostname");
+        this.hostname = hostname;
     }
 
     public SniCompletionEvent(String hostname, Throwable cause) {
