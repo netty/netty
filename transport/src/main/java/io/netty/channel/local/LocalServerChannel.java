@@ -24,6 +24,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -35,9 +36,9 @@ import java.util.Queue;
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
-    private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final ChannelConfig config =
+            new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<>();
-
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;

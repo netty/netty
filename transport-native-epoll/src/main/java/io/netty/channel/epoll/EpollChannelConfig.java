@@ -33,6 +33,10 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         super(channel);
     }
 
+    EpollChannelConfig(AbstractEpollChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
+        super(channel, recvByteBufAllocator);
+    }
+
     @Override
     public EpollChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         super.setConnectTimeoutMillis(connectTimeoutMillis);

@@ -22,12 +22,12 @@ import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
 
@@ -47,9 +47,8 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
      */
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
-        super(channel);
-        requireNonNull(javaChannel, "javaChannel");
-        this.javaChannel = javaChannel;
+        super(channel, new ServerChannelRecvByteBufAllocator());
+        this.javaChannel = requireNonNull(javaChannel, "javaChannel");
     }
 
     @Override
