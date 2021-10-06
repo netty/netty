@@ -67,6 +67,15 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                                             .channel(KQueueServerSocketChannel.class);
             }
         });
+        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                ServerBootstrap serverBootstrap = new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                                                                       .channel(KQueueServerSocketChannel.class);
+                serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
+                return serverBootstrap;
+            }
+        });
 
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override

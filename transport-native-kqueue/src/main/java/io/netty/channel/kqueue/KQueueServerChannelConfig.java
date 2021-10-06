@@ -32,11 +32,13 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 @UnstableApi
 public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
+    private volatile boolean enableTcpFastOpen;
 
     KQueueServerChannelConfig(AbstractKQueueChannel channel) {
         super(channel, new ServerChannelRecvByteBufAllocator());
@@ -44,7 +46,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, TCP_FASTOPEN);
     }
 
     @SuppressWarnings("unchecked")
@@ -59,6 +61,9 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         if (option == SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
+        if (option == TCP_FASTOPEN) {
+            return (T) (isTcpFastOpen() ? Integer.valueOf(1) : Integer.valueOf(0));
+        }
         return super.getOption(option);
     }
 
@@ -72,6 +77,8 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
             setReuseAddress((Boolean) value);
         } else if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
+        } else if (option == TCP_FASTOPEN) {
+            setTcpFastOpen((Integer) value > 0);
         } else {
             return super.setOption(option, value);
         }
@@ -126,6 +133,28 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     public KQueueServerChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if TCP FastOpen is enabled.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
+     */
+    public boolean isTcpFastOpen() {
+        return enableTcpFastOpen;
+    }
+
+    /**
+     * Enables TCP FastOpen on the server channel. If the underlying os doesn't support TCP_FASTOPEN setting this has no
+     * effect. This has to be set before doing listen on the socket otherwise this takes no effect.
+     *
+     * @param enableTcpFastOpen {@code true} if TCP FastOpen should be enabled for incomming connections.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
+     */
+    public KQueueServerChannelConfig setTcpFastOpen(boolean enableTcpFastOpen) {
+        this.enableTcpFastOpen = enableTcpFastOpen;
         return this;
     }
 
