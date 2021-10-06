@@ -1212,6 +1212,9 @@
               <includes>
                 <include>**/pom.xml</include>
               </includes>
+              <excludes>
+                <exclude>**/target/**</exclude>
+              </excludes>
             </formatFileSet>
           </formatFileSets>
           <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
