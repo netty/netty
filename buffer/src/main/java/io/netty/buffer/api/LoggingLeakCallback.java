@@ -20,8 +20,29 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.function.Consumer;
 
-public class LoggingLeakCallback implements Consumer<LeakInfo> {
+/**
+ * The {@link LoggingLeakCallback} can be {@linkplain MemoryManager#onLeakDetected(Consumer) installed} to enable
+ * logging output when a leak is detected.
+ * <p>
+ * The logging output will be done with the {@code ERROR} level.
+ * <p>
+ * Note that asynchronous and fast logging should be preferred, since the callback may run inside a cleaner-thread.
+ */
+public final class LoggingLeakCallback implements Consumer<LeakInfo> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LoggingLeakCallback.class);
+    private static final LoggingLeakCallback instance = new LoggingLeakCallback();
+
+    /**
+     * Get an instance of the {@link LoggingLeakCallback}.
+     *
+     * @return An instance of the {@link LoggingLeakCallback} class.
+     */
+    public static LoggingLeakCallback getInstance() {
+        return instance;
+    }
+
+    private LoggingLeakCallback() {
+    }
 
     @Override
     public void accept(LeakInfo leakInfo) {
@@ -34,11 +55,11 @@ public class LoggingLeakCallback implements Consumer<LeakInfo> {
         private static final long serialVersionUID = -1894217374238341652L;
 
         LeakReport(LeakInfo leakInfo) {
-            super("LEAK: buffer (of " + leakInfo.bytesLeaked() + " bytes) was not property closed before it was " +
+            super("LEAK: Object \"" + leakInfo.objectDescription() + "\" was not property closed before it was " +
                   "garbage collected. " +
                   "A life-cycle back-trace (if any) is attached as suppressed exceptions. " +
                   "See https://netty.io/wiki/reference-counted-objects.html for more information.", null, true, false);
-            leakInfo.forEach(tracePoint -> addSuppressed(tracePoint.getTraceback()));
+            leakInfo.forEach(tracePoint -> addSuppressed(tracePoint.traceback()));
         }
     }
 }

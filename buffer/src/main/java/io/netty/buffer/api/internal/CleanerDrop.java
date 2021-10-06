@@ -100,7 +100,7 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
                     drop.drop((T) obj);
                 } else {
                     try (Buffer recoveredBuffer = manager.recoverMemory(ALLOC_CONTROL, obj, (Drop<Buffer>) drop)) {
-                        LeakDetection.reportLeak(tracer, recoveredBuffer);
+                        LeakDetection.reportLeak(tracer, "buffer (" + recoveredBuffer.capacity() + " bytes)");
                     }
                 }
             }

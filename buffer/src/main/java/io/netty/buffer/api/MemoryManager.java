@@ -54,6 +54,9 @@ public interface MemoryManager {
      * <p>
      * Be mindful that the callback must be fast, and not take any locks or call any blocking methods,
      * as this might interfere with the garbage collectors reference processing and cleaning.
+     * <p>
+     * This also applies to callbacks that perform logging.
+     * In these cases, asynchronous logging should be preferred, for the avoidance of blocking calls and IO.
      *
      * @param callback The callback that will be called when a buffer leak is detected.
      * @return An {@link AutoCloseable} instance that, when closed, removes the given callback again.

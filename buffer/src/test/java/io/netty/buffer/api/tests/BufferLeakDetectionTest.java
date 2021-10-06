@@ -140,7 +140,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         if (nonLeakAsserts.get() != null) {
             LeakInfo info = nonLeakAsserts.get();
             AssertionError error = new AssertionError("Buffers that were sent and properly received should not leak");
-            info.forEach(tracePoint -> error.addSuppressed(tracePoint.getTraceback()));
+            info.forEach(tracePoint -> error.addSuppressed(tracePoint.traceback()));
             throw error;
         }
     }

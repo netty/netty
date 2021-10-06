@@ -36,12 +36,11 @@ public interface LeakInfo extends Iterable<TracePoint> {
     Stream<TracePoint> stream();
 
     /**
-     * The number of bytes of memory the leaked buffer was holding on to.
-     * This will typically be the capacity of the leaked buffer.
+     * A human-readable description of the object that leaked.
      *
-     * @return The number of bytes leaked.
+     * @return A description of the leaked object.
      */
-    int bytesLeaked();
+    String objectDescription();
 
     /**
      * A moment in the life of the leaked object, for which some information was recorded.
@@ -61,6 +60,6 @@ public interface LeakInfo extends Iterable<TracePoint> {
          *
          * @return A {@link Throwable} with the stack trace of this trace point.
          */
-        Throwable getTraceback();
+        Throwable traceback();
     }
 }

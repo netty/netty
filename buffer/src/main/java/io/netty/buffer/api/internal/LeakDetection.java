@@ -15,7 +15,6 @@
  */
 package io.netty.buffer.api.internal;
 
-import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.LeakInfo;
 import io.netty.buffer.api.LoggingLeakCallback;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -52,7 +51,7 @@ public final class LeakDetection {
             throw new ExceptionInInitializerError(e);
         }
         if (enabled > 0) {
-            CALLBACKS.add(new LoggingLeakCallback());
+            CALLBACKS.add(LoggingLeakCallback.getInstance());
         }
         leakDetectionEnabled = enabled;
     }
@@ -62,23 +61,17 @@ public final class LeakDetection {
 
     public static AutoCloseable onLeakDetected(Consumer<LeakInfo> callback) {
         LEAK_DETECTION_ENABLED_UPDATER.getAndAddAcquire(1);
-        Set<Consumer<LeakInfo>> callbacks = CALLBACKS;
-        synchronized (callbacks) {
-            callbacks.add(callback);
+        synchronized (CALLBACKS) {
+            CALLBACKS.add(callback);
         }
         return new CallbackRemover(callback);
     }
 
-    public static void reportLeak(LifecycleTracer tracer, Buffer recoveredBuffer) {
-        Set<Consumer<LeakInfo>> callbacks = CALLBACKS;
-        synchronized (callbacks) {
-            if (!callbacks.isEmpty()) {
-                LeakInfo info = new InternalLeakInfo(tracer, recoveredBuffer);
-                System.err.println("LEAK: "); // todo remove
-                info.forEach(trace -> { // todo remove
-                    trace.getTraceback().printStackTrace();
-                });
-                for (Consumer<LeakInfo> callback : callbacks) {
+    public static void reportLeak(LifecycleTracer tracer, String leakedObjectDescription) {
+        synchronized (CALLBACKS) {
+            if (!CALLBACKS.isEmpty()) {
+                LeakInfo info = new InternalLeakInfo(tracer, leakedObjectDescription);
+                for (Consumer<LeakInfo> callback : CALLBACKS) {
                     callback.accept(info);
                 }
             }
@@ -94,9 +87,8 @@ public final class LeakDetection {
 
         @Override
         public void close() {
-            Set<Consumer<LeakInfo>> callbacks = CALLBACKS;
-            synchronized (callbacks) {
-                callbacks.remove(callback);
+            synchronized (CALLBACKS) {
+                CALLBACKS.remove(callback);
             }
             LEAK_DETECTION_ENABLED_UPDATER.getAndAddRelease(-1);
         }
@@ -104,17 +96,12 @@ public final class LeakDetection {
 
     private static final class InternalLeakInfo implements LeakInfo {
         private final LifecycleTracer tracer;
-        private final int bytesLeaked;
+        private final String leakedObjectDescription;
         private Collection<TracePoint> cachedTrace;
 
-        InternalLeakInfo(LifecycleTracer tracer, Buffer recoveredBuffer) {
+        InternalLeakInfo(LifecycleTracer tracer, String leakedObjectDescription) {
             this.tracer = tracer;
-            bytesLeaked = recoveredBuffer.capacity();
-        }
-
-        @Override
-        public int bytesLeaked() {
-            return bytesLeaked;
+            this.leakedObjectDescription = leakedObjectDescription;
         }
 
         @Override
@@ -125,6 +112,11 @@ public final class LeakDetection {
         @Override
         public Stream<TracePoint> stream() {
             return getTracePoints().stream();
+        }
+
+        @Override
+        public String objectDescription() {
+            return leakedObjectDescription;
         }
 
         private Collection<TracePoint> getTracePoints() {

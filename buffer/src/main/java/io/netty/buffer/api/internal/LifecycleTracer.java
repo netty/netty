@@ -15,11 +15,13 @@
  */
 package io.netty.buffer.api.internal;
 
+import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.LeakInfo;
 import io.netty.buffer.api.LeakInfo.TracePoint;
 import io.netty.buffer.api.Owned;
 import io.netty.buffer.api.Resource;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -35,7 +37,7 @@ import java.util.stream.Stream;
 @UnstableApi
 public abstract class LifecycleTracer {
     static volatile int lifecycleTracingEnabled =
-            System.getProperty("io.netty.buffer.lifecycleTracingEnabled") == null ? 0 : 1;
+            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", false) ? 0 : 1;
 
     /**
      * Get a tracer for a newly allocated resource.
@@ -90,6 +92,19 @@ public abstract class LifecycleTracer {
      */
     public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance);
 
+    /**
+     * Attach a trace to both life-cycles, that a single life-cycle has been split into two.
+     *
+     * Such branches happen when two views are created to share a single underlying resource.
+     * The most prominent example of this is the {@link Buffer#split()} method, where a buffer is broken into two that
+     * each cover a non-overlapping region of the original memory.
+     *
+     * This method is called on the originating, or "parent" tracer, while the newly allocated "child" is given as an
+     * argument.
+     *
+     * @param splitTracer The tracer for the life-cycle that was branched from the life-cycle represented by this
+     *                   tracer.
+     */
     public abstract void splitTo(LifecycleTracer splitTracer);
 
     /**
@@ -279,12 +294,8 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public Throwable getTraceback() {
-            try {
-                return getTraceback(System.nanoTime(), true);
-            } catch (Exception e) {
-                return e;
-            }
+        public Throwable traceback() {
+            return getTraceback(System.nanoTime(), true);
         }
 
         private Traceback getTraceback(long timestamp, boolean recurse) {
