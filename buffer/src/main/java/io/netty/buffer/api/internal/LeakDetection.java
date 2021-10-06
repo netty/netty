@@ -17,6 +17,7 @@ package io.netty.buffer.api.internal;
 
 import io.netty.buffer.api.LeakInfo;
 import io.netty.buffer.api.LoggingLeakCallback;
+import io.netty.buffer.api.MemoryManager.LeakCallbackUninstall;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -59,7 +60,7 @@ public final class LeakDetection {
     private LeakDetection() {
     }
 
-    public static AutoCloseable onLeakDetected(Consumer<LeakInfo> callback) {
+    public static LeakCallbackUninstall onLeakDetected(Consumer<LeakInfo> callback) {
         LEAK_DETECTION_ENABLED_UPDATER.getAndAddAcquire(1);
         synchronized (CALLBACKS) {
             CALLBACKS.add(callback);
@@ -78,7 +79,7 @@ public final class LeakDetection {
         }
     }
 
-    private static final class CallbackRemover implements AutoCloseable {
+    private static final class CallbackRemover implements LeakCallbackUninstall {
         private final Consumer<LeakInfo> callback;
 
         CallbackRemover(Consumer<LeakInfo> callback) {

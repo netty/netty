@@ -59,10 +59,10 @@ public interface MemoryManager {
      * In these cases, asynchronous logging should be preferred, for the avoidance of blocking calls and IO.
      *
      * @param callback The callback that will be called when a buffer leak is detected.
-     * @return An {@link AutoCloseable} instance that, when closed, removes the given callback again.
+     * @return An {@link LeakCallbackUninstall} instance that, when closed, removes the given callback again.
      */
     @UnstableApi
-    static AutoCloseable onLeakDetected(Consumer<LeakInfo> callback) {
+    static LeakCallbackUninstall onLeakDetected(Consumer<LeakInfo> callback) {
         return LeakDetection.onLeakDetected(callback);
     }
 
@@ -189,4 +189,14 @@ public interface MemoryManager {
      * @return The name of this memory managers implementation.
      */
     String implementationName();
+
+    /**
+     * A callback used to uninstall object leak callbacks that were previously
+     * {@linkplain #onLeakDetected(Consumer) installed}.
+     */
+    @UnstableApi
+    interface LeakCallbackUninstall extends AutoCloseable {
+        @Override
+        void close();
+    }
 }
