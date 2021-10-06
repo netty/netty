@@ -81,8 +81,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.start();
             leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
             thread.interrupt();
+            thread.join();
         }
-        thread.join();
         assertThat(leakInfo).isNotNull();
     }
 
@@ -134,8 +134,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.start();
             leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
             thread.interrupt();
+            thread.join();
         }
-        thread.join();
         assertThat(leakInfo).isNotNull();
         if (nonLeakAsserts.get() != null) {
             LeakInfo info = nonLeakAsserts.get();
@@ -165,8 +165,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.start();
             leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
             thread.interrupt();
+            thread.join();
         }
-        thread.join();
         assertThat(leakInfo).isNotNull();
     }
 
