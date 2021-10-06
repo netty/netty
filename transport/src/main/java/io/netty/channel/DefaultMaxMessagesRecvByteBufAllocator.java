@@ -26,6 +26,7 @@ import io.netty.util.UncheckedBooleanSupplier;
  * and also prevents overflow.
  */
 public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessagesRecvByteBufAllocator {
+    private final boolean ignoreBytesRead;
     private volatile int maxMessagesPerRead;
     private volatile boolean respectMaybeMoreData = true;
 
@@ -34,6 +35,11 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     }
 
     public DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead) {
+        this(maxMessagesPerRead, false);
+    }
+
+    DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead, boolean ignoreBytesRead) {
+        this.ignoreBytesRead = ignoreBytesRead;
         maxMessagesPerRead(maxMessagesPerRead);
     }
 
@@ -141,8 +147,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
             return config.isAutoRead() &&
                    (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
-                   totalMessages < maxMessagePerRead &&
-                   totalBytesRead > 0;
+                   totalMessages < maxMessagePerRead && (ignoreBytesRead || totalBytesRead > 0);
         }
 
         @Override

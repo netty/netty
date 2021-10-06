@@ -36,6 +36,10 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         super(channel);
     }
 
+    EpollChannelConfig(AbstractEpollChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
+        super(channel, recvByteBufAllocator);
+    }
+
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(), EpollChannelOption.EPOLL_MODE);

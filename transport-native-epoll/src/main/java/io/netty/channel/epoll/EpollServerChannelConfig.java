@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
@@ -38,7 +39,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
     private volatile int pendingFastOpenRequestsThreshold;
 
     EpollServerChannelConfig(AbstractEpollChannel channel) {
-        super(channel);
+        super(channel, new ServerChannelRecvByteBufAllocator());
     }
 
     @Override

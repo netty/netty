@@ -38,6 +38,10 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         super(channel);
     }
 
+    KQueueChannelConfig(AbstractKQueueChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
+        super(channel, recvByteBufAllocator);
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
