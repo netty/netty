@@ -195,17 +195,6 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     }
 
     /**
-     * Encapsulation bypass to directly read the acquires field.
-     * This is used by the life cycle tracers, because every trace point needs to snapshot the acquires field.
-     *
-     * @param obj The object to read the acquires field from.
-     * @return The acquires field value.
-     */
-    static int getAcquires(ResourceSupport<?, ?> obj) {
-        return obj.acquires;
-    }
-
-    /**
      * Count the number of borrows of this object.
      * Note that even if the number of borrows is {@code 0}, this object might not be {@linkplain #isOwned() owned}
      * because there could be other restrictions involved in ownership.
