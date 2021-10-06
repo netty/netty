@@ -249,25 +249,17 @@ public final class NativeLibraryLoader {
         try {
             int exitValue = Runtime.getRuntime().exec(cmd).waitFor();
             if (exitValue != 0) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Execution of '{}' failed: {}", cmd, exitValue);
-                }
+                logger.debug("Execution of '{}' failed: {}", cmd, exitValue);
                 return false;
             }
-            if (logger.isDebugEnabled()) {
-                logger.debug("Execution of '{}' succeed: {}", cmd, exitValue);
-            }
+            logger.debug("Execution of '{}' succeed: {}", cmd, exitValue);
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (IOException e) {
-            if (logger.isInfoEnabled()) {
-                logger.info("Execution of '{}' failed.", cmd, e);
-            }
+            logger.info("Execution of '{}' failed.", cmd, e);
         } catch (SecurityException e) {
-            if (logger.isInfoEnabled()) {
-                logger.info("Execution of '{}' failed.", cmd, e);
-            }
+            logger.error("Execution of '{}' failed.", cmd, e);
         }
         return false;
     }
