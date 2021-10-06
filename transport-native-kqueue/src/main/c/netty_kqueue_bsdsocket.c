@@ -194,6 +194,10 @@ static void netty_kqueue_bsdsocket_setSndLowAt(JNIEnv* env, jclass clazz, jint f
     netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval));
 }
 
+static void netty_kqueue_bsdsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+}
+
 static jint netty_kqueue_bsdsocket_getTcpNoPush(JNIEnv* env, jclass clazz, jint fd) {
   int optval;
   if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
@@ -208,6 +212,15 @@ static jint netty_kqueue_bsdsocket_getSndLowAt(JNIEnv* env, jclass clazz, jint f
     return -1;
   }
   return optval;
+}
+
+static jint netty_kqueue_bsdsocket_isTcpFastOpen(JNIEnv* env, jclass clazz, jint fd) {
+    int optval = 0;
+    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval)) == -1) {
+        netty_unix_socket_getOptionHandleError(env, errno);
+        return 0;
+    }
+    return optval;
 }
 
 static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
@@ -249,9 +262,11 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setAcceptFilter", "(ILjava/lang/String;Ljava/lang/String;)V", (void *) netty_kqueue_bsdsocket_setAcceptFilter },
   { "setTcpNoPush", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpNoPush },
   { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
+  { "setTcpFastOpen", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpFastOpen },
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
   { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
+  { "isTcpFastOpen", "(I)I", (void *) netty_kqueue_bsdsocket_isTcpFastOpen },
   { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
 };
 

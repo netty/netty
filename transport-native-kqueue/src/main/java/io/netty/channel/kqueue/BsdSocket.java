@@ -65,6 +65,10 @@ final class BsdSocket extends Socket {
         setSndLowAt(intValue(), lowAt);
     }
 
+    public void setTcpFastOpen(boolean enableTcpFastOpen) throws IOException {
+        setTcpFastOpen(intValue(), enableTcpFastOpen ? 1 : 0);
+    }
+
     boolean isTcpNoPush() throws IOException {
         return getTcpNoPush(intValue()) != 0;
     }
@@ -76,6 +80,10 @@ final class BsdSocket extends Socket {
     AcceptFilter getAcceptFilter() throws IOException {
         String[] result = getAcceptFilter(intValue());
         return result == null ? PLATFORM_UNSUPPORTED : new AcceptFilter(result[0], result[1]);
+    }
+
+    public boolean isTcpFastOpen() throws IOException {
+        return isTcpFastOpen(intValue()) != 0;
     }
 
     PeerCredentials getPeerCredentials() throws IOException {
@@ -224,6 +232,8 @@ final class BsdSocket extends Socket {
 
     private static native int getSndLowAt(int fd) throws IOException;
 
+    private static native int isTcpFastOpen(int fd) throws IOException;
+
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
 
     private static native void setAcceptFilter(int fd, String filterName, String filterArgs) throws IOException;
@@ -231,4 +241,6 @@ final class BsdSocket extends Socket {
     private static native void setTcpNoPush(int fd, int tcpNoPush) throws IOException;
 
     private static native void setSndLowAt(int fd, int lowAt) throws IOException;
+
+    private static native void setTcpFastOpen(int fd, int enableFastOpen) throws IOException;
 }
