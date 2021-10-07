@@ -79,4 +79,12 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     protected void invalidateSessionsAndAssert(SSLSessionContext context) {
         // Not supported by conscrypt
     }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled("Disabled due a conscrypt bug")
+    @Override
+    public void testInvalidSNIIsIgnoredAndNotThrow(SSLEngineTestParam param) throws Exception {
+        super.testInvalidSNIIsIgnoredAndNotThrow(param);
+    }
 }
