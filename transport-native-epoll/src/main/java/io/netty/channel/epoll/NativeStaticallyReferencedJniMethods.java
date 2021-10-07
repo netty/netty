@@ -43,5 +43,4 @@ final class NativeStaticallyReferencedJniMethods {
     static native boolean isSupportingRecvmmsg();
     static native int tcpFastopenMode();
     static native String kernelVersion();
-    static native int gnulibc();
 }
