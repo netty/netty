@@ -46,3 +46,6 @@ mainframer
 # exclude vscode files
 .vscode/
 *.factorypath
+
+# exclude file created by the flatten plugin
+.flattened-pom.xml
