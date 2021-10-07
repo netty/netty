@@ -145,6 +145,10 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <skip>${skipShadingTestsuite}</skip>
+          <!--
+            Use a fork count of 0 as otherwise the build will just pass when a forked VM dies during JNI loading.
+          -->
+          <forkCount>0</forkCount>
           <systemPropertyVariables>
             <shadingPrefix>${shadingPrefix}</shadingPrefix>
             <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
