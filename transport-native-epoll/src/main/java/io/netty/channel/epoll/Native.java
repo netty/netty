@@ -23,15 +23,11 @@ import io.netty.channel.unix.Unix;
 import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 
@@ -40,7 +36,6 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epolle
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.gnulibc;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
@@ -55,7 +50,6 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
 public final class Native {
-    private static final boolean checkMusl = SystemPropertyUtil.getBoolean("io.netty.native.musl.check", true);
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
     static {
@@ -83,9 +77,9 @@ public final class Native {
         );
 
         try {
-            // First, try calling a side effect free JNI method to see if the library was already
+            // First, try calling a side-effect free JNI method to see if the library was already
             // loaded by the application.
-            gnulibc();
+            offsetofEpollData();
         } catch (UnsatisfiedLinkError ignore) {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
@@ -96,33 +90,6 @@ public final class Native {
                 }
             } catch (IOException ignore) {
                 // Just ignore
-            }
-        }
-        if (checkMusl && gnulibc() == 1) {
-            // Our binary is compiled for linking with GLIBC.
-            // Let's check that we don't have anything that looks like Musl libc in our runtime.
-            try {
-                FileInputStream fis = new FileInputStream("/proc/self/maps");
-                try {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.contains("-musl-")) {
-                            throw new LinkageError("Native library was compiled for linking with GLIBC, but GLIBC " +
-                                    "was not found among library mappings. This likely means the OS/JVM uses an " +
-                                    "alternative libc, such as musl. To fix, either use NIO transport, or build a " +
-                                    "native transport for your platform.");
-                        }
-                    }
-                } finally {
-                    try {
-                        fis.close();
-                    } catch (IOException e) {
-                        logger.debug("Failed to close /proc/self/maps file.", e);
-                    }
-                }
-            } catch (IOException e) {
-                logger.debug("Unable to check libc compatibility.", e);
             }
         }
         Unix.registerInternal(new Runnable() {
