@@ -4192,6 +4192,36 @@ public abstract class SSLEngineTest {
         rethrowIfNotNull(serverException);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testInvalidSNIIsIgnoredAndNotThrow(SSLEngineTestParam param) throws Exception {
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                // This test only works for non TLSv1.3 for now
+                .protocols(param.protocols())
+                .sslContextProvider(clientSslContextProvider())
+                .build());
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .ciphers(param.ciphers())
+                .build());
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "/invalid.path", 80));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+            assertNotNull(clientEngine.getSSLParameters());
+            assertNotNull(serverEngine.getSSLParameters());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return engine;
     }

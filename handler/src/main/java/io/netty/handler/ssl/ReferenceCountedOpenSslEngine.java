@@ -342,8 +342,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
                 if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
-                    SSL.setTlsExtHostName(ssl, peerHost);
-                    sniHostNames = Collections.singletonList(peerHost);
+                    // If on java8 and later we should do some extra validation to ensure we can construct the
+                    // SNIHostName later again.
+                    if (PlatformDependent.javaVersion() >= 8) {
+                        if (Java8SslUtils.isValidHostNameForSNI(peerHost)) {
+                            SSL.setTlsExtHostName(ssl, peerHost);
+                            sniHostNames = Collections.singletonList(peerHost);
+                        }
+                    } else {
+                        SSL.setTlsExtHostName(ssl, peerHost);
+                        sniHostNames = Collections.singletonList(peerHost);
+                    }
                 }
 
                 if (enableOcsp) {
