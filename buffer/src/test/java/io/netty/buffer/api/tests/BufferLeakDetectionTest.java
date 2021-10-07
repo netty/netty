@@ -30,6 +30,8 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -64,7 +66,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bufferLeakMustBeDetectedWhenNotClosedProperty(Fixture fixture) throws Exception {
+    public void bufferLeakMustBeDetectedWhenNotClosedProperly(Fixture fixture) throws Exception {
         Object hint = new Object();
         Consumer<Buffer> leakBuffer = buffer -> { };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
@@ -167,15 +169,25 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     }
 
     private static AutoCloseable installGcEventListener(Runnable callback) {
-        CallbackListener listener = new CallbackListener(callback);
+        CallbackListener listener = null;
         List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
         for (GarbageCollectorMXBean bean : garbageCollectorMXBeans) {
             if (bean instanceof NotificationBroadcaster) {
                 NotificationBroadcaster broadcaster = (NotificationBroadcaster) bean;
+                if (listener == null) {
+                    listener = new CallbackListener(callback);
+                }
                 listener.install(broadcaster);
             }
         }
-        return listener;
+        if (listener != null) {
+            return listener;
+        }
+
+        // Alternative callback mechanism based on counting the number of GCs that happen.
+        CollectionCounter counter = new CollectionCounter(callback, garbageCollectorMXBeans);
+        counter.start();
+        return counter;
     }
 
     private static Consumer<LeakInfo> forHint(Object hint, Consumer<LeakInfo> consumer) {
@@ -188,14 +200,17 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     private static class CreateAndUseBuffers implements Runnable {
         private static final AtomicLong resultCaptor = new AtomicLong();
+        private static final int N_THREADS = 4;
         private final BufferAllocator allocator;
         private final Object hint;
         private final Consumer<Buffer> consumer;
+        private final ExecutorService executor;
 
         CreateAndUseBuffers(BufferAllocator allocator, Object hint, Consumer<Buffer> consumer) {
             this.allocator = allocator;
             this.hint = hint;
             this.consumer = consumer;
+            executor = Executors.newFixedThreadPool(N_THREADS);
         }
 
         @Override
@@ -208,15 +223,35 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
                 consumer.accept(buffer);
                 produceGarbage();
             }
+            executor.shutdown();
+            try {
+                //noinspection ResultOfMethodCallIgnored
+                executor.awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        private static void produceGarbage() {
+        private void produceGarbage() {
+            Semaphore semaphore = new Semaphore(0);
             AtomicInteger trigger = new AtomicInteger();
-            try (AutoCloseable ignore = installGcEventListener(() -> trigger.incrementAndGet())) {
-                while (trigger.get() < 2) {
+            Runnable gcCallback = () -> {
+                trigger.incrementAndGet();
+                semaphore.release();
+            };
+            Runnable gcProducer = () -> {
+                while (trigger.get() < 1) {
                     resultCaptor.set(System.identityHashCode(new int[1024]));
                 }
-            } catch (Exception ignore) {
+            };
+
+            try (AutoCloseable ignore = installGcEventListener(gcCallback)) {
+                for (int i = 0; i < N_THREADS; i++) {
+                    executor.execute(gcProducer);
+                }
+                semaphore.acquireUninterruptibly();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -245,6 +280,53 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             for (NotificationBroadcaster broadcaster : installedBroadcasters) {
                 broadcaster.removeNotificationListener(this);
             }
+        }
+    }
+
+    private static class CollectionCounter extends Thread implements AutoCloseable {
+        private final Runnable callback;
+        private final List<GarbageCollectorMXBean> gcBeans;
+
+        CollectionCounter(Runnable callback,
+                          List<GarbageCollectorMXBean> gcBeans) {
+            super("Garbage Collection Counter");
+            this.callback = callback;
+            this.gcBeans = gcBeans;
+        }
+
+        @Override
+        public void run() {
+            long prevSum = sum();
+            boolean interrupted = false;
+            do {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+                long newSum = sum();
+                if (newSum > prevSum) {
+                    callback.run();
+                    prevSum = newSum;
+                }
+            } while (!interrupted);
+        }
+
+        private long sum() {
+            long sum = 0;
+            for (GarbageCollectorMXBean bean : gcBeans) {
+                long count = bean.getCollectionCount();
+                if (count > 0) { // The 'count' is allowed to be -1.
+                    sum += count;
+                }
+            }
+            return sum;
+        }
+
+        @Override
+        public void close() throws Exception {
+            interrupt();
+            join(10_000);
         }
     }
 }
