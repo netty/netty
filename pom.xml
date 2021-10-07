@@ -1015,7 +1015,7 @@
       <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
-        <version>0.15.3</version>
+        <version>0.15.4</version>
         <configuration>
           <parameter>
             <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
@@ -1030,10 +1030,6 @@
             <excludes>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
               <exclude>io.netty.util.internal.shaded</exclude>
-              <!-- Added to fix false-positive -->
-              <exclude>io.netty.handler.codec.dns.TcpDnsQueryDecoder</exclude>
-              <exclude>io.netty.handler.codec.dns.TcpDnsResponseEncoder</exclude>
-              <exclude>io.netty.channel.ServerChannelRecvByteBufAllocator</exclude>
             </excludes>
           </parameter>
         </configuration>
