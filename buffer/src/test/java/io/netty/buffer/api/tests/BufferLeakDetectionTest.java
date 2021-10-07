@@ -18,6 +18,7 @@ package io.netty.buffer.api.tests;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.LeakInfo;
+import io.netty.buffer.api.LoggingLeakCallback;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.Send;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet());
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
              var ignore2 = installGcEventListener(() -> gcEvents.release());
+             var ignore3 = MemoryManager.onLeakDetected(LoggingLeakCallback.getInstance());
              BufferAllocator allocator = fixture.createAllocator()) {
             var runnable = new CreateAndUseBuffers(allocator, hint, closeBuffer);
             var thread = new Thread(runnable);
@@ -75,6 +77,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Thread thread;
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
+             var ignore2 = MemoryManager.onLeakDetected(LoggingLeakCallback.getInstance());
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, hint, leakBuffer);
             thread = new Thread(runnable);
@@ -99,6 +102,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet());
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
              var ignore2 = installGcEventListener(() -> gcEvents.release());
+             var ignore3 = MemoryManager.onLeakDetected(LoggingLeakCallback.getInstance());
              BufferAllocator allocator = fixture.createAllocator()) {
             var runnable = new CreateAndUseBuffers(allocator, hint, sendThenClose);
             var thread = new Thread(runnable);
@@ -127,6 +131,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
              var ignore2 = MemoryManager.onLeakDetected(assertNoNonLeakingHints);
+             var ignore3 = MemoryManager.onLeakDetected(LoggingLeakCallback.getInstance());
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, nonLeakingHint, sendThenLeakBuffer);
             thread = new Thread(runnable);
@@ -157,6 +162,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Thread thread;
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
+             var ignore2 = MemoryManager.onLeakDetected(LoggingLeakCallback.getInstance());
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, hint, sendThenLeakBuffer);
             thread = new Thread(runnable);
