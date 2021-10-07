@@ -178,28 +178,19 @@ public abstract class LifecycleTracer {
 
         @Override
         public void acquire(int acquires) {
-            addTrace(WALKER.walk(new Trace(TraceType.ACQUIRE, acquires)));
-        }
-
-        void addTrace(Trace trace) {
-            synchronized (traces) {
-                if (traces.size() == MAX_TRACE_POINTS) {
-                    traces.pollFirst();
-                }
-                traces.addLast(trace);
-            }
+            addTrace(walk(new Trace(TraceType.ACQUIRE, acquires)));
         }
 
         @Override
         public void drop(int acquires) {
             dropped = true;
-            addTrace(WALKER.walk(new Trace(TraceType.DROP, acquires)));
+            addTrace(walk(new Trace(TraceType.DROP, acquires)));
         }
 
         @Override
         public void close(int acquires) {
             if (!dropped) {
-                addTrace(WALKER.walk(new Trace(TraceType.CLOSE, acquires)));
+                addTrace(walk(new Trace(TraceType.CLOSE, acquires)));
             }
         }
 
@@ -208,18 +199,18 @@ public abstract class LifecycleTracer {
             Trace trace = new Trace(TraceType.TOUCH);
             trace.attachmentType = AttachmentType.HINT;
             trace.attachment = hint;
-            addTrace(WALKER.walk(trace));
+            addTrace(walk(trace));
         }
 
         @Override
         public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance) {
             Trace sendTrace = new Trace(TraceType.SEND);
             sendTrace.attachmentType = AttachmentType.RECEIVED_AT;
-            addTrace(WALKER.walk(sendTrace));
+            addTrace(walk(sendTrace));
             return new Owned<T>() {
                 @Override
                 public T transferOwnership(Drop<T> drop) {
-                    sendTrace.attachment = WALKER.walk(new Trace(TraceType.RECEIVE));
+                    sendTrace.attachment = walk(new Trace(TraceType.RECEIVE));
                     return instance.transferOwnership(drop);
                 }
             };
@@ -233,10 +224,10 @@ public abstract class LifecycleTracer {
             splitParent.attachment = splitChild;
             splitChild.attachmentType = AttachmentType.SPLIT_FROM;
             splitChild.attachment = splitParent;
-            addTrace(WALKER.walk(splitParent));
+            addTrace(walk(splitParent));
             if (splitTracer instanceof StackTracer) {
                 StackTracer tracer = (StackTracer) splitTracer;
-                tracer.addTrace(WALKER.walk(splitChild));
+                tracer.addTrace(walk(splitChild));
             }
         }
 
@@ -255,10 +246,28 @@ public abstract class LifecycleTracer {
         public Collection<TracePoint> collectTraces() {
             return Collections.unmodifiableCollection(Collections.synchronizedCollection(traces));
         }
+
+        Trace walk(Trace trace) {
+            if (WALKER != null) {
+                WALKER.walk(trace);
+            }
+            return trace;
+        }
+
+        void addTrace(Trace trace) {
+            synchronized (traces) {
+                if (traces.size() == MAX_TRACE_POINTS) {
+                    traces.pollFirst();
+                }
+                traces.addLast(trace);
+            }
+        }
     }
 
     static final class Trace implements Function<Stream<StackWalker.StackFrame>, Trace>, LeakInfo.TracePoint {
         private static final int TRACE_LIFECYCLE_DEPTH;
+        public static final StackTraceElement[] EMPTY_TRACE = new StackTraceElement[0];
+
         static {
             int traceDefault = 50;
             TRACE_LIFECYCLE_DEPTH = Math.max(Integer.getInteger(
@@ -345,11 +354,17 @@ public abstract class LifecycleTracer {
             case SPLIT_FROM:
                 message += " (split from other object)";
                 break;
+            case HINT:
+                message += " (" + attachment + ')';
+                break;
             }
             return message;
         }
 
         private StackTraceElement[] framesToStackTrace() {
+            if (frames == null) {
+                return EMPTY_TRACE;
+            }
             StackTraceElement[] stackTrace = new StackTraceElement[frames.length];
             for (int i = 0; i < frames.length; i++) {
                 stackTrace[i] = frames[i].toStackTraceElement();

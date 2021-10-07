@@ -43,11 +43,12 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("StringOperationCanBeSimplified")
 public class BufferLeakDetectionTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void bufferMustNotLeakWhenClosedProperly(Fixture fixture) throws Exception {
-        Object hint = new Object();
+        Object hint = new String("for test \"" + fixture + '"');
         Consumer<Buffer> closeBuffer = buffer -> buffer.close();
         AtomicInteger counter = new AtomicInteger();
         Semaphore gcEvents = new Semaphore(0);
@@ -69,7 +70,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void bufferLeakMustBeDetectedWhenNotClosedProperly(Fixture fixture) throws Exception {
-        Object hint = new Object();
+        Object hint = new String("for test \"" + fixture + '"');
         Consumer<Buffer> leakBuffer = buffer -> { };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
         Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak));
@@ -86,13 +87,13 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.interrupt();
             thread.join();
         }
-        assertThat(leakInfo).isNotNull();
+        assertThat(leakInfo).as("No leak detected in 20 seconds for \"" + fixture + "\".").isNotNull();
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     public void bufferMustNotLeakWhenClosedAfterSend(Fixture fixture) throws Exception {
-        Object hint = new Object();
+        Object hint = new String("for test \"" + fixture + '"');
         Consumer<Buffer> sendThenClose = buffer -> {
             Send<Buffer> send = buffer.send();
             send.receive().close();
@@ -117,8 +118,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void bufferLeakMustBeDetectedWhenNotClosedAfterSend(Fixture fixture) throws Exception {
-        Object leakingHint = new Object();
-        Object nonLeakingHint = new Object();
+        Object leakingHint = new String("for test \"" + fixture + '"');
+        Object nonLeakingHint = new String(leakingHint + " (non-leaking hint)");
         Consumer<Buffer> sendThenLeakBuffer = buffer -> {
             buffer.send().receive().touch(leakingHint); // Buffer is received from send, but then leaks.
         };
@@ -140,7 +141,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.interrupt();
             thread.join();
         }
-        assertThat(leakInfo).isNotNull();
+        assertThat(leakInfo).as("No leak detected in 20 seconds for \"" + fixture + "\".").isNotNull();
         if (nonLeakAsserts.get() != null) {
             LeakInfo info = nonLeakAsserts.get();
             AssertionError error = new AssertionError("Buffers that were sent and properly received should not leak");
@@ -152,7 +153,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void bufferLeakMustBeDetectedWhenSendObjectLeaks(Fixture fixture) throws Exception {
-        Object hint = new Object();
+        Object hint = new String("for test \"" + fixture + '"');
         Consumer<Buffer> sendThenLeakBuffer = buffer -> {
             buffer.send(); // Send object itself leaks.
         };
@@ -171,7 +172,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             thread.interrupt();
             thread.join();
         }
-        assertThat(leakInfo).isNotNull();
+        assertThat(leakInfo).as("No leak detected in 20 seconds for \"" + fixture + "\".").isNotNull();
     }
 
     private static AutoCloseable installGcEventListener(Runnable callback) {

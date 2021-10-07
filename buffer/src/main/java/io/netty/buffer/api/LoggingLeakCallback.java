@@ -65,7 +65,7 @@ public final class LoggingLeakCallback implements Consumer<LeakInfo> {
         }
 
         private LeakReport() {
-            super("Object life-cycle trace", null, true, false);
+            super("Object life-cycle trace:", null, true, false);
         }
     }
 }
