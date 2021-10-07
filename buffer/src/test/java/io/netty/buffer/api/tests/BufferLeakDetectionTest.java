@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SuppressWarnings("StringOperationCanBeSimplified")
@@ -214,6 +215,9 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         private final ExecutorService executor;
 
         CreateAndUseBuffers(BufferAllocator allocator, Object hint, Consumer<Buffer> consumer) {
+            requireNonNull(allocator, "allocator");
+            requireNonNull(hint, "hint");
+            requireNonNull(consumer, "consumer");
             this.allocator = allocator;
             this.hint = hint;
             this.consumer = consumer;
@@ -222,12 +226,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
         @Override
         public void run() {
+            allocateAndProcessBuffer();
             while (!Thread.interrupted()) {
-                Buffer buffer = allocator.allocate(128);
-                if (hint != null) {
-                    buffer.touch(hint);
-                }
-                consumer.accept(buffer);
                 produceGarbage();
             }
             executor.shutdown();
@@ -237,6 +237,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        private void allocateAndProcessBuffer() {
+            Buffer buffer = allocator.allocate(128);
+            buffer.touch(hint);
+            consumer.accept(buffer);
         }
 
         private void produceGarbage() {
