@@ -16,13 +16,14 @@
 package io.netty.buffer.api;
 
 import io.netty.buffer.api.pool.PooledBufferAllocator;
+import io.netty.util.SafeCloseable;
 
 import java.util.function.Supplier;
 
 /**
  * Interface for allocating {@link Buffer}s.
  */
-public interface BufferAllocator extends AutoCloseable {
+public interface BufferAllocator extends SafeCloseable {
     /**
      * Produces a {@link BufferAllocator} that allocates unpooled, on-heap buffers.
      * On-heap buffers have a {@code byte[]} internally, and their

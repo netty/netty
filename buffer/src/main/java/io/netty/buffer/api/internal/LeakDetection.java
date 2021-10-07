@@ -17,17 +17,18 @@ package io.netty.buffer.api.internal;
 
 import io.netty.buffer.api.LeakInfo;
 import io.netty.buffer.api.LoggingLeakCallback;
-import io.netty.buffer.api.MemoryManager.LeakCallbackUninstall;
+import io.netty.buffer.api.MemoryManager;
+import io.netty.util.SafeCloseable;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -42,7 +43,8 @@ public final class LeakDetection {
 
     // Protected by synchronizing on the instance.
     // This field is only accessed when leak are detected, or when callbacks are installed or removed.
-    private static final Set<Consumer<LeakInfo>> CALLBACKS = Collections.newSetFromMap(new IdentityHashMap<>());
+    private static final Map<Consumer<LeakInfo>, Integer> CALLBACKS = new IdentityHashMap<>();
+    private static final Integer INTEGER_ONE = 1;
 
     private static final VarHandle LEAK_DETECTION_ENABLED_UPDATER;
     static {
@@ -54,7 +56,7 @@ public final class LeakDetection {
             throw new ExceptionInInitializerError(e);
         }
         if (enabled > 0) {
-            CALLBACKS.add(LoggingLeakCallback.getInstance());
+            CALLBACKS.put(LoggingLeakCallback.getInstance(), 1);
         }
         leakDetectionEnabled = enabled;
     }
@@ -62,29 +64,45 @@ public final class LeakDetection {
     private LeakDetection() {
     }
 
-    public static LeakCallbackUninstall onLeakDetected(Consumer<LeakInfo> callback) {
+    /**
+     * Internal API for {@link MemoryManager#onLeakDetected(Consumer)}.
+     *
+     * @see MemoryManager#onLeakDetected(Consumer)
+     */
+    public static SafeCloseable onLeakDetected(Consumer<LeakInfo> callback) {
         requireNonNull(callback, "callback");
-        LEAK_DETECTION_ENABLED_UPDATER.getAndAddAcquire(1);
         synchronized (CALLBACKS) {
-            CALLBACKS.add(callback);
+            Integer newValue = CALLBACKS.compute(callback, (k, v) -> v == null ? INTEGER_ONE : v + 1);
+            if (newValue.equals(INTEGER_ONE)) {
+                // This callback was not already in the map, so we need to increment the leak-detection-enabled counter.
+                LEAK_DETECTION_ENABLED_UPDATER.getAndAddAcquire(1);
+            }
         }
         return new CallbackRemover(callback);
     }
 
+    /**
+     * Called when a leak is detected. This method will inform all registered
+     * {@linkplain MemoryManager#onLeakDetected(Consumer) on-leak-detected} callbacks.
+     *
+     * @param tracer The life-cycle trace of the leaked object.
+     * @param leakedObjectDescription A human-readable description of the leaked object, that can be used for logging.
+     */
     public static void reportLeak(LifecycleTracer tracer, String leakedObjectDescription) {
         requireNonNull(tracer, "tracer");
         requireNonNull(leakedObjectDescription, "leakedObjectDescription");
         synchronized (CALLBACKS) {
             if (!CALLBACKS.isEmpty()) {
                 LeakInfo info = new InternalLeakInfo(tracer, leakedObjectDescription);
-                for (Consumer<LeakInfo> callback : CALLBACKS) {
+                for (Consumer<LeakInfo> callback : CALLBACKS.keySet()) {
                     callback.accept(info);
                 }
             }
         }
     }
 
-    private static final class CallbackRemover implements LeakCallbackUninstall {
+    private static final class CallbackRemover extends AtomicBoolean implements SafeCloseable {
+        private static final long serialVersionUID = -7883321389305330790L;
         private final Consumer<LeakInfo> callback;
 
         CallbackRemover(Consumer<LeakInfo> callback) {
@@ -93,10 +111,19 @@ public final class LeakDetection {
 
         @Override
         public void close() {
-            synchronized (CALLBACKS) {
-                CALLBACKS.remove(callback);
+            if (!getAndSet(true)) { // Close can only be called once, per remover-object.
+                synchronized (CALLBACKS) {
+                    CALLBACKS.compute(callback, (k, v) -> {
+                        assert v != null; // This should not be possible with the getAndSet guard above.
+                        if (v.equals(INTEGER_ONE)) {
+                            // The specific callback was removed, so reduce the leak-detection-enabled counter.
+                            LEAK_DETECTION_ENABLED_UPDATER.getAndAddRelease(-1);
+                            return null; // And then remove the mapping.
+                        }
+                        return v - 1;
+                    });
+                }
             }
-            LEAK_DETECTION_ENABLED_UPDATER.getAndAddRelease(-1);
         }
     }
 

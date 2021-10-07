@@ -18,6 +18,7 @@ package io.netty.buffer.api;
 import io.netty.buffer.api.internal.LeakDetection;
 import io.netty.buffer.api.internal.MemoryManagerLoader;
 import io.netty.buffer.api.internal.MemoryManagerOverride;
+import io.netty.util.SafeCloseable;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -57,12 +58,15 @@ public interface MemoryManager {
      * <p>
      * This also applies to callbacks that perform logging.
      * In these cases, asynchronous logging should be preferred, for the avoidance of blocking calls and IO.
+     * <p>
+     * If the same callback object is registered multiple times, it will only be informed once for each leak,
+     * but each of the associated {@link SafeCloseable} objects will need to be closed before the callback is removed.
      *
      * @param callback The callback that will be called when a buffer leak is detected.
-     * @return An {@link LeakCallbackUninstall} instance that, when closed, removes the given callback again.
+     * @return An {@link SafeCloseable} instance that, when closed, removes the given callback again.
      */
     @UnstableApi
-    static LeakCallbackUninstall onLeakDetected(Consumer<LeakInfo> callback) {
+    static SafeCloseable onLeakDetected(Consumer<LeakInfo> callback) {
         return LeakDetection.onLeakDetected(callback);
     }
 
@@ -189,14 +193,4 @@ public interface MemoryManager {
      * @return The name of this memory managers implementation.
      */
     String implementationName();
-
-    /**
-     * A callback used to uninstall object leak callbacks that were previously
-     * {@linkplain #onLeakDetected(Consumer) installed}.
-     */
-    @UnstableApi
-    interface LeakCallbackUninstall extends AutoCloseable {
-        @Override
-        void close();
-    }
 }
