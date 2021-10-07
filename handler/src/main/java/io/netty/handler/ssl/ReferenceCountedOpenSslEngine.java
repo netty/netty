@@ -1451,12 +1451,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // The engine was destroyed in the meantime, just return.
                 return;
             }
-            try {
-                task.run();
-            } finally {
-                // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-                needTask = false;
-            }
+            // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+            needTask = false;
+            task.run();
         }
     }
 
