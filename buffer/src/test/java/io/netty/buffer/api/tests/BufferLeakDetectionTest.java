@@ -29,13 +29,12 @@ import javax.management.NotificationListener;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -74,12 +73,11 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Thread thread;
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
-             var ignore2 = installGcEventListener(() -> { });
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, hint, leakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
+            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
             thread.interrupt();
             thread.join();
         }
@@ -126,13 +124,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Thread thread;
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
-             var ignore2 = installGcEventListener(() -> { });
-             var ignore3 = MemoryManager.onLeakDetected(assertNoNonLeakingHints);
+             var ignore2 = MemoryManager.onLeakDetected(assertNoNonLeakingHints);
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, nonLeakingHint, sendThenLeakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
+            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
             thread.interrupt();
             thread.join();
         }
@@ -158,12 +155,11 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Thread thread;
         LeakInfo leakInfo;
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
-             var ignore2 = installGcEventListener(() -> { });
              BufferAllocator allocator = fixture.createAllocator()) {
             runnable = new CreateAndUseBuffers(allocator, hint, sendThenLeakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(10, TimeUnit.SECONDS);
+            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
             thread.interrupt();
             thread.join();
         }
@@ -191,6 +187,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     }
 
     private static class CreateAndUseBuffers implements Runnable {
+        private static final AtomicLong resultCaptor = new AtomicLong();
         private final BufferAllocator allocator;
         private final Object hint;
         private final Consumer<Buffer> consumer;
@@ -214,11 +211,10 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         }
 
         private static void produceGarbage() {
-            AtomicBoolean trigger = new AtomicBoolean();
-            try (AutoCloseable ignore = installGcEventListener(() -> trigger.set(true))) {
-                while (!trigger.get()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    Arrays.stream(new int[1024]).mapToObj(String::valueOf).count();
+            AtomicInteger trigger = new AtomicInteger();
+            try (AutoCloseable ignore = installGcEventListener(() -> trigger.incrementAndGet())) {
+                while (trigger.get() < 2) {
+                    resultCaptor.set(System.identityHashCode(new int[1024]));
                 }
             } catch (Exception ignore) {
             }
