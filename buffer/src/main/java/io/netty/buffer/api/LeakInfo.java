@@ -56,7 +56,7 @@ public interface LeakInfo extends Iterable<TracePoint> {
         Object hint();
 
         /**
-         * Get a {@link Throwable} instance that hold the recorded stack trace of this trace point.
+         * Get a {@link Throwable} instance that holds the recorded stack trace of this trace point.
          *
          * @return A {@link Throwable} with the stack trace of this trace point.
          */

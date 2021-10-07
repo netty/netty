@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Utility class for the leak detection parts that are static and shared system-wide.
  */
@@ -61,6 +63,7 @@ public final class LeakDetection {
     }
 
     public static LeakCallbackUninstall onLeakDetected(Consumer<LeakInfo> callback) {
+        requireNonNull(callback, "callback");
         LEAK_DETECTION_ENABLED_UPDATER.getAndAddAcquire(1);
         synchronized (CALLBACKS) {
             CALLBACKS.add(callback);
@@ -69,6 +72,8 @@ public final class LeakDetection {
     }
 
     public static void reportLeak(LifecycleTracer tracer, String leakedObjectDescription) {
+        requireNonNull(tracer, "tracer");
+        requireNonNull(leakedObjectDescription, "leakedObjectDescription");
         synchronized (CALLBACKS) {
             if (!CALLBACKS.isEmpty()) {
                 LeakInfo info = new InternalLeakInfo(tracer, leakedObjectDescription);

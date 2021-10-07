@@ -97,7 +97,7 @@ public abstract class LifecycleTracer {
      *
      * Such branches happen when two views are created to share a single underlying resource.
      * The most prominent example of this is the {@link Buffer#split()} method, where a buffer is broken into two that
-     * each cover a non-overlapping region of the original memory.
+     * each covers a non-overlapping region of the original memory.
      *
      * This method is called on the originating, or "parent" tracer, while the newly allocated "child" is given as an
      * argument.
@@ -305,7 +305,7 @@ public abstract class LifecycleTracer {
             if (acquires != Integer.MIN_VALUE) {
                 message += " (current acquires = " + acquires + ')';
             }
-            message += " T" + (this.timestamp - timestamp) / 1000 + "µs.";
+            message += " T" + (this.timestamp - timestamp) / 1000 + "us.";
             Traceback exception = new Traceback(message);
             StackTraceElement[] stackTrace = framesToStackTrace();
             exception.setStackTrace(stackTrace);
