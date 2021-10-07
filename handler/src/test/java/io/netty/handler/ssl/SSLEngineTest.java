@@ -4198,14 +4198,15 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
-                // This test only works for non TLSv1.3 for now
-                .protocols(param.protocols())
                 .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
                 .build());
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
         SSLEngine clientEngine = null;
