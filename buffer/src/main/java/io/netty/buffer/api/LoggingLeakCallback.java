@@ -47,7 +47,11 @@ public final class LoggingLeakCallback implements Consumer<LeakInfo> {
     @Override
     public void accept(LeakInfo leakInfo) {
         if (logger.isErrorEnabled()) {
-            logger.error(LeakReport.reportFor(leakInfo));
+            String message = "LEAK: Object \"" + leakInfo.objectDescription() + "\" was not property closed before " +
+                             "it was garbage collected. " +
+                             "A life-cycle back-trace (if any) is attached as suppressed exceptions. " +
+                             "See https://netty.io/wiki/reference-counted-objects.html for more information.";
+            logger.error(message, LeakReport.reportFor(leakInfo));
         }
     }
 
@@ -55,16 +59,13 @@ public final class LoggingLeakCallback implements Consumer<LeakInfo> {
         private static final long serialVersionUID = -1894217374238341652L;
 
         static LeakReport reportFor(LeakInfo info) {
-            LeakReport report = new LeakReport(info);
+            LeakReport report = new LeakReport();
             info.forEach(tracePoint -> report.addSuppressed(tracePoint.traceback()));
             return report;
         }
 
-        private LeakReport(LeakInfo leakInfo) {
-            super("LEAK: Object \"" + leakInfo.objectDescription() + "\" was not property closed before it was " +
-                  "garbage collected. " +
-                  "A life-cycle back-trace (if any) is attached as suppressed exceptions. " +
-                  "See https://netty.io/wiki/reference-counted-objects.html for more information.", null, true, false);
+        private LeakReport() {
+            super("Object life-cycle trace", null, true, false);
         }
     }
 }
