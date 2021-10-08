@@ -191,6 +191,14 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
         super.testSessionCacheSize(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled("Disabled due a conscrypt bug")
+    @Override
+    public void testInvalidSNIIsIgnoredAndNotThrow(SSLEngineTestParam param) throws Exception {
+        super.testInvalidSNIIsIgnoredAndNotThrow(param);
+    }
+
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);

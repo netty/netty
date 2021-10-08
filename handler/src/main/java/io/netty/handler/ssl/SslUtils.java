@@ -480,7 +480,7 @@ final class SslUtils {
     static boolean isValidHostNameForSNI(String hostname) {
         return hostname != null &&
                hostname.indexOf('.') > 0 &&
-               !hostname.endsWith(".") &&
+               !hostname.endsWith(".") && !hostname.startsWith("/") &&
                !NetUtil.isValidIpV4Address(hostname) &&
                !NetUtil.isValidIpV6Address(hostname);
     }
@@ -491,10 +491,6 @@ final class SslUtils {
     static boolean isTLSv13Cipher(String cipher) {
         // See https://tools.ietf.org/html/rfc8446#appendix-B.4
         return TLSV13_CIPHERS.contains(cipher);
-    }
-
-    static boolean isEmpty(Object[] arr) {
-        return arr == null || arr.length == 0;
     }
 
     private SslUtils() {
