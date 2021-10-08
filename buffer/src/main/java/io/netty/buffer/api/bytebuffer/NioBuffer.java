@@ -39,6 +39,7 @@ import static io.netty.buffer.api.internal.Statics.bbput;
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty.buffer.api.internal.Statics.checkLength;
 
 class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
@@ -140,9 +141,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public Buffer copy(int offset, int length) {
+        checkLength(length);
         checkGet(offset, length);
-        int allocSize = Math.max(length, 1); // Allocators don't support allocating zero-sized buffers.
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, allocSize);
+        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
         ByteBuffer base = memory.memory();
         ByteBuffer buffer = length == 0? bbslice(base, 0, 0) : base;
         Drop<NioBuffer> drop = memory.drop();
@@ -166,9 +167,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         if (srcPos < 0) {
             throw new IllegalArgumentException("The srcPos cannot be negative: " + srcPos + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity() < srcPos + length) {
             throw new IllegalArgumentException("The srcPos + length is beyond the end of the buffer: " +
                     "srcPos = " + srcPos + ", length = " + length + '.');
@@ -193,6 +192,39 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     @Override
+    public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
+        checkLength(length);
+        checkGet(fromOffsetInclusive, length);
+        int end = Math.addExact(fromOffsetInclusive, length);
+
+        if (length > 16) {
+            final int longCount = length >>> 3;
+            final long pattern = (needle & 0xFFL) * 0x101010101010101L;
+            for (int i = 0; i < longCount; i++) {
+                final long word = rmem.getLong(fromOffsetInclusive + i * Long.BYTES);
+
+                long input = word ^ pattern;
+                long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
+                tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+                final int binaryPosition = Long.numberOfLeadingZeros(tmp);
+
+                int index = binaryPosition >>> 3;
+                if (index < Long.BYTES) {
+                    return fromOffsetInclusive + index + i * Long.BYTES;
+                }
+            }
+            fromOffsetInclusive += longCount << 3;
+        }
+        for (int i = fromOffsetInclusive; i < end; i++) {
+            if (rmem.get(i) == needle) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return openCursor(readerOffset(), readableBytes());
     }
@@ -205,9 +237,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity() < fromOffset + length) {
             throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
@@ -223,9 +253,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity() <= fromOffset) {
             throw new IllegalArgumentException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
         }
@@ -474,7 +502,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Byte.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Byte.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -486,7 +514,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.put(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Byte.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -499,7 +527,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Byte.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Byte.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -511,7 +539,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.put(woff, (byte) (value & 0xFF));
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Byte.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -538,7 +566,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += 2;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, 2);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -550,7 +578,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putChar(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, 2);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -591,7 +619,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Short.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Short.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -603,7 +631,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putShort(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Short.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -616,7 +644,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Short.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Short.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -628,7 +656,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putShort(woff, (short) (value & 0xFFFF));
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Short.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -735,7 +763,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Integer.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Integer.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -747,7 +775,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putInt(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, this.woff);
+            throw checkWriteState(e, this.woff, Integer.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -760,7 +788,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Integer.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Integer.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -772,7 +800,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putInt(woff, (int) (value & 0xFFFFFFFFL));
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, this.woff);
+            throw checkWriteState(e, this.woff, Integer.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -799,7 +827,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Float.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Float.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -811,7 +839,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putFloat(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Float.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -838,7 +866,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Long.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Long.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -850,7 +878,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putLong(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Long.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -877,7 +905,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             woff += Double.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Double.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -889,7 +917,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putDouble(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff);
+            throw checkWriteState(e, woff, Double.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -930,29 +958,29 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     private void checkRead(int index, int size) {
         if (index < 0 || woff < index + size) {
-            throw readAccessCheckException(index);
+            throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
         if (index < 0 || capacity() < index + size) {
-            throw readAccessCheckException(index);
+            throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size) {
         if (index < roff || wmem.capacity() < index + size) {
-            throw writeAccessCheckException(index);
+            throw writeAccessCheckException(index, size);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 || wmem.capacity() < index + size) {
-            throw writeAccessCheckException(index);
+            throw writeAccessCheckException(index, size);
         }
     }
 
-    private RuntimeException checkWriteState(IndexOutOfBoundsException ioobe, int offset) {
+    private RuntimeException checkWriteState(IndexOutOfBoundsException ioobe, int offset, int size) {
         if (rmem == CLOSED_BUFFER) {
             return bufferIsClosed(this);
         }
@@ -960,32 +988,32 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             return bufferIsReadOnly(this);
         }
 
-        IndexOutOfBoundsException exception = outOfBounds(offset);
+        IndexOutOfBoundsException exception = outOfBounds(offset, size);
         exception.addSuppressed(ioobe);
         return exception;
     }
 
-    private RuntimeException readAccessCheckException(int index) {
+    private RuntimeException readAccessCheckException(int index, int size) {
         if (rmem == CLOSED_BUFFER) {
             throw bufferIsClosed(this);
         }
-        return outOfBounds(index);
+        return outOfBounds(index, size);
     }
 
-    private RuntimeException writeAccessCheckException(int index) {
+    private RuntimeException writeAccessCheckException(int index, int size) {
         if (rmem == CLOSED_BUFFER) {
             throw bufferIsClosed(this);
         }
         if (wmem != rmem) {
             return bufferIsReadOnly(this);
         }
-        return outOfBounds(index);
+        return outOfBounds(index, size);
     }
 
-    private IndexOutOfBoundsException outOfBounds(int index) {
+    private IndexOutOfBoundsException outOfBounds(int index, int size) {
         return new IndexOutOfBoundsException(
-                "Index " + index + " is out of bounds: [read 0 to " + woff + ", write 0 to " +
-                        rmem.capacity() + "].");
+                "Access at index " + index + " of size " + size + " is out of bounds: " +
+                "[read 0 to " + woff + ", write 0 to " + rmem.capacity() + "].");
     }
 
     ByteBuffer recoverable() {

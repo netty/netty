@@ -17,6 +17,8 @@ package io.netty.buffer.api.internal;
 
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManager;
+import io.netty.buffer.api.unsafe.UnsafeMemoryManager;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -49,6 +51,13 @@ public final class MemoryManagerOverride {
                 logger.debug("{} requested implementation is unavailable: {} (using default {} implementation instead)",
                              systemProperty, configured, fallback.implementationName());
                 return fallback;
+            }
+        }
+        if (PlatformDependent.hasUnsafe() && PlatformDependent.hasDirectBufferNoCleanerConstructor()) {
+            try {
+                return new UnsafeMemoryManager();
+            } catch (Exception ignore) {
+                // We will just fall back to ByteBuffer based memory management if Unsafe fails.
             }
         }
         return new ByteBufferMemoryManager();

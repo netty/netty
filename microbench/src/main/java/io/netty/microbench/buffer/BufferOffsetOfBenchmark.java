@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,10 +15,11 @@
  */
 package io.netty.microbench.buffer;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManager;
+import io.netty.buffer.api.unsafe.UnsafeMemoryManager;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -38,10 +39,13 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@Fork(2)
+@Fork(value = 2, jvmArgsAppend = {
+        "-Dio.netty.tryReflectionSetAccessible=true",
+        "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED" })
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
-public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
+public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
 
     @Param({ /*"7", "16", "23",*/ "32", "500" })
     int size;
@@ -54,7 +58,7 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
 
     int permutations;
 
-    ByteBuf[] data;
+    Buffer[] data;
     private int i;
 
     @Param({ "0" })
@@ -71,13 +75,15 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
     @Setup(Level.Trial)
     @SuppressJava6Requirement(reason = "using SplittableRandom to reliably produce data")
     public void init() {
-        System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;
-        data = new ByteBuf[permutations];
-        final ByteBufAllocator allocator = pooled? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT;
+        data = new Buffer[permutations];
+        MemoryManager memoryManager = noUnsafe ? new ByteBufferMemoryManager() : new UnsafeMemoryManager();
+        BufferAllocator allocator = MemoryManager.using(memoryManager, () -> direct?
+                pooled? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled() :
+                pooled? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled());
         for (int i = 0; i < permutations; ++i) {
-            data[i] = direct? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size);
+            data[i] = allocator.allocate(size);
             for (int j = 0; j < size; j++) {
                 int value = random.nextInt(Byte.MIN_VALUE, Byte.MAX_VALUE + 1);
                 // turn any found value into something different
@@ -88,26 +94,27 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
                         value = 0;
                     }
                 }
-                data[i].setByte(j, value);
+                data[i].setByte(j, (byte) value);
             }
             final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
             data[i].setByte(foundIndex, needleByte);
         }
+        allocator.close();
     }
 
-    private ByteBuf getData() {
+    private Buffer getData() {
         return data[i++ & permutations - 1];
     }
 
     @Benchmark
     public int indexOf() {
-        return getData().indexOf(0, size, needleByte);
+        return getData().firstOffsetOf(0, size, needleByte);
     }
 
     @TearDown
     public void releaseBuffers() {
-        for (ByteBuf buffer : data) {
-            buffer.release();
+        for (Buffer buffer : data) {
+            buffer.close();
         }
     }
 }

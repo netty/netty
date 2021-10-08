@@ -39,6 +39,7 @@ import java.nio.ReadOnlyBufferException;
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty.buffer.api.internal.Statics.checkLength;
 
 class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
     private static final int CLOSED_SIZE = -1;
@@ -154,9 +155,9 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public Buffer copy(int offset, int length) {
+        checkLength(length);
         checkGet(offset, length);
-        int allocSize = Math.max(length, 1); // Allocators don't support allocating zero-sized buffers.
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, allocSize);
+        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
         UnsafeMemory unsafeMemory = memory.memory();
         Drop<UnsafeBuffer> drop = memory.drop();
         UnsafeBuffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, drop);
@@ -209,9 +210,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (srcPos < 0) {
             throw new IllegalArgumentException("The srcPos cannot be negative: " + srcPos + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (rsize < srcPos + length) {
             throw new IllegalArgumentException("The srcPos + length is beyond the end of the buffer: " +
                     "srcPos = " + srcPos + ", length = " + length + '.');
@@ -254,6 +253,44 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
+    public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
+        checkLength(length);
+        checkGet(fromOffsetInclusive, length);
+        try {
+            int end = Math.addExact(fromOffsetInclusive, length);
+
+            if (length > 16) {
+                final int longCount = length >>> 3;
+                final long pattern = (needle & 0xFFL) * 0x101010101010101L;
+                long base = address + fromOffsetInclusive;
+                for (int i = 0; i < longCount; i++) {
+                    final long word = loadLong(base + (long) i * Long.BYTES);
+
+                    long input = word ^ pattern;
+                    long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
+                    tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+                    final int binaryPosition = Long.numberOfLeadingZeros(tmp);
+
+                    int index = binaryPosition >>> 3;
+                    if (index < Long.BYTES) {
+                        return fromOffsetInclusive + index + i * Long.BYTES;
+                    }
+                }
+                fromOffsetInclusive += longCount << 3;
+            }
+            for (int i = fromOffsetInclusive; i < end; i++) {
+                if (loadByte(address + i) == needle) {
+                    return i;
+                }
+            }
+
+            return -1;
+        } finally {
+            Reference.reachabilityFence(memory);
+        }
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return openCursor(readerOffset(), readableBytes());
     }
@@ -266,9 +303,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity() < fromOffset + length) {
             throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
                     "fromOffset = " + fromOffset + ", length = " + length + '.');
@@ -284,9 +319,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity() <= fromOffset) {
             throw new IllegalArgumentException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
         }
@@ -1098,49 +1131,49 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     private void checkRead(int index, int size) {
         if (index < 0 || woff < index + size) {
-            throw readAccessCheckException(index);
+            throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
         if (index < 0 || rsize < index + size) {
-            throw readAccessCheckException(index);
+            throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size) {
         if (index < roff || wsize < index + size) {
-            throw writeAccessCheckException(index);
+            throw writeAccessCheckException(index, size);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 || wsize < index + size) {
-            throw writeAccessCheckException(index);
+            throw writeAccessCheckException(index, size);
         }
     }
 
-    private RuntimeException readAccessCheckException(int index) {
+    private RuntimeException readAccessCheckException(int index, int size) {
         if (rsize == CLOSED_SIZE) {
             throw bufferIsClosed(this);
         }
-        return outOfBounds(index);
+        return outOfBounds(index, size);
     }
 
-    private RuntimeException writeAccessCheckException(int index) {
+    private RuntimeException writeAccessCheckException(int index, int size) {
         if (rsize == CLOSED_SIZE) {
             throw bufferIsClosed(this);
         }
         if (wsize != rsize) {
             return bufferIsReadOnly(this);
         }
-        return outOfBounds(index);
+        return outOfBounds(index, size);
     }
 
-    private IndexOutOfBoundsException outOfBounds(int index) {
+    private IndexOutOfBoundsException outOfBounds(int index, int size) {
         return new IndexOutOfBoundsException(
-                "Index " + index + " is out of bounds: [read 0 to " + woff + ", write 0 to " +
-                        rsize + "].");
+                "Access at index " + index + " of size " + size + " is out of bounds: " +
+                "[read 0 to " + woff + ", write 0 to " + rsize + "].");
     }
 
     private byte loadByte(long off) {
