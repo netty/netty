@@ -100,4 +100,9 @@ public class SslUtilsTest {
         assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
         buf.release();
     }
+
+    @Test
+    public void testValidHostNameForSni() {
+        assertFalse(SslUtils.isValidHostNameForSNI("/test.de"));
+    }
 }

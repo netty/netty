@@ -51,6 +51,15 @@ final class Java8SslUtils {
         sslParameters.setServerNames(getSniHostNames(names));
     }
 
+    static boolean isValidHostNameForSNI(String hostname) {
+        try {
+            new SNIHostName(hostname);
+            return true;
+        } catch (IllegalArgumentException illegal) {
+            return false;
+        }
+    }
+
     static List getSniHostNames(List<String> names) {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
