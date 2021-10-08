@@ -639,13 +639,19 @@
         <version>3.0.0-alpha-5</version>
       </dependency>
 
-      <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
+      <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>${tcnative.artifactId}</artifactId>
+        <version>${tcnative.version}</version>
+        <scope>compile</scope>
+      </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>${tcnative.artifactId}</artifactId>
         <version>${tcnative.version}</version>
         <classifier>${tcnative.classifier}</classifier>
-        <scope>compile</scope>
+        <scope>runtime</scope>
         <optional>true</optional>
       </dependency>
 
