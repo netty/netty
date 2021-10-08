@@ -27,7 +27,6 @@ import io.netty.buffer.api.ReadableComponentProcessor;
 import io.netty.buffer.api.WritableComponent;
 import io.netty.buffer.api.WritableComponentProcessor;
 import io.netty.buffer.api.internal.AdaptableBuffer;
-import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.Statics;
 import io.netty.util.internal.PlatformDependent;
 
@@ -285,7 +284,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         int roff = this.roff;
         int woff = this.woff;
         drop.drop(this);
-        unsafeSetDrop(new ArcDrop<>(newDrop));
+        unsafeSetDrop(newDrop);
         this.roff = roff;
         this.woff = woff;
     }
