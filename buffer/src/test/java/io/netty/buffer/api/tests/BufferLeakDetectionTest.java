@@ -214,7 +214,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     private static Consumer<LeakInfo> forHint(Object hint, Consumer<LeakInfo> consumer) {
         return leak -> {
-            if (leak.stream().anyMatch(tracePoint -> tracePoint.hint() == hint)) {
+            boolean foundIntendedLeak = leak.stream().anyMatch(tracePoint -> tracePoint.hint() == hint);
+            if (foundIntendedLeak) {
                 consumer.accept(leak);
             } else {
                 InternalLogger logger = InternalLoggerFactory.getInstance(BufferLeakDetectionTest.class);

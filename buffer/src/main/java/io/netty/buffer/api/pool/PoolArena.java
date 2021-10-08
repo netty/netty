@@ -213,7 +213,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     private UntetheredMemory allocateHuge(int size) {
         activeBytesHuge.add(size);
         allocationsHuge.increment();
-        return new UnpooledUnthetheredMemory(parent, manager, allocationType, size);
+        return new UnpooledUntetheredMemory(parent, manager, allocationType, size);
     }
 
     void free(PoolChunk chunk, long handle, int normCapacity, PoolThreadCache cache) {
