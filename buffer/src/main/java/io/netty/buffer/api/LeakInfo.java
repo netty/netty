@@ -31,7 +31,7 @@ public interface LeakInfo extends Iterable<TracePoint> {
      * Create a {@link Stream} of all the {@link TracePoint}s in this {@link LeakInfo}.
      * The returned {@link Stream} does not need to be closed.
      *
-     * @return A {@link Stream} of {@link TracePoint}s, covering the life-cycle of the leaked buffer.
+     * @return A {@link Stream} of {@link TracePoint}s, covering the life-cycle of the leaked resource.
      */
     Stream<TracePoint> stream();
 
