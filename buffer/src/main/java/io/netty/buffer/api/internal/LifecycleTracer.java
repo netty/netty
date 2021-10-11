@@ -36,8 +36,8 @@ import java.util.stream.Stream;
  */
 @UnstableApi
 public abstract class LifecycleTracer {
-    static volatile int lifecycleTracingEnabled =
-            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", false) ? 0 : 1;
+    static final boolean lifecycleTracingEnabled =
+            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", false);
 
     /**
      * Get a tracer for a newly allocated resource.
@@ -45,7 +45,7 @@ public abstract class LifecycleTracer {
      * @return A new tracer for a resource.
      */
     public static LifecycleTracer get() {
-        if (lifecycleTracingEnabled == 0 && LeakDetection.leakDetectionEnabled == 0) {
+        if (lifecycleTracingEnabled && LeakDetection.leakDetectionEnabled == 0) {
             return NoOpTracer.INSTANCE;
         }
         StackTracer stackTracer = new StackTracer();
@@ -165,12 +165,12 @@ public abstract class LifecycleTracer {
     }
 
     private static final class StackTracer extends LifecycleTracer {
-        private static final int MAX_TRACE_POINTS = Math.min(Integer.getInteger(
+        private static final int MAX_TRACE_POINTS = Math.min(SystemPropertyUtil.getInt(
                 "io.netty.buffer.api.internal.LifecycleTracer.MAX_TRACE_POINTS", 50), 1000);
         private static final StackWalker WALKER;
         static {
             int depth = Trace.TRACE_LIFECYCLE_DEPTH;
-            WALKER = depth > 0 ? StackWalker.getInstance(Set.of(), depth + 2) : null;
+            WALKER = depth > 0 && lifecycleTracingEnabled ? StackWalker.getInstance(Set.of(), depth + 2) : null;
         }
 
         private final ArrayDeque<Trace> traces = new ArrayDeque<>();
