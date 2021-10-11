@@ -179,8 +179,6 @@ public final class JdkZlibCompressor implements Compressor {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuffer in = uncompressed.internalNioBuffer(uncompressed.readerIndex(), len);
-
         int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
         if (writeHeader) {
             switch (wrapper) {
@@ -195,6 +193,20 @@ public final class JdkZlibCompressor implements Compressor {
             }
         }
         ByteBuf out = allocator.buffer(sizeEstimate);
+
+        if (uncompressed.nioBufferCount() == 1) {
+            ByteBuffer in = uncompressed.internalNioBuffer(uncompressed.readerIndex(), len);
+            compressData(in, out);
+        } else {
+            ByteBuffer[] ins = uncompressed.nioBuffers(uncompressed.readerIndex(), len);
+            for (ByteBuffer in: ins) {
+                compressData(in, out);
+            }
+        }
+        return out;
+    }
+
+    private void compressData(ByteBuffer in, ByteBuf out) {
         try {
             if (writeHeader) {
                 writeHeader = false;
