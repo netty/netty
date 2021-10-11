@@ -195,13 +195,13 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
         checkLength(length);
         checkGet(fromOffsetInclusive, length);
-        int end = Math.addExact(fromOffsetInclusive, length);
+        final int end = Math.addExact(fromOffsetInclusive, length);
 
         if (length > 16) {
-            final int longCount = length >>> 3;
+            final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
             final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-            for (int i = 0; i < longCount; i++) {
-                final long word = rmem.getLong(fromOffsetInclusive + i * Long.BYTES);
+            for (; fromOffsetInclusive < longEnd; fromOffsetInclusive += Long.BYTES) {
+                final long word = rmem.getLong(fromOffsetInclusive);
 
                 long input = word ^ pattern;
                 long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
@@ -210,14 +210,13 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
                 int index = binaryPosition >>> 3;
                 if (index < Long.BYTES) {
-                    return fromOffsetInclusive + index + i * Long.BYTES;
+                    return fromOffsetInclusive + index;
                 }
             }
-            fromOffsetInclusive += longCount << 3;
         }
-        for (int i = fromOffsetInclusive; i < end; i++) {
-            if (rmem.get(i) == needle) {
-                return i;
+        for (; fromOffsetInclusive < end; fromOffsetInclusive++) {
+            if (rmem.get(fromOffsetInclusive) == needle) {
+                return fromOffsetInclusive;
             }
         }
 
@@ -957,25 +956,25 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     private void checkRead(int index, int size) {
-        if (index < 0 || woff < index + size) {
+        if (index < 0 | woff < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
-        if (index < 0 || capacity() < index + size) {
+        if (index < 0 | capacity() < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size) {
-        if (index < roff || wmem.capacity() < index + size) {
+        if (index < roff | wmem.capacity() < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 || wmem.capacity() < index + size) {
+        if (index < 0 | wmem.capacity() < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }

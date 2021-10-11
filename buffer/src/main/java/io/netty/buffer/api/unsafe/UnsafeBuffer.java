@@ -252,35 +252,44 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         }
     }
 
+    /**
+     * Most deployment platforms support unaligned access, and are little-endian.
+     * This allows us to micro-optimise for this common case.
+     */
+    private static final boolean FIRST_OFFSET_OF_USE_LITTLE_ENDIAN =
+            PlatformDependent.isUnaligned() && ByteOrder.nativeOrder() != ByteOrder.BIG_ENDIAN;
+
     @Override
     public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
         checkLength(length);
         checkGet(fromOffsetInclusive, length);
         try {
-            int end = Math.addExact(fromOffsetInclusive, length);
+            final int end = Math.addExact(fromOffsetInclusive, length);
+            final long addr = address;
 
             if (length > 16) {
-                final int longCount = length >>> 3;
+                final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
                 final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-                long base = address + fromOffsetInclusive;
-                for (int i = 0; i < longCount; i++) {
-                    final long word = loadLong(base + (long) i * Long.BYTES);
+                for (; fromOffsetInclusive < longEnd; fromOffsetInclusive += Long.BYTES) {
+                    final long word = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
+                            PlatformDependent.getLong(base, addr + fromOffsetInclusive) :
+                            loadLong(addr + fromOffsetInclusive);
 
-                    long input = word ^ pattern;
-                    long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-                    tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-                    final int binaryPosition = Long.numberOfLeadingZeros(tmp);
+                    final long input = word ^ pattern;
+                    final long tmp =
+                            ~((input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL | input | 0x7F7F7F7F7F7F7F7FL);
+                    final int binaryPosition = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
+                            Long.numberOfTrailingZeros(tmp) :
+                            Long.numberOfLeadingZeros(tmp);
 
-                    int index = binaryPosition >>> 3;
-                    if (index < Long.BYTES) {
-                        return fromOffsetInclusive + index + i * Long.BYTES;
+                    if (binaryPosition < Long.SIZE) {
+                        return fromOffsetInclusive + (binaryPosition >>> 3);
                     }
                 }
-                fromOffsetInclusive += longCount << 3;
             }
-            for (int i = fromOffsetInclusive; i < end; i++) {
-                if (loadByte(address + i) == needle) {
-                    return i;
+            for (; fromOffsetInclusive < end; fromOffsetInclusive++) {
+                if (loadByte(addr + fromOffsetInclusive) == needle) {
+                    return fromOffsetInclusive;
                 }
             }
 
@@ -1130,25 +1139,25 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     private void checkRead(int index, int size) {
-        if (index < 0 || woff < index + size) {
+        if (index < 0 | woff < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
-        if (index < 0 || rsize < index + size) {
+        if (index < 0 | rsize < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size) {
-        if (index < roff || wsize < index + size) {
+        if (index < roff | wsize < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 || wsize < index + size) {
+        if (index < 0 | wsize < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }
