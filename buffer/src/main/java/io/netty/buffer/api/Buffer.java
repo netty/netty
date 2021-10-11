@@ -386,7 +386,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     int firstOffsetOf(int fromOffsetInclusive, int length, byte needle);
 
     /**
-     * Get the number of {@linkplain #readableBytes() readable bytes}, until the given {@code needle} is found in this buffer.
+     * Get the number of {@linkplain #readableBytes() readable bytes}, until the given {@code needle} is found in this
+     * buffer.
      * If the needle is not found, {@code -1} is returned.
      * <p>
      * This method does not modify the {@linkplain #readerOffset() reader-offset} or the
