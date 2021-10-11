@@ -118,7 +118,8 @@ public abstract class LifecycleTracer {
     public abstract <E extends Throwable> E attachTrace(E throwable);
 
     /**
-     * Return the life-cycle trace as a {@link Collection} of {@link TracePoint}s.
+     * Return the life-cycle trace as an ordered {@link Collection} of {@link TracePoint}s.
+     * The trace points are ordered chronologically in the collection, with earlier events before later ones.
      * The returned collection is not modifiable.
      *
      * @return A collection of trace points.
