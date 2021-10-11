@@ -179,20 +179,6 @@ public final class JdkZlibCompressor implements Compressor {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        int offset;
-        byte[] inAry;
-        if (uncompressed.hasArray()) {
-            // if it is backed by an array we not need to to do a copy at all
-            inAry = uncompressed.array();
-            offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
-            // skip all bytes as we will consume all of them
-            uncompressed.skipBytes(len);
-        } else {
-            inAry = new byte[len];
-            uncompressed.readBytes(inAry);
-            offset = 0;
-        }
-
         int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
         if (writeHeader) {
             switch (wrapper) {
@@ -207,6 +193,20 @@ public final class JdkZlibCompressor implements Compressor {
             }
         }
         ByteBuf out = allocator.buffer(sizeEstimate);
+
+        if (uncompressed.nioBufferCount() == 1) {
+            ByteBuffer in = uncompressed.internalNioBuffer(uncompressed.readerIndex(), len);
+            compressData(in, out);
+        } else {
+            ByteBuffer[] ins = uncompressed.nioBuffers(uncompressed.readerIndex(), len);
+            for (ByteBuffer in: ins) {
+                compressData(in, out);
+            }
+        }
+        return out;
+    }
+
+    private void compressData(ByteBuffer in, ByteBuf out) {
         try {
             if (writeHeader) {
                 writeHeader = false;
@@ -216,10 +216,12 @@ public final class JdkZlibCompressor implements Compressor {
             }
 
             if (wrapper == ZlibWrapper.GZIP) {
-                crc.update(inAry, offset, len);
+                int position = in.position();
+                crc.update(in);
+                in.position(position);
             }
 
-            deflater.setInput(inAry, offset, len);
+            deflater.setInput(in);
             for (;;) {
                 deflate(out);
                 if (deflater.needsInput()) {
@@ -233,7 +235,6 @@ public final class JdkZlibCompressor implements Compressor {
                     }
                 }
             }
-            return out;
         } catch (Throwable cause) {
             out.release();
             throw cause;
