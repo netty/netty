@@ -160,6 +160,7 @@
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
           <!-- Ensure excludes are set correctly -->
           <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenMode>ossrh</flattenMode>
         </configuration>
         <executions>
           <!-- enable flattening -->
