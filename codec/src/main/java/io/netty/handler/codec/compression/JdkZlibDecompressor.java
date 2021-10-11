@@ -244,7 +244,11 @@ public final class JdkZlibDecompressor implements Decompressor {
             if (in.hasArray()) {
                 inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
             } else {
-                inflater.setInput(in.nioBuffer(in.readerIndex(), readableBytes));
+                if (in.nioBufferCount() == 1) {
+                    inflater.setInput(in.internalNioBuffer(in.readerIndex(), readableBytes));
+                } else {
+                    inflater.setInput(in.nioBuffer(in.readerIndex(), readableBytes));
+                }
             }
         }
 
