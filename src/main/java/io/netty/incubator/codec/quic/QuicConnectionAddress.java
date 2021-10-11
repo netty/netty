@@ -15,6 +15,10 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -29,6 +33,8 @@ public final class QuicConnectionAddress extends SocketAddress {
      * and choosen on the fly.
      */
     public static final QuicConnectionAddress EPHEMERAL = new QuicConnectionAddress((ByteBuffer) null, false);
+
+    private final String toStr;
 
     // Accessed by QuicheQuicheChannel
     final ByteBuffer connId;
@@ -62,15 +68,22 @@ public final class QuicConnectionAddress extends SocketAddress {
                     + Quiche.QUICHE_MAX_CONN_ID_LEN);
         }
         this.connId = connId;
+        if (connId == null) {
+            toStr = "QuicConnectionAddress{EPHEMERAL}";
+        } else {
+            ByteBuf buffer = Unpooled.wrappedBuffer(connId);
+            try {
+                toStr = "QuicConnectionAddress{" +
+                        "connId=" + ByteBufUtil.hexDump(buffer) + '}';
+            } finally {
+                buffer.release();
+            }
+        }
     }
 
     @Override
     public String toString() {
-        if (this == EPHEMERAL) {
-            return "QuicConnectionAddress{EPHEMERAL}";
-        }
-        return "QuicConnectionAddress{" +
-                "connId=" + connId + '}';
+        return toStr;
     }
 
     @Override
