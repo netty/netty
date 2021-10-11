@@ -235,7 +235,6 @@ public final class JdkZlibCompressor implements Compressor {
                     }
                 }
             }
-            return out;
         } catch (Throwable cause) {
             out.release();
             throw cause;
