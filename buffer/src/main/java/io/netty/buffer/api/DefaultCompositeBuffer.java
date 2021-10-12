@@ -438,10 +438,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         int off = fromOffsetInclusive - offsets[startBufferIndex];
         Buffer buf = bufs[startBufferIndex];
         int len = Math.min(buf.capacity() - off, length);
-        for (;;) {
-            if (len < 1) {
-                return -1;
-            }
+        while (len > 0) {
             int found = buf.firstOffsetOf(off, len, needle);
             if (found != -1) {
                 return offsets[startBufferIndex] + found;
@@ -455,6 +452,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             off = 0;
             len = Math.min(buf.capacity(), length);
         }
+        return -1;
     }
 
     @Override

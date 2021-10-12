@@ -200,10 +200,11 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         }
         final int end = Math.addExact(fromOffsetInclusive, length);
 
-        if (length > 16) {
-            final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
+        if (length > 7) {
             final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-            for (; fromOffsetInclusive < longEnd; fromOffsetInclusive += Long.BYTES) {
+            for (final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
+                 fromOffsetInclusive < longEnd;
+                 fromOffsetInclusive += Long.BYTES) {
                 final long word = rmem.getLong(fromOffsetInclusive);
 
                 long input = word ^ pattern;

@@ -270,10 +270,11 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             final int end = Math.addExact(fromOffsetInclusive, length);
             final long addr = address;
 
-            if (length > 16) {
-                final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
+            if (length > 7) {
                 final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-                for (; fromOffsetInclusive < longEnd; fromOffsetInclusive += Long.BYTES) {
+                for (final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
+                     fromOffsetInclusive < longEnd;
+                     fromOffsetInclusive += Long.BYTES) {
                     final long word = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
                             PlatformDependent.getLong(base, addr + fromOffsetInclusive) :
                             loadLong(addr + fromOffsetInclusive);

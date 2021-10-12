@@ -50,7 +50,6 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
             "16",
             "23",
             "32",
-//            "500",
     })
     int size;
 

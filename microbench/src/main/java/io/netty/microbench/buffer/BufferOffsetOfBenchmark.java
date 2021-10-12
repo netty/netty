@@ -52,8 +52,7 @@ public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
             "7",
             "16",
             "23",
-            "32" ,
-//            "500",
+            "32",
     })
     int size;
 

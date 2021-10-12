@@ -40,9 +40,9 @@ public final class MemoryManagerOverride {
     private static MemoryManager createDefaultMemoryManagerInstance() {
         String systemProperty = "io.netty.buffer.api.MemoryManager";
         String configured = System.getProperty(systemProperty);
+        InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagerOverride.class);
         if (configured != null) {
             Optional<MemoryManager> candidateManager = MemoryManager.lookupImplementation(configured);
-            InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagerOverride.class);
             if (candidateManager.isPresent()) {
                 logger.debug("{} configured: {}", systemProperty, configured);
                 return candidateManager.get();
@@ -56,8 +56,10 @@ public final class MemoryManagerOverride {
         if (PlatformDependent.hasUnsafe() && PlatformDependent.hasDirectBufferNoCleanerConstructor()) {
             try {
                 return new UnsafeMemoryManager();
-            } catch (Exception ignore) {
+            } catch (Exception exception) {
                 // We will just fall back to ByteBuffer based memory management if Unsafe fails.
+                logger.warn("Both sun.misc.Unsafe and DirectByteBuffer-without-Cleaner constructor are available, " +
+                            "yet an UnsafeMemoryManager could not be created.", exception);
             }
         }
         return new ByteBufferMemoryManager();
