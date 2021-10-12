@@ -25,7 +25,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -37,6 +36,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -422,7 +422,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     void forceClose() {
         assert eventLoop().inEventLoop();
-        // Set received to true to ensure we will actual remove it from the internal map once we send the fin.
+        // Set received to true to ensure we will remove it from the internal map once we send the fin.
         finSent = true;
         unsafe().close(unsafe().voidPromise());
     }
@@ -493,7 +493,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 if (promise.isVoid()) {
                     return;
                 }
-                closePromise.addListener(new ChannelPromiseNotifier(promise));
+                closePromise.addListener(new PromiseNotifier<>(promise));
                 return;
             }
             active = false;

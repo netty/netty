@@ -59,7 +59,7 @@ public final class EpollQuicUtils {
 
         @Override
         public DatagramPacket newPacket(ByteBuf buffer, int segmentSize, InetSocketAddress remoteAddress) {
-            return new SegmentedDatagramPacket(buffer, segmentSize, remoteAddress);
+            return new io.netty.channel.unix.SegmentedDatagramPacket(buffer, segmentSize, remoteAddress);
         }
     }
 }

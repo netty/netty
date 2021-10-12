@@ -70,16 +70,14 @@ final class QuicheQuicConnectionStats implements QuicConnectionStats {
      */
     @Override
     public String toString() {
-        return new StringBuilder(StringUtil.simpleClassName(this))
-            .append("[")
-            .append("recv=").append(this.recv)
-            .append(", sent=").append(this.sent)
-            .append(", lost=").append(this.lost)
-            .append(", rttNanos=").append(this.rttNanos)
-            .append(", congestionWindow=").append(this.congestionWindow)
-            .append(", deliveryRate=").append(this.deliveryRate)
-            .append("]")
-            .toString();
+        return StringUtil.simpleClassName(this) + "[" +
+            "recv=" + this.recv +
+            ", sent=" + this.sent +
+            ", lost=" + this.lost +
+            ", rttNanos=" + this.rttNanos +
+            ", congestionWindow=" + this.congestionWindow +
+            ", deliveryRate=" + this.deliveryRate +
+            "]";
     }
 
 }

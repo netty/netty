@@ -76,7 +76,7 @@ final class BoringSSLCertificateCallback {
         KEY_TYPES.put("DH_RSA", KEY_TYPE_DH_RSA);
     }
 
-    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<String>(
+    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<>(
             Arrays.asList(KEY_TYPE_RSA,
                     KEY_TYPE_DH_RSA,
                     KEY_TYPE_EC,
@@ -234,7 +234,7 @@ final class BoringSSLCertificateCallback {
             // Try all of the supported key types.
             return SUPPORTED_KEY_TYPES;
         }
-        Set<String> result = new HashSet<String>(clientCertificateTypes.length);
+        Set<String> result = new HashSet<>(clientCertificateTypes.length);
         for (byte keyTypeCode : clientCertificateTypes) {
             String keyType = clientKeyType(keyTypeCode);
             if (keyType == null) {

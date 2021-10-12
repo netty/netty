@@ -30,18 +30,14 @@ public final class QuicConnectionAddress extends SocketAddress {
 
     /**
      * Special {@link QuicConnectionAddress} that should be used when the connection address should be generated
-     * and choosen on the fly.
+     * and chosen on the fly.
      */
-    public static final QuicConnectionAddress EPHEMERAL = new QuicConnectionAddress((ByteBuffer) null, false);
+    public static final QuicConnectionAddress EPHEMERAL = new QuicConnectionAddress(null, false);
 
     private final String toStr;
 
     // Accessed by QuicheQuicheChannel
     final ByteBuffer connId;
-
-    QuicConnectionAddress(byte[] connId, boolean clone) {
-        this(ByteBuffer.wrap(clone ? connId.clone() : connId), false);
-    }
 
     /**
      * Create a new instance
