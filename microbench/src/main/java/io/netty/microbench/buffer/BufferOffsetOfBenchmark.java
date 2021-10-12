@@ -42,15 +42,25 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 2, jvmArgsAppend = {
         "-Dio.netty.tryReflectionSetAccessible=true",
         "--add-opens", "java.base/java.nio=ALL-UNNAMED",
-        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED" })
+        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+        "-XX:+UnlockDiagnosticVMOptions", "-XX:+DebugNonSafepoints" })
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
 public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ /*"7", "16", "23",*/ "32", "500" })
+    @Param({
+            "7",
+            "16",
+            "23",
+            "32" ,
+//            "500",
+    })
     int size;
 
-    @Param({ "4", "11" })
+    @Param({
+            "4",
+            "11",
+    })
     int logPermutations;
 
     @Param({ "1" })
@@ -64,12 +74,21 @@ public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
     @Param({ "0" })
     private byte needleByte;
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean direct;
-    @Param({ "false", "true" })
+    @Param({
+            "false",
+            "true",
+    })
     private boolean noUnsafe;
 
-    @Param({ "false", "true" })
+    @Param({
+            "false",
+            "true",
+    })
     private boolean pooled;
 
     @Setup(Level.Trial)
