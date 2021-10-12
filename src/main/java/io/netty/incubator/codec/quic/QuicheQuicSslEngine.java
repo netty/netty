@@ -53,6 +53,8 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     final String tlsHostName;
     volatile QuicheQuicConnection connection;
 
+    String sniHostname;
+
     QuicheQuicSslEngine(QuicheQuicSslContext ctx, String peerHost, int peerPort) {
         this.ctx = ctx;
         this.peerHost = peerHost;
@@ -67,11 +69,13 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
     }
 
-    long moveTo(QuicheQuicSslContext ctx) {
+    long moveTo(String hostname, QuicheQuicSslContext ctx) {
         // First of remove the engine from its previous QuicheQuicSslContext.
         this.ctx.remove(this);
         this.ctx = ctx;
-        return ctx.add(this);
+        long added = ctx.add(this);
+        sniHostname = hostname;
+        return added;
     }
 
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator) {

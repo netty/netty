@@ -33,6 +33,7 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
@@ -1380,6 +1381,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     initAddresses(connection);
 
                     pipeline().fireChannelActive();
+                    String sniHostname = connection.engine().sniHostname;
+                    if (sniHostname != null) {
+                        connection.engine().sniHostname = null;
+                        pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname));
+                    }
                     fireDatagramExtensionEvent();
                 }
             } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {

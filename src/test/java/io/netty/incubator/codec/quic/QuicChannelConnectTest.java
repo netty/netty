@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.DomainWildcardMappingBuilder;
@@ -624,12 +625,24 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                 .applicationProtocols("sni-protocol").build();
 
+        CountDownLatch sniEventLatch = new CountDownLatch(1);
+        String hostname = "quic.netty.io";
         QuicSslContext serverSslContext = QuicSslContextBuilder.buildForServerWithSni(
                         new DomainWildcardMappingBuilder<>(defaultServerSslContext)
-                                .add("quic.netty.io", sniServerSslContext).build());
+                                .add(hostname, sniServerSslContext).build());
 
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(serverSslContext),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof SniCompletionEvent) {
+                            if (hostname.equals(((SniCompletionEvent) evt).hostname())) {
+                                sniEventLatch.countDown();
+                            }
+                        }
+                        super.userEventTriggered(ctx, evt);
+                    }
+                },
                 new ChannelInboundHandlerAdapter());
 
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
@@ -638,7 +651,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("sni-protocol").build();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
-                .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), "quic.netty.io", 8080)));
+                .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), hostname, 8080)));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -652,6 +665,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
+            sniEventLatch.await();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
