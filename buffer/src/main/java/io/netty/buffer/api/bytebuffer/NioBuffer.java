@@ -49,7 +49,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     private int roff;
     private int woff;
-    private boolean constBuffer;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
         super(drop, control);
@@ -68,7 +67,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
-        constBuffer = true;
     }
 
     @Override
@@ -294,7 +292,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         base = buffer;
         rmem = buffer;
         wmem = buffer;
-        constBuffer = false;
         drop.attach(this);
     }
 
@@ -324,7 +321,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             splitBuffer.makeReadOnly();
         }
         // Split preserves const-state.
-        splitBuffer.constBuffer = constBuffer;
         rmem = bbslice(rmem, splitOffset, rmem.capacity() - splitOffset);
         if (!readOnly) {
             wmem = rmem;
@@ -901,7 +897,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         var roff = this.roff;
         var woff = this.woff;
         var readOnly = readOnly();
-        var isConst = constBuffer;
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
         return new Owned<NioBuffer>() {
@@ -913,7 +908,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
-                copy.constBuffer = isConst;
                 return copy;
             }
         };

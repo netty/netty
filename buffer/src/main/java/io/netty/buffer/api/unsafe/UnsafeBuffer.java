@@ -53,7 +53,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     private boolean readOnly;
     private int roff;
     private int woff;
-    private boolean constBuffer;
 
     UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl control,
                         Drop<UnsafeBuffer> drop) {
@@ -80,7 +79,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         readOnly = parent.readOnly;
         roff = parent.roff;
         woff = parent.woff;
-        constBuffer = true;
     }
 
     @Override
@@ -364,7 +362,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         address = memory.address;
         rsize = memory.size;
         wsize = memory.size;
-        constBuffer = false;
         drop.attach(this);
     }
 
@@ -393,7 +390,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             splitBuffer.makeReadOnly();
         }
         // Split preserves const-state.
-        splitBuffer.constBuffer = constBuffer;
         rsize -= splitOffset;
         baseOffset += splitOffset;
         address += splitOffset;
@@ -1067,7 +1063,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         var roff = this.roff;
         var woff = this.woff;
         var readOnly = readOnly();
-        var isConst = constBuffer;
         UnsafeMemory memory = this.memory;
         AllocatorControl control = this.control;
         long baseOffset = this.baseOffset;
@@ -1081,7 +1076,6 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
-                copy.constBuffer = isConst;
                 return copy;
             }
         };
