@@ -37,6 +37,10 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
      * it becomes cleanable.
      */
     public static <T extends Buffer> Drop<T> wrap(Drop<T> drop, MemoryManager manager) {
+        return innerWrap(drop, manager);
+    }
+
+    private static <T extends Buffer> CleanerDrop<T> innerWrap(Drop<T> drop, MemoryManager manager) {
         CleanerDrop<T> cleanerDrop = new CleanerDrop<>();
         GatedRunner<T> runner = new GatedRunner<>(drop, manager);
         cleanerDrop.cleanable = Statics.CLEANER.register(cleanerDrop, runner);
@@ -62,7 +66,10 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
 
     @Override
     public Drop<T> fork() {
-        return wrap(runner.drop.fork(), runner.manager);
+        CleanerDrop<T> drop = innerWrap(runner.drop.fork(), runner.manager);
+        drop.runner.tracerFromSplitParent = true;
+        drop.runner.tracer = runner.tracer;
+        return drop;
     }
 
     @Override
@@ -76,6 +83,8 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
         final Drop<T> drop;
         final MemoryManager manager;
         volatile boolean dropping;
+        volatile boolean tracerFromSplitParent;
+        LifecycleTracer tracer;
 
         private GatedRunner(Drop<T> drop, MemoryManager manager) {
             this.drop = drop;
@@ -90,12 +99,20 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
                 if (dropping) {
                     drop.drop((T) obj);
                 } else {
-                    manager.recoverMemory(ALLOC_CONTROL, obj, (Drop<Buffer>) drop).close();
+                    try (Buffer recoveredBuffer = manager.recoverMemory(ALLOC_CONTROL, obj, (Drop<Buffer>) drop)) {
+                        LeakDetection.reportLeak(tracer, "buffer (" + recoveredBuffer.capacity() + " bytes)");
+                    }
                 }
             }
         }
 
         public void prepareRecover(T obj) {
+            LifecycleTracer recoveredTracer = ResourceSupport.getTracer((ResourceSupport<?, ?>) obj);
+            if (tracerFromSplitParent) {
+                tracerFromSplitParent = false;
+                tracer.splitTo(recoveredTracer);
+            }
+            tracer = recoveredTracer;
             set(manager.unwrapRecoverableMemory(obj));
         }
     }

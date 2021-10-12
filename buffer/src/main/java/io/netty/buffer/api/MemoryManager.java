@@ -15,8 +15,10 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.LeakDetection;
 import io.netty.buffer.api.internal.MemoryManagerLoader;
 import io.netty.buffer.api.internal.MemoryManagerOverride;
+import io.netty.util.SafeCloseable;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -24,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader.Provider;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -45,6 +48,26 @@ public interface MemoryManager {
      */
     static MemoryManager instance() {
         return MemoryManagerOverride.configuredOrDefaultManager();
+    }
+
+    /**
+     * Register a callback that will be called whenever a {@link Buffer} instance is leaked.
+     * <p>
+     * Be mindful that the callback must be fast, and not take any locks or call any blocking methods,
+     * as this might interfere with the garbage collectors reference processing and cleaning.
+     * <p>
+     * This also applies to callbacks that perform logging.
+     * In these cases, asynchronous logging should be preferred, for the avoidance of blocking calls and IO.
+     * <p>
+     * If the same callback object is registered multiple times, it will only be informed once for each leak,
+     * but each of the associated {@link SafeCloseable} objects will need to be closed before the callback is removed.
+     *
+     * @param callback The callback that will be called when a buffer leak is detected.
+     * @return An {@link SafeCloseable} instance that, when closed, removes the given callback again.
+     */
+    @UnstableApi
+    static SafeCloseable onLeakDetected(Consumer<LeakInfo> callback) {
+        return LeakDetection.onLeakDetected(callback);
     }
 
     /**

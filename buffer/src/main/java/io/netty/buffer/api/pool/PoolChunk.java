@@ -21,12 +21,13 @@ import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.internal.ArcDrop;
+import io.netty.buffer.api.internal.CleanerDrop;
 import io.netty.util.internal.LongLongHashMap;
 import io.netty.util.internal.LongPriorityQueue;
 
 import java.util.PriorityQueue;
 
-import static io.netty.buffer.api.internal.Statics.standardDrop;
 import static io.netty.buffer.api.internal.Statics.standardDropWrap;
 
 /**
@@ -193,7 +194,9 @@ final class PoolChunk implements PoolChunkMetric {
     PoolChunk(PoolArena arena, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
         this.arena = arena;
         MemoryManager manager = arena.manager;
-        baseDrop = standardDrop(manager);
+        // Unlike a standard wrapping, the CleanerDrop needs to be inside the ArcDrop here, because it can only drop
+        // once. And we need the ArcDrop for the reference counting by every buffer allocated from this chunk.
+        baseDrop = ArcDrop.wrap(CleanerDrop.wrap(manager.drop(), manager));
         base = manager.allocateShared(CONTROL, chunkSize, baseDrop, arena.allocationType);
         memory = manager.unwrapRecoverableMemory(base);
         baseDrop.attach(base);

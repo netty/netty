@@ -15,11 +15,18 @@
  */
 package io.netty.buffer.api.internal;
 
+import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
+import io.netty.buffer.api.LeakInfo;
+import io.netty.buffer.api.LeakInfo.TracePoint;
 import io.netty.buffer.api.Owned;
 import io.netty.buffer.api.Resource;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -27,18 +34,22 @@ import java.util.stream.Stream;
 /**
  * Instances of this class record life cycle events of resources, to help debug life-cycle errors.
  */
+@UnstableApi
 public abstract class LifecycleTracer {
+    static final boolean lifecycleTracingEnabled =
+            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", false);
+
     /**
      * Get a tracer for a newly allocated resource.
      *
      * @return A new tracer for a resource.
      */
     public static LifecycleTracer get() {
-        if (Trace.TRACE_LIFECYCLE_DEPTH == 0) {
+        if (lifecycleTracingEnabled && LeakDetection.leakDetectionEnabled == 0) {
             return NoOpTracer.INSTANCE;
         }
         StackTracer stackTracer = new StackTracer();
-        stackTracer.addTrace(StackTracer.WALKER.walk(new Trace(TraceType.ALLOCATE, 0)));
+        stackTracer.addTrace(stackTracer.walk(new Trace(TraceType.ALLOCATE, 0)));
         return stackTracer;
     }
 
@@ -67,22 +78,34 @@ public abstract class LifecycleTracer {
      * Add the hint object to the trace log.
      * The hint objects can be inspected later if a lifecycle related exception is thrown, or if the object leaks.
      *
-     * @param acquires The current number of acquires on the traced object.
      * @param hint The hint object to attach to the trace log.
      */
-    public abstract void touch(int acquires, Object hint);
+    public abstract void touch(Object hint);
 
     /**
      * Add to the trace log that the object is being sent.
      *
-     * @param instance The owned instance being sent.
-     * @param acquires The current number of acquires on this object.
      * @param <I> The resource interface for the object.
      * @param <T> The concrete type of the object.
+     * @param instance The owned instance being sent.
      * @return An {@link Owned} instance that may trace the reception of the object.
      */
-    public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(
-            Owned<T> instance, int acquires);
+    public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance);
+
+    /**
+     * Attach a trace to both life-cycles, that a single life-cycle has been split into two.
+     *
+     * Such branches happen when two views are created to share a single underlying resource.
+     * The most prominent example of this is the {@link Buffer#split()} method, where a buffer is broken into two that
+     * each covers a non-overlapping region of the original memory.
+     *
+     * This method is called on the originating, or "parent" tracer, while the newly allocated "child" is given as an
+     * argument.
+     *
+     * @param splitTracer The tracer for the life-cycle that was branched from the life-cycle represented by this
+     *                   tracer.
+     */
+    public abstract void splitTo(LifecycleTracer splitTracer);
 
     /**
      * Attach a life cycle trace log to the given exception.
@@ -93,6 +116,15 @@ public abstract class LifecycleTracer {
      * @return The same exception instance, that can then be thrown.
      */
     public abstract <E extends Throwable> E attachTrace(E throwable);
+
+    /**
+     * Return the life-cycle trace as an ordered {@link Collection} of {@link TracePoint}s.
+     * The trace points are ordered chronologically in the collection, with earlier events before later ones.
+     * The returned collection is not modifiable.
+     *
+     * @return A collection of trace points.
+     */
+    public abstract Collection<TracePoint> collectTraces();
 
     private static final class NoOpTracer extends LifecycleTracer {
         private static final NoOpTracer INSTANCE = new NoOpTracer();
@@ -110,27 +142,36 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public void touch(int acquires, Object hint) {
+        public void touch(Object hint) {
         }
 
         @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance, int acquires) {
+        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance) {
             return instance;
+        }
+
+        @Override
+        public void splitTo(LifecycleTracer splitTracer) {
         }
 
         @Override
         public <E extends Throwable> E attachTrace(E throwable) {
             return throwable;
         }
+
+        @Override
+        public Collection<TracePoint> collectTraces() {
+            return Collections.emptyList();
+        }
     }
 
     private static final class StackTracer extends LifecycleTracer {
-        private static final int MAX_TRACE_POINTS = Math.min(Integer.getInteger(
+        private static final int MAX_TRACE_POINTS = Math.min(SystemPropertyUtil.getInt(
                 "io.netty.buffer.api.internal.LifecycleTracer.MAX_TRACE_POINTS", 50), 1000);
         private static final StackWalker WALKER;
         static {
             int depth = Trace.TRACE_LIFECYCLE_DEPTH;
-            WALKER = depth > 0 ? StackWalker.getInstance(Set.of(), depth + 2) : null;
+            WALKER = depth > 0 && lifecycleTracingEnabled ? StackWalker.getInstance(Set.of(), depth + 2) : null;
         }
 
         private final ArrayDeque<Trace> traces = new ArrayDeque<>();
@@ -138,51 +179,57 @@ public abstract class LifecycleTracer {
 
         @Override
         public void acquire(int acquires) {
-            addTrace(WALKER.walk(new Trace(TraceType.ACQUIRE, acquires)));
-        }
-
-        void addTrace(Trace trace) {
-            synchronized (traces) {
-                if (traces.size() == MAX_TRACE_POINTS) {
-                    traces.pollFirst();
-                }
-                traces.addLast(trace);
-            }
+            addTrace(walk(new Trace(TraceType.ACQUIRE, acquires)));
         }
 
         @Override
         public void drop(int acquires) {
             dropped = true;
-            addTrace(WALKER.walk(new Trace(TraceType.DROP, acquires)));
+            addTrace(walk(new Trace(TraceType.DROP, acquires)));
         }
 
         @Override
         public void close(int acquires) {
             if (!dropped) {
-                addTrace(WALKER.walk(new Trace(TraceType.CLOSE, acquires)));
+                addTrace(walk(new Trace(TraceType.CLOSE, acquires)));
             }
         }
 
         @Override
-        public void touch(int acquires, Object hint) {
-            Trace trace = new Trace(TraceType.TOUCH, acquires);
+        public void touch(Object hint) {
+            Trace trace = new Trace(TraceType.TOUCH);
             trace.attachmentType = AttachmentType.HINT;
             trace.attachment = hint;
-            addTrace(WALKER.walk(trace));
+            addTrace(walk(trace));
         }
 
         @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance, int acquires) {
-            Trace sendTrace = new Trace(TraceType.SEND, acquires);
+        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance) {
+            Trace sendTrace = new Trace(TraceType.SEND);
             sendTrace.attachmentType = AttachmentType.RECEIVED_AT;
-            addTrace(WALKER.walk(sendTrace));
+            addTrace(walk(sendTrace));
             return new Owned<T>() {
                 @Override
                 public T transferOwnership(Drop<T> drop) {
-                    sendTrace.attachment = WALKER.walk(new Trace(TraceType.RECEIVE, acquires));
+                    sendTrace.attachment = walk(new Trace(TraceType.RECEIVE));
                     return instance.transferOwnership(drop);
                 }
             };
+        }
+
+        @Override
+        public void splitTo(LifecycleTracer splitTracer) {
+            Trace splitParent = new Trace(TraceType.SPLIT);
+            Trace splitChild = new Trace(TraceType.SPLIT);
+            splitParent.attachmentType = AttachmentType.SPLIT_TO;
+            splitParent.attachment = splitChild;
+            splitChild.attachmentType = AttachmentType.SPLIT_FROM;
+            splitChild.attachment = splitParent;
+            addTrace(walk(splitParent));
+            if (splitTracer instanceof StackTracer) {
+                StackTracer tracer = (StackTracer) splitTracer;
+                tracer.addTrace(walk(splitChild));
+            }
         }
 
         @Override
@@ -195,12 +242,35 @@ public abstract class LifecycleTracer {
             }
             return throwable;
         }
+
+        @Override
+        public Collection<TracePoint> collectTraces() {
+            return Collections.unmodifiableCollection(Collections.synchronizedCollection(traces));
+        }
+
+        Trace walk(Trace trace) {
+            if (WALKER != null) {
+                WALKER.walk(trace);
+            }
+            return trace;
+        }
+
+        void addTrace(Trace trace) {
+            synchronized (traces) {
+                if (traces.size() == MAX_TRACE_POINTS) {
+                    traces.pollFirst();
+                }
+                traces.addLast(trace);
+            }
+        }
     }
 
-    private static final class Trace implements Function<Stream<StackWalker.StackFrame>, Trace> {
+    static final class Trace implements Function<Stream<StackWalker.StackFrame>, Trace>, LeakInfo.TracePoint {
         private static final int TRACE_LIFECYCLE_DEPTH;
+        public static final StackTraceElement[] EMPTY_TRACE = new StackTraceElement[0];
+
         static {
-            int traceDefault = 0;
+            int traceDefault = 50;
             TRACE_LIFECYCLE_DEPTH = Math.max(Integer.getInteger(
                     "io.netty.buffer.api.internal.LifecycleTracer.TRACE_LIFECYCLE_DEPTH", traceDefault), 0);
         }
@@ -211,6 +281,10 @@ public abstract class LifecycleTracer {
         volatile AttachmentType attachmentType;
         volatile Object attachment;
         StackWalker.StackFrame[] frames;
+
+        Trace(TraceType type) {
+            this(type, Integer.MIN_VALUE);
+        }
 
         Trace(TraceType type, int acquires) {
             this.type = type;
@@ -229,11 +303,19 @@ public abstract class LifecycleTracer {
             throwable.addSuppressed(exception);
         }
 
+        @Override
+        public Throwable traceback() {
+            return getTraceback(System.nanoTime(), true);
+        }
+
         private Traceback getTraceback(long timestamp, boolean recurse) {
             String message = type.name();
             Trace associatedTrace = getAssociatedTrace();
             message = explainAttachment(message, associatedTrace);
-            message += " (current acquires = " + acquires + ") T" + (this.timestamp - timestamp) / 1000 + "µs.";
+            if (acquires != Integer.MIN_VALUE) {
+                message += " (current acquires = " + acquires + ')';
+            }
+            message += " T" + (this.timestamp - timestamp) / 1000 + "us.";
             Traceback exception = new Traceback(message);
             StackTraceElement[] stackTrace = framesToStackTrace();
             exception.setStackTrace(stackTrace);
@@ -267,16 +349,33 @@ public abstract class LifecycleTracer {
             case SEND_FROM:
                 message += " (from a send)";
                 break;
+            case SPLIT_TO:
+                message += " (split into two)";
+                break;
+            case SPLIT_FROM:
+                message += " (split from other object)";
+                break;
+            case HINT:
+                message += " (" + attachment + ')';
+                break;
             }
             return message;
         }
 
         private StackTraceElement[] framesToStackTrace() {
+            if (frames == null) {
+                return EMPTY_TRACE;
+            }
             StackTraceElement[] stackTrace = new StackTraceElement[frames.length];
             for (int i = 0; i < frames.length; i++) {
                 stackTrace[i] = frames[i].toStackTraceElement();
             }
             return stackTrace;
+        }
+
+        @Override
+        public Object hint() {
+            return attachmentType == AttachmentType.HINT? attachment : null;
         }
     }
 
@@ -301,6 +400,7 @@ public abstract class LifecycleTracer {
         SEND,
         RECEIVE,
         TOUCH,
+        SPLIT,
     }
 
     private enum AttachmentType {
@@ -312,6 +412,14 @@ public abstract class LifecycleTracer {
          * Tracer of object that was received, after being sent.
          */
         RECEIVED_AT,
+        /**
+         * Tracer of origin object of a split.
+         */
+        SPLIT_FROM,
+        /**
+         * Tracer of object split from this traced object.
+         */
+        SPLIT_TO,
         /**
          * Object is a hint from a {@link Resource#touch(Object)} call.
          */

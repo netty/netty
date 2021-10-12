@@ -16,6 +16,7 @@
 package io.netty.buffer.api;
 
 import io.netty.buffer.api.internal.SendFromSupplier;
+import io.netty.util.SafeCloseable;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -33,7 +34,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-public interface Send<T extends Resource<T>> extends AutoCloseable {
+public interface Send<T extends Resource<T>> extends SafeCloseable {
     /**
      * Construct a {@link Send} based on the given {@link Supplier}. The supplier will be called only once, in the
      * receiving thread.

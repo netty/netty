@@ -57,6 +57,16 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     }
 
     /**
+     * Encapsulation bypass for getting the {@link LifecycleTracer} attached to the given object.
+     *
+     * @param obj The object to get the {@link LifecycleTracer} from.
+     * @return The {@link LifecycleTracer} that is attached to the given object.
+     */
+    static LifecycleTracer getTracer(ResourceSupport<?, ?> obj) {
+        return obj.tracer;
+    }
+
+    /**
      * Increment the reference count.
      * <p>
      * Note, this method is not thread-safe because Resources are meant to thread-confined.
@@ -123,7 +133,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
             throw notSendableException();
         }
         try {
-            var owned = tracer.send(prepareSend(), acquires);
+            var owned = tracer.send(prepareSend());
             return new SendFromOwned<I, T>(owned, drop, getClass());
         } finally {
             acquires = -2; // Close without dropping. This also ignore future double-free attempts.
@@ -203,7 +213,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     @Override
     public I touch(Object hint) {
         if (isAccessible()) {
-            tracer.touch(acquires, hint);
+            tracer.touch(hint);
         }
         return self();
     }

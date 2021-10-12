@@ -343,7 +343,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     private UntetheredMemory allocateUnpooled(int size) {
-        return new UnpooledUnthetheredMemory(this, manager, allocationType, size);
+        return new UnpooledUntetheredMemory(this, manager, allocationType, size);
     }
 
     @Override
