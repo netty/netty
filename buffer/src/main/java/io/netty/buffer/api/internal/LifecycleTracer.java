@@ -49,7 +49,7 @@ public abstract class LifecycleTracer {
             return NoOpTracer.INSTANCE;
         }
         StackTracer stackTracer = new StackTracer();
-        stackTracer.addTrace(StackTracer.WALKER.walk(new Trace(TraceType.ALLOCATE, 0)));
+        stackTracer.addTrace(stackTracer.walk(new Trace(TraceType.ALLOCATE, 0)));
         return stackTracer;
     }
 
