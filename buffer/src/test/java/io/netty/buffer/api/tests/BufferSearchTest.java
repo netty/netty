@@ -52,11 +52,29 @@ public class BufferSearchTest extends BufferTestSupport {
             buffer.writeLong(0x0102030405060708L);
             assertThat(buffer.firstOffsetOf(0, 8, (byte) 0x03)).isEqualTo(2);
             var send = buffer.send();
+            assertThrows(IllegalStateException.class, () -> buffer.firstOffsetOf(0, 0, (byte) 0));
             assertThrows(IllegalStateException.class, () -> buffer.firstOffsetOf(0, 1, (byte) 0));
             Buffer received = send.receive();
             assertThat(received.firstOffsetOf(0, 8, (byte) 0x03)).isEqualTo(2);
             received.close();
+            assertThrows(IllegalStateException.class, () -> received.firstOffsetOf(0, 0, (byte) 0));
             assertThrows(IllegalStateException.class, () -> received.firstOffsetOf(0, 1, (byte) 0));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeMustThrowOnInaccessibleBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buffer = allocator.allocate(8);
+            buffer.writeLong(0x0102030405060708L);
+            assertThat(buffer.bytesBefore((byte) 0x03)).isEqualTo(2);
+            var send = buffer.send();
+            assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
+            Buffer received = send.receive();
+            assertThat(received.bytesBefore((byte) 0x03)).isEqualTo(2);
+            received.close();
+            assertThrows(IllegalStateException.class, () -> received.bytesBefore((byte) 0));
         }
     }
 
@@ -89,6 +107,21 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void bytesBeforeMustFindNeedleAtStart(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128)) {
+            fillBuffer(buf);
+            byte needle = (byte) 0xA5;
+            buf.setByte(3, needle);
+            buf.skipReadable(3);
+            assertThat(buf.bytesBefore(needle))
+                    .as("bytesBefore(%X) should be 0", needle)
+                    .isEqualTo(0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void firstOffsetOfMustFindNeedleAfterStartOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
@@ -106,6 +139,21 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void bytesBeforeMustFindNeedleAfterStart(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128)) {
+            fillBuffer(buf);
+            byte needle = (byte) 0xA5;
+            buf.setByte(3, needle);
+            buf.skipReadable(2);
+            assertThat(buf.bytesBefore(needle))
+                    .as("bytesBefore(%X) should be 0", needle)
+                    .isEqualTo(1);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void firstOffsetOfMustFindNeedleCloseToEndOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
@@ -117,6 +165,25 @@ public class BufferSearchTest extends BufferTestSupport {
                 assertThat(buf.firstOffsetOf(buf.readerOffset(), buf.readableBytes(), needle))
                         .as("firstOffsetOf(%s, %s, %X)", buf.readerOffset(), buf.readableBytes(), needle)
                         .isEqualTo(offset);
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeMustFindNeedleCloseToEndOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128)) {
+            fillBuffer(buf);
+            byte needle = (byte) 0xA5;
+            int offset = buf.capacity() - 2;
+            buf.setByte(offset, needle);
+            while (buf.readableBytes() > 1) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(%X)", needle)
+                        .isEqualTo(offset);
+                offset--;
                 buf.skipReadable(1);
             }
         }
@@ -145,6 +212,25 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void bytesBeforeMustFindNeedlePriorToEndOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128)) {
+            fillBuffer(buf);
+            byte needle = (byte) 0xA5;
+            int offset = buf.capacity() - 1;
+            buf.setByte(offset, needle);
+            while (buf.readableBytes() > 1) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(%X)", needle)
+                        .isEqualTo(offset);
+                offset--;
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void firstOffsetOfMustNotFindNeedleAtEndOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
@@ -155,6 +241,25 @@ public class BufferSearchTest extends BufferTestSupport {
             while (buf.readableBytes() - 1 > 0) {
                 assertThat(buf.firstOffsetOf(buf.readerOffset(), buf.readableBytes() - 1, needle))
                         .as("firstOffsetOf(%s, %s, %X)", buf.readerOffset(), buf.readableBytes() - 1, needle)
+                        .isEqualTo(-1);
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeMustNotFindNeedleOutsideReadableRange(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128)) {
+            fillBuffer(buf);
+            byte needle = (byte) 0xA5;
+            int offset = buf.capacity() - 1;
+            buf.setByte(offset, needle);
+            buf.skipWritable(-1); // Pull the write-offset down by one, leaving needle just outside readable range.
+            while (buf.readableBytes() > 1) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(%X)", needle)
                         .isEqualTo(-1);
                 buf.skipReadable(1);
             }

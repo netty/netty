@@ -263,6 +263,9 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
         checkLength(length);
         checkGet(fromOffsetInclusive, length);
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
         try {
             final int end = Math.addExact(fromOffsetInclusive, length);
             final long addr = address;

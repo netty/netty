@@ -195,6 +195,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
         checkLength(length);
         checkGet(fromOffsetInclusive, length);
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
         final int end = Math.addExact(fromOffsetInclusive, length);
 
         if (length > 16) {

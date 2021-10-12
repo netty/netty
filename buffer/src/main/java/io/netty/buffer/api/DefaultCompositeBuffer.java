@@ -431,6 +431,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
         checkLength(length);
         checkGetBounds(fromOffsetInclusive, length);
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
         int startBufferIndex = searchOffsets(fromOffsetInclusive);
         int off = fromOffsetInclusive - offsets[startBufferIndex];
         Buffer buf = bufs[startBufferIndex];
