@@ -329,18 +329,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // Just return if we already destroyed the underlying connection.
             return;
         }
+        // We need to set the connection to null now to guard against reentrancy.
+        QuicheQuicConnection conn = connection;
+        connection = null;
+
         unsafe().close(voidPromise());
         // making sure that connection statistics is avaliable
         // even after channel is closed
-        statsAtClose = collectStats0(eventLoop().newPromise());
-        QuicheQuicConnection conn = connection;
+        statsAtClose = collectStats0(conn,  eventLoop().newPromise());
         try {
             ChannelPromise promise = QuicheQuicChannel.this.connectPromise;
             if (promise != null) {
                 QuicheQuicChannel.this.connectPromise = null;
                 promise.tryFailure(new ClosedChannelException());
             }
-            connection = null;
             state = CLOSED;
             timedOut = Quiche.quiche_conn_is_timed_out(conn.address());
 
@@ -1549,12 +1551,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return promise;
     }
 
-    private QuicConnectionStats collectStats0(Promise<QuicConnectionStats> promise) {
+    private void collectStats0(Promise<QuicConnectionStats> promise) {
         if (isConnDestroyed()) {
             promise.setSuccess(statsAtClose);
-            return statsAtClose;
+            return;
         }
 
+        collectStats0(connection, promise);
+    }
+
+    private QuicConnectionStats collectStats0(QuicheQuicConnection connection, Promise<QuicConnectionStats> promise) {
         final long[] stats = Quiche.quiche_conn_stats(connection.address());
         if (stats == null) {
             promise.setFailure(new IllegalStateException("native quiche_conn_stats(...) failed"));
