@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SniCompletionEvent;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.DomainWildcardMappingBuilder;
@@ -484,11 +485,25 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Test
     public void testALPNProtocolMissmatch() throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch eventLatch = new CountDownLatch(1);
+
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                         .applicationProtocols("my-protocol").build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (((SslHandshakeCompletionEvent) evt).cause() instanceof SSLHandshakeException) {
+                                eventLatch.countDown();
+                                return;
+                            }
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause instanceof SSLHandshakeException) {
@@ -511,6 +526,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .await().cause();
             assertThat(cause, Matchers.instanceOf(ClosedChannelException.class));
             latch.await();
+            eventLatch.await();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -626,6 +642,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .applicationProtocols("sni-protocol").build();
 
         CountDownLatch sniEventLatch = new CountDownLatch(1);
+        CountDownLatch sslEventLatch = new CountDownLatch(1);
         String hostname = "quic.netty.io";
         QuicSslContext serverSslContext = QuicSslContextBuilder.buildForServerWithSni(
                         new DomainWildcardMappingBuilder<>(defaultServerSslContext)
@@ -638,6 +655,10 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         if (evt instanceof SniCompletionEvent) {
                             if (hostname.equals(((SniCompletionEvent) evt).hostname())) {
                                 sniEventLatch.countDown();
+                            }
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                                sslEventLatch.countDown();
                             }
                         }
                         super.userEventTriggered(ctx, evt);
@@ -666,6 +687,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
             sniEventLatch.await();
+            sslEventLatch.await();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.

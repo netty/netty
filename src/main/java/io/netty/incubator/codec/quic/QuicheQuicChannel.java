@@ -34,6 +34,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.ssl.SniCompletionEvent;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
@@ -44,6 +45,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
 import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -922,6 +924,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 done = Quiche.throwIfError(written);
             } catch (Exception e) {
                 done = true;
+                if (e instanceof SSLHandshakeException) {
+                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
+                }
                 pipeline().fireExceptionCaught(e);
             }
             if (done) {
@@ -1026,6 +1031,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             } catch (Exception e) {
                 out.release();
+                if (e instanceof SSLHandshakeException) {
+                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
+                }
                 pipeline().fireExceptionCaught(e);
                 break;
             }
@@ -1209,6 +1217,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             if (tryFailConnectPromise(e)) {
                                 break;
                             }
+                            if (e instanceof SSLHandshakeException) {
+                                pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
+                            }
                             pipeline().fireExceptionCaught(e);
                             done = true;
                         }
@@ -1386,6 +1397,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         connection.engine().sniHostname = null;
                         pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname));
                     }
+                    pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
                     fireDatagramExtensionEvent();
                 }
             } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
