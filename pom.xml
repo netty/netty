@@ -158,7 +158,6 @@
               <windowTitle>Netty Source Xref (${project.version})</windowTitle>
               <excludes>
                 <exclude>**/com/sun/**/*.java</exclude>
-                <exclude>**/example/**/*.java</exclude>
                 <exclude>**/microbench/**/*.java</exclude>
                 <exclude>**/microbenchmark/**/*.java</exclude>
               </excludes>
