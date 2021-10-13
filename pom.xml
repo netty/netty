@@ -894,6 +894,20 @@
               </target>
             </configuration>
           </execution>
+          <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
+          <execution>
+            <id>copy-manifest</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
+                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
+              </target>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -998,7 +1012,6 @@
               </supportedProjectTypes>
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
-                <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
                 <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
                 <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
@@ -1117,6 +1130,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.2.0</version>
@@ -1131,6 +1145,16 @@
                 <exclude>META-INF/NOTICE.txt</exclude>
                 <exclude>META-INF/LICENSE.txt</exclude>
               </excludes>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+              </archive>
             </configuration>
           </execution>
           <!-- Generate the JAR that contains the native library in it. -->
@@ -1146,9 +1170,10 @@
                 </manifest>
                 <manifestEntries>
                   <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                <manifestFile>${project.build.directory}/manifests/MANIFEST-native.MF</manifestFile>
               </archive>
               <classifier>${jni.classifier}</classifier>
             </configuration>
