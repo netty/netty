@@ -68,7 +68,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          ClientAuth clientAuth, TrustManagerFactory trustManagerFactory,
                          KeyManagerFactory keyManagerFactory, String password,
                          Mapping<? super String, ? extends QuicSslContext> mapping,
-                         Boolean earlyData,
+                         Boolean earlyData, boolean keylog,
                          String... applicationProtocols) {
         Quic.ensureAvailability();
         this.server = server;
@@ -101,7 +101,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 new BoringSSLCertificateCallback(engineMap, keyManager, password),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
                 mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
-                verifyMode, BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
+                keylog ? new BoringSSLKeylogCallback() : null, verifyMode,
+                BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
         this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), sessionCacheSize);
         this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), sessionTimeout);

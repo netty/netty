@@ -139,6 +139,47 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     }
 
     @Test
+    public void testKeylogEnabled() throws Throwable {
+        testKeylog(true);
+    }
+
+    @Test
+    public void testKeylogDisabled() throws Throwable {
+        testKeylog(false);
+    }
+
+    private static void testKeylog(boolean enable) throws Throwable {
+        TestLogBackAppender.clearLogs();
+        QuicChannelValidationHandler serverValidationHandler = new QuicChannelValidationHandler();
+        QuicChannelValidationHandler clientValidationHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(serverValidationHandler,
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(
+                QuicSslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).keylog(enable).build()));
+
+        try {
+            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+                    .handler(clientValidationHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            quicChannel.close().sync();
+            quicChannel.closeFuture().sync();
+            assertTrue(enable ? TestLogBackAppender.getLogs().size() > 0 : TestLogBackAppender.getLogs().size() == 0);
+            serverValidationHandler.assertState();
+            clientValidationHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    @Test
     public void testAddressValidation() throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();

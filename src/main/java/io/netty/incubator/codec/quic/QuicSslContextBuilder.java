@@ -159,6 +159,7 @@ public final class QuicSslContextBuilder {
     private ClientAuth clientAuth = ClientAuth.NONE;
     private String[] applicationProtocols;
     private Boolean earlyData;
+    private boolean keylog;
     private Mapping<? super String, ? extends QuicSslContext> mapping;
 
     private QuicSslContextBuilder(boolean forServer) {
@@ -175,6 +176,18 @@ public final class QuicSslContextBuilder {
      */
     public QuicSslContextBuilder earlyData(boolean enabled) {
         this.earlyData = enabled;
+        return this;
+    }
+
+    /**
+     * Enable / disable keylog. When enabled, TLS keys are logged to an internal logger named
+     * "io.netty.incubator.codec.quic.BoringSSLKeylogCallback" with DEBUG level, see
+     * {@link io.netty.incubator.codec.quic.BoringSSLKeylogCallback} for detail, logging keys are following
+     * <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format">
+     *     NSS Key Log Format</a>. This is intended for debugging use with tools like Wireshark.
+     */
+    public QuicSslContextBuilder keylog(boolean enabled) {
+        this.keylog = enabled;
         return this;
     }
 
@@ -334,11 +347,11 @@ public final class QuicSslContextBuilder {
      */
     public QuicSslContext build() {
         if (forServer) {
-            return new QuicheQuicSslContext(true, sessionCacheSize, sessionTimeout, clientAuth,
-                    trustManagerFactory, keyManagerFactory, keyPassword, mapping, earlyData, applicationProtocols);
+            return new QuicheQuicSslContext(true, sessionCacheSize, sessionTimeout, clientAuth, trustManagerFactory,
+                    keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
         } else {
-            return new QuicheQuicSslContext(false, sessionCacheSize, sessionTimeout, clientAuth,
-                    trustManagerFactory, keyManagerFactory, keyPassword, mapping, earlyData, applicationProtocols);
+            return new QuicheQuicSslContext(false, sessionCacheSize, sessionTimeout, clientAuth, trustManagerFactory,
+                    keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
         }
     }
 }

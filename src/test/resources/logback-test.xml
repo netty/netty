@@ -21,6 +21,12 @@
         </encoder>
     </appender>
 
+    <appender name="TEST" class="io.netty.incubator.codec.quic.TestLogBackAppender"/>
+
+    <logger name="io.netty.incubator.codec.quic.BoringSSLKeylogCallback" level="debug" additivity="false">
+        <appender-ref ref="TEST" />
+    </logger>
+
     <root level="${logLevel:-info}">
         <appender-ref ref="STDOUT" />
     </root>
