@@ -193,6 +193,8 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public int bytesBefore(byte needle) {
+        // For the details of this algorithm, see Hacker's Delight, Chapter 6, Searching Words.
+        // Richard Startin also describes this on his blog: https://richardstartin.github.io/posts/finding-bytes
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }

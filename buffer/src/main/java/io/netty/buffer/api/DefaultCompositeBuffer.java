@@ -433,9 +433,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             throw bufferIsClosed(this);
         }
         final int length = readableBytes();
-        final int start = searchOffsets(readerOffset());
-        int skip = 0;
-        for (int i = start; skip < length; i++) {
+        for (int i = searchOffsets(readerOffset()), skip = 0; skip < length; i++) {
             Buffer buf = bufs[i];
             int found = buf.bytesBefore(needle);
             if (found != -1) {
