@@ -119,13 +119,13 @@ public final class Native {
      * <a href ="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">tcp_fastopen</a> client mode enabled
      * state.
      */
-    public static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT =
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT =
             (TCP_FASTOPEN_MODE & TFO_ENABLED_CLIENT_MASK) == TFO_ENABLED_CLIENT_MASK;
     /**
      * <a href ="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">tcp_fastopen</a> server mode enabled
      * state.
      */
-    public static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER =
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER =
             (TCP_FASTOPEN_MODE & TFO_ENABLED_SERVER_MASK) == TFO_ENABLED_SERVER_MASK;
     /**
      * @deprecated Use {@link #IS_SUPPORTING_TCP_FASTOPEN_CLIENT} or {@link #IS_SUPPORTING_TCP_FASTOPEN_SERVER}.
