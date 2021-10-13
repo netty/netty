@@ -15,9 +15,11 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.Statics;
 import io.netty.buffer.api.pool.PooledBufferAllocator;
 import io.netty.util.SafeCloseable;
 
+import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
 /**
@@ -132,6 +134,58 @@ public interface BufferAllocator extends SafeCloseable {
      * prior to closing the allocator will continue to work.
      */
     Supplier<Buffer> constBufferSupplier(byte[] bytes);
+
+    /**
+     * Allocate a {@link Buffer} with the same size and contents of the given byte array.
+     * The allocated buffer is <em>NOT</em> backed by the given byte array, and changes to the contents of either
+     * will not be reflected in the other.
+     * This may throw an {@link OutOfMemoryError} if there is not enough free memory available to allocate a
+     * {@link Buffer} of the requested size.
+     * <p>
+     * The allocated buffer will use big endian byte order.
+     *
+     * @param bytes The byte array that determines the size and contents of the new buffer.
+     * @return The newly allocated {@link Buffer}.
+     * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
+     */
+    default Buffer copyOf(byte[] bytes) {
+        return allocate(bytes.length).writeBytes(bytes);
+    }
+
+    /**
+     * Allocate a {@link Buffer} with the same size and contents, as the contents of the given {@link ByteBuffer}.
+     * The allocated buffer is <em>NOT</em> backed by the give byte buffer, and changes to the contents of either
+     * will not be reflected in the other.
+     * The position and limit of the given byte buffer defines the region of contents that will be copied.
+     * The position and limit are not modified by this method.
+     * This may throw an {@link OutOfMemoryError} if there is not enough free memory available to allocate a
+     * {@link Buffer} of the requested size.
+     * <p>
+     * The allocated buffer will use big endian byte order, regardless of the byte order of the given buffer.
+     * The contents of the byte buffer will be copied without regard to the byte order, as if the bytes are copied
+     * one at a time.
+     *
+     * @param buffer The byte buffer, whose contents determine the capacity and contents of the allocated buffer.
+     * @return The newly allocated {@link Buffer}.
+     * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
+     */
+    default Buffer copyOf(ByteBuffer buffer) {
+        if (!buffer.hasRemaining()) {
+            return allocate(0);
+        }
+        Buffer copy = allocate(buffer.remaining());
+        int pos = buffer.position();
+        copy.forEachWritable(0, (i, component) -> {
+            ByteBuffer dest = component.writableBuffer();
+            int length = Math.min(dest.capacity(), buffer.remaining());
+            Statics.bbput(dest, 0, buffer, buffer.position(), length);
+            buffer.position(length + buffer.position());
+            return true;
+        });
+        copy.skipWritable(copy.capacity());
+        buffer.position(pos);
+        return copy;
+    }
 
     /**
      * Close this allocator, freeing all of its internal resources.
