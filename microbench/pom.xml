@@ -31,7 +31,7 @@
   <properties>
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
-    <jmh.version>1.22</jmh.version>
+    <jmh.version>1.33</jmh.version>
     <!-- This only be set when run on linux as on other platforms we just want to include the jar without native
          code -->
     <epoll.classifier />
