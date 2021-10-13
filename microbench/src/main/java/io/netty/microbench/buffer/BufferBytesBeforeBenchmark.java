@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
         "-XX:+UnlockDiagnosticVMOptions", "-XX:+DebugNonSafepoints" })
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
-public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
+public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
 
     @Param({
             "7",
@@ -126,7 +126,7 @@ public class BufferOffsetOfBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public int indexOf() {
-        return getData().firstOffsetOf(0, size, needleByte);
+        return getData().bytesBefore(needleByte);
     }
 
     @TearDown
