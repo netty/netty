@@ -50,4 +50,8 @@ final class KQueueStaticallyReferencedJniMethods {
     // Flags for connectx(2)
     static native int connectResumeOnReadWrite();
     static native int connectDataIdempotent();
+
+    // Sysctl values.
+    static native int fastOpenClient();
+    static native int fastOpenServer();
 }

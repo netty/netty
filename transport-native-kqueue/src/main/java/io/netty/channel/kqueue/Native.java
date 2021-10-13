@@ -42,6 +42,8 @@ import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfil
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltSock;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltUser;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltWrite;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.fastOpenClient;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.fastOpenServer;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteConnReset;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteDisconnected;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteReadClosed;
@@ -110,6 +112,8 @@ final class Native {
     private static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
     private static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
     static final int CONNECT_TCP_FASTOPEN = CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT;
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT = fastOpenClient() == 1;
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER = fastOpenServer() == 1;
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());
