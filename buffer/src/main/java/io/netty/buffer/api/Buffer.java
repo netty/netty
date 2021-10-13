@@ -371,7 +371,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Locate the first occurrence of the given {@code needle} byte in this buffer, within the given bounds.
      * If the needle is not found, {@code -1} is returned.
-     * The from-bound is always inclusive, and the to-bound is always exclusive.
+     * The from-bound is inclusive, and the to-bound is exclusive.
      * <p>
      * This method does not modify the {@linkplain #readerOffset() reader-offset} or the
      * {@linkplain #writerOffset() write-offset}.
