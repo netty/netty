@@ -369,23 +369,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
-     * Locate the first occurrence of the given {@code needle} byte in this buffer, within the given bounds.
-     * If the needle is not found, {@code -1} is returned.
-     * The from-bound is inclusive, and the to-bound is exclusive.
-     * <p>
-     * This method does not modify the {@linkplain #readerOffset() reader-offset} or the
-     * {@linkplain #writerOffset() write-offset}.
-     *
-     * @param fromOffsetInclusive The offset of the first byte to search.
-     * @param length The number of bytes from the {@code fromOffsetInclusive} to search.
-     * @param needle The byte value to search for.
-     * @return The absolute offset into this buffer of the found value, or {@code -1} if none was found.
-     * @throws IllegalArgumentException If the {@code fromOffsetInclusive} argument is less than zero,
-     * or the {@code length} argument is less than zero.
-     */
-    int firstOffsetOf(int fromOffsetInclusive, int length, byte needle);
-
-    /**
      * Get the number of {@linkplain #readableBytes() readable bytes}, until the given {@code needle} is found in this
      * buffer.
      * If the needle is not found, {@code -1} is returned.
@@ -397,13 +380,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return The offset, relative to the current {@link #readerOffset()}, of the found value, or {@code -1} if none
      * was found.
      */
-    default int bytesBefore(byte needle) {
-        int offset = firstOffsetOf(readerOffset(), readableBytes(), needle);
-        if (offset == -1) {
-            return -1;
-        }
-        return offset - readerOffset();
-    }
+    int bytesBefore(byte needle);
 
     /**
      * Opens a cursor to iterate the readable bytes of this buffer. The {@linkplain #readerOffset() reader offset} and

@@ -428,29 +428,23 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
-        checkLength(length);
-        checkGetBounds(fromOffsetInclusive, length);
+    public int bytesBefore(byte needle) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
-        int startBufferIndex = searchOffsets(fromOffsetInclusive);
-        int off = fromOffsetInclusive - offsets[startBufferIndex];
-        Buffer buf = bufs[startBufferIndex];
-        int len = Math.min(buf.capacity() - off, length);
-        while (len > 0) {
-            int found = buf.firstOffsetOf(off, len, needle);
+        if (bufs.length == 0) {
+            return -1;
+        }
+        final int length = readableBytes();
+        final int start = searchOffsets(readerOffset());
+        int skip = 0;
+        for (int i = start; skip < length; i++) {
+            Buffer buf = bufs[i];
+            int found = buf.bytesBefore(needle);
             if (found != -1) {
-                return offsets[startBufferIndex] + found;
+                return skip + found;
             }
-            startBufferIndex++;
-            if (startBufferIndex == bufs.length) {
-                return -1;
-            }
-            length -= len;
-            buf = bufs[startBufferIndex];
-            off = 0;
-            len = Math.min(buf.capacity(), length);
+            skip += buf.readableBytes();
         }
         return -1;
     }

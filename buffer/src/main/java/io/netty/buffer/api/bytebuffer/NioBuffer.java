@@ -192,20 +192,20 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     @Override
-    public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
-        checkLength(length);
-        checkGet(fromOffsetInclusive, length);
+    public int bytesBefore(byte needle) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
-        final int end = Math.addExact(fromOffsetInclusive, length);
+        int offset = roff;
+        final int length = woff - roff;
+        final int end = woff;
 
         if (length > 7) {
             final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-            for (final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
-                 fromOffsetInclusive < longEnd;
-                 fromOffsetInclusive += Long.BYTES) {
-                final long word = rmem.getLong(fromOffsetInclusive);
+            for (final int longEnd = offset + (length >>> 3) * Long.BYTES;
+                 offset < longEnd;
+                 offset += Long.BYTES) {
+                final long word = rmem.getLong(offset);
 
                 long input = word ^ pattern;
                 long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
@@ -214,13 +214,13 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
                 int index = binaryPosition >>> 3;
                 if (index < Long.BYTES) {
-                    return fromOffsetInclusive + index;
+                    return offset + index - roff;
                 }
             }
         }
-        for (; fromOffsetInclusive < end; fromOffsetInclusive++) {
-            if (rmem.get(fromOffsetInclusive) == needle) {
-                return fromOffsetInclusive;
+        for (; offset < end; offset++) {
+            if (rmem.get(offset) == needle) {
+                return offset - roff;
             }
         }
 

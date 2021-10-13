@@ -260,24 +260,24 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             PlatformDependent.isUnaligned() && ByteOrder.nativeOrder() != ByteOrder.BIG_ENDIAN;
 
     @Override
-    public int firstOffsetOf(int fromOffsetInclusive, int length, byte needle) {
-        checkLength(length);
-        checkGet(fromOffsetInclusive, length);
+    public int bytesBefore(byte needle) {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
         try {
-            final int end = Math.addExact(fromOffsetInclusive, length);
+            int offset = roff;
+            final int length = woff - roff;
+            final int end = woff;
             final long addr = address;
 
             if (length > 7) {
                 final long pattern = (needle & 0xFFL) * 0x101010101010101L;
-                for (final int longEnd = fromOffsetInclusive + (length >>> 3) * Long.BYTES;
-                     fromOffsetInclusive < longEnd;
-                     fromOffsetInclusive += Long.BYTES) {
+                for (final int longEnd = offset + (length >>> 3) * Long.BYTES;
+                     offset < longEnd;
+                     offset += Long.BYTES) {
                     final long word = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
-                            PlatformDependent.getLong(base, addr + fromOffsetInclusive) :
-                            loadLong(addr + fromOffsetInclusive);
+                            PlatformDependent.getLong(base, addr + offset) :
+                            loadLong(addr + offset);
 
                     final long input = word ^ pattern;
                     final long tmp =
@@ -287,13 +287,13 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
                             Long.numberOfLeadingZeros(tmp);
 
                     if (binaryPosition < Long.SIZE) {
-                        return fromOffsetInclusive + (binaryPosition >>> 3);
+                        return offset + (binaryPosition >>> 3) - roff;
                     }
                 }
             }
-            for (; fromOffsetInclusive < end; fromOffsetInclusive++) {
-                if (loadByte(addr + fromOffsetInclusive) == needle) {
-                    return fromOffsetInclusive;
+            for (; offset < end; offset++) {
+                if (loadByte(addr + offset) == needle) {
+                    return offset - roff;
                 }
             }
 

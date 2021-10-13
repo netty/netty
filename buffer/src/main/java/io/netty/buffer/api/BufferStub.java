@@ -118,8 +118,8 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public int firstOffsetOf(int fromOffsetInclusive, int toOffsetExclusive, byte needle) {
-        return delegate.firstOffsetOf(fromOffsetInclusive, toOffsetExclusive, needle);
+    public int bytesBefore(byte needle) {
+        return delegate.bytesBefore(needle);
     }
 
     @Override
