@@ -873,23 +873,23 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public char readChar() {
-        return prepRead(2).readChar();
+        return prepRead(Character.BYTES).readChar();
     }
 
     @Override
     public char getChar(int roff) {
-        return prepGet(roff, 2).getChar(subOffset);
+        return prepGet(roff, Character.BYTES).getChar(subOffset);
     }
 
     @Override
     public CompositeBuffer writeChar(char value) {
-        prepWrite(2).writeChar(value);
+        prepWrite(Character.BYTES).writeChar(value);
         return this;
     }
 
     @Override
     public CompositeBuffer setChar(int woff, char value) {
-        prepWrite(woff, 2).setChar(subOffset, value);
+        prepWrite(woff, Character.BYTES).setChar(subOffset, value);
         return this;
     }
 
