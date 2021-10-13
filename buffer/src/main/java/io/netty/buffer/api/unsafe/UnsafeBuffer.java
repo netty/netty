@@ -256,7 +256,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
      * Most deployment platforms support unaligned access, and are little-endian.
      * This allows us to micro-optimise for this common case.
      */
-    private static final boolean FIRST_OFFSET_OF_USE_LITTLE_ENDIAN =
+    private static final boolean BYTES_BEFORE_USE_LITTLE_ENDIAN =
             PlatformDependent.isUnaligned() && ByteOrder.nativeOrder() != ByteOrder.BIG_ENDIAN;
 
     @Override
@@ -275,14 +275,14 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
                 for (final int longEnd = offset + (length >>> 3) * Long.BYTES;
                      offset < longEnd;
                      offset += Long.BYTES) {
-                    final long word = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
+                    final long word = BYTES_BEFORE_USE_LITTLE_ENDIAN?
                             PlatformDependent.getLong(base, addr + offset) :
                             loadLong(addr + offset);
 
                     final long input = word ^ pattern;
                     final long tmp =
                             ~((input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL | input | 0x7F7F7F7F7F7F7F7FL);
-                    final int binaryPosition = FIRST_OFFSET_OF_USE_LITTLE_ENDIAN?
+                    final int binaryPosition = BYTES_BEFORE_USE_LITTLE_ENDIAN?
                             Long.numberOfTrailingZeros(tmp) :
                             Long.numberOfLeadingZeros(tmp);
 

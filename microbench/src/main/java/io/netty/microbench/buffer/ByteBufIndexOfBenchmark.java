@@ -51,20 +51,20 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
             "23",
             "32",
     })
-    int size;
+    private int size;
 
     @Param({
             "4",
             "11",
     })
-    int logPermutations;
+    private int logPermutations;
 
     @Param({ "1" })
-    int seed;
+    private int seed;
 
-    int permutations;
+    private int permutations;
 
-    ByteBuf[] data;
+    private ByteBuf[] data;
     private int i;
 
     @Param({ "0" })

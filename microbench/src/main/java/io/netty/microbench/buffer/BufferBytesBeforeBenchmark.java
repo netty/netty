@@ -54,20 +54,20 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
             "23",
             "32",
     })
-    int size;
+    private int size;
 
     @Param({
             "4",
             "11",
     })
-    int logPermutations;
+    private int logPermutations;
 
     @Param({ "1" })
-    int seed;
+    private int seed;
 
-    int permutations;
+    private int permutations;
 
-    Buffer[] data;
+    private Buffer[] data;
     private int i;
 
     @Param({ "0" })
@@ -102,6 +102,7 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
                 pooled? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled());
         for (int i = 0; i < permutations; ++i) {
             data[i] = allocator.allocate(size);
+            data[i].skipWritable(size);
             for (int j = 0; j < size; j++) {
                 int value = random.nextInt(Byte.MIN_VALUE, Byte.MAX_VALUE + 1);
                 // turn any found value into something different
