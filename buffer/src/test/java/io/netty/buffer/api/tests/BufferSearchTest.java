@@ -128,7 +128,15 @@ public class BufferSearchTest extends BufferTestSupport {
             }
         }
     }
-    // todo bytes before on zero sized buffer
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeOnEmptyBufferMustNotFindAnything(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(0)) {
+            assertThat(buf.bytesBefore((byte) 0)).isEqualTo(-1);
+        }
+    }
 
     private static void fillBuffer(Buffer buf) {
         ThreadLocalRandom rng = ThreadLocalRandom.current();

@@ -432,9 +432,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
-        if (bufs.length == 0) {
-            return -1;
-        }
         final int length = readableBytes();
         final int start = searchOffsets(readerOffset());
         int skip = 0;
