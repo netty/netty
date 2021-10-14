@@ -1187,7 +1187,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             if (posDelimiter < 0 &&
                 httpData.definedLength() == httpData.length() + readableBytes - 1 &&
                 undecodedChunk.getByte(readableBytes + startReaderIndex - 1) == HttpConstants.CR) {
-                // Last CR shall preceed a future LF
+                // Last CR shall precede a future LF
                 lastPosition = 0;
                 posDelimiter = readableBytes - 1;
             }
