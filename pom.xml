@@ -430,7 +430,8 @@
                     <filter token="MIN_SDK_VERSION" value="${androidMinSdkVersion}" />
 
                     <copy file="src/main/AndroidManifest.xml" todir="${project.build.directory}/android-build/" filtering="true" />
-
+                    <!-- Create an empty MANIFEST.MF file -->
+                    <touch file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" mkdirs="true"/>
                   </target>
                 </configuration>
               </execution>

@@ -173,3 +173,55 @@ jobs:
           path: |
             **/target/surefire-reports/
             **/hs_err*.log
+
+
+  build-pr-android:
+    runs-on: ubuntu-latest
+    name: android
+    env:
+      SDK_VER: "platforms;android-21"
+      NDK_VER: "ndk;21.4.7075529"
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup ninja-build
+        run: sudo apt-get install ninja-build
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+
+      - name: Install cargo-ndk
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-ndk
+
+      - name: Install Rust toolchain for Android architectures
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Install Android SDK platforms
+        run: sdkmanager "${{ env.SDK_VER }}"
+
+      - name: Install Android NDK
+        run: sdkmanager "${{ env.NDK_VER }}"
+
+      - name: Setup environment
+        run: export ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Build project
+        run: ./mvnw -B -ntp --file pom.xml clean package -Dandroid
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: build-pr-android-target
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
