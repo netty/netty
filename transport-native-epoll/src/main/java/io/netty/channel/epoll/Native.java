@@ -128,7 +128,8 @@ public final class Native {
     static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER =
             (TCP_FASTOPEN_MODE & TFO_ENABLED_SERVER_MASK) == TFO_ENABLED_SERVER_MASK;
     /**
-     * @deprecated Use {@link #IS_SUPPORTING_TCP_FASTOPEN_CLIENT} or {@link #IS_SUPPORTING_TCP_FASTOPEN_SERVER}.
+     * @deprecated Use {@link Epoll#isTcpFastOpenClientSideAvailable()}
+     * or {@link Epoll#isTcpFastOpenServerSideAvailable()}.
      */
     @Deprecated
     public static final boolean IS_SUPPORTING_TCP_FASTOPEN = IS_SUPPORTING_TCP_FASTOPEN_CLIENT ||
