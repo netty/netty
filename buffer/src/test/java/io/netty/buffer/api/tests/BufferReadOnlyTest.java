@@ -153,6 +153,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     public void readOnlyBuffersCannotChangeWriteOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8).makeReadOnly()) {
+            assertThrows(BufferReadOnlyException.class, () -> buf.writerOffset(0));
             assertThrows(BufferReadOnlyException.class, () -> buf.writerOffset(4));
         }
     }
@@ -262,6 +263,36 @@ public class BufferReadOnlyTest extends BufferTestSupport {
             assertEquals(0, copy.readerOffset());
             copy.setLong(0, 0xA1A2A3A4A5A6A7A8L);
             assertEquals(0xA1A2A3A4A5A6A7A8L, copy.getLong(0));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void resetOffsetsOfReadOnlyBufferOnlyChangesReadOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(4).writeInt(0x01020304).makeReadOnly()) {
+            assertEquals(4, buf.readableBytes());
+            assertEquals(0x01020304, buf.readInt());
+            assertEquals(0, buf.readableBytes());
+            buf.resetOffsets();
+            assertEquals(4, buf.readableBytes());
+            assertEquals(0x01020304, buf.readInt());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void resetOffsetsOfConstBufferOnlyChangesReadOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4});
+            try (Buffer buf = supplier.get()) {
+                assertEquals(4, buf.readableBytes());
+                assertEquals(0x01020304, buf.readInt());
+                assertEquals(0, buf.readableBytes());
+                buf.resetOffsets();
+                assertEquals(4, buf.readableBytes());
+                assertEquals(0x01020304, buf.readInt());
+            }
         }
     }
 }

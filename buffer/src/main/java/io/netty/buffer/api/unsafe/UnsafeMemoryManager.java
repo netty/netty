@@ -22,6 +22,7 @@ import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.Statics;
+import io.netty.buffer.api.internal.WrappingAllocation;
 import io.netty.util.internal.PlatformDependent;
 
 import java.lang.ref.Cleaner;
@@ -57,6 +58,10 @@ public class UnsafeMemoryManager implements MemoryManager {
             drop = new UnsafeCleanerDrop(memory, drop, cleaner);
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
             base = new byte[size32];
+            address = PlatformDependent.byteArrayBaseOffset();
+            memory = new UnsafeMemory(base, address, size32);
+        } else if (allocationType instanceof WrappingAllocation) {
+            base = ((WrappingAllocation) allocationType).getArray();
             address = PlatformDependent.byteArrayBaseOffset();
             memory = new UnsafeMemory(base, address, size32);
         } else {

@@ -18,6 +18,7 @@ package io.netty.buffer.api;
 import io.netty.buffer.api.internal.LeakDetection;
 import io.netty.buffer.api.internal.MemoryManagerLoader;
 import io.netty.buffer.api.internal.MemoryManagerOverride;
+import io.netty.buffer.api.internal.WrappingAllocation;
 import io.netty.util.SafeCloseable;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -119,6 +120,31 @@ public interface MemoryManager {
     }
 
     /**
+     * Create a new on-heap {@link Buffer} instance that directly wraps the given array.
+     * <p>
+     * This is <em>unsafe</em> because it allows the memory (the array) to be aliased (multiple references to the same
+     * memory) in an uncontrolled way.
+     * <p>
+     * The returned buffer will be {@linkplain Buffer#readOnly() read-only}, but changes to the byte array will be
+     * reflected in the buffers contents.
+     * <p>
+     * <strong>Note:</strong> Wrapping buffers created with this method are not subject to leak detection, and if they
+     * are garbage collected without being {@linkplain Buffer#close() closed} first, then no callback will be issued
+     * to any {@linkplain #onLeakDetected(Consumer) on-leak callback handler}.
+     *
+     * @param array The byte array that will be embedded in the created buffer.
+     * @return A buffer that wraps the given byte array
+     */
+    @UnstableApi
+    static Buffer unsafeWrap(byte[] array) {
+        MemoryManager manager = instance();
+        ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
+        WrappingAllocation allocationType = new WrappingAllocation(array);
+        Buffer buffer = manager.allocateShared(allocator, array.length, manager.drop(), allocationType);
+        return buffer.skipWritable(array.length).makeReadOnly();
+    }
+
+    /**
      * Allocates a shared buffer. "Shared" is the normal type of buffer, and means the buffer permit concurrent access
      * from multiple threads, within the limited thread-safety guarantees of the {@link Buffer} interface.
      *
@@ -140,7 +166,7 @@ public interface MemoryManager {
      * is normally not allowed by the API. This allows efficient implementation of the
      * {@link BufferAllocator#constBufferSupplier(byte[])} method.
      * <p>
-     * <strong>Note:</strong> the const-parent buffer must be allocated by this memory manager.
+     * <strong>Note:</strong> The const-parent buffer must be allocated by this memory manager.
      *
      * @param readOnlyConstParent The read-only parent buffer for which a const buffer should be created. The parent
      *                            buffer is allocated in the usual way, with
