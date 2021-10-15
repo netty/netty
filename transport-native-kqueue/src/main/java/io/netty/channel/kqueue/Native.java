@@ -112,8 +112,8 @@ final class Native {
     private static final int CONNECT_RESUME_ON_READ_WRITE = connectResumeOnReadWrite();
     private static final int CONNECT_DATA_IDEMPOTENT = connectDataIdempotent();
     static final int CONNECT_TCP_FASTOPEN = CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT;
-    static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT = fastOpenClient() == 1;
-    static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER = fastOpenServer() == 1;
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT = isSupportingFastOpenClient();
+    static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER = isSupportingFastOpenServer();
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());
@@ -162,6 +162,24 @@ final class Native {
                 throw e1;
             }
         }
+    }
+
+    private static boolean isSupportingFastOpenClient() {
+        try {
+            return fastOpenClient() == 1;
+        } catch (Exception e) {
+            logger.debug("Failed to probe fastOpenClient sysctl, assuming client-side TCP FastOpen cannot be used.", e);
+        }
+        return false;
+    }
+
+    private static boolean isSupportingFastOpenServer() {
+        try {
+            return fastOpenServer() == 1;
+        } catch (Exception e) {
+            logger.debug("Failed to probe fastOpenServer sysctl, assuming server-side TCP FastOpen cannot be used", e);
+        }
+        return false;
     }
 
     private Native() {
