@@ -42,7 +42,6 @@ import static io.netty.buffer.api.internal.Statics.checkLength;
 
 class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
-    private static final int CLOSED_BUFFER_WMEM_CAP = -1;
 
     private ByteBuffer base;
     private ByteBuffer rmem; // For reading.
@@ -50,16 +49,12 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     private int roff;
     private int woff;
-    private int rcap;
-    private int wcap;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
         super(drop, control);
         this.base = base;
         rmem = memory;
         wmem = memory;
-        rcap = memory.capacity();
-        wcap = memory.capacity();
     }
 
     /**
@@ -72,13 +67,11 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
-        rcap = rmem.capacity();
-        wcap = CLOSED_BUFFER_WMEM_CAP;
     }
 
     @Override
     public String toString() {
-        return "Buffer[roff:" + roff + ", woff:" + woff + ", cap:" + rcap + ']';
+        return "Buffer[roff:" + roff + ", woff:" + woff + ", cap:" + rmem.capacity() + ']';
     }
 
     @Override
@@ -88,7 +81,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public int capacity() {
-        return rcap;
+        return rmem.capacity();
     }
 
     @Override
@@ -110,6 +103,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public Buffer writerOffset(int offset) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         checkWrite(offset, 0);
         woff = offset;
         return this;
@@ -135,7 +131,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     @Override
     public Buffer makeReadOnly() {
         wmem = CLOSED_BUFFER;
-        wcap = CLOSED_BUFFER_WMEM_CAP;
         return this;
     }
 
@@ -332,8 +327,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         base = buffer;
         rmem = buffer;
         wmem = buffer;
-        rcap = buffer.capacity();
-        wcap = rcap;
         drop.attach(this);
     }
 
@@ -363,11 +356,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             splitBuffer.makeReadOnly();
         }
         // Split preserves const-state.
-        rmem = bbslice(rmem, splitOffset, rcap - splitOffset);
-        rcap = rmem.capacity();
+        rmem = bbslice(rmem, splitOffset, rmem.capacity() - splitOffset);
         if (!readOnly) {
             wmem = rmem;
-            wcap = rcap;
         }
         woff = Math.max(woff, splitOffset) - splitOffset;
         roff = Math.max(roff, splitOffset) - splitOffset;
@@ -940,8 +931,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     protected Owned<NioBuffer> prepareSend() {
         var roff = this.roff;
         var woff = this.woff;
-        var rcap = this.rcap;
-        var wcap = this.wcap;
         var readOnly = readOnly();
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
@@ -951,8 +940,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
                 NioBuffer copy = new NioBuffer(base, rmem, control, drop);
                 copy.roff = roff;
                 copy.woff = woff;
-                copy.rcap = rcap;
-                copy.wcap = wcap;
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
@@ -968,8 +955,6 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
         wmem = CLOSED_BUFFER;
         roff = 0;
         woff = 0;
-        rcap = 0;
-        wcap = CLOSED_BUFFER_WMEM_CAP;
     }
 
     private void checkRead(int index, int size) {
@@ -985,13 +970,13 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     private void checkWrite(int index, int size) {
-        if (index < roff | wcap < index + size) {
+        if (index < roff | wmem.capacity() < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 | wcap < index + size) {
+        if (index < 0 | wmem.capacity() < index + size) {
             throw writeAccessCheckException(index, size);
         }
     }
@@ -1029,7 +1014,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     private IndexOutOfBoundsException outOfBounds(int index, int size) {
         return new IndexOutOfBoundsException(
                 "Access at index " + index + " of size " + size + " is out of bounds: " +
-                "[read 0 to " + woff + ", write 0 to " + rcap + "].");
+                "[read 0 to " + woff + ", write 0 to " + rmem.capacity() + "].");
     }
 
     ByteBuffer recoverable() {
