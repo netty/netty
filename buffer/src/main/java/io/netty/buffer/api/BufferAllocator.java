@@ -173,17 +173,16 @@ public interface BufferAllocator extends SafeCloseable {
         if (!buffer.hasRemaining()) {
             return allocate(0);
         }
-        Buffer copy = allocate(buffer.remaining());
-        int pos = buffer.position();
+        final Buffer copy = allocate(buffer.remaining());
+        final ByteBuffer duplicate = buffer.duplicate();
         copy.forEachWritable(0, (i, component) -> {
             ByteBuffer dest = component.writableBuffer();
-            int length = Math.min(dest.capacity(), buffer.remaining());
-            Statics.bbput(dest, 0, buffer, buffer.position(), length);
-            buffer.position(length + buffer.position());
+            int length = Math.min(dest.capacity(), duplicate.remaining());
+            Statics.bbput(dest, 0, duplicate, duplicate.position(), length);
+            duplicate.position(length + duplicate.position());
             return true;
         });
         copy.skipWritable(copy.capacity());
-        buffer.position(pos);
         return copy;
     }
 
