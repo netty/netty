@@ -123,6 +123,12 @@ public interface Statics {
         }
     }
 
+    static void checkLength(int length) {
+        if (length < 0) {
+            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
+        }
+    }
+
     static void copyToViaReverseLoop(Buffer src, int srcPos, Buffer dest, int destPos, int length) {
         if (length == 0) {
             return;

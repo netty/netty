@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty.buffer.api.internal.Statics.checkLength;
 import static java.lang.Math.addExact;
 
 /**
@@ -335,12 +336,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public CompositeBuffer copy(int offset, int length) {
-        checkWriteBounds(offset, length);
-        if (offset < 0 || length < 0) {
-            throw new IllegalArgumentException(
-                    "Offset and length cannot be negative, but offset was " +
-                    offset + ", and length was " + length + '.');
-        }
+        checkLength(length);
+        checkGetBounds(offset, length);
         if (closed) {
             throw bufferIsClosed(this);
         }
@@ -431,6 +428,23 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public int bytesBefore(byte needle) {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        final int length = readableBytes();
+        for (int i = searchOffsets(readerOffset()), skip = 0; skip < length; i++) {
+            Buffer buf = bufs[i];
+            int found = buf.bytesBefore(needle);
+            if (found != -1) {
+                return skip + found;
+            }
+            skip += buf.readableBytes();
+        }
+        return -1;
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return openCursor(readerOffset(), readableBytes());
     }
@@ -440,9 +454,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (capacity < addExact(fromOffset, length)) {
             throw new IllegalArgumentException("The fromOffset+length is beyond the end of the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
@@ -462,9 +474,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (fromOffset < 0) {
             throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
+        checkLength(length);
         if (fromOffset - length < -1) {
             throw new IllegalArgumentException("The fromOffset-length would underflow the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');

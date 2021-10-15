@@ -369,6 +369,20 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
+     * Get the number of {@linkplain #readableBytes() readable bytes}, until the given {@code needle} is found in this
+     * buffer.
+     * If the needle is not found, {@code -1} is returned.
+     * <p>
+     * This method does not modify the {@linkplain #readerOffset() reader-offset} or the
+     * {@linkplain #writerOffset() write-offset}.
+     *
+     * @param needle The byte value to search for.
+     * @return The offset, relative to the current {@link #readerOffset()}, of the found value, or {@code -1} if none
+     * was found.
+     */
+    int bytesBefore(byte needle);
+
+    /**
      * Opens a cursor to iterate the readable bytes of this buffer. The {@linkplain #readerOffset() reader offset} and
      * {@linkplain #writerOffset() writer offset} are not modified by the cursor.
      * <p>
