@@ -286,7 +286,11 @@ static jint netty_kqueue_bsdsocket_fastOpenClient(JNIEnv *env, jclass clazz) {
     if (sysctlbyname("net.inet.tcp.fastopen.client_enable", &value, &len, NULL, 0) != 0) {
         netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", errno);
     }
-    return value;
+    if (value) {
+        return 1;
+    } else {
+        return 0;
+    }
 #endif // __APPLE__
 }
 
