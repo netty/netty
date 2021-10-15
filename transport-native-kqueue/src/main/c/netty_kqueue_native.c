@@ -24,6 +24,7 @@
 #include <time.h>
 #include <sys/event.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 
 #include "netty_kqueue_bsdsocket.h"
@@ -259,12 +260,68 @@ static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
    return NOTE_DISCONNECTED;
 }
 
-static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env) {
+static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env, jclass clazz) {
     return CONNECT_RESUME_ON_READ_WRITE;
 }
 
-static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env) {
+static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env, jclass clazz) {
     return CONNECT_DATA_IDEMPOTENT;
+}
+
+static jint netty_kqueue_bsdsocket_fastOpenClient(JNIEnv *env, jclass clazz) {
+#ifdef __APPLE__
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if ((value & 2) == 2) {
+        return 1;
+    }
+    return 0;
+#else
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen.client_enable", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if (value) {
+        return 1;
+    }
+    return 0;
+#endif // __APPLE__
+}
+
+static jint netty_kqueue_bsdsocket_fastOpenServer(JNIEnv *env, jclass clazz) {
+#ifdef __APPLE__
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if ((value & 1) == 1) {
+        return 1;
+    }
+    return 0;
+#else
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen.server_enable", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if (value) {
+        return 1;
+    }
+    return 0;
+#endif // __APPLE__
 }
 
 // JNI Method Registration Table Begin
@@ -284,7 +341,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
   { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected },
   { "connectResumeOnReadWrite", "()I", (void *) netty_kqueue_bsdsocket_connectResumeOnReadWrite },
-  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent }
+  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent },
+  { "fastOpenClient", "()I", (void *) netty_kqueue_bsdsocket_fastOpenClient },
+  { "fastOpenServer", "()I", (void *) netty_kqueue_bsdsocket_fastOpenServer }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
