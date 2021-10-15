@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -80,6 +81,26 @@ public final class KQueue {
      */
     public static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
+    }
+
+    /**
+     * Returns {@code true} if the kqueue native transport is both {@linkplain #isAvailable() available} and supports
+     * {@linkplain ChannelOption#TCP_FASTOPEN_CONNECT client-side TCP FastOpen}.
+     *
+     * @return {@code true} if it's possible to use client-side TCP FastOpen via kqueue, otherwise {@code false}.
+     */
+    public static boolean isTcpFastOpenClientSideAvailable() {
+        return isAvailable() && Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
+    }
+
+    /**
+     * Returns {@code true} if the kqueue native transport is both {@linkplain #isAvailable() available} and supports
+     * {@linkplain ChannelOption#TCP_FASTOPEN server-side TCP FastOpen}.
+     *
+     * @return {@code true} if it's possible to use server-side TCP FastOpen via kqueue, otherwise {@code false}.
+     */
+    public static boolean isTcpFastOpenServerSideAvailable() {
+        return isAvailable() && Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     }
 
     private KQueue() {
