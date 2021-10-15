@@ -177,7 +177,7 @@ final class Native {
         try {
             return fastOpenServer() == 1;
         } catch (Exception e) {
-            logger.debug("Failed to probe fastOpenServer sysctl, assuming server-side TCP FastOpen cannot be used", e);
+            logger.debug("Failed to probe fastOpenServer sysctl, assuming server-side TCP FastOpen cannot be used.", e);
         }
         return false;
     }
