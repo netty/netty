@@ -547,15 +547,15 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public char readChar() {
-        checkRead(roff, 2);
+        checkRead(roff, Character.BYTES);
         var value = rmem.getChar(roff);
-        roff += 2;
+        roff += Character.BYTES;
         return value;
     }
 
     @Override
     public char getChar(int roff) {
-        checkGet(roff, 2);
+        checkGet(roff, Character.BYTES);
         return rmem.getChar(roff);
     }
 
@@ -563,10 +563,10 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public Buffer writeChar(char value) {
         try {
             wmem.putChar(woff, value);
-            woff += 2;
+            woff += Character.BYTES;
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff, 2);
+            throw checkWriteState(e, woff, Character.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -578,7 +578,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             wmem.putChar(woff, value);
             return this;
         } catch (IndexOutOfBoundsException e) {
-            throw checkWriteState(e, woff, 2);
+            throw checkWriteState(e, woff, Character.BYTES);
         } catch (ReadOnlyBufferException e) {
             throw bufferIsReadOnly(this);
         }
@@ -588,7 +588,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public short readShort() {
         checkRead(roff, Short.BYTES);
         var value = rmem.getShort(roff);
-        roff += 2;
+        roff += Short.BYTES;
         return value;
     }
 
@@ -602,7 +602,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public int readUnsignedShort() {
         checkRead(roff, Short.BYTES);
         var value = rmem.getShort(roff) & 0xFFFF;
-        roff += 2;
+        roff += Short.BYTES;
         return value;
     }
 
