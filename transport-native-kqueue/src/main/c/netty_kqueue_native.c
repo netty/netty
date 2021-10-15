@@ -269,50 +269,58 @@ static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env, jclass cla
 }
 
 static jint netty_kqueue_bsdsocket_fastOpenClient(JNIEnv *env, jclass clazz) {
-#if __APPLE__
+#ifdef __APPLE__
     unsigned int value = 0;
     size_t len = sizeof(value);
     if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", errno);
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
     }
     if ((value & 2) == 2) {
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 #else
     unsigned int value = 0;
     size_t len = sizeof(value);
     if (sysctlbyname("net.inet.tcp.fastopen.client_enable", &value, &len, NULL, 0) != 0) {
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", errno);
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
     }
     if (value) {
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 #endif // __APPLE__
 }
 
 static jint netty_kqueue_bsdsocket_fastOpenServer(JNIEnv *env, jclass clazz) {
-#if __APPLE__
+#ifdef __APPLE__
     unsigned int value = 0;
     size_t len = sizeof(value);
     if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", errno);
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
     }
     if ((value & 1) == 1) {
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 #else
     unsigned int value = 0;
     size_t len = sizeof(value);
     if (sysctlbyname("net.inet.tcp.fastopen.server_enable", &value, &len, NULL, 0) != 0) {
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", errno);
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
     }
-    return value;
+    if (value) {
+        return 1;
+    }
+    return 0;
 #endif // __APPLE__
 }
 
