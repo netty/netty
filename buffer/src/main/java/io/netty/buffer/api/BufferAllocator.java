@@ -173,7 +173,8 @@ public interface BufferAllocator extends SafeCloseable {
         if (!buffer.hasRemaining()) {
             return allocate(0);
         }
-        final Buffer copy = allocate(buffer.remaining());
+        int bytesToCopy = buffer.remaining();
+        final Buffer copy = allocate(bytesToCopy);
         final ByteBuffer duplicate = buffer.duplicate();
         copy.forEachWritable(0, (i, component) -> {
             ByteBuffer dest = component.writableBuffer();
@@ -182,7 +183,7 @@ public interface BufferAllocator extends SafeCloseable {
             duplicate.position(length + duplicate.position());
             return true;
         });
-        copy.skipWritable(copy.capacity());
+        copy.skipWritable(bytesToCopy);
         return copy;
     }
 

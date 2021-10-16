@@ -105,13 +105,15 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             byte[] array = new byte[23];
             ByteBuffer byteBuffer = ByteBuffer.wrap(array);
             ThreadLocalRandom.current().nextBytes(byteBuffer.array());
+            byteBuffer.position(1 + byteBuffer.position());
             final int pos = byteBuffer.position();
             final int lim = byteBuffer.limit();
             final int cap = byteBuffer.capacity();
+            final int rem = byteBuffer.remaining();
 
             try (Buffer buffer = allocator.copyOf(byteBuffer)) {
-                assertThat(buffer.capacity()).isEqualTo(byteBuffer.capacity());
-                assertThat(buffer.readableBytes()).isEqualTo(byteBuffer.capacity());
+                assertThat(buffer.capacity()).isEqualTo(rem);
+                assertThat(buffer.readableBytes()).isEqualTo(rem);
                 assertThat(byteBuffer.position()).isEqualTo(pos);
                 assertThat(byteBuffer.limit()).isEqualTo(lim);
                 assertThat(byteBuffer.capacity()).isEqualTo(cap);
