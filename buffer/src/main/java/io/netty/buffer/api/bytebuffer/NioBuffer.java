@@ -103,6 +103,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public Buffer writerOffset(int offset) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         checkWrite(offset, 0);
         woff = offset;
         return this;

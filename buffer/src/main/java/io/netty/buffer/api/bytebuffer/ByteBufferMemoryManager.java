@@ -22,6 +22,7 @@ import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.Statics;
+import io.netty.buffer.api.internal.WrappingAllocation;
 
 import java.nio.ByteBuffer;
 
@@ -38,6 +39,8 @@ public class ByteBufferMemoryManager implements MemoryManager {
             buffer = ByteBuffer.allocateDirect(capacity);
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
             buffer = ByteBuffer.allocate(capacity);
+        } else if (allocationType instanceof WrappingAllocation) {
+            buffer = ByteBuffer.wrap(((WrappingAllocation) allocationType).getArray());
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }

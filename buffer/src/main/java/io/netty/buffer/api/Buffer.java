@@ -364,7 +364,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      */
     default Buffer resetOffsets() {
         readerOffset(0);
-        writerOffset(0);
+        if (!readOnly()) {
+            writerOffset(0);
+        }
         return this;
     }
 
