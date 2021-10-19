@@ -44,6 +44,9 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
             if (msg instanceof FileRegion) {
                 return 0;
             }
+            if (msg instanceof CustomEstimator) {
+                return ((CustomEstimator) msg).size();
+            }
             return unknownSize;
         }
     }
@@ -58,7 +61,7 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
     /**
      * Create a new instance
      *
-     * @param unknownSize       The size which is returned for unknown messages.
+     * @param unknownSize The size which is returned for unknown messages.
      */
     public DefaultMessageSizeEstimator(int unknownSize) {
         checkPositiveOrZero(unknownSize, "unknownSize");
