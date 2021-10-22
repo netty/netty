@@ -250,6 +250,12 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-xml</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml</groupId>
+          <artifactId>aalto-xml</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -285,6 +291,12 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-rxtx</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.rxtx</groupId>
+          <artifactId>rxtx</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -295,6 +307,12 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-udt</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.barchart.udt</groupId>
+          <artifactId>barchart-udt-bundle</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!--
       Use no classifier for the native dependencies. The dependencies with the classifier are added by the
