@@ -17,7 +17,6 @@ package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -337,48 +336,40 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
         }
     }
 
+    @Override
     public String getApplicationProtocol() {
-        if (PlatformDependent.javaVersion() >= 9) {
-            try {
-                return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
-            } finally {
-                assertErrorStackEmpty();
-            }
+        try {
+            return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
+        } finally {
+            assertErrorStackEmpty();
         }
-        throw new UnsupportedOperationException();
     }
 
+    @Override
     public String getHandshakeApplicationProtocol() {
-        if (PlatformDependent.javaVersion() >= 9) {
-            try {
-                return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
-            } finally {
-                assertErrorStackEmpty();
-            }
+        try {
+            return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+        } finally {
+            assertErrorStackEmpty();
         }
-        throw new UnsupportedOperationException();
     }
 
+    @Override
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
-        if (PlatformDependent.javaVersion() >= 9) {
-            try {
-                JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
-            } finally {
-                assertErrorStackEmpty();
-            }
+        try {
+            JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+        } finally {
+            assertErrorStackEmpty();
         }
-        throw new UnsupportedOperationException();
     }
 
+    @Override
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
-        if (PlatformDependent.javaVersion() >= 9) {
-            try {
-                return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
-            } finally {
-                assertErrorStackEmpty();
-            }
+        try {
+            return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+        } finally {
+            assertErrorStackEmpty();
         }
-        throw new UnsupportedOperationException();
     }
 
     @Override

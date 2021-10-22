@@ -15,21 +15,19 @@
  */
 package io.netty.handler.ssl;
 
-import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
-import static java.util.Objects.requireNonNull;
-
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-
-import java.util.LinkedHashSet;
-import java.util.List;
+import org.eclipse.jetty.alpn.ALPN;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import java.util.LinkedHashSet;
+import java.util.List;
 
-import io.netty.util.internal.PlatformDependent;
-import org.eclipse.jetty.alpn.ALPN;
+import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
+import static java.util.Objects.requireNonNull;
 
+@Deprecated(forRemoval = true)
 abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final boolean available = initAvailable();
 
@@ -38,15 +36,6 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     }
 
     private static boolean initAvailable() {
-        if (PlatformDependent.javaVersion() <= 8) {
-            try {
-                // Always use bootstrap class loader.
-                Class.forName("sun.security.ssl.ALPNExtension", true, null);
-                return true;
-            } catch (Throwable ignore) {
-                // alpn-boot was not loaded.
-            }
-        }
         return false;
     }
 

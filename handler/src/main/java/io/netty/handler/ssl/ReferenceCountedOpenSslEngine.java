@@ -334,14 +334,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
                 if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
-                    // If on java8 and later we should do some extra validation to ensure we can construct the
+                    // Since we are on Java 8+, we should do some extra validation to ensure we can construct the
                     // SNIHostName later again.
-                    if (PlatformDependent.javaVersion() >= 8) {
-                        if (Java8SslUtils.isValidHostNameForSNI(peerHost)) {
-                            SSL.setTlsExtHostName(ssl, peerHost);
-                            sniHostNames = Collections.singletonList(peerHost);
-                        }
-                    } else {
+                    if (Java8SslUtils.isValidHostNameForSNI(peerHost)) {
                         SSL.setTlsExtHostName(ssl, peerHost);
                         sniHostNames = Collections.singletonList(peerHost);
                     }
@@ -2155,63 +2150,53 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized SSLParameters getSSLParameters() {
         SSLParameters sslParameters = super.getSSLParameters();
 
-        int version = PlatformDependent.javaVersion();
-        if (version >= 7) {
-            sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
-            Java7SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
-            if (version >= 8) {
-                if (sniHostNames != null) {
-                    Java8SslUtils.setSniHostNames(sslParameters, sniHostNames);
-                }
-                if (!isDestroyed()) {
-                    Java8SslUtils.setUseCipherSuitesOrder(
-                            sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
-                }
-
-                Java8SslUtils.setSNIMatchers(sslParameters, matchers);
-            }
+        sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
+        Java7SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
+        if (sniHostNames != null) {
+            Java8SslUtils.setSniHostNames(sslParameters, sniHostNames);
         }
+        if (!isDestroyed()) {
+            Java8SslUtils.setUseCipherSuitesOrder(
+                    sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
+        }
+
+        Java8SslUtils.setSNIMatchers(sslParameters, matchers);
         return sslParameters;
     }
 
     @Override
     public final synchronized void setSSLParameters(SSLParameters sslParameters) {
-        int version = PlatformDependent.javaVersion();
-        if (version >= 7) {
-            if (sslParameters.getAlgorithmConstraints() != null) {
-                throw new IllegalArgumentException("AlgorithmConstraints are not supported.");
-            }
-
-            boolean isDestroyed = isDestroyed();
-            if (version >= 8) {
-                if (!isDestroyed) {
-                    if (clientMode) {
-                        final List<String> sniHostNames = Java8SslUtils.getSniHostNames(sslParameters);
-                        for (String name: sniHostNames) {
-                            SSL.setTlsExtHostName(ssl, name);
-                        }
-                        this.sniHostNames = sniHostNames;
-                    }
-                    if (Java8SslUtils.getUseCipherSuitesOrder(sslParameters)) {
-                        SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                    } else {
-                        SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                    }
-                }
-                matchers = sslParameters.getSNIMatchers();
-            }
-
-            final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
-            if (!isDestroyed) {
-                // If the user asks for hostname verification we must ensure we verify the peer.
-                // If the user disables hostname verification we leave it up to the user to change the mode manually.
-                if (clientMode && isEndPointVerificationEnabled(endPointIdentificationAlgorithm)) {
-                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
-                }
-            }
-            this.endPointIdentificationAlgorithm = endPointIdentificationAlgorithm;
-            algorithmConstraints = sslParameters.getAlgorithmConstraints();
+        if (sslParameters.getAlgorithmConstraints() != null) {
+            throw new IllegalArgumentException("AlgorithmConstraints are not supported.");
         }
+
+        boolean isDestroyed = isDestroyed();
+        if (!isDestroyed) {
+            if (clientMode) {
+                final List<String> sniHostNames = Java8SslUtils.getSniHostNames(sslParameters);
+                for (String name: sniHostNames) {
+                    SSL.setTlsExtHostName(ssl, name);
+                }
+                this.sniHostNames = sniHostNames;
+            }
+            if (Java8SslUtils.getUseCipherSuitesOrder(sslParameters)) {
+                SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+            } else {
+                SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+            }
+        }
+        matchers = sslParameters.getSNIMatchers();
+
+        final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
+        if (!isDestroyed) {
+            // If the user asks for hostname verification we must ensure we verify the peer.
+            // If the user disables hostname verification we leave it up to the user to change the mode manually.
+            if (clientMode && isEndPointVerificationEnabled(endPointIdentificationAlgorithm)) {
+                SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
+            }
+        }
+        this.endPointIdentificationAlgorithm = endPointIdentificationAlgorithm;
+        algorithmConstraints = sslParameters.getAlgorithmConstraints();
         super.setSSLParameters(sslParameters);
     }
 

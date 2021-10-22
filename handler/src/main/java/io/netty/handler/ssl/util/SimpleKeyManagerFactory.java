@@ -17,20 +17,19 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.KeyManagerFactorySpi;
+import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509KeyManager;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Provider;
 import java.util.Objects;
-import javax.net.ssl.ManagerFactoryParameters;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.KeyManagerFactorySpi;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509KeyManager;
 
 /**
  * Helps to implement a custom {@link KeyManagerFactory}.
@@ -133,15 +132,12 @@ public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
             KeyManager[] keyManagers = this.keyManagers;
             if (keyManagers == null) {
                 keyManagers = parent.engineGetKeyManagers();
-                if (PlatformDependent.javaVersion() >= 7) {
-                    wrapIfNeeded(keyManagers);
-                }
+                wrapIfNeeded(keyManagers);
                 this.keyManagers = keyManagers;
             }
             return keyManagers.clone();
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private static void wrapIfNeeded(KeyManager[] keyManagers) {
             for (int i = 0; i < keyManagers.length; i++) {
                 final KeyManager tm = keyManagers[i];

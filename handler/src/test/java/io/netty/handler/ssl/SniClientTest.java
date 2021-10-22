@@ -29,7 +29,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +46,6 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 public class SniClientTest {
@@ -73,7 +71,6 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniSNIMatcherMatchesClient(SslProvider serverProvider, SslProvider clientProvider)
             throws Throwable {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
@@ -82,7 +79,6 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniSNIMatcherDoesNotMatchClient(
             final SslProvider serverProvider, final SslProvider clientProvider) {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         assertThrows(SSLException.class, new Executable() {
             @Override
             public void execute() throws Throwable {

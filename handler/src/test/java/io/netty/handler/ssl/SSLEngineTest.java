@@ -1449,7 +1449,6 @@ public abstract class SSLEngineTest {
     @Timeout(30)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer(final SSLEngineTestParam param)
             throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
@@ -3977,7 +3976,7 @@ public abstract class SSLEngineTest {
          * The JDK SSL engine master key retrieval relies on being able to set field access to true.
          * That is not available in JDK9+
          */
-        assumeFalse(sslServerProvider() == SslProvider.JDK && PlatformDependent.javaVersion() > 8);
+        assumeFalse(sslServerProvider() == SslProvider.JDK);
 
         String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
         System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());

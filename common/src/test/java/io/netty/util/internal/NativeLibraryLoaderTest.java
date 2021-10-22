@@ -47,7 +47,6 @@ public class NativeLibraryLoaderTest {
         }
     }
 
-    @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
     private static void verifySuppressedException(UnsatisfiedLinkError error,
             Class<?> expectedSuppressedExceptionClass) {
         try {
