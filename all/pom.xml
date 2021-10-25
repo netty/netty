@@ -250,6 +250,12 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-xml</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml</groupId>
+          <artifactId>aalto-xml</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
