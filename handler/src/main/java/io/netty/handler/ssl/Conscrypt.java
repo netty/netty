@@ -34,10 +34,8 @@ final class Conscrypt {
     static {
         MethodHandle isConscryptSSLEngine = null;
 
-        if ((PlatformDependent.javaVersion() >= 8 &&
-                // Only works on Java14 and earlier for now
-                // See https://github.com/google/conscrypt/issues/838
-                PlatformDependent.javaVersion() < 15) || PlatformDependent.isAndroid()) {
+        // Only works on Java14 and earlier for now. See https://github.com/google/conscrypt/issues/838
+        if (PlatformDependent.javaVersion() < 15 || PlatformDependent.isAndroid()) {
             try {
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
                 Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,

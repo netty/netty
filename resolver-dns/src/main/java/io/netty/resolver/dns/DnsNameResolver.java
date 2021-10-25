@@ -59,7 +59,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -138,10 +137,11 @@ public class DnsNameResolver extends InetNameResolver {
     static {
         String[] searchDomains;
         try {
-            List<String> list = PlatformDependent.isWindows()
-                    ? getSearchDomainsHack()
-                    : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
-            searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
+            searchDomains = EmptyArrays.EMPTY_STRINGS;
+            if (!PlatformDependent.isWindows()) {
+                List<String> list = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
+                searchDomains = list.toArray(String[]::new);
+            }
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
             searchDomains = EmptyArrays.EMPTY_STRINGS;
@@ -179,23 +179,6 @@ public class DnsNameResolver extends InetNameResolver {
             // ignore
         }
         return false;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static List<String> getSearchDomainsHack() throws Exception {
-        // Only try if not using Java9 and later
-        // See https://github.com/netty/netty/issues/9500
-        if (PlatformDependent.javaVersion() < 9) {
-            // This code on Java 9+ yields a warning about illegal reflective access that will be denied in
-            // a future release. There doesn't seem to be a better way to get search domains for Windows yet.
-            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-            Method open = configClass.getMethod("open");
-            Method nameservers = configClass.getMethod("searchlist");
-            Object instance = open.invoke(null);
-
-            return (List<String>) nameservers.invoke(instance);
-        }
-        return Collections.emptyList();
     }
 
     private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder() {

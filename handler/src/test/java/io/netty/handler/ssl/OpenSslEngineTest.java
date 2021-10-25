@@ -24,7 +24,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -1068,7 +1067,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersDoesNotThrow(SSLEngineTestParam param) throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
@@ -1090,7 +1088,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersWithSNINameWithUnderscore(SSLEngineTestParam param) throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(CharsetUtil.UTF_8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())

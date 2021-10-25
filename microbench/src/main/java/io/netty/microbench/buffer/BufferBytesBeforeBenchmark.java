@@ -21,7 +21,6 @@ import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.bytebuffer.ByteBufferMemoryManager;
 import io.netty.buffer.api.unsafe.UnsafeMemoryManager;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -91,7 +90,6 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     private boolean pooled;
 
     @Setup(Level.Trial)
-    @SuppressJava6Requirement(reason = "using SplittableRandom to reliably produce data")
     public void init() {
         SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;

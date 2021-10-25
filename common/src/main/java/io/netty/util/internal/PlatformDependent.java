@@ -154,7 +154,7 @@ public final class PlatformDependent {
 
         int tryAllocateUninitializedArray =
                 SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
-        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod() ?
+        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = PlatformDependent0.hasAllocateArrayMethod() ?
                 tryAllocateUninitializedArray : -1;
         logger.debug("-Dio.netty.uninitializedArrayAllocationThreshold: {}", UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
 
@@ -1372,22 +1372,11 @@ public final class PlatformDependent {
         return LINUX_OS_CLASSIFIERS;
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     public static File createTempFile(String prefix, String suffix, File directory) throws IOException {
-        if (javaVersion() >= 7) {
-            if (directory == null) {
-                return Files.createTempFile(prefix, suffix).toFile();
-            }
-            return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
-        }
         if (directory == null) {
-            return File.createTempFile(prefix, suffix);
+            return Files.createTempFile(prefix, suffix).toFile();
         }
-        File file = File.createTempFile(prefix, suffix, directory);
-        // Try to adjust the perms, if this fails there is not much else we can do...
-        file.setReadable(false, false);
-        file.setReadable(true, true);
-        return file;
+        return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
     }
 
     /**

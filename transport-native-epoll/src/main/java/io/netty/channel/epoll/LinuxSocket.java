@@ -17,16 +17,15 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
@@ -95,7 +94,7 @@ final class LinuxSocket extends Socket {
     NetworkInterface getNetworkInterface() throws IOException {
         int ret = getInterface(intValue(), ipv6);
         if (ipv6) {
-            return PlatformDependent.javaVersion() >= 7 ? NetworkInterface.getByIndex(ret) : null;
+            return NetworkInterface.getByIndex(ret);
         }
         InetAddress address = inetAddress(ret);
         return address != null ? NetworkInterface.getByInetAddress(address) : null;
@@ -149,15 +148,13 @@ final class LinuxSocket extends Socket {
     }
 
     private static int interfaceIndex(NetworkInterface networkInterface) {
-        return PlatformDependent.javaVersion() >= 7 ? networkInterface.getIndex() : -1;
+        return networkInterface.getIndex();
     }
 
     private static int interfaceIndex(InetAddress address) throws IOException {
-        if (PlatformDependent.javaVersion() >= 7) {
-            NetworkInterface iface = NetworkInterface.getByInetAddress(address);
-            if (iface != null) {
-                return iface.getIndex();
-            }
+        NetworkInterface iface = NetworkInterface.getByInetAddress(address);
+        if (iface != null) {
+            return iface.getIndex();
         }
         return -1;
     }

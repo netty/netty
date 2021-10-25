@@ -16,6 +16,11 @@
 package io.netty.handler.ssl;
 
 
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -26,11 +31,6 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
-
-import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 final class JdkAlpnSslUtils {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkAlpnSslUtils.class);
@@ -87,11 +87,9 @@ final class JdkAlpnSslUtils {
                     (BiFunction<SSLEngine, List<String>, String>)
                             getHandshakeApplicationProtocolSelector.invokeExact(engine);
         } catch (Throwable t) {
+            // This is expected to work since Java 9, so log as error.
             int version = PlatformDependent.javaVersion();
-            if (version >= 9) {
-                // We only log when run on java9+ as this is expected on some earlier java8 versions
-                logger.error("Unable to initialize JdkAlpnSslUtils, but the detected java version was: {}", version, t);
-            }
+            logger.error("Unable to initialize JdkAlpnSslUtils. Detected java version was: {}", version, t);
             getHandshakeApplicationProtocol = null;
             getApplicationProtocol = null;
             setApplicationProtocols = null;

@@ -54,7 +54,6 @@ public final class ThrowableUtil {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Throwable addSuppressed is only available for >= 7. Has check for < 7.")
     public static void addSuppressed(Throwable target, Throwable suppressed) {
         target.addSuppressed(suppressed);
     }

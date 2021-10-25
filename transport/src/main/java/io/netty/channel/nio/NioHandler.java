@@ -15,8 +15,6 @@
  */
 package io.netty.channel.nio;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultSelectStrategyFactory;
@@ -38,9 +36,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
-
+import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -50,6 +47,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link IoHandler} implementation which register the {@link Channel}'s to a
@@ -209,7 +208,7 @@ public final class NioHandler implements IoHandler {
                 Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                 Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-                if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
+                if (PlatformDependent.hasUnsafe()) {
                     // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
                     // This allows us to also do this in Java9+ without any extra flags.
                     long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);

@@ -45,9 +45,6 @@ public class UnitializedArrayBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setupTrial() {
-        if (PlatformDependent.javaVersion() < 9) {
-            throw new IllegalStateException("Needs Java9");
-        }
         if (!PlatformDependent.hasUnsafe()) {
             throw new IllegalStateException("Needs Unsafe");
         }

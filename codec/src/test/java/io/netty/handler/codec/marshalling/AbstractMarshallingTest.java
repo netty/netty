@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.util.internal.PlatformDependent;
 import org.jboss.marshalling.Marshalling;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -33,9 +32,6 @@ public abstract class AbstractMarshallingTest {
             Marshalling.getProvidedMarshallerFactory(SERIAL_FACTORY);
         } catch (Throwable cause) {
             // This may fail on Java 9+ depending on which command-line arguments are used when building.
-            if (PlatformDependent.javaVersion() < 9) {
-                throw cause;
-            }
             error = cause;
         }
         assumeTrue(error == null, error + " was not null");

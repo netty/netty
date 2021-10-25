@@ -21,7 +21,6 @@ import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Method;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -53,28 +52,6 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
         }
 
-        // Only try when using Java8 and lower as otherwise it will produce:
-        // WARNING: Illegal reflective access by io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider
-        if (PlatformDependent.javaVersion() < 9 && defaultNameServers.isEmpty()) {
-            try {
-                Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-                Method open = configClass.getMethod("open");
-                Method nameservers = configClass.getMethod("nameservers");
-                Object instance = open.invoke(null);
-
-                @SuppressWarnings("unchecked")
-                final List<String> list = (List<String>) nameservers.invoke(instance);
-                for (String a: list) {
-                    if (a != null) {
-                        defaultNameServers.add(new InetSocketAddress(SocketUtils.addressByName(a), DNS_PORT));
-                    }
-                }
-            } catch (Exception ignore) {
-                // Failed to get the system name server list via reflection.
-                // Will add the default name servers afterwards.
-            }
-        }
-
         if (!defaultNameServers.isEmpty()) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -85,7 +62,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             // https://developers.google.com/speed/public-dns/docs/using
             // https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
             if (NetUtil.isIpV6AddressesPreferred() ||
-                    (NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred())) {
+                NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred()) {
                 Collections.addAll(
                         defaultNameServers,
                         SocketUtils.socketAddress("2001:4860:4860::8888", DNS_PORT),
