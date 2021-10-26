@@ -86,7 +86,7 @@
     <!-- Follow what is used in quiche for now -->
     <!-- https://github.com/cloudflare/quiche/tree/master/deps -->
     <boringsslBranch>master</boringsslBranch>
-    <boringsslCommitSha>a2278d4d2cabe73f6663e3299ea7808edfa306b9</boringsslCommitSha>
+    <boringsslCommitSha>19fe7943ce593068bf447f05c2dbed4a324146ef</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -95,7 +95,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>e9f59a55f5b56999d0e609a73aa8f1b450878a0c</quicheCommitSha>
+    <quicheCommitSha>fe56de9c7a1117621ea01edc165bc5635f37fe27</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
