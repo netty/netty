@@ -40,7 +40,8 @@ import io.netty.util.CharsetUtil;
 @Sharable
 public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
 
-    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
+    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
+            copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

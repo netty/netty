@@ -31,13 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractDecoderTest extends AbstractCompressionTest {
 
-    protected static final ByteBuf WRAPPED_BYTES_SMALL;
-    protected static final ByteBuf WRAPPED_BYTES_LARGE;
-
-    static {
-        WRAPPED_BYTES_SMALL = Unpooled.wrappedBuffer(BYTES_SMALL);
-        WRAPPED_BYTES_LARGE = Unpooled.wrappedBuffer(BYTES_LARGE);
-    }
+    protected static final ByteBuf WRAPPED_BYTES_SMALL = Unpooled.unreleasableBuffer(
+            Unpooled.wrappedBuffer(BYTES_SMALL)).asReadOnly();
+    protected static final ByteBuf WRAPPED_BYTES_LARGE = Unpooled.unreleasableBuffer(
+            Unpooled.wrappedBuffer(BYTES_LARGE)).asReadOnly();
 
     protected EmbeddedChannel channel;
 

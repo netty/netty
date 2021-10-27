@@ -87,7 +87,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
+    public static final ByteBuf EMPTY_BUFFER = unreleasableBuffer(ALLOC.buffer(0, 0)).asReadOnly();
 
     static {
         assert EMPTY_BUFFER instanceof EmptyByteBuf: "EMPTY_BUFFER must be an EmptyByteBuf.";
