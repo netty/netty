@@ -112,13 +112,13 @@ public class BrotliDecoderTest {
     @ParameterizedTest
     @MethodSource("smallData")
     public void testDecompressionOfSmallChunkOfData(ByteBuf data) {
-        testDecompression(WRAPPED_BYTES_SMALL, data);
+        testDecompression(WRAPPED_BYTES_SMALL.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
     public void testDecompressionOfLargeChunkOfData(ByteBuf data) {
-        testDecompression(WRAPPED_BYTES_LARGE, data);
+        testDecompression(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     @ParameterizedTest

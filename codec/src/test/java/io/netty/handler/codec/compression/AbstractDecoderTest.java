@@ -83,19 +83,19 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
     @ParameterizedTest
     @MethodSource("smallData")
     public void testDecompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
-        testDecompression(WRAPPED_BYTES_SMALL, data);
+        testDecompression(WRAPPED_BYTES_SMALL.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
     public void testDecompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
-        testDecompression(WRAPPED_BYTES_LARGE, data);
+        testDecompression(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
     public void testDecompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
-        testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
+        testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     protected void testDecompression(final ByteBuf expected, final ByteBuf data) throws Exception {
