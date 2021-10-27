@@ -162,12 +162,12 @@
       <plugin>
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
-        <version>2.0</version>
+        <version>2.1.1</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
-            <version>2.4.8</version>
+            <artifactId>groovy</artifactId>
+            <version>3.0.9</version>
           </dependency>
           <dependency>
             <groupId>ant</groupId>
