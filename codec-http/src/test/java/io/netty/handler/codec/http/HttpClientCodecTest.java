@@ -55,6 +55,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -118,18 +119,13 @@ public class HttpClientCodecTest {
 
         assertNull(ch.readInbound());
         final byte[] responseBytes = INCOMPLETE_CHUNKED_RESPONSE.getBytes(ISO_8859_1);
-        ch.writeInbound(ch.bufferAllocator().allocate(responseBytes.length).writeBytes(responseBytes));
+        ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes));
         assertThat(ch.readInbound(), instanceOf(HttpResponse.class));
         ((HttpContent<?>) ch.readInbound()).close(); // Chunk 'first'
         ((HttpContent<?>) ch.readInbound()).close(); // Chunk 'second'
         assertNull(ch.readInbound());
 
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
     }
 
     @Test
@@ -162,13 +158,12 @@ public class HttpClientCodecTest {
                             final byte[] bytes = ("HTTP/1.0 200 OK\r\n" +
                                     "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
                                     "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1);
-                            sChannel.writeAndFlush(ch.bufferAllocator().allocate(bytes.length).writeBytes(bytes))
+                            sChannel.writeAndFlush(ch.bufferAllocator().copyOf(bytes))
                                     .addListener(future -> {
                                         assertTrue(future.isSuccess());
                                         final byte[] bytes1 = "<html><body>hello half closed!</body></html>\r\n"
                                                 .getBytes(CharsetUtil.ISO_8859_1);
-                                        sChannel.writeAndFlush(ch.bufferAllocator().allocate(bytes1.length)
-                                                        .writeBytes(bytes1))
+                                        sChannel.writeAndFlush(ch.bufferAllocator().copyOf(bytes1))
                                                 .addListener(future1 -> {
                                                     assertTrue(future1.isSuccess());
                                                     sChannel.shutdownOutput();
@@ -204,9 +199,9 @@ public class HttpClientCodecTest {
             Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
             assertTrue(ccf.awaitUninterruptibly().isSuccess());
             Channel clientChannel = ccf.get();
-            assertTrue(serverChannelLatch.await(5, DAYS));
+            assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
-            assertTrue(responseReceivedLatch.await(5, DAYS));
+            assertTrue(responseReceivedLatch.await(5, SECONDS));
         } finally {
             sb.config().group().shutdownGracefully();
             sb.config().childGroup().shutdownGracefully();
@@ -255,7 +250,7 @@ public class HttpClientCodecTest {
                         ch.bufferAllocator().allocate(0))),
                 "Channel outbound write failed.");
         final byte[] responseBytes = response.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(responseBytes.length).writeBytes(responseBytes)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)),
                 "Channel inbound write failed.");
 
         for (;;) {
@@ -309,7 +304,7 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeOutbound(request), "Channel outbound write failed.");
 
         final byte[] bytes = SWITCHING_PROTOCOLS_RESPONSE.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(bytes.length).writeBytes(bytes)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(bytes)),
                 "Channel inbound write failed.");
         Object switchingProtocolsResponse = ch.readInbound();
         assertNotNull(switchingProtocolsResponse, "No response received");
@@ -317,7 +312,7 @@ public class HttpClientCodecTest {
         ((FullHttpResponse) switchingProtocolsResponse).close();
 
         final byte[] bytes2 = SWITCHING_PROTOCOLS_RESPONSE.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(bytes2.length).writeBytes(bytes2)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(bytes2)),
                 "Channel inbound write failed");
         Object finalResponse = ch.readInbound();
         assertNotNull(finalResponse, "No response received");
@@ -336,7 +331,7 @@ public class HttpClientCodecTest {
                 "\r\n" +
                 "1234567812345678").getBytes();
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -357,7 +352,7 @@ public class HttpClientCodecTest {
                        "\r\n" +
                        "1234567812345678").getBytes();
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -384,7 +379,7 @@ public class HttpClientCodecTest {
                 ch.bufferAllocator().allocate(0))));
         ((Buffer) ch.readOutbound()).close();
         assertNull(ch.readOutbound());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
@@ -398,7 +393,7 @@ public class HttpClientCodecTest {
                 ch.bufferAllocator().allocate(0))));
         ((Buffer) ch.readOutbound()).close();
         assertNull(ch.readOutbound());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data2.length).writeBytes(data2)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data2)));
 
         res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -425,8 +420,8 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeOutbound(request));
 
         final byte[] responseBytes = response.getBytes(UTF_8);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(responseBytes.length).writeBytes(responseBytes)));
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(responseBytes.length).writeBytes(responseBytes)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)));
         FullHttpResponse resp = ch.readInbound();
         assertTrue(resp.decoderResult().isSuccess());
         resp.close();

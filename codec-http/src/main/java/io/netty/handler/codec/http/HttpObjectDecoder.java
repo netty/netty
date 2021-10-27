@@ -367,16 +367,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
             // fall-through
         }
         case READ_CHUNK_DELIMITER: {
-            final int woff = buffer.writerOffset();
-            int roff = buffer.readerOffset();
-            while (woff > roff) {
-                byte next = buffer.getByte(roff++);
-                if (next == HttpConstants.LF) {
-                    currentState = State.READ_CHUNK_SIZE;
-                    break;
-                }
+            // include LF in the bytes to skip
+            int bytesToSkip = buffer.bytesBefore(HttpConstants.LF) + 1;
+            if (bytesToSkip > 0) {
+                currentState = State.READ_CHUNK_SIZE;
+                buffer.skipReadable(bytesToSkip);
+            } else {
+                buffer.skipReadable(buffer.readableBytes());
             }
-            buffer.readerOffset(roff);
             return;
         }
         case READ_CHUNK_FOOTER: try {
@@ -566,7 +564,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
-        in.readerOffset(in.readerOffset() + in.readableBytes());
+        in.skipReadable(in.readableBytes());
 
         HttpContent<?> chunk = new DefaultLastHttpContent(allocator.allocate(0));
         chunk.setDecoderResult(DecoderResult.failure(cause));

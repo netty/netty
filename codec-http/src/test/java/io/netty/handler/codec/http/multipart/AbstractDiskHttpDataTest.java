@@ -59,7 +59,7 @@ public class AbstractDiskHttpDataTest {
             Buffer buf2 = test.getChunk(1024);
             assertEquals(buf2.readerOffset(), 0);
             assertEquals(buf2.writerOffset(), 1024);
-            Assertions.assertNotEquals(buf1, buf2, "Arrays should not be equal");
+            Assertions.assertNotEquals(buf1, buf2, "Buffers should not be equal");
         } finally {
             test.delete();
         }

@@ -714,11 +714,10 @@ public class HttpObjectAggregatorTest {
     }
 
     private static Buffer copiedBuffer(BufferAllocator allocator, String data, Charset charset) {
-        final byte[] bytes = data.getBytes(charset);
-        return allocator.allocate(bytes.length).writeBytes(bytes);
+        return copiedBuffer(allocator, data.getBytes(charset));
     }
 
     private static Buffer copiedBuffer(BufferAllocator allocator, byte[] bytes) {
-        return allocator.allocate(bytes.length).writeBytes(bytes);
+        return allocator.copyOf(bytes);
     }
 }

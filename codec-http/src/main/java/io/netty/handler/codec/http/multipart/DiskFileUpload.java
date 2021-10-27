@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import static io.netty.buffer.api.Send.sending;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -63,6 +64,15 @@ public class DiskFileUpload extends AbstractDiskHttpData<DiskFileUpload> impleme
                           String contentTransferEncoding, Charset charset, long size) {
         this(allocator, name, filename, contentType, contentTransferEncoding,
                 charset, size, baseDirectory, deleteOnExitTemporaryFile);
+    }
+
+    private DiskFileUpload(DiskFileUpload copyFrom) {
+        super(copyFrom);
+        this.baseDir = copyFrom.baseDir;
+        this.deleteOnExit = copyFrom.deleteOnExit;
+        this.filename = copyFrom.filename;
+        this.contentType = copyFrom.contentType;
+        this.contentTransferEncoding = copyFrom.contentTransferEncoding;
     }
 
     @Override
@@ -172,7 +182,7 @@ public class DiskFileUpload extends AbstractDiskHttpData<DiskFileUpload> impleme
 
     @Override
     public Send<DiskFileUpload> send() {
-        return Send.sending(DiskFileUpload.class, () -> this);
+        return sending(DiskFileUpload.class, () -> new DiskFileUpload(this));
     }
 
     @Override

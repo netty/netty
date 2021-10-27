@@ -253,8 +253,6 @@ public class HttpPostMultiPartRequestDecoderTest {
         httpContent.close();
         decoder.offer(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
 
-        decoder.offer(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
-
         FileUpload<?> data = (FileUpload<?>) decoder.getBodyHttpDatas().get(0);
         assertEquals(data.length(), fileSize);
         assertEquals(inMemory, data.isInMemory());
@@ -272,15 +270,11 @@ public class HttpPostMultiPartRequestDecoderTest {
         }
         factory.cleanAllHttpData();
         for (InterfaceHttpData<?> httpData : httpDatas) {
-            if (inMemory) {
-                assertTrue(httpData.isAccessible(), "After cleanAllHttpData should be 1 if in Memory");
-            } else {
-                assertFalse(httpData.isAccessible(), "After cleanAllHttpData should be 1 if in Memory");
-            }
+            assertEquals(httpData.isAccessible(), inMemory);
         }
         decoder.destroy();
         for (InterfaceHttpData<?> httpData : httpDatas) {
-            assertFalse(httpData.isAccessible(), "RefCnt should be 0");
+            assertFalse(httpData.isAccessible());
         }
     }
 
@@ -497,15 +491,11 @@ public class HttpPostMultiPartRequestDecoderTest {
         }
         factory.cleanAllHttpData();
         for (InterfaceHttpData<?> httpData : httpDatas) {
-            if (inMemory) {
-                assertTrue(httpData.isAccessible(), "After cleanAllHttpData should be 1 if in Memory");
-            } else {
-                assertFalse(httpData.isAccessible(), "After cleanAllHttpData should be 1 if in Memory");
-            }
+            assertEquals(httpData.isAccessible(), inMemory);
         }
         decoder.destroy();
         for (InterfaceHttpData<?> httpData : httpDatas) {
-            assertFalse(httpData.isAccessible(), "RefCnt should be 0");
+            assertFalse(httpData.isAccessible());
         }
     }
 

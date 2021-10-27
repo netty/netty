@@ -96,7 +96,7 @@ public class HttpServerCodecTest {
         assertThat(ch.readOutbound(), is(nullValue()));
 
         // Send the content of the request.
-        ch.writeInbound(ch.bufferAllocator().allocate(1).writeBytes(new byte[]{42}));
+        ch.writeInbound(ch.bufferAllocator().allocate(1).writeByte((byte) 42));
 
         // Ensure the aggregator generates a full request.
         FullHttpRequest req = ch.readInbound();
@@ -184,9 +184,6 @@ public class HttpServerCodecTest {
     }
 
     private static Buffer prepareDataChunk(BufferAllocator allocator, int size) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("a".repeat(Math.max(0, size)));
-        final byte[] data = sb.toString().getBytes(StandardCharsets.UTF_8);
-        return allocator.allocate(data.length).writeBytes(data);
+        return allocator.copyOf("a".repeat(Math.max(0, size)).getBytes(StandardCharsets.UTF_8));
     }
 }

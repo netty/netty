@@ -92,7 +92,7 @@ public class DiskFileUploadTest {
                 new DiskFileUpload(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, "d1", "d1",
                         "application/json", null, null, 100);
 
-        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeBytes(new byte[]{1, 2, 3, 4}));
+        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(new byte[]{1, 2, 3, 4}));
 
         assertTrue(f.getFile().exists());
         assertEquals(4, f.getFile().length());
@@ -108,11 +108,11 @@ public class DiskFileUploadTest {
                 new DiskFileUpload(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, "d1", "d1",
                         "application/json", null, null, 100);
 
-        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeBytes(new byte[]{1, 2, 3, 4}));
+        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(new byte[]{1, 2, 3, 4}));
 
         assertTrue(f.getFile().exists());
         assertEquals(4, f.getFile().length());
-        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeBytes(new byte[]{1, 2}));
+        f.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(new byte[]{1, 2}));
         assertTrue(f.getFile().exists());
         assertEquals(2, f.getFile().length());
         f.delete();
@@ -161,7 +161,7 @@ public class DiskFileUploadTest {
         try {
             String json = "{\"hello\":\"world\"}";
             byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
-            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length).writeBytes(bytes));
+            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(bytes));
             assertEquals(json, f1.getString());
             assertArrayEquals(bytes, f1.get());
             File file = f1.getFile();
@@ -221,7 +221,7 @@ public class DiskFileUploadTest {
                         DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length / 2)
                                 .writeBytes(bytes, bytes.length / 2, bytes.length / 2).send());
             } else {
-                buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length).writeBytes(bytes);
+                buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(bytes);
             }
             f1.addContent(buffer, true);
             Buffer buf = f1.getBuffer();
@@ -262,7 +262,7 @@ public class DiskFileUploadTest {
                 "application/json", null, null, 0);
         try {
             assertNull(f1.getFile());
-            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length).writeBytes(bytes));
+            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(bytes));
             assertNotNull(tmpFile = f1.getFile());
         } finally {
             f1.delete();
@@ -280,7 +280,7 @@ public class DiskFileUploadTest {
                 "application/json", null, null, 0);
         f1.setMaxSize(maxSize);
         try {
-            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1).writeBytes(new byte[(int) maxSize]));
+            f1.setContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(new byte[(int) maxSize]));
             File originalFile = f1.getFile();
             assertNotNull(originalFile);
             assertEquals(maxSize, originalFile.length());

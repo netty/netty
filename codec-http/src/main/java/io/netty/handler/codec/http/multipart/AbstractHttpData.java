@@ -52,6 +52,15 @@ public abstract class AbstractHttpData<R extends AbstractHttpData<R>> implements
         definedSize = size;
     }
 
+    protected AbstractHttpData(AbstractHttpData<R> copyFrom) {
+        this.name = copyFrom.name;
+        this.definedSize = copyFrom.definedSize;
+        this.size = copyFrom.size;
+        this.charset = copyFrom.charset;
+        this.completed = copyFrom.completed;
+        this.maxSize = copyFrom.maxSize;
+    }
+
     @Override
     public long getMaxSize() {
         return maxSize;

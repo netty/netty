@@ -947,20 +947,18 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         // Set name=
         if (isKey) {
             String key = currentData.getName();
-            final byte[] bytes = key.getBytes(charset);
-            buffer = allocator.allocate(bytes.length).writeBytes(bytes);
+            buffer = allocator.copyOf(key.getBytes(charset));
             isKey = false;
             final byte[] equalsAsBytes = "=".getBytes(charset);
             if (currentBuffer == null) {
-                currentBuffer = compose(allocator, buffer.send(),
-                        allocator.allocate(equalsAsBytes.length).writeBytes(equalsAsBytes).send());
+                currentBuffer = compose(allocator, buffer.send(), allocator.copyOf(equalsAsBytes).send());
             } else if (CompositeBuffer.isComposite(currentBuffer)) {
                 final CompositeBuffer compositeBuffer = (CompositeBuffer) this.currentBuffer;
                 compositeBuffer.extendWith(buffer.send());
-                compositeBuffer.extendWith(allocator.allocate(equalsAsBytes.length).writeBytes(equalsAsBytes).send());
+                compositeBuffer.extendWith(allocator.copyOf(equalsAsBytes).send());
             } else {
                 currentBuffer = compose(allocator, currentBuffer.send(), buffer.send(),
-                        allocator.allocate(equalsAsBytes.length).writeBytes(equalsAsBytes).send());
+                        allocator.copyOf(equalsAsBytes).send());
             }
             // continue
             size -= buffer.readableBytes() + 1;
@@ -982,7 +980,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (buffer.readableBytes() < size) {
             isKey = true;
             final byte[] ampAsBytes = "&".getBytes(charset);
-            delimiter = iterator.hasNext() ? allocator.allocate(ampAsBytes.length).writeBytes(ampAsBytes) : null;
+            delimiter = iterator.hasNext() ? allocator.copyOf(ampAsBytes) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data

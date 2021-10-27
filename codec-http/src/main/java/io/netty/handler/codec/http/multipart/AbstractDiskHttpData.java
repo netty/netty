@@ -52,6 +52,14 @@ public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> ex
         this.allocator = requireNonNull(allocator, "allocator");
     }
 
+    protected AbstractDiskHttpData(AbstractDiskHttpData<R> copyFrom) {
+        super(copyFrom);
+        this.allocator = copyFrom.allocator;
+        this.file = copyFrom.file;
+        this.isRenamed = copyFrom.isRenamed;
+        this.fileChannel = copyFrom.fileChannel;
+    }
+
     /**
      *
      * @return the real DiskFilename (basename)

@@ -103,6 +103,12 @@ public class DiskAttribute extends AbstractDiskHttpData<DiskAttribute> implement
         this.deleteOnExit = deleteOnExit;
     }
 
+    private DiskAttribute(DiskAttribute copyFrom) {
+        super(copyFrom);
+        this.baseDir = copyFrom.baseDir;
+        this.deleteOnExit = copyFrom.deleteOnExit;
+    }
+
     @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.Attribute;
@@ -119,7 +125,7 @@ public class DiskAttribute extends AbstractDiskHttpData<DiskAttribute> implement
         requireNonNull(value, "value");
         byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
-        Buffer buffer = allocator().allocate(bytes.length).writeBytes(bytes);
+        Buffer buffer = allocator().copyOf(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
         }
@@ -204,7 +210,7 @@ public class DiskAttribute extends AbstractDiskHttpData<DiskAttribute> implement
 
     @Override
     public Send<DiskAttribute> send() {
-        return Send.sending(DiskAttribute.class, () -> this);
+        return Send.sending(DiskAttribute.class, () -> new DiskAttribute(this));
     }
 
     @Override

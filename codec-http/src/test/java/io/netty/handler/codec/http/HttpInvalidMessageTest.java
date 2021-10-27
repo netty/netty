@@ -123,10 +123,7 @@ public class HttpInvalidMessageTest {
         rnd.nextBytes(data);
 
         try (Buffer buf = ch.bufferAllocator().allocate(data.length).writeBytes(data)) {
-            buf.readerOffset(0);
-            buf.writerOffset(0);
             for (int i = 0; i < 4096; i++) {
-                buf.writerOffset(data.length);
                 ch.writeInbound(buf.copy());
                 ch.checkException();
                 assertNull(ch.readInbound());

@@ -282,7 +282,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             // Since the Handler will release the incoming later on, we need to copy it
             undecodedChunk = buf.copy();
         } else {
-            undecodedChunk.writeBytes(buf);
+            undecodedChunk.ensureWritable(buf.readableBytes()).writeBytes(buf);
         }
         parseBody();
         if (undecodedChunk != null && undecodedChunk.writerOffset() > discardThreshold) {
