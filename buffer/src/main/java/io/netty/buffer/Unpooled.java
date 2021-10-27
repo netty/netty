@@ -87,7 +87,8 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = unreleasableBuffer(ALLOC.buffer(0, 0)).asReadOnly();
+    @SuppressWarnings("checkstyle:StaticFinalBuffer")  // EmptyByteBuf is not writeable or readable.
+    public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
     static {
         assert EMPTY_BUFFER instanceof EmptyByteBuf: "EMPTY_BUFFER must be an EmptyByteBuf.";
