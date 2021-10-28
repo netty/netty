@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty-resolver-dns-native-macos</artifactId>
 
-  <name>Netty/Resolver/DNS/MacOS</name>
+  <name>Netty/Resolver/DNS/Native/MacOS</name>
   <packaging>jar</packaging>
 
   <profiles>
@@ -248,22 +248,13 @@
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <artifactId>netty-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
