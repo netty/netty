@@ -388,7 +388,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 // fall through
             case PROCESS_FHCRC:
                 if ((flags & FHCRC) != 0) {
-                    if (!verifyCrc(in)) {
+                    if (!verifyCrc16(in)) {
                         return false;
                     }
                 }
@@ -474,6 +474,27 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (crcValue != readCrc) {
             throw new DecompressionException(
                     "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
+        }
+        return true;
+    }
+
+    private boolean verifyCrc16(ByteBuf in) {
+        if (in.readableBytes() < 2) {
+            return false;
+        }
+        long readCrc32 = crc.getValue();
+        long[] crc16Bytes = {readCrc32 & 0xff, (readCrc32 >> 8) & 0xff}; // the two least significant bytes of the CRC32
+
+        long crc16Value = 0;
+        long readCrc16 = 0;
+        for (int i = 0; i < 2; ++i) {
+            crc16Value |= (long) in.readUnsignedByte() << (i * 8);
+            readCrc16 |= crc16Bytes[i] << (i * 8);
+        }
+
+        if (crc16Value != readCrc16) {
+            throw new DecompressionException(
+                    "CRC16 value mismatch. Expected: " + crc16Value + ", Got: " + readCrc16);
         }
         return true;
     }
