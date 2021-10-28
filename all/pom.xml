@@ -181,6 +181,31 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.basepom.maven</groupId>
+        <artifactId>duplicate-finder-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <failBuildInCaseOfDifferentContentConflict>true</failBuildInCaseOfDifferentContentConflict>
+          <failBuildInCaseOfEqualContentConflict>true</failBuildInCaseOfEqualContentConflict>
+          <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+          <checkCompileClasspath>true</checkCompileClasspath>
+          <checkRuntimeClasspath>true</checkRuntimeClasspath>
+          <checkTestClasspath>false</checkTestClasspath>
+          <preferLocal>true</preferLocal>
+          <useResultFile>true</useResultFile>
+          <resultFile>${project.build.directory}/duplicate-finder-result.xml</resultFile>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
