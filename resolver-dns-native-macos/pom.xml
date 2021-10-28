@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty-resolver-dns-native-macos</artifactId>
 
-  <name>Netty/Resolver/DNS/MacOS</name>
+  <name>Netty/Resolver/DNS/Native/MacOS</name>
   <packaging>jar</packaging>
 
   <profiles>
@@ -253,17 +253,7 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <artifactId>netty-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>

@@ -188,6 +188,11 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty-resolver-dns-classes-macos</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns-native-macos</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -234,6 +239,11 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty-transport-classes-epoll</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -248,6 +258,11 @@
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-classes-kqueue</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
