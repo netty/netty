@@ -195,7 +195,6 @@
           </execution>
         </executions>
         <configuration>
-          <printEqualFiles>false</printEqualFiles>
           <failBuildInCaseOfDifferentContentConflict>true</failBuildInCaseOfDifferentContentConflict>
           <failBuildInCaseOfEqualContentConflict>true</failBuildInCaseOfEqualContentConflict>
           <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
