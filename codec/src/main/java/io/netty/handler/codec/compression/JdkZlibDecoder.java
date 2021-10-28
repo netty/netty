@@ -483,13 +483,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
             return false;
         }
         long readCrc32 = crc.getValue();
-        long[] crc16Bytes = {readCrc32 & 0xff, (readCrc32 >> 8) & 0xff}; // the two least significant bytes of the CRC32
-
         long crc16Value = 0;
-        long readCrc16 = 0;
+        long readCrc16 = 0; // the two least significant bytes from the CRC32
         for (int i = 0; i < 2; ++i) {
             crc16Value |= (long) in.readUnsignedByte() << (i * 8);
-            readCrc16 |= crc16Bytes[i] << (i * 8);
+            readCrc16 |= ((readCrc32 >> (i * 8)) & 0xff) << (i * 8);
         }
 
         if (crc16Value != readCrc16) {
