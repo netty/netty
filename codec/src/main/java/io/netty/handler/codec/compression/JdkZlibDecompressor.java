@@ -409,7 +409,7 @@ public final class JdkZlibDecompressor implements Decompressor {
                 // fall through
             case PROCESS_FHCRC:
                 if ((flags & FHCRC) != 0) {
-                    if (!verifyCrc(in)) {
+                    if (!verifyCrc16(in)) {
                         return false;
                     }
                 }
@@ -495,6 +495,25 @@ public final class JdkZlibDecompressor implements Decompressor {
         if (crcValue != readCrc) {
             throw new DecompressionException(
                     "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
+        }
+        return true;
+    }
+
+    private boolean verifyCrc16(ByteBuf in) {
+        if (in.readableBytes() < 2) {
+            return false;
+        }
+        long readCrc32 = crc.getValue();
+        long crc16Value = 0;
+        long readCrc16 = 0; // the two least significant bytes from the CRC32
+        for (int i = 0; i < 2; ++i) {
+            crc16Value |= (long) in.readUnsignedByte() << (i * 8);
+            readCrc16 |= ((readCrc32 >> (i * 8)) & 0xff) << (i * 8);
+        }
+
+        if (crc16Value != readCrc16) {
+            throw new DecompressionException(
+                    "CRC16 value mismatch. Expected: " + crc16Value + ", Got: " + readCrc16);
         }
         return true;
     }
