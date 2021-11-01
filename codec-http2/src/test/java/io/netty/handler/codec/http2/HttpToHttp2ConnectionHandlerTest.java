@@ -386,9 +386,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
-        final String uri = "http://your_user-name123@www.example.org:5555/example";
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST,
-                uri, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(uri.getBytes(UTF_8)));
+                "http://your_user-name123@www.example.org:5555/example",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example-origin.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
