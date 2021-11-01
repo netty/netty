@@ -181,6 +181,31 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.basepom.maven</groupId>
+        <artifactId>duplicate-finder-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <failBuildInCaseOfDifferentContentConflict>true</failBuildInCaseOfDifferentContentConflict>
+          <failBuildInCaseOfEqualContentConflict>true</failBuildInCaseOfEqualContentConflict>
+          <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+          <checkCompileClasspath>true</checkCompileClasspath>
+          <checkRuntimeClasspath>true</checkRuntimeClasspath>
+          <checkTestClasspath>false</checkTestClasspath>
+          <preferLocal>true</preferLocal>
+          <useResultFile>true</useResultFile>
+          <resultFile>${project.build.directory}/duplicate-finder-result.xml</resultFile>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -315,22 +340,21 @@
       </exclusions>
     </dependency>
     <!--
-      Use no classifier for the native dependencies. The dependencies with the classifier are added by the
-      native-dependencies profile.
+      The native dependencies with the classifier are added by the native-dependencies profile.
       -->
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-native-kqueue</artifactId>
+      <artifactId>netty-transport-classes-kqueue</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-resolver-dns-native-macos</artifactId>
+      <artifactId>netty-resolver-dns-classes-macos</artifactId>
       <scope>compile</scope>
     </dependency>
   </dependencies>

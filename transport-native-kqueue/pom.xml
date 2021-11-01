@@ -468,6 +468,7 @@
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <dependencies>
@@ -489,6 +490,11 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-unix-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-kqueue</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
