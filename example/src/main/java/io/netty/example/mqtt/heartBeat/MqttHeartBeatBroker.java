@@ -54,6 +54,7 @@ public final class MqttHeartBeatBroker {
 
             ChannelFuture f = b.bind(1883).sync();
             System.out.println("Broker initiated...");
+            System.out.println("Broker test...");
 
             f.channel().closeFuture().sync();
         } finally {
