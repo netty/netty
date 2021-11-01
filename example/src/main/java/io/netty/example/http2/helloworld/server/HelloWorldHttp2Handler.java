@@ -107,8 +107,9 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                               Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
-            Buffer content = ctx.bufferAllocator().allocate(RESPONSE_BYTES.length).writeBytes(RESPONSE_BYTES);
-            content.writeCharSequence(" - via HTTP/2", US_ASCII);
+            final byte[] viaBytes = " - via HTTP/2".getBytes(US_ASCII);
+            Buffer content = ctx.bufferAllocator().allocate(RESPONSE_BYTES.length + viaBytes.length)
+                    .writeBytes(RESPONSE_BYTES).writeBytes(viaBytes);
             sendResponse(ctx, streamId, intoByteBuf(content));
         }
     }

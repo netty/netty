@@ -121,32 +121,29 @@ public class MessageAggregatorNewTest {
 
     @Test
     public void testReadFlowManagement() {
-        try (BufferAllocator allocator = BufferAllocator.offHeapPooled()) {
+        try (BufferAllocator allocator = BufferAllocator.offHeapPooled();
+             Buffer first = message(allocator, "first");
+             Buffer chunk = message(allocator, "chunk");
+             Buffer last = message(allocator, "last")) {
             ReadCounter counter = new ReadCounter();
-            EmbeddedChannel embedded;
-            CompositeBuffer all;
-            try (Buffer first = message(allocator, "first");
-                 Buffer chunk = message(allocator, "chunk");
-                 Buffer last = message(allocator, "last")) {
-                MockMessageAggregator agg = new MockMessageAggregator(first.copy(), last.copy());
-                embedded = new EmbeddedChannel(counter, agg);
-                embedded.config().setAutoRead(false);
+            MockMessageAggregator agg = new MockMessageAggregator(first.copy(), last.copy());
+            EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
+            embedded.config().setAutoRead(false);
 
-                assertFalse(embedded.writeInbound(first.copy()));
-                assertFalse(embedded.writeInbound(chunk.copy()));
-                assertTrue(embedded.writeInbound(last.copy()));
+            assertFalse(embedded.writeInbound(first.copy()));
+            assertFalse(embedded.writeInbound(chunk.copy()));
+            assertTrue(embedded.writeInbound(last.copy()));
 
-                assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
-                // 1 read issued from EmbeddedChannel constructor
+            assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
+            // 1 read issued from EmbeddedChannel constructor
 
-                all = compose(allocator, first.copy().send(), chunk.copy().send(), last.copy().send());
-                CompositeBuffer out = embedded.readInbound();
+            CompositeBuffer all = compose(allocator, first.copy().send(), chunk.copy().send(), last.copy().send());
+            CompositeBuffer out = embedded.readInbound();
 
-                assertEquals(all, out);
-                assertTrue(all.isAccessible());
-                assertTrue(out.isAccessible());
-                assertFalse(embedded.finish());
-            }
+            assertEquals(all, out);
+            assertTrue(all.isAccessible());
+            assertTrue(out.isAccessible());
+            assertFalse(embedded.finish());
         }
     }
 }

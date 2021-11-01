@@ -48,6 +48,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -360,7 +361,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testInvalidStreamId() throws Exception {
         bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/foo",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence("foobar", UTF_8));
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf("foobar".getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -385,9 +386,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
+        final String uri = "http://your_user-name123@www.example.org:5555/example";
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST,
-                "http://your_user-name123@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence(text, UTF_8));
+                uri, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(uri.getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example-origin.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -425,7 +426,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         bootstrapEnv(4, 1, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST,
                 "http://your_user-name123@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence(text, UTF_8));
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -485,10 +486,10 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         final DefaultHttpContent httpContent =
-                new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence(text, UTF_8));
+                new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
         final LastHttpContent<?> lastHttpContent =
-                new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence(text2, UTF_8));
+                new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text2
+                        .getBytes(StandardCharsets.UTF_8)));
 
         lastHttpContent.trailingHeaders().add(of("trailing"), of("bar"));
 

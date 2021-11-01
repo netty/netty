@@ -503,6 +503,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private static boolean releaseAll(Queue<Object> queue) {
+        Exception closeFailed = null;
         if (isNotEmpty(queue)) {
             for (;;) {
                 Object msg = queue.poll();
@@ -513,9 +514,16 @@ public class EmbeddedChannel extends AbstractChannel {
                     try {
                         ((AutoCloseable) msg).close();
                     } catch (Exception e) {
-                        throwException(e);
+                        if (closeFailed == null) {
+                            closeFailed = e;
+                        } else {
+                            closeFailed.addSuppressed(e);
+                        }
                     }
                 }
+            }
+            if (closeFailed != null) {
+                throwException(closeFailed);
             }
             return true;
         }

@@ -183,7 +183,7 @@ public final class WebSocketServerBenchmarkPage {
                 "</script>" + NEWLINE +
                 "</body>" + NEWLINE +
                 "</html>" + NEWLINE).getBytes(US_ASCII);
-        return allocator.allocate(content.length).writeBytes(content);
+        return allocator.copyOf(content);
     }
 
     private WebSocketServerBenchmarkPage() {

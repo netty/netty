@@ -391,7 +391,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
         }
         case BAD_MESSAGE: {
             // Keep discarding until disconnection.
-            buffer.readerOffset(buffer.readerOffset() + buffer.readableBytes());
+            buffer.skipReadable(buffer.readableBytes());
             break;
         }
         case UPGRADED: {

@@ -419,7 +419,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         responseContent.append("</html>");
 
         final byte[] bytes = responseContent.toString().getBytes(UTF_8);
-        Buffer buf = ctx.bufferAllocator().allocate(bytes.length).writeBytes(bytes);
+        Buffer buf = ctx.bufferAllocator().copyOf(bytes);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);

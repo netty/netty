@@ -24,6 +24,8 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 
+import java.nio.charset.StandardCharsets;
+
 import static io.netty.example.http2.helloworld.server.HelloWorldHttp2Handler.RESPONSE_BYTES;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -54,8 +56,10 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         }
         boolean keepAlive = HttpUtil.isKeepAlive(req);
 
-        final Buffer content = ctx.bufferAllocator().allocate(RESPONSE_BYTES.length).writeBytes(RESPONSE_BYTES)
-                .writeCharSequence(" - via " + req.protocolVersion() + " (" + establishApproach + ")", US_ASCII);
+        final byte[] sourceBytes = (" - via " + req.protocolVersion() + " (" + establishApproach + ")")
+                .getBytes(US_ASCII);
+        final Buffer content = ctx.bufferAllocator().allocate(RESPONSE_BYTES.length + sourceBytes.length)
+                .writeBytes(RESPONSE_BYTES).writeBytes(sourceBytes);
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");

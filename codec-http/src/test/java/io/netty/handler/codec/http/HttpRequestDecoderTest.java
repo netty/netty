@@ -164,16 +164,16 @@ public class HttpRequestDecoderTest {
         checkHeaders(req.headers());
 
         for (int i = CONTENT_LENGTH; i > 1; i --) {
-            HttpContent<?> c = channel.readInbound();
-            assertEquals(1, c.payload().readableBytes());
-            assertEquals(content[content.length - i], c.payload().readByte());
-            c.close();
+            try (HttpContent<?> c = channel.readInbound()) {
+                assertEquals(1, c.payload().readableBytes());
+                assertEquals(content[content.length - i], c.payload().readByte());
+            }
         }
 
-        LastHttpContent<?> c = channel.readInbound();
-        assertEquals(1, c.payload().readableBytes());
-        assertEquals(content[content.length - 1], c.payload().readByte());
-        c.close();
+        try (LastHttpContent<?> c = channel.readInbound()) {
+            assertEquals(1, c.payload().readableBytes());
+            assertEquals(content[content.length - 1], c.payload().readByte());
+        }
 
         assertFalse(channel.finish());
         assertNull(channel.readInbound());

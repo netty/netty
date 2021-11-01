@@ -67,6 +67,7 @@ public final class Http2Client {
     static final String URL = System.getProperty("url", "/whatever");
     static final String URL2 = System.getProperty("url2");
     static final String URL2DATA = System.getProperty("url2data", "test data!");
+    static final byte[] URL_2_DATA_BYTES = URL2DATA.getBytes(CharsetUtil.UTF_8);
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -130,9 +131,8 @@ public final class Http2Client {
             }
             if (URL2 != null) {
                 // Create a simple POST request with a body.
-                final byte[] url2DATABytes = URL2DATA.getBytes(CharsetUtil.UTF_8);
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, URL2,
-                        channel.bufferAllocator().allocate(url2DATABytes.length).writeBytes(url2DATABytes));
+                        channel.bufferAllocator().allocate(URL_2_DATA_BYTES.length).writeBytes(URL_2_DATA_BYTES));
                 request.headers().add(HttpHeaderNames.HOST, hostName);
                 request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);

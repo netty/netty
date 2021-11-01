@@ -25,7 +25,7 @@ import io.netty.util.concurrent.Future;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 
 /**
- * A {@link ChannelHandler} that converts {@link ByteBuf} read or written from/to a {@link ChannelPipeline} with
+ * A {@link ChannelHandler} that converts {@link ByteBuf} read or written from/to a {@link ChannelPipeline} to a
  * {@link Buffer}.
  */
 public final class ByteBufToBufferHandler extends ChannelHandlerAdapter {

@@ -71,7 +71,7 @@ public final class WebSocketServerIndexPage {
                 "</form>" + NEWLINE +
                 "</body>" + NEWLINE +
                 "</html>" + NEWLINE).getBytes(StandardCharsets.US_ASCII);
-        return allocator.allocate(content.length).writeBytes(content);
+        return allocator.copyOf(content);
     }
 
     private WebSocketServerIndexPage() {

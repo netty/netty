@@ -134,7 +134,7 @@ public class HttpResponseEncoderTest {
 
         // Test writing an empty buffer works when the encoder is at ST_INIT.
         try (Buffer emptyBuffer = channel.bufferAllocator().allocate(0)) {
-            channel.writeOutbound(emptyBuffer.copy());
+            assertTrue(channel.writeOutbound(emptyBuffer.copy()));
             Buffer buffer = channel.readOutbound();
             assertEquals(buffer, emptyBuffer);
 

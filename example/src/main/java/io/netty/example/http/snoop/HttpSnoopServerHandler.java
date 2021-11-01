@@ -154,7 +154,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         final byte[] bytes = buf.toString().getBytes(UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
-                ctx.bufferAllocator().allocate(bytes.length).writeBytes(bytes));
+                ctx.bufferAllocator().copyOf(bytes));
 
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 

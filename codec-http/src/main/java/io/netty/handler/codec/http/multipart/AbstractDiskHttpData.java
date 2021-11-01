@@ -115,6 +115,8 @@ public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> ex
     @Override
     public void setContent(Buffer buffer) throws IOException {
         requireNonNull(buffer, "buffer");
+        // Release the buffer as it was retained before and we not need a reference to it at all
+        // See https://github.com/netty/netty/issues/1516
         try (buffer) {
             size = buffer.readableBytes();
             checkSize(size);
@@ -137,8 +139,6 @@ public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> ex
                 }
                 return;
             }
-            // Release the buffer as it was retained before and we not need a reference to it at all
-            // See https://github.com/netty/netty/issues/1516
             try (RandomAccessFile accessFile = new RandomAccessFile(file, "rw")) {
                 accessFile.setLength(0);
                 FileChannel localfileChannel = accessFile.getChannel();
@@ -183,7 +183,6 @@ public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> ex
                         written += fileChannel.write(buf);
                     }
                     buffer.skipReadable(written);
-                    fileChannel.position(position + written);
                     size -= written;
                     return true;
                 });
@@ -339,11 +338,7 @@ public abstract class AbstractDiskHttpData<R extends AbstractDiskHttpData<R>> ex
             return allocator.allocate(0);
         }
         byteBuffer.flip();
-        final Buffer buffer = allocator.allocate(byteBuffer.remaining());
-        while (byteBuffer.hasRemaining()) {
-            buffer.writeByte(byteBuffer.get());
-        }
-        return buffer;
+        return allocator.copyOf(byteBuffer);
     }
 
     @Override

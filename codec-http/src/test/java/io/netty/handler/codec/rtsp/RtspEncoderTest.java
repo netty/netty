@@ -61,11 +61,10 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(request);
 
-        String actual;
         try (Buffer buf = ch.readOutbound()) {
-            actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
         }
-        assertEquals(expected, actual);
     }
 
     /**
@@ -101,11 +100,10 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(request);
 
-        String actual;
         try (Buffer buf = ch.readOutbound()) {
-            actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
         }
-        assertEquals(expected, actual);
     }
 
     /**
@@ -128,11 +126,10 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(response);
 
-        String actual;
         try (Buffer buf = ch.readOutbound()) {
-            actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
         }
-        assertEquals(expected, actual);
     }
 
     /**
@@ -171,10 +168,9 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(response);
 
-        String actual;
         try (Buffer buf = ch.readOutbound()) {
-            actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
         }
-        assertEquals(expected, actual);
     }
 }
