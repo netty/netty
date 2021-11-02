@@ -137,12 +137,13 @@ public class MessageAggregatorNewTest {
             assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
             // 1 read issued from EmbeddedChannel constructor
 
-            CompositeBuffer all = compose(allocator, first.copy().send(), chunk.copy().send(), last.copy().send());
-            CompositeBuffer out = embedded.readInbound();
-
-            assertEquals(all, out);
-            assertTrue(all.isAccessible());
-            assertTrue(out.isAccessible());
+            try (CompositeBuffer all = compose(allocator, first.copy().send(), chunk.copy().send(),
+                    last.copy().send());
+                 CompositeBuffer out = embedded.readInbound()) {
+                assertEquals(all, out);
+                assertTrue(all.isAccessible());
+                assertTrue(out.isAccessible());
+            }
             assertFalse(embedded.finish());
         }
     }
