@@ -72,7 +72,7 @@
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
     <netty.version>4.1.70.Final</netty.version>
-    <netty.build.version>29</netty.build.version>
+    <netty.build.version>30</netty.build.version>
     <junit.version>5.7.0</junit.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
