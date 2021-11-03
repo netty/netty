@@ -31,13 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractDecoderTest extends AbstractCompressionTest {
 
-    protected static final ByteBuf WRAPPED_BYTES_SMALL;
-    protected static final ByteBuf WRAPPED_BYTES_LARGE;
-
-    static {
-        WRAPPED_BYTES_SMALL = Unpooled.wrappedBuffer(BYTES_SMALL);
-        WRAPPED_BYTES_LARGE = Unpooled.wrappedBuffer(BYTES_LARGE);
-    }
+    protected static final ByteBuf WRAPPED_BYTES_SMALL = Unpooled.unreleasableBuffer(
+            Unpooled.wrappedBuffer(BYTES_SMALL)).asReadOnly();
+    protected static final ByteBuf WRAPPED_BYTES_LARGE = Unpooled.unreleasableBuffer(
+            Unpooled.wrappedBuffer(BYTES_LARGE)).asReadOnly();
 
     protected EmbeddedChannel channel;
 
@@ -86,19 +83,19 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
     @ParameterizedTest
     @MethodSource("smallData")
     public void testDecompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
-        testDecompression(WRAPPED_BYTES_SMALL, data);
+        testDecompression(WRAPPED_BYTES_SMALL.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
     public void testDecompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
-        testDecompression(WRAPPED_BYTES_LARGE, data);
+        testDecompression(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
     public void testDecompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
-        testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
+        testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     protected void testDecompression(final ByteBuf expected, final ByteBuf data) throws Exception {

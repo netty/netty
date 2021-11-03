@@ -32,11 +32,11 @@ import java.util.List;
 @Sharable
 public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
     private static final ByteBuf _0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte((byte) 0x00));
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0x00)).asReadOnly();
     private static final ByteBuf _0XFF = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF));
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF)).asReadOnly();
     private static final ByteBuf _0XFF_0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00));
+            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00)).asReadOnly();
 
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {

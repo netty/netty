@@ -34,7 +34,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
     private static final int CRLF_SHORT = ('\r' << 8) | '\n';
     private static final byte SP = ' ';
     private static final ByteBuf DOT_CRLF_BUFFER = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n'));
+            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n')).asReadOnly();
 
     private boolean contentExpected;
 

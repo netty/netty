@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoder {
-    private static final ByteBuf CONNECTION_PREFACE = unreleasableBuffer(connectionPrefaceBuf());
+    private static final ByteBuf CONNECTION_PREFACE = unreleasableBuffer(connectionPrefaceBuf()).asReadOnly();
 
     private final HttpServerCodec httpServerCodec;
     private final HttpServerUpgradeHandler httpServerUpgradeHandler;
