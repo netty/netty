@@ -71,7 +71,7 @@
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
-    <netty.version>4.1.69.Final</netty.version>
+    <netty.version>4.1.70.Final</netty.version>
     <netty.build.version>29</netty.build.version>
     <junit.version>5.7.0</junit.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
