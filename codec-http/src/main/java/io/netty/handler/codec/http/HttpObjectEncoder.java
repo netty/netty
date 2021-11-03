@@ -50,9 +50,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     static final int CRLF_SHORT = (CR << 8) | LF;
     private static final int ZERO_CRLF_MEDIUM = ('0' << 16) | CRLF_SHORT;
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(2).writeByte(CR).writeByte(LF));
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
-            .writeBytes(ZERO_CRLF_CRLF));
+    private static final ByteBuf CRLF_BUF = unreleasableBuffer(
+            directBuffer(2).writeByte(CR).writeByte(LF)).asReadOnly();
+    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(
+            directBuffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF)).asReadOnly();
     private static final float HEADERS_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_WEIGHT_HISTORICAL = 1 - HEADERS_WEIGHT_NEW;
     private static final float TRAILERS_WEIGHT_NEW = HEADERS_WEIGHT_NEW;
