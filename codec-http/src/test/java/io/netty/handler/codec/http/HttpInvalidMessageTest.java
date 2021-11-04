@@ -119,10 +119,10 @@ public class HttpInvalidMessageTest {
 
     private void ensureInboundTrafficDiscarded(EmbeddedChannel ch) {
         // Generate a lot of random traffic to ensure that it's discarded silently.
-        byte[] data = new byte[1048576];
+        byte[] data = new byte[1024];
         rnd.nextBytes(data);
 
-        try (Buffer buf = ch.bufferAllocator().allocate(data.length).writeBytes(data)) {
+        try (Buffer buf = ch.bufferAllocator().copyOf(data)) {
             for (int i = 0; i < 4096; i++) {
                 ch.writeInbound(buf.copy());
                 ch.checkException();
