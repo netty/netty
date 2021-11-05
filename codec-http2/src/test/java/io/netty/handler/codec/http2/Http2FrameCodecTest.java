@@ -877,8 +877,9 @@ public class Http2FrameCodecTest {
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
                         DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
-        channel.pipeline().fireUserEventTriggered(upgradeEvent);
         assertTrue(upgradeEvent.isAccessible());
+        channel.pipeline().fireUserEventTriggered(upgradeEvent);
+        assertFalse(upgradeEvent.isAccessible());
     }
 
     @Test

@@ -124,9 +124,11 @@ public class HttpInvalidMessageTest {
 
         try (Buffer buf = ch.bufferAllocator().copyOf(data)) {
             for (int i = 0; i < 4096; i++) {
-                ch.writeInbound(buf.copy());
+                final Buffer copy = buf.copy();
+                ch.writeInbound(copy);
                 ch.checkException();
                 assertNull(ch.readInbound());
+                assertFalse(copy.isAccessible());
             }
         }
     }
