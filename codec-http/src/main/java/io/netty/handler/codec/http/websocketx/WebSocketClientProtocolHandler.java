@@ -70,7 +70,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
         HANDSHAKE_ISSUED,
 
         /**
-         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         * The Handshake was complete successful and so the channel was upgraded to websockets
          */
         HANDSHAKE_COMPLETE
     }
