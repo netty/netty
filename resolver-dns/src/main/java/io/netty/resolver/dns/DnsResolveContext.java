@@ -262,7 +262,8 @@ abstract class DnsResolveContext<T> {
         private static final long serialVersionUID = -8573510133644997085L;
 
         SearchDomainUnknownHostException(Throwable cause, String originalHostname) {
-            super("Search domain query failed. Original hostname: '" + originalHostname + "' " + cause.getMessage());
+            super("Failed to resolve '" + originalHostname + "' and search domain query for configured domain" +
+                    " failed as well. " + cause.getMessage());
             setStackTrace(cause.getStackTrace());
 
             // Preserve the cause
@@ -1031,7 +1032,7 @@ abstract class DnsResolveContext<T> {
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
-        buf.append("failed to resolve '").append(hostname).append('\'');
+        buf.append("Failed to resolve '").append(hostname).append('\'');
         if (tries > 1) {
             if (tries < maxAllowedQueries) {
                 buf.append(" after ")
