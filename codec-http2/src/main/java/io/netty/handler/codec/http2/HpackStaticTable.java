@@ -166,9 +166,9 @@ final class HpackStaticTable {
         while (index <= MAX_SAME_NAME_FIELD_INDEX) {
             entry = getEntry(index);
             if (!equalsVariableTime(name, entry.name)) {
-                // As far as fields with the same name are placed in the table sequentialy
+                // As far as fields with the same name are placed in the table sequentially
                 // and INDEX_BY_NAME returns index of the fist position, - it's safe to
-                // exit immediatly.
+                // exit immediately.
                 return NOT_FOUND;
             }
             if (equalsVariableTime(value, entry.value)) {
@@ -199,7 +199,7 @@ final class HpackStaticTable {
     /**
      * Returns the last position in the array that contains multiple
      * fields with the same name. Starting from this position, all
-     * names are unique. Similary to {@link #getIndexInsensitive(CharSequence, CharSequence)} method
+     * names are unique. Similar to {@link #getIndexInsensitive(CharSequence, CharSequence)} method
      * assumes all entries for a given header field are sequential
      */
     private static int maxSameNameFieldIndex() {

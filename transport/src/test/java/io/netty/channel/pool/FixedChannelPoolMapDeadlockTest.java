@@ -61,7 +61,7 @@ public class FixedChannelPoolMapDeadlockTest {
         final FixedChannelPool poolB2 = new FixedChannelPool(bootstrapA2, NOOP_HANDLER, 1);
 
         // Synchronize threads on these barriers to ensure order of execution, first wait until each thread is inside
-        // the newPool callbak, then hold the two threads that should lose the match until the first two returns, then
+        // the newPool callback, then hold the two threads that should lose the match until the first two returns, then
         // release them to test if they deadlock when trying to release their pools on each other's threads.
         final CyclicBarrier arrivalBarrier = new CyclicBarrier(4);
         final CyclicBarrier releaseBarrier = new CyclicBarrier(3);

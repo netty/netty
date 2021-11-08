@@ -41,7 +41,7 @@ import java.nio.ByteBuffer;
 final class EpollEventArray {
     // Size of the epoll_event struct
     private static final int EPOLL_EVENT_SIZE = Native.sizeofEpollEvent();
-    // The offsiet of the data union in the epoll_event struct
+    // The offset of the data union in the epoll_event struct
     private static final int EPOLL_DATA_OFFSET = Native.offsetofEpollData();
 
     private ByteBuffer memory;
