@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.util.CharsetUtil;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The version of HTTP or its derived protocols, such as
@@ -246,7 +246,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         return minorVersion() - o.minorVersion();
     }
 
-    void encode(ByteBuf buf) {
+    void encode(Buffer buf) {
         if (bytes == null) {
             buf.writeCharSequence(text, CharsetUtil.US_ASCII);
         } else {

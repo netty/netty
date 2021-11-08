@@ -24,7 +24,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class WebSocketRequestBuilder {
 
@@ -122,7 +123,8 @@ public class WebSocketRequestBuilder {
     }
 
     public FullHttpRequest build() {
-        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, uri);
+        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, uri,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         HttpHeaders headers = req.headers();
 
         if (host != null) {

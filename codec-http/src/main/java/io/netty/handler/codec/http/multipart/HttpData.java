@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.api.Buffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +25,7 @@ import java.nio.charset.Charset;
 /**
  * Extended interface for InterfaceHttpData
  */
-public interface HttpData extends InterfaceHttpData, ByteBufHolder {
+public interface HttpData<R extends HttpData<R>> extends InterfaceHttpData<R> {
 
     /**
      * Returns the maxSize for this HttpData.
@@ -49,16 +48,16 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
-     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
+     * <p>{@link Buffer#close()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer Must be not null.
      * @throws IOException If an IO error occurs when setting the content of this HttpData.
      */
-    void setContent(ByteBuf buffer) throws IOException;
+    void setContent(Buffer buffer) throws IOException;
 
     /**
      * Add the content from the ChannelBuffer
-     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
+     * <p>{@link Buffer#close()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer
      *            must be not null except if last is set to False
@@ -66,7 +65,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *            True of the buffer is the last one
      * @throws IOException If an IO error occurs while adding content to this HttpData.
      */
-    void addContent(ByteBuf buffer, boolean last) throws IOException;
+    void addContent(Buffer buffer, boolean last) throws IOException;
 
     /**
      * Set the content from the file (erase any previous data)
@@ -129,13 +128,13 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     byte[] get() throws IOException;
 
     /**
-     * Returns the content of the file item as a ByteBuf.<br>
+     * Returns the content of the file item as a {@link Buffer}.<br>
      * Note: this method will allocate a lot of memory, if the data is currently stored on the file system.
      *
-     * @return the content of the file item as a ByteBuf
+     * @return the content of the file item as a {@link Buffer}
      * @throws IOException If an IO error occurs while reading the data contents of this HttpData.
      */
-    ByteBuf getByteBuf() throws IOException;
+    Buffer getBuffer() throws IOException;
 
     /**
      * Returns a ChannelBuffer for the content from the current position with at
@@ -146,7 +145,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      * @return a ChannelBuffer for the content from the current position or an
      *         EMPTY_BUFFER if there is no more data to return
      */
-    ByteBuf getChunk(int length) throws IOException;
+    Buffer getChunk(int length) throws IOException;
 
     /**
      * Returns the contents of the file item as a String, using the default
@@ -212,28 +211,4 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
      *                if this data is not represented by a file
      */
     File getFile() throws IOException;
-
-    @Override
-    HttpData copy();
-
-    @Override
-    HttpData duplicate();
-
-    @Override
-    HttpData retainedDuplicate();
-
-    @Override
-    HttpData replace(ByteBuf content);
-
-    @Override
-    HttpData retain();
-
-    @Override
-    HttpData retain(int increment);
-
-    @Override
-    HttpData touch();
-
-    @Override
-    HttpData touch(Object hint);
 }

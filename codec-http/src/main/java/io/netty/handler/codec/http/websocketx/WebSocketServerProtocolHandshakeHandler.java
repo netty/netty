@@ -57,14 +57,16 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         final FullHttpRequest req = (FullHttpRequest) msg;
+
         if (!isWebSocketPath(req)) {
             ctx.fireChannelRead(msg);
             return;
         }
 
-        try {
+        try (req) {
             if (!GET.equals(req.method())) {
-                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, ctx.alloc().buffer(0)));
+                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN,
+                        ctx.bufferAllocator().allocate(0)));
                 return;
             }
 
@@ -92,7 +94,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                         localHandshakePromise.trySuccess(null);
                         // Kept for compatibility
                         ctx.fireUserEventTriggered(
-                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                                ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
                         ctx.fireUserEventTriggered(
                                 new WebSocketServerProtocolHandler.HandshakeComplete(
                                         req.uri(), req.headers(), handshaker.selectedSubprotocol()));
@@ -101,8 +103,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                 });
                 applyHandshakeTimeout(ctx);
             }
-        } finally {
-            req.release();
         }
     }
 

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -28,6 +29,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -59,10 +61,10 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(request);
 
-        ByteBuf buf = ch.readOutbound();
-        String actual = buf.toString(CharsetUtil.UTF_8);
-        buf.release();
-        assertEquals(expected, actual);
+        try (Buffer buf = ch.readOutbound()) {
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
+        }
     }
 
     /**
@@ -87,21 +89,21 @@ public class RtspEncoderTest {
         FullHttpRequest request = new DefaultFullHttpRequest(
                 RtspVersions.RTSP_1_0,
                 RtspMethods.GET_PARAMETER,
-                "rtsp://172.10.20.30:554");
+                "rtsp://172.10.20.30:554", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(content.length));
         request.headers().add(RtspHeaderNames.SESSION, "2547019973447939919");
         request.headers().add(RtspHeaderNames.CSEQ, "3");
         request.headers().add(RtspHeaderNames.CONTENT_LENGTH,
                 "" + content.length);
         request.headers().add(RtspHeaderNames.CONTENT_TYPE, "text/parameters");
-        request.content().writeBytes(content);
+        request.payload().writeBytes(content);
 
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(request);
 
-        ByteBuf buf = ch.readOutbound();
-        String actual = buf.toString(CharsetUtil.UTF_8);
-        buf.release();
-        assertEquals(expected, actual);
+        try (Buffer buf = ch.readOutbound()) {
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
+        }
     }
 
     /**
@@ -124,10 +126,10 @@ public class RtspEncoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(response);
 
-        ByteBuf buf = ch.readOutbound();
-        String actual = buf.toString(CharsetUtil.UTF_8);
-        buf.release();
-        assertEquals(expected, actual);
+        try (Buffer buf = ch.readOutbound()) {
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
+        }
     }
 
     /**
@@ -152,7 +154,8 @@ public class RtspEncoderTest {
 
         FullHttpResponse response =
                 new DefaultFullHttpResponse(RtspVersions.RTSP_1_0,
-                                            RtspResponseStatuses.OK);
+                                            RtspResponseStatuses.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR
+                        .allocate(content.length));
         response.headers().add(RtspHeaderNames.SERVER, "Testserver");
         response.headers().add(RtspHeaderNames.SESSION, "2547019973447939919");
         response.headers().add(RtspHeaderNames.CONTENT_TYPE,
@@ -160,14 +163,14 @@ public class RtspEncoderTest {
         response.headers().add(RtspHeaderNames.CONTENT_LENGTH,
                 "" + content.length);
         response.headers().add(RtspHeaderNames.CSEQ, "3");
-        response.content().writeBytes(content);
+        response.payload().writeBytes(content);
 
         EmbeddedChannel ch = new EmbeddedChannel(new RtspEncoder());
         ch.writeOutbound(response);
 
-        ByteBuf buf = ch.readOutbound();
-        String actual = buf.toString(CharsetUtil.UTF_8);
-        buf.release();
-        assertEquals(expected, actual);
+        try (Buffer buf = ch.readOutbound()) {
+            String actual = buf.toString(CharsetUtil.UTF_8);
+            assertEquals(expected, actual);
+        }
     }
 }

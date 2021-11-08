@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 import io.netty.handler.stream.ChunkedInput;
 
 /**
@@ -40,29 +40,23 @@ import io.netty.handler.stream.ChunkedInput;
  * }
  * </pre>
  */
-public class HttpChunkedInput implements ChunkedInput<HttpContent> {
-
-    private final ChunkedInput<ByteBuf> input;
+public class HttpChunkedInput /*implements ChunkedInput<HttpContent> */ {
+    // TODO: Migrate ChunkedInput
+/*
+    private final ChunkedInput<Buffer> input;
     private final LastHttpContent lastHttpContent;
     private boolean sentLastChunk;
 
-    /**
-     * Creates a new instance using the specified input.
-     * @param input {@link ChunkedInput} containing data to write
-     */
-    public HttpChunkedInput(ChunkedInput<ByteBuf> input) {
-        this.input = input;
-        lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
-    }
-
-    /**
+    */
+/**
      * Creates a new instance using the specified input. {@code lastHttpContent} will be written as the terminating
      * chunk.
      * @param input {@link ChunkedInput} containing data to write
      * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this for
-     *            training headers.
-     */
-    public HttpChunkedInput(ChunkedInput<ByteBuf> input, LastHttpContent lastHttpContent) {
+     * training headers.
+     *//*
+
+    public HttpChunkedInput(ChunkedInput<Buffer> input, LastHttpContent lastHttpContent) {
         this.input = input;
         this.lastHttpContent = lastHttpContent;
     }
@@ -78,18 +72,49 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
     }
 
     @Override
-    public void close() throws Exception {
-        input.close();
+    public Send<ChunkedInput<HttpContent>> send() {
+        final Send<ChunkedInput<Buffer>> inputSend = input.send();
+        final Send<HttpContent> lhcSend = lastHttpContent.send();
+        return new Send<>() {
+            @Override
+            public ChunkedInput<HttpContent> receive() {
+                final HttpContent lhc = lhcSend.receive();
+                assert lhcSend.referentIsInstanceOf(lhc.getClass());
+                return new HttpChunkedInput(inputSend.receive(), (LastHttpContent) lhc);
+            }
+
+            @Override
+            public void close() {
+                try {
+                    inputSend.close();
+                } finally {
+                    lhcSend.close();
+                }
+            }
+
+            @Override
+            public boolean referentIsInstanceOf(Class<?> cls) {
+                return cls.isAssignableFrom(HttpChunkedInput.class);
+            }
+        };
     }
 
-    @Deprecated
     @Override
-    public HttpContent readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
+    public void close() {
+        try {
+            input.close();
+        } finally {
+            lastHttpContent.close();
+        }
     }
 
     @Override
-    public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
+    public boolean isAccessible() {
+        return input.isAccessible() && lastHttpContent.isAccessible();
+    }
+
+    @Override
+    public HttpContent readChunk(BufferAllocator allocator) throws Exception {
         if (input.isEndOfInput()) {
             if (sentLastChunk) {
                 return null;
@@ -99,7 +124,7 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
                 return lastHttpContent;
             }
         } else {
-            ByteBuf buf = input.readChunk(allocator);
+            Buffer buf = input.readChunk(allocator);
             if (buf == null) {
                 return null;
             }
@@ -116,4 +141,5 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
     public long progress() {
         return input.progress();
     }
+*/
 }

@@ -54,7 +54,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             Need more chunks
      */
-    List<InterfaceHttpData> getBodyHttpDatas();
+    List<InterfaceHttpData<?>> getBodyHttpDatas();
 
     /**
      * This getMethod returns a List of all HttpDatas with the given name from
@@ -67,7 +67,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    List<InterfaceHttpData> getBodyHttpDatas(String name);
+    List<InterfaceHttpData<?>> getBodyHttpDatas(String name);
 
     /**
      * This getMethod returns the first InterfaceHttpData with the given name from
@@ -81,7 +81,7 @@ public interface InterfaceHttpPostRequestDecoder {
      * @throws HttpPostRequestDecoder.NotEnoughDataDecoderException
      *             need more chunks
      */
-    InterfaceHttpData getBodyHttpData(String name);
+    InterfaceHttpData<?> getBodyHttpData(String name);
 
     /**
      * Initialized the internals from a new chunk
@@ -92,7 +92,7 @@ public interface InterfaceHttpPostRequestDecoder {
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    InterfaceHttpPostRequestDecoder offer(HttpContent content);
+    InterfaceHttpPostRequestDecoder offer(HttpContent<?> content);
 
     /**
      * True if at current getStatus, there is an available decoded
@@ -111,14 +111,14 @@ public interface InterfaceHttpPostRequestDecoder {
      * is called, there is no more available InterfaceHttpData. A subsequent
      * call to offer(httpChunk) could enable more data.
      *
-     * Be sure to call {@link InterfaceHttpData#release()} after you are done
+     * Be sure to call {@link InterfaceHttpData#close()} after you are done
      * with processing to make sure to not leak any resources
      *
      * @return the next available InterfaceHttpData or null if none
      * @throws HttpPostRequestDecoder.EndOfDataDecoderException
      *             No more data will be available
      */
-    InterfaceHttpData next();
+    InterfaceHttpData<?> next();
 
     /**
      * Returns the current InterfaceHttpData if currently in decoding status,
@@ -128,7 +128,7 @@ public interface InterfaceHttpPostRequestDecoder {
      *
      * @return the current InterfaceHttpData if currently in decoding status or null if none.
      */
-    InterfaceHttpData currentPartialHttpData();
+    InterfaceHttpData<?> currentPartialHttpData();
 
     /**
      * Destroy the {@link InterfaceHttpPostRequestDecoder} and release all it resources. After this method
@@ -144,5 +144,5 @@ public interface InterfaceHttpPostRequestDecoder {
     /**
      * Remove the given FileUpload from the list of FileUploads to clean
      */
-    void removeHttpDataFromClean(InterfaceHttpData data);
+    void removeHttpDataFromClean(InterfaceHttpData<?> data);
 }

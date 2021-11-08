@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
@@ -24,11 +25,10 @@ import io.netty.util.IllegalReferenceCountException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.Charset;
 import java.util.concurrent.ExecutionException;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -41,112 +41,104 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class HttpRequestEncoderTest {
 
-    @SuppressWarnings("deprecation")
-    private static ByteBuf[] getBuffers() {
-        return new ByteBuf[]{
-                Unpooled.buffer(128).order(ByteOrder.BIG_ENDIAN),
-                Unpooled.buffer(128).order(ByteOrder.LITTLE_ENDIAN),
-                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN)).writerIndex(0),
-                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN)).writerIndex(0)
+    private static Buffer[] getBuffers() {
+        return new Buffer[]{
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(128),
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(128).writerOffset(0),
         };
     }
 
     @Test
     public void testUriWithoutPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, "http://localhost"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testUriWithoutPath2() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                     "http://localhost:9999?p1=v1"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testUriWithEmptyPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                     "http://localhost:9999/?p1=v1"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testUriWithPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, "http://localhost/"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testAbsPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, "/"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET / HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testEmptyAbsPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, ""));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET / HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
     public void testQueryStringPath() throws Exception {
-        for (ByteBuf buffer : getBuffers()) {
+        for (Buffer buffer : getBuffers()) {
             HttpRequestEncoder encoder = new HttpRequestEncoder();
             encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, "/?url=http://example.com"));
-            String req = buffer.toString(Charset.forName("US-ASCII"));
+            String req = buffer.toString(US_ASCII);
             assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
-            buffer.release();
+            buffer.close();
         }
     }
 
     @Test
-    public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() throws Exception {
+    public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         final EmbeddedChannel channel = new EmbeddedChannel(encoder);
         final ByteBuf buf = Unpooled.buffer();
         buf.release();
-        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.writeAndFlush(buf).get();
-            }
-        });
+        ExecutionException e = assertThrows(ExecutionException.class, () -> channel.writeAndFlush(buf).get());
         assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
 
         channel.finishAndReleaseAll();
@@ -163,26 +155,26 @@ public class HttpRequestEncoderTest {
     }
 
     @Test
-    public void testEmptyContentsChunked() throws Exception {
+    public void testEmptyContentsChunked() {
         testEmptyContents(true, false);
     }
 
     @Test
-    public void testEmptyContentsChunkedWithTrailers() throws Exception {
+    public void testEmptyContentsChunkedWithTrailers() {
         testEmptyContents(true, true);
     }
 
     @Test
-    public void testEmptyContentsNotChunked() throws Exception {
+    public void testEmptyContentsNotChunked() {
         testEmptyContents(false, false);
     }
 
     @Test
-    public void testEmptyContentNotsChunkedWithTrailers() throws Exception {
+    public void testEmptyContentNotsChunkedWithTrailers() {
         testEmptyContents(false, true);
     }
 
-    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+    private void testEmptyContents(boolean chunked, boolean trailers) {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
@@ -191,38 +183,39 @@ public class HttpRequestEncoderTest {
         }
         assertTrue(channel.writeOutbound(request));
 
-        ByteBuf contentBuffer = Unpooled.buffer();
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
 
-        ByteBuf lastContentBuffer = Unpooled.buffer();
-        LastHttpContent last = new DefaultLastHttpContent(lastContentBuffer);
+        LastHttpContent<?> last = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         if (trailers) {
             last.trailingHeaders().set("X-Netty-Test", "true");
         }
         assertTrue(channel.writeOutbound(last));
 
-        // Ensure we only produce ByteBuf instances.
-        ByteBuf head = channel.readOutbound();
-        assertTrue(head.release());
+        try (Buffer head = channel.readOutbound()) {
+            assertTrue(head.isAccessible());
+        }
 
-        ByteBuf content = channel.readOutbound();
-        content.release();
+        try (Buffer content = channel.readOutbound()) {
+            assertTrue(content.isAccessible());
+        }
 
-        ByteBuf lastContent = channel.readOutbound();
-        lastContent.release();
+        try (Buffer lastContent = channel.readOutbound()) {
+            assertTrue(lastContent.isAccessible());
+        }
         assertFalse(channel.finish());
     }
 
     /**
-     * A test that checks for a NPE that would occur if when processing {@link LastHttpContent#EMPTY_LAST_CONTENT}
+     * A test that checks for a NPE that would occur if when processing {@link EmptyLastHttpContent}
      * when a certain initialization order of {@link EmptyHttpHeaders} would occur.
      */
     @Test
-    public void testForChunkedRequestNpe() throws Exception {
+    public void testForChunkedRequestNpe() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
         assertTrue(channel.writeOutbound(new CustomHttpRequest()));
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII))));
-        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("test", CharsetUtil.US_ASCII))));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
         assertTrue(channel.finishAndReleaseAll());
     }
 
@@ -243,11 +236,6 @@ public class HttpRequestEncoderTest {
         }
 
         @Override
-        public DecoderResult getDecoderResult() {
-            return decoderResult();
-        }
-
-        @Override
         public HttpVersion getProtocolVersion() {
             return HttpVersion.HTTP_1_1;
         }
@@ -265,23 +253,13 @@ public class HttpRequestEncoderTest {
         }
 
         @Override
-        public HttpMethod getMethod() {
-            return HttpMethod.POST;
-        }
-
-        @Override
         public HttpMethod method() {
-            return getMethod();
+            return HttpMethod.POST;
         }
 
         @Override
         public HttpRequest setMethod(HttpMethod method) {
             return this;
-        }
-
-        @Override
-        public String getUri() {
-            return "/";
         }
 
         @Override

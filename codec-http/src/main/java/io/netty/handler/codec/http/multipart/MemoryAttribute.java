@@ -15,43 +15,44 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelException;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.*;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Memory implementation of Attributes
  */
-public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
+public class MemoryAttribute extends AbstractMemoryHttpData<MemoryAttribute> implements Attribute<MemoryAttribute> {
+    private boolean closed;
 
-    public MemoryAttribute(String name) {
-        this(name, HttpConstants.DEFAULT_CHARSET);
+    public MemoryAttribute(BufferAllocator allocator, String name) {
+        this(allocator, name, HttpConstants.DEFAULT_CHARSET);
     }
 
-    public MemoryAttribute(String name, long definedSize) {
-        this(name, definedSize, HttpConstants.DEFAULT_CHARSET);
+    public MemoryAttribute(BufferAllocator allocator, String name, long definedSize) {
+        this(allocator, name, definedSize, HttpConstants.DEFAULT_CHARSET);
     }
 
-    public MemoryAttribute(String name, Charset charset) {
-        super(name, charset, 0);
+    public MemoryAttribute(BufferAllocator allocator, String name, Charset charset) {
+        super(allocator, name, charset, 0);
     }
 
-    public MemoryAttribute(String name, long definedSize, Charset charset) {
-        super(name, charset, definedSize);
+    public MemoryAttribute(BufferAllocator allocator, String name, long definedSize, Charset charset) {
+        super(allocator, name, charset, definedSize);
     }
 
-    public MemoryAttribute(String name, String value) throws IOException {
-        this(name, value, HttpConstants.DEFAULT_CHARSET); // Attribute have no default size
+    public MemoryAttribute(BufferAllocator allocator, String name, String value) throws IOException {
+        this(allocator, name, value, HttpConstants.DEFAULT_CHARSET); // Attribute have no default size
     }
 
-    public MemoryAttribute(String name, String value, Charset charset) throws IOException {
-        super(name, charset, 0); // Attribute have no default size
+    public MemoryAttribute(BufferAllocator allocator, String name, String value, Charset charset) throws IOException {
+        super(allocator, name, charset, 0); // Attribute have no default size
         setValue(value);
     }
 
@@ -62,7 +63,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public String getValue() {
-        return getByteBuf().toString(getCharset());
+        return getBuffer().toString(getCharset());
     }
 
     @Override
@@ -70,7 +71,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         requireNonNull(value, "value");
         byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
-        ByteBuf buffer = wrappedBuffer(bytes);
+        Buffer buffer = allocator().allocate(bytes.length).writeBytes(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
         }
@@ -78,12 +79,12 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     }
 
     @Override
-    public void addContent(ByteBuf buffer, boolean last) throws IOException {
+    public void addContent(Buffer buffer, boolean last) throws IOException {
         int localsize = buffer.readableBytes();
         try {
             checkSize(size + localsize);
         } catch (IOException e) {
-            buffer.release();
+            buffer.close();
             throw e;
         }
         if (definedSize > 0 && definedSize < size + localsize) {
@@ -102,7 +103,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         if (!(o instanceof Attribute)) {
             return false;
         }
-        Attribute attribute = (Attribute) o;
+        Attribute<?> attribute = (Attribute<?>) o;
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
@@ -112,10 +113,10 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
                     " with " + other.getHttpDataType());
         }
-        return compareTo((Attribute) other);
+        return compareTo((Attribute<?>) other);
     }
 
-    public int compareTo(Attribute o) {
+    public int compareTo(Attribute<?> o) {
         return getName().compareToIgnoreCase(o.getName());
     }
 
@@ -125,72 +126,22 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     }
 
     @Override
-    public Attribute copy() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.copy() : null);
+    public Send<MemoryAttribute> send() {
+        return Send.sending(MemoryAttribute.class, () -> this);
     }
 
     @Override
-    public Attribute duplicate() {
-        final ByteBuf content = content();
-        return replace(content != null ? content.duplicate() : null);
+    public void close() {
+        closed = true;
     }
 
     @Override
-    public Attribute retainedDuplicate() {
-        ByteBuf content = content();
-        if (content != null) {
-            content = content.retainedDuplicate();
-            boolean success = false;
-            try {
-                Attribute duplicate = replace(content);
-                success = true;
-                return duplicate;
-            } finally {
-                if (!success) {
-                    content.release();
-                }
-            }
-        } else {
-            return replace(null);
-        }
+    public boolean isAccessible() {
+        return !closed;
     }
 
     @Override
-    public Attribute replace(ByteBuf content) {
-        MemoryAttribute attr = new MemoryAttribute(getName());
-        attr.setCharset(getCharset());
-        if (content != null) {
-            try {
-                attr.setContent(content);
-            } catch (IOException e) {
-                throw new ChannelException(e);
-            }
-        }
-        return attr;
-    }
-
-    @Override
-    public Attribute retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public Attribute retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public Attribute touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public Attribute touch(Object hint) {
-        super.touch(hint);
+    public MemoryAttribute touch(Object hint) {
         return this;
     }
 }

@@ -16,12 +16,14 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.compression.Decompressor;
-import io.netty.util.ReferenceCountUtil;
+
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
@@ -40,7 +42,7 @@ import io.netty.util.ReferenceCountUtil;
  * <p>
  * This handler must be placed after {@link HttpObjectDecoder} in the pipeline
  * so that this handler can intercept HTTP requests after {@link HttpObjectDecoder}
- * converts {@link ByteBuf}s into HTTP requests.
+ * converts {@link Buffer}s into HTTP requests.
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
@@ -59,7 +61,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     continueResponse = true;
             }
             // 100-continue response must be passed through.
-            fireChannelRead(ctx, ReferenceCountUtil.retain(msg));
+            fireChannelRead(ctx, msg);
             return;
         }
 
@@ -68,7 +70,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 continueResponse = false;
             }
             // 100-continue response must be passed through.
-            fireChannelRead(ctx, ReferenceCountUtil.retain(msg));
+            fireChannelRead(ctx, msg);
             return;
         }
 
@@ -97,9 +99,6 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             decompressor = newContentDecoder(contentEncoding);
 
             if (decompressor == null) {
-                if (message instanceof HttpContent) {
-                    ((HttpContent) message).retain();
-                }
                 fireChannelRead(ctx, message);
                 return;
             }
@@ -150,17 +149,18 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         }
 
         if (msg instanceof HttpContent) {
-            final HttpContent c = (HttpContent) msg;
+            final HttpContent<?> c = (HttpContent<?>) msg;
             if (decompressor == null) {
-                fireChannelRead(ctx, c.retain());
+                fireChannelRead(ctx, c);
             } else {
                 decodeContent(ctx, c);
             }
         }
     }
 
-    private void decodeContent(ChannelHandlerContext ctx, HttpContent c) {
-        ByteBuf content = c.content();
+    private void decodeContent(ChannelHandlerContext ctx, HttpContent<?> c) {
+        final Buffer payload = c.payload();
+        ByteBuf content = intoByteBuf(payload);
 
         assert decompressor != null;
 
@@ -172,7 +172,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     decompressed.release();
                     return;
                 }
-                ctx.fireChannelRead(new DefaultHttpContent(decompressed));
+                ctx.fireChannelRead(new DefaultHttpContent(extractOrCopy(ctx.bufferAllocator(), decompressed)));
             } else if (idx == content.readerIndex()) {
                 break;
             }
@@ -182,14 +182,14 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             decompressor.close();
             decompressor = null;
 
-            LastHttpContent last = (LastHttpContent) c;
+            LastHttpContent<?> last = (LastHttpContent<?>) c;
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
             HttpHeaders headers = last.trailingHeaders();
             if (headers.isEmpty()) {
-                fireChannelRead(ctx, LastHttpContent.EMPTY_LAST_CONTENT);
+                fireChannelRead(ctx, new EmptyLastHttpContent(ctx.bufferAllocator()));
             } else {
-                fireChannelRead(ctx, new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
+                fireChannelRead(ctx, new DefaultLastHttpContent(ctx.bufferAllocator().allocate(0), headers));
             }
         }
     }

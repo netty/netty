@@ -16,24 +16,27 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectEncoder;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
+import static io.netty.util.CharsetUtil.US_ASCII;
+import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
  * Encodes an RTSP message represented in {@link HttpMessage} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
 public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
-    private static final int CRLF_SHORT = (CR << 8) | LF;
+    private static final short CRLF_SHORT = (CR << 8) | LF;
 
     @Override
     public boolean acceptOutboundMessage(final Object msg)
@@ -42,27 +45,25 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
     }
 
     @Override
-    protected void encodeInitialLine(final ByteBuf buf, final HttpMessage message)
-           throws Exception {
+    protected void encodeInitialLine(final Buffer buf, final HttpMessage message) throws Exception {
         if (message instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) message;
-            ByteBufUtil.copy(request.method().asciiName(), buf);
+            buf.writeCharSequence(request.method().asciiName(), US_ASCII);
             buf.writeByte(SP);
-            buf.writeCharSequence(request.uri(), CharsetUtil.UTF_8);
+            buf.writeCharSequence(request.uri(), UTF_8);
             buf.writeByte(SP);
-            buf.writeCharSequence(request.protocolVersion().toString(), CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeCharSequence(request.protocolVersion().toString(), US_ASCII);
+            buf.writeShort(CRLF_SHORT);
         } else if (message instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) message;
-            buf.writeCharSequence(response.protocolVersion().toString(), CharsetUtil.US_ASCII);
+            buf.writeCharSequence(response.protocolVersion().toString(), US_ASCII);
             buf.writeByte(SP);
-            ByteBufUtil.copy(response.status().codeAsText(), buf);
+            buf.writeCharSequence(response.status().codeAsText(), US_ASCII);
             buf.writeByte(SP);
-            buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeCharSequence(response.status().reasonPhrase(), US_ASCII);
+            buf.writeShort(CRLF_SHORT);
         } else {
-            throw new UnsupportedMessageTypeException("Unsupported type "
-                                + StringUtil.simpleClassName(message));
+            throw new UnsupportedMessageTypeException("Unsupported type " + StringUtil.simpleClassName(message));
         }
     }
 }

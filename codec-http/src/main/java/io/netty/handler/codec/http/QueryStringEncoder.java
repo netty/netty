@@ -151,9 +151,6 @@ public class QueryStringEncoder {
         }
     }
 
-    /**
-     * @see ByteBufUtil#writeUtf8(io.netty.buffer.ByteBuf, CharSequence, int, int)
-     */
     private void encodeUtf8Component(CharSequence s) {
         for (int i = 0, len = s.length(); i < len; i++) {
             char c = s.charAt(i);

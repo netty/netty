@@ -15,9 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Send;
 import io.netty.util.IllegalReferenceCountException;
 
 import static java.util.Objects.requireNonNull;
@@ -27,7 +26,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
 
-    private final ByteBuf content;
+    private final Buffer payload;
     private final HttpHeaders trailingHeaders;
 
     /**
@@ -35,90 +34,61 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
      */
     private int hash;
 
-    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.buffer(0));
-    }
-
-    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        this(version, status, content, true);
-    }
-
-    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        this(version, status, Unpooled.buffer(0), validateHeaders, false);
-    }
-
-    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
-                                   boolean singleFieldHeaders) {
-        this(version, status, Unpooled.buffer(0), validateHeaders, singleFieldHeaders);
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, Buffer payload) {
+        this(version, status, payload, true);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
-                                   ByteBuf content, boolean validateHeaders) {
-        this(version, status, content, validateHeaders, false);
+                                   Buffer payload, boolean validateHeaders) {
+        this(version, status, payload, validateHeaders, false);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
-                                   ByteBuf content, boolean validateHeaders, boolean singleFieldHeaders) {
+                                   Buffer payload, boolean validateHeaders, boolean singleFieldHeaders) {
         super(version, status, validateHeaders, singleFieldHeaders);
-        this.content = requireNonNull(content, "content");
+        this.payload = requireNonNull(payload, "payload");
         this.trailingHeaders = singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
                                                   : new DefaultHttpHeaders(validateHeaders);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
-            ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeaders) {
+                                   Buffer payload, HttpHeaders headers, HttpHeaders trailingHeaders) {
         super(version, status, headers);
-        this.content = requireNonNull(content, "content");
+        this.payload = requireNonNull(payload, "payload");
         this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
+    }
+
+    @Override
+    public void close() {
+        payload.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return payload.isAccessible();
+    }
+
+    @Override
+    public FullHttpResponse touch(Object hint) {
+        payload.touch(hint);
+        return this;
+    }
+
+    @Override
+    public Buffer payload() {
+        return payload;
+    }
+
+    @Override
+    public Send<FullHttpResponse> send() {
+        return payload.send().map(FullHttpResponse.class,
+                payload -> new DefaultFullHttpResponse(protocolVersion(), status(), payload, headers(),
+                        trailingHeaders));
     }
 
     @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
-    }
-
-    @Override
-    public ByteBuf content() {
-        return content;
-    }
-
-    @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public FullHttpResponse retain() {
-        content.retain();
-        return this;
-    }
-
-    @Override
-    public FullHttpResponse retain(int increment) {
-        content.retain(increment);
-        return this;
-    }
-
-    @Override
-    public FullHttpResponse touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public FullHttpResponse touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
     }
 
     @Override
@@ -134,35 +104,13 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public FullHttpResponse copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public FullHttpResponse duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public FullHttpResponse retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public FullHttpResponse replace(ByteBuf content) {
-        FullHttpResponse response = new DefaultFullHttpResponse(protocolVersion(), status(), content,
-                headers().copy(), trailingHeaders().copy());
-        response.setDecoderResult(decoderResult());
-        return response;
-    }
-
-    @Override
     public int hashCode() {
         int hash = this.hash;
         if (hash == 0) {
-            if (ByteBufUtil.isAccessible(content())) {
+            final Buffer payload = payload();
+            if (payload.isAccessible()) {
                 try {
-                    hash = 31 + content().hashCode();
+                    hash = 31 + payload.hashCode();
                 } catch (IllegalReferenceCountException ignored) {
                     // Handle race condition between checking refCnt() == 0 and using the object.
                     hash = 31;
@@ -186,7 +134,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         DefaultFullHttpResponse other = (DefaultFullHttpResponse) o;
 
         return super.equals(other) &&
-               content().equals(other.content()) &&
+               payload().equals(other.payload()) &&
                trailingHeaders().equals(other.trailingHeaders());
     }
 

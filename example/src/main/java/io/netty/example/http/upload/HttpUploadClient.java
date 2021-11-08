@@ -16,6 +16,7 @@
 package io.netty.example.http.upload;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -104,15 +105,17 @@ public final class HttpUploadClient {
         // Configure the client.
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
 
-        // setup the factory: here using a mixed memory/disk based on size threshold
-        HttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if MINSIZE exceed
-
         DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
         DiskFileUpload.baseDirectory = null; // system temp directory
         DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
         DiskAttribute.baseDirectory = null; // system temp directory
 
-        try {
+        HttpDataFactory factory = null;
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            // setup the factory: here using a mixed memory/disk based on size threshold
+            // Disk if MINSIZE exceed
+            factory = new DefaultHttpDataFactory(allocator, DefaultHttpDataFactory.MINSIZE);
+
             Bootstrap b = new Bootstrap();
             b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientInitializer(sslCtx));
 
@@ -124,20 +127,22 @@ public final class HttpUploadClient {
             }
 
             // Simple Post form: factory used for big attributes
-            List<InterfaceHttpData> bodylist = formpost(b, host, port, uriSimple, file, factory, headers);
+            List<InterfaceHttpData<?>> bodylist = formpost(allocator, b, host, port, uriSimple, file, factory, headers);
             if (bodylist == null) {
                 factory.cleanAllHttpData();
                 return;
             }
 
             // Multipart Post form: factory used
-            formpostmultipart(b, host, port, uriFile, factory, headers, bodylist);
+            formpostmultipart(allocator, b, host, port, uriFile, factory, headers, bodylist);
         } finally {
             // Shut down executor threads to exit.
             group.shutdownGracefully();
 
             // Really clean all temporary files if they still exist
-            factory.cleanAllHttpData();
+            if (factory != null) {
+                factory.cleanAllHttpData();
+            }
         }
     }
 
@@ -202,8 +207,7 @@ public final class HttpUploadClient {
      *
      * @return the list of HttpData object (attribute and file) to be reused on next post
      */
-    private static List<InterfaceHttpData> formpost(
-            Bootstrap bootstrap,
+    private static List<InterfaceHttpData<?>> formpost(BufferAllocator allocator, Bootstrap bootstrap,
             String host, int port, URI uriSimple, File file, HttpDataFactory factory,
             List<Entry<String, String>> headers) throws Exception {
         // XXX /formpost
@@ -217,7 +221,7 @@ public final class HttpUploadClient {
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder =
-                new HttpPostRequestEncoder(factory, request, false);  // false => not multipart
+                new HttpPostRequestEncoder(allocator, factory, request, false);  // false => not multipart
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
@@ -236,7 +240,7 @@ public final class HttpUploadClient {
         request = bodyRequestEncoder.finalizeRequest();
 
         // Create the bodylist to be reused on the last version with Multipart support
-        List<InterfaceHttpData> bodylist = bodyRequestEncoder.getBodyListAttributes();
+        List<InterfaceHttpData<?>> bodylist = bodyRequestEncoder.getBodyListAttributes();
 
         // send request
         channel.write(request);
@@ -264,8 +268,8 @@ public final class HttpUploadClient {
      * Multipart example
      */
     private static void formpostmultipart(
-            Bootstrap bootstrap, String host, int port, URI uriFile, HttpDataFactory factory,
-            Iterable<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
+            BufferAllocator allocator, Bootstrap bootstrap, String host, int port, URI uriFile, HttpDataFactory factory,
+            Iterable<Entry<String, String>> headers, List<InterfaceHttpData<?>> bodylist) throws Exception {
         // XXX /formpostmultipart
         // Start the connection attempt.
         Future<Channel> future = bootstrap.connect(SocketUtils.socketAddress(host, port));
@@ -277,7 +281,7 @@ public final class HttpUploadClient {
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder =
-                new HttpPostRequestEncoder(factory, request, true); // true => multipart
+                new HttpPostRequestEncoder(allocator, factory, request, true); // true => multipart
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {

@@ -17,9 +17,9 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
-
 import org.junit.jupiter.api.Test;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -88,7 +88,7 @@ class HttpContentCompressorOptionsTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(null));
         ch.writeInbound(newRequest());
         FullHttpRequest fullHttpRequest = ch.readInbound();
-        fullHttpRequest.release();
+        fullHttpRequest.close();
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -114,7 +114,8 @@ class HttpContentCompressorOptionsTest {
     }
 
     private static FullHttpRequest newRequest() {
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, gzip, deflate");
         return req;
     }

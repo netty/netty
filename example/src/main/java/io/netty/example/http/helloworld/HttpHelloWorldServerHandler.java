@@ -15,7 +15,6 @@
  */
 package io.netty.example.http.helloworld;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -49,10 +48,11 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
 
             boolean keepAlive = HttpUtil.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), OK,
-                                                                    Unpooled.wrappedBuffer(CONTENT));
+                                                                    ctx.bufferAllocator().allocate(CONTENT.length)
+                                                                            .writeBytes(CONTENT));
             response.headers()
                     .set(CONTENT_TYPE, TEXT_PLAIN)
-                    .setInt(CONTENT_LENGTH, response.content().readableBytes());
+                    .setInt(CONTENT_LENGTH, response.payload().readableBytes());
 
             if (keepAlive) {
                 if (!req.protocolVersion().isKeepAliveDefault()) {

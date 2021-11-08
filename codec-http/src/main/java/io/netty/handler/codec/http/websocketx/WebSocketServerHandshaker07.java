@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -24,7 +25,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * <p>
@@ -127,7 +128,8 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      * </pre>
      */
     @Override
-    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
+    protected FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
+                                                    HttpHeaders headers) {
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
@@ -135,7 +137,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
 
         FullHttpResponse res =
                 new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
-                        req.content().alloc().buffer(0));
+                        allocator.allocate(0));
 
         if (headers != null) {
             res.headers().add(headers);

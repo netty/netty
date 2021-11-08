@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
 import static java.util.Collections.singletonList;
@@ -285,13 +286,15 @@ public class HttpUtilTest {
         run100ContinueTest(HttpVersion.HTTP_1_1, null, false);
         run100ContinueTest(HttpVersion.HTTP_1_1, "chocolate=yummy", false);
         run100ContinueTest(HttpVersion.HTTP_1_0, "100-continue", false);
-        final HttpMessage message = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        final HttpMessage message = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         message.headers().set(HttpHeaderNames.EXPECT, "100-continue");
         run100ContinueTest(message, false);
     }
 
     private static void run100ContinueTest(final HttpVersion version, final String expectations, boolean expect) {
-        final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/");
+        final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         if (expectations != null) {
             message.headers().set(HttpHeaderNames.EXPECT, expectations);
         }
@@ -312,14 +315,16 @@ public class HttpUtilTest {
         runUnsupportedExpectationTest(HttpVersion.HTTP_1_1, null, false);
         runUnsupportedExpectationTest(HttpVersion.HTTP_1_1, "chocolate=yummy", true);
         runUnsupportedExpectationTest(HttpVersion.HTTP_1_0, "100-continue", false);
-        final HttpMessage message = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        final HttpMessage message = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         message.headers().set("Expect", "100-continue");
         runUnsupportedExpectationTest(message, false);
     }
 
     private static void runUnsupportedExpectationTest(final HttpVersion version,
                                                       final String expectations, boolean expect) {
-        final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/");
+        final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         if (expectations != null) {
             message.headers().set("Expect", expectations);
         }

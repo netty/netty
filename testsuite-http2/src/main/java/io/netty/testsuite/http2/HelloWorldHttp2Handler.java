@@ -16,7 +16,7 @@
 package io.netty.testsuite.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -31,19 +31,22 @@ import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.util.CharsetUtil;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import java.util.function.Supplier;
+
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.util.CharsetUtil.US_ASCII;
+import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
  * A simple handler that responds with the message "Hello World!".
  */
 public final class HelloWorldHttp2Handler extends Http2ConnectionHandler implements Http2FrameListener {
 
-    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
-            copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();
+    static final Supplier<Buffer> RESPONSE_BYTES_SUPPLIER =
+            DEFAULT_GLOBAL_BUFFER_ALLOCATOR.constBufferSupplier("Hello World".getBytes(UTF_8));
 
     HelloWorldHttp2Handler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                            Http2Settings initialSettings) {
@@ -108,10 +111,9 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                               Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
-            ByteBuf content = ctx.alloc().buffer();
-            content.writeBytes(RESPONSE_BYTES.duplicate());
-            ByteBufUtil.writeAscii(content, " - via HTTP/2");
-            sendResponse(ctx, streamId, content);
+            final Buffer content = RESPONSE_BYTES_SUPPLIER.get().copy()
+                    .writeCharSequence(" - via HTTP/2", US_ASCII);
+            sendResponse(ctx, streamId, intoByteBuf(content));
         }
     }
 

@@ -15,17 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Send;
 import io.netty.util.IllegalReferenceCountException;
+
 import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
-    private final ByteBuf content;
+    private final Buffer payload;
     private final HttpHeaders trailingHeader;
 
     /**
@@ -33,79 +33,54 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      */
     private int hash;
 
-    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer(0));
-    }
-
-    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        this(httpVersion, method, uri, content, true);
-    }
-
-    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, Unpooled.buffer(0), validateHeaders);
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, Buffer payload) {
+        this(httpVersion, method, uri, payload, true);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
-                                  ByteBuf content, boolean validateHeaders) {
+                                  Buffer payload, boolean validateHeaders) {
         super(httpVersion, method, uri, validateHeaders);
-        this.content = requireNonNull(content, "content");
+        this.payload = requireNonNull(payload, "payload");
         trailingHeader = new DefaultHttpHeaders(validateHeaders);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
-            ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
+                                  Buffer payload, HttpHeaders headers, HttpHeaders trailingHeader) {
         super(httpVersion, method, uri, headers);
-        this.content = requireNonNull(content, "content");
+        this.payload = requireNonNull(payload, "payload");
         this.trailingHeader = requireNonNull(trailingHeader, "trailingHeader");
+    }
+
+    @Override
+    public void close() {
+        payload.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return payload.isAccessible();
+    }
+
+    @Override
+    public FullHttpRequest touch(Object hint) {
+        payload.touch(hint);
+        return this;
+    }
+
+    @Override
+    public Buffer payload() {
+        return payload;
+    }
+
+    @Override
+    public Send<FullHttpRequest> send() {
+        return payload.send().map(FullHttpRequest.class,
+                payload -> new DefaultFullHttpRequest(protocolVersion(), method(), uri(), payload));
     }
 
     @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeader;
-    }
-
-    @Override
-    public ByteBuf content() {
-        return content;
-    }
-
-    @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public FullHttpRequest retain() {
-        content.retain();
-        return this;
-    }
-
-    @Override
-    public FullHttpRequest retain(int increment) {
-        content.retain(increment);
-        return this;
-    }
-
-    @Override
-    public FullHttpRequest touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public FullHttpRequest touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
     }
 
     @Override
@@ -127,35 +102,13 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
-    public FullHttpRequest copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public FullHttpRequest duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public FullHttpRequest retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public FullHttpRequest replace(ByteBuf content) {
-        FullHttpRequest request = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content,
-                headers().copy(), trailingHeaders().copy());
-        request.setDecoderResult(decoderResult());
-        return request;
-    }
-
-    @Override
     public int hashCode() {
         int hash = this.hash;
         if (hash == 0) {
-            if (ByteBufUtil.isAccessible(content())) {
+            final Buffer payload = payload();
+            if (payload.isAccessible()) {
                 try {
-                    hash = 31 + content().hashCode();
+                    hash = 31 + payload.hashCode();
                 } catch (IllegalReferenceCountException ignored) {
                     // Handle race condition between checking refCnt() == 0 and using the object.
                     hash = 31;
@@ -179,8 +132,8 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         DefaultFullHttpRequest other = (DefaultFullHttpRequest) o;
 
         return super.equals(other) &&
-               content().equals(other.content()) &&
-               trailingHeaders().equals(other.trailingHeaders());
+                payload().equals(other.payload()) &&
+                trailingHeaders().equals(other.trailingHeaders());
     }
 
     @Override

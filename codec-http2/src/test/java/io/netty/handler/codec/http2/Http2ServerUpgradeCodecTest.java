@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -59,7 +60,8 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) {
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         request.headers().set(HttpHeaderNames.HOST, "netty.io");
         request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");
         request.headers().set(HttpHeaderNames.UPGRADE, "h2c");

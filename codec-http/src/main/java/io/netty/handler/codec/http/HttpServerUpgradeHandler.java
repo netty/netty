@@ -14,11 +14,12 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Resource;
+import io.netty.buffer.api.Send;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 
 import java.util.ArrayList;
@@ -27,17 +28,17 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static java.util.Objects.requireNonNull;
 import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
 import static io.netty.util.internal.StringUtil.COMMA;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
  * the requested protocol is supported. Once an upgrade is performed, this handler removes itself
  * from the pipeline.
  */
-public class HttpServerUpgradeHandler extends HttpObjectAggregator {
+public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObjectAggregator<C> {
 
     /**
      * The source codec that is used in the pipeline initially.
@@ -99,7 +100,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      * to another protocol. Contains the original upgrade request so that the response
      * (if required) can be sent using the new protocol.
      */
-    public static final class UpgradeEvent implements ReferenceCounted {
+    public static final class UpgradeEvent implements Resource<UpgradeEvent> {
         private final CharSequence protocol;
         private final FullHttpRequest upgradeRequest;
 
@@ -123,42 +124,24 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         @Override
-        public int refCnt() {
-            return upgradeRequest.refCnt();
+        public Send<UpgradeEvent> send() {
+            return upgradeRequest.send().map(UpgradeEvent.class, req -> new UpgradeEvent(protocol, req));
         }
 
         @Override
-        public UpgradeEvent retain() {
-            upgradeRequest.retain();
-            return this;
+        public void close() {
+            upgradeRequest.close();
         }
 
         @Override
-        public UpgradeEvent retain(int increment) {
-            upgradeRequest.retain(increment);
-            return this;
-        }
-
-        @Override
-        public UpgradeEvent touch() {
-            upgradeRequest.touch();
-            return this;
+        public boolean isAccessible() {
+            return upgradeRequest.isAccessible();
         }
 
         @Override
         public UpgradeEvent touch(Object hint) {
             upgradeRequest.touch(hint);
             return this;
-        }
-
-        @Override
-        public boolean release() {
-            return upgradeRequest.release();
-        }
-
-        @Override
-        public boolean release(int decrement) {
-            return upgradeRequest.release(decrement);
         }
 
         @Override
@@ -247,7 +230,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         FullHttpRequest fullRequest;
         if (msg instanceof FullHttpRequest) {
             fullRequest = (FullHttpRequest) msg;
-            tryUpgrade(ctx, fullRequest.retain());
+            tryUpgrade(ctx, fullRequest);
         } else {
             // Call the base class to handle the aggregation of the full request.
             super.decode(new DelegatingChannelHandlerContext(ctx) {
@@ -347,48 +330,39 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
-        final FullHttpResponse upgradeResponse = createUpgradeResponse(upgradeProtocol);
+        final FullHttpResponse upgradeResponse = createUpgradeResponse(ctx.bufferAllocator(), upgradeProtocol);
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request, upgradeResponse.headers())) {
             return false;
         }
-
-        // Create the user event to be fired once the upgrade completes.
-        final UpgradeEvent event = new UpgradeEvent(upgradeProtocol, request);
 
         // After writing the upgrade response we immediately prepare the
         // pipeline for the next protocol to avoid a race between completion
         // of the write future and receiving data before the pipeline is
         // restructured.
-        try {
-            Future<Void> writeComplete = ctx.writeAndFlush(upgradeResponse);
-            // Perform the upgrade to the new protocol.
-            sourceCodec.upgradeFrom(ctx);
-            upgradeCodec.upgradeTo(ctx, request);
+        Future<Void> writeComplete = ctx.writeAndFlush(upgradeResponse);
+        // Perform the upgrade to the new protocol.
+        sourceCodec.upgradeFrom(ctx);
+        upgradeCodec.upgradeTo(ctx, request);
 
-            // Notify that the upgrade has occurred. Retain the event to offset
-            // the release() in the finally block.
-            ctx.fireUserEventTriggered(event.retain());
+        // Notify that the upgrade has occurred.
+        ctx.fireUserEventTriggered(new UpgradeEvent(upgradeProtocol, request));
 
-            // Remove this handler from the pipeline.
-            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
+        // Remove this handler from the pipeline.
+        ctx.pipeline().remove(HttpServerUpgradeHandler.this);
 
-            // Add the listener last to avoid firing upgrade logic after
-            // the channel is already closed since the listener may fire
-            // immediately if the write failed eagerly.
-            writeComplete.addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
-        } finally {
-            // Release the event if the upgrade event wasn't fired.
-            event.release();
-        }
+        // Add the listener last to avoid firing upgrade logic after
+        // the channel is already closed since the listener may fire
+        // immediately if the write failed eagerly.
+        writeComplete.addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
         return true;
     }
 
     /**
      * Creates the 101 Switching Protocols response message.
      */
-    private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
+    private FullHttpResponse createUpgradeResponse(BufferAllocator allocator, CharSequence upgradeProtocol) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, validateHeaders);
+                HTTP_1_1, SWITCHING_PROTOCOLS, allocator.allocate(0), validateHeaders);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

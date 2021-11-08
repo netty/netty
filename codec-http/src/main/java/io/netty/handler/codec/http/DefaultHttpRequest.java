@@ -65,20 +65,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     }
 
     @Override
-    @Deprecated
-    public HttpMethod getMethod() {
-        return method();
-    }
-
-    @Override
     public HttpMethod method() {
         return method;
-    }
-
-    @Override
-    @Deprecated
-    public String getUri() {
-        return uri();
     }
 
     @Override

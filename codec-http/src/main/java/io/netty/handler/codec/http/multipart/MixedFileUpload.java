@@ -15,50 +15,66 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Send;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Mixed implementation using both in Memory and in File with a limit of size
  */
-public class MixedFileUpload implements FileUpload {
+public class MixedFileUpload implements FileUpload<MixedFileUpload> {
 
     private final String baseDir;
 
     private final boolean deleteOnExit;
 
-    private FileUpload fileUpload;
+    private FileUpload<?> fileUpload;
 
+    private final BufferAllocator allocator;
     private final long limitSize;
 
     private final long definedSize;
     private long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
-    public MixedFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size,
-            long limitSize) {
-        this(name, filename, contentType, contentTransferEncoding,
-                charset, size, limitSize, DiskFileUpload.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
+    public MixedFileUpload(BufferAllocator allocator, String name, String filename, String contentType,
+                           String contentTransferEncoding, Charset charset, long size,
+                           long limitSize) {
+        this(allocator, name, filename, contentType, contentTransferEncoding, charset, size, limitSize,
+                DiskFileUpload.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
     }
 
-    public MixedFileUpload(String name, String filename, String contentType,
+    public MixedFileUpload(BufferAllocator allocator, String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
             long limitSize, String baseDir, boolean deleteOnExit) {
+        this.allocator = requireNonNull(allocator, "allocator");
         this.limitSize = limitSize;
         if (size > this.limitSize) {
-            fileUpload = new DiskFileUpload(name, filename, contentType,
+            fileUpload = new DiskFileUpload(allocator, name, filename, contentType,
                     contentTransferEncoding, charset, size);
         } else {
-            fileUpload = new MemoryFileUpload(name, filename, contentType,
+            fileUpload = new MemoryFileUpload(allocator, name, filename, contentType,
                     contentTransferEncoding, charset, size);
         }
         definedSize = size;
         this.baseDir = baseDir;
         this.deleteOnExit = deleteOnExit;
+    }
+
+    private MixedFileUpload(MixedFileUpload mixedFileUpload, FileUpload<?> fileUpload) {
+        this.allocator = mixedFileUpload.allocator;
+        this.baseDir = mixedFileUpload.baseDir;
+        this.deleteOnExit = mixedFileUpload.deleteOnExit;
+        this.fileUpload = fileUpload;
+        this.limitSize = mixedFileUpload.limitSize;
+        this.definedSize = mixedFileUpload.definedSize;
+        this.maxSize = mixedFileUpload.maxSize;
     }
 
     @Override
@@ -80,29 +96,29 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public void addContent(ByteBuf buffer, boolean last)
+    public void addContent(Buffer buffer, boolean last)
             throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
             try {
                 checkSize(fileUpload.length() + buffer.readableBytes());
                 if (fileUpload.length() + buffer.readableBytes() > limitSize) {
-                    DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+                    DiskFileUpload diskFileUpload = new DiskFileUpload(allocator, fileUpload
                             .getName(), fileUpload.getFilename(), fileUpload
                             .getContentType(), fileUpload
                             .getContentTransferEncoding(), fileUpload.getCharset(),
                             definedSize, baseDir, deleteOnExit);
                     diskFileUpload.setMaxSize(maxSize);
-                    ByteBuf data = fileUpload.getByteBuf();
-                    if (data != null && data.isReadable()) {
-                        diskFileUpload.addContent(data.retain(), false);
+                    Buffer data = fileUpload.getBuffer();
+                    if (data != null && data.readableBytes() > 0) {
+                        diskFileUpload.addContent(data, false);
                     }
                     // release old upload
-                    fileUpload.release();
+                    fileUpload.close();
 
                     fileUpload = diskFileUpload;
                 }
             } catch (IOException e) {
-                buffer.release();
+                buffer.close();
                 throw e;
             }
         }
@@ -120,8 +136,8 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public ByteBuf getByteBuf() throws IOException {
-        return fileUpload.getByteBuf();
+    public Buffer getBuffer() throws IOException {
+        return fileUpload.getBuffer();
     }
 
     @Override
@@ -185,18 +201,18 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public void setContent(ByteBuf buffer) throws IOException {
+    public void setContent(Buffer buffer) throws IOException {
         try {
             checkSize(buffer.readableBytes());
         } catch (IOException e) {
-            buffer.release();
+            buffer.close();
             throw e;
         }
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
-                FileUpload memoryUpload = fileUpload;
+                FileUpload<?> memoryUpload = fileUpload;
                 // change to Disk
-                fileUpload = new DiskFileUpload(memoryUpload
+                fileUpload = new DiskFileUpload(allocator, memoryUpload
                         .getName(), memoryUpload.getFilename(), memoryUpload
                         .getContentType(), memoryUpload
                         .getContentTransferEncoding(), memoryUpload.getCharset(),
@@ -204,7 +220,7 @@ public class MixedFileUpload implements FileUpload {
                 fileUpload.setMaxSize(maxSize);
 
                 // release old upload
-                memoryUpload.release();
+                memoryUpload.close();
             }
         }
         fileUpload.setContent(buffer);
@@ -215,10 +231,10 @@ public class MixedFileUpload implements FileUpload {
         checkSize(file.length());
         if (file.length() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
-                FileUpload memoryUpload = fileUpload;
+                FileUpload<?> memoryUpload = fileUpload;
 
                 // change to Disk
-                fileUpload = new DiskFileUpload(memoryUpload
+                fileUpload = new DiskFileUpload(allocator, memoryUpload
                         .getName(), memoryUpload.getFilename(), memoryUpload
                         .getContentType(), memoryUpload
                         .getContentTransferEncoding(), memoryUpload.getCharset(),
@@ -226,7 +242,7 @@ public class MixedFileUpload implements FileUpload {
                 fileUpload.setMaxSize(maxSize);
 
                 // release old upload
-                memoryUpload.release();
+                memoryUpload.close();
             }
         }
         fileUpload.setContent(file);
@@ -235,10 +251,10 @@ public class MixedFileUpload implements FileUpload {
     @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
-            FileUpload memoryUpload = fileUpload;
+            FileUpload<?> memoryUpload = fileUpload;
 
             // change to Disk
-            fileUpload = new DiskFileUpload(fileUpload
+            fileUpload = new DiskFileUpload(allocator, fileUpload
                     .getName(), fileUpload.getFilename(), fileUpload
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
@@ -246,7 +262,7 @@ public class MixedFileUpload implements FileUpload {
             fileUpload.setMaxSize(maxSize);
 
             // release old upload
-            memoryUpload.release();
+            memoryUpload.close();
         }
         fileUpload.setContent(inputStream);
     }
@@ -277,16 +293,25 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MixedFileUpload that = (MixedFileUpload) o;
+
+        return fileUpload != null ? fileUpload.equals(that.fileUpload) : that.fileUpload == null;
+    }
+
+    @Override
     public int hashCode() {
         return fileUpload.hashCode();
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        return fileUpload.equals(obj);
-    }
-
-    @Override
+    @SuppressWarnings("unchecked")
     public int compareTo(InterfaceHttpData o) {
         return fileUpload.compareTo(o);
     }
@@ -297,7 +322,7 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public ByteBuf getChunk(int length) throws IOException {
+    public Buffer getChunk(int length) throws IOException {
         return fileUpload.getChunk(length);
     }
 
@@ -307,66 +332,24 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public FileUpload copy() {
-        return fileUpload.copy();
-    }
-
-    @Override
-    public FileUpload duplicate() {
-        return fileUpload.duplicate();
-    }
-
-    @Override
-    public FileUpload retainedDuplicate() {
-        return fileUpload.retainedDuplicate();
-    }
-
-    @Override
-    public FileUpload replace(ByteBuf content) {
-        return fileUpload.replace(content);
-    }
-
-    @Override
-    public ByteBuf content() {
-        return fileUpload.content();
-    }
-
-    @Override
-    public int refCnt() {
-        return fileUpload.refCnt();
-    }
-
-    @Override
-    public FileUpload retain() {
-        fileUpload.retain();
-        return this;
-    }
-
-    @Override
-    public FileUpload retain(int increment) {
-        fileUpload.retain(increment);
-        return this;
-    }
-
-    @Override
-    public FileUpload touch() {
-        fileUpload.touch();
-        return this;
-    }
-
-    @Override
-    public FileUpload touch(Object hint) {
+    public MixedFileUpload touch(Object hint) {
         fileUpload.touch(hint);
         return this;
     }
 
     @Override
-    public boolean release() {
-        return fileUpload.release();
+    public Send<MixedFileUpload> send() {
+        return fileUpload.send().map(MixedFileUpload.class,
+                fu -> new MixedFileUpload(this, fu));
     }
 
     @Override
-    public boolean release(int decrement) {
-        return fileUpload.release(decrement);
+    public void close() {
+        fileUpload.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return fileUpload.isAccessible();
     }
 }

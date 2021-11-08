@@ -15,93 +15,55 @@
  */
 package io.netty.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Send;
 import io.netty.util.internal.StringUtil;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link HttpContent} implementation.
  */
-public class DefaultHttpContent extends DefaultHttpObject implements HttpContent {
+public class DefaultHttpContent extends DefaultHttpObject implements HttpContent<DefaultHttpContent> {
 
-    private final ByteBuf content;
+    private final Buffer payload;
 
     /**
      * Creates a new instance with the specified chunk content.
      */
-    public DefaultHttpContent(ByteBuf content) {
-        requireNonNull(content, "content");
-        this.content = content;
-    }
-
-    @Override
-    public ByteBuf content() {
-        return content;
-    }
-
-    @Override
-    public HttpContent copy() {
-        return replace(content.copy());
-    }
-
-    @Override
-    public HttpContent duplicate() {
-        return replace(content.duplicate());
-    }
-
-    @Override
-    public HttpContent retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public HttpContent replace(ByteBuf content) {
-        return new DefaultHttpContent(content);
-    }
-
-    @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public HttpContent retain() {
-        content.retain();
-        return this;
-    }
-
-    @Override
-    public HttpContent retain(int increment) {
-        content.retain(increment);
-        return this;
-    }
-
-    @Override
-    public HttpContent touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public HttpContent touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
+    public DefaultHttpContent(Buffer payload) {
+        this.payload = requireNonNull(payload, "payload");
     }
 
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) +
-               "(data: " + content() + ", decoderResult: " + decoderResult() + ')';
+               "(data: " + payload() + ", decoderResult: " + decoderResult() + ')';
+    }
+
+    @Override
+    public Send<DefaultHttpContent> send() {
+        return payload.send().map(DefaultHttpContent.class, DefaultHttpContent::new);
+    }
+
+    @Override
+    public void close() {
+        payload.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return payload.isAccessible();
+    }
+
+    @Override
+    public DefaultHttpContent touch(Object hint) {
+        payload.touch(hint);
+        return this;
+    }
+
+    @Override
+    public Buffer payload() {
+        return payload;
     }
 }

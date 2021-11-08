@@ -15,8 +15,11 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -25,12 +28,12 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static java.util.Objects.requireNonNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -42,7 +45,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     private static final ImmediateSendDetector DEFAULT_SEND_DETECTOR = new ImmediateSendDetector() {
         @Override
-        public boolean mustSendImmediately(FullHttpMessage msg) {
+        public boolean mustSendImmediately(FullHttpMessage<?> msg) {
             if (msg instanceof FullHttpResponse) {
                 return ((FullHttpResponse) msg).status().codeClass() == HttpStatusClass.INFORMATIONAL;
             }
@@ -53,9 +56,11 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         @Override
-        public FullHttpMessage copyIfNeeded(ByteBufAllocator allocator, FullHttpMessage msg) {
+        public FullHttpMessage<?> copyIfNeeded(BufferAllocator allocator, FullHttpMessage<?> msg) {
             if (msg instanceof FullHttpRequest) {
-                FullHttpRequest copy = ((FullHttpRequest) msg).replace(allocator.buffer(0));
+                final FullHttpRequest original = (FullHttpRequest) msg;
+                FullHttpRequest copy = new DefaultFullHttpRequest(original.protocolVersion(), original.method(),
+                        original.uri(), allocator.allocate(0), original.headers(), original.trailingHeaders());
                 copy.headers().remove(HttpHeaderNames.EXPECT);
                 return copy;
             }
@@ -88,9 +93,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @param release {@code true} to call release on the value if it is present. {@code false} to not call release.
      */
     protected final void removeMessage(Http2Stream stream, boolean release) {
-        FullHttpMessage msg = stream.removeProperty(messageKey);
+        FullHttpMessage<?> msg = stream.removeProperty(messageKey);
         if (release && msg != null) {
-            msg.release();
+            msg.close();
         }
     }
 
@@ -99,8 +104,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @param stream The stream to get the associated state from
      * @return The {@link FullHttpMessage} associated with {@code stream}.
      */
-    protected final FullHttpMessage getMessage(Http2Stream stream) {
-        return (FullHttpMessage) stream.getProperty(messageKey);
+    protected final FullHttpMessage<?> getMessage(Http2Stream stream) {
+        return stream.getProperty(messageKey);
     }
 
     /**
@@ -108,10 +113,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @param stream The stream which {@code message} is associated with.
      * @param message The message which contains the HTTP semantics.
      */
-    protected final void putMessage(Http2Stream stream, FullHttpMessage message) {
-        FullHttpMessage previous = stream.setProperty(messageKey, message);
+    protected final void putMessage(Http2Stream stream, FullHttpMessage<?> message) {
+        FullHttpMessage<?> previous = stream.setProperty(messageKey, message);
         if (previous != message && previous != null) {
-            previous.release();
+            previous.close();
         }
     }
 
@@ -128,10 +133,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @param release {@code true} to call release on the value if it is present. {@code false} to not call release.
      * @param stream the stream of the message which is being fired
      */
-    protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, boolean release,
+    protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage<?> msg, boolean release,
                                    Http2Stream stream) {
         removeMessage(stream, release);
-        HttpUtil.setContentLength(msg, msg.content().readableBytes());
+        HttpUtil.setContentLength(msg, msg.payload().readableBytes());
         ctx.fireChannelRead(msg);
     }
 
@@ -145,12 +150,12 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * <li>{@code true} to validate HTTP headers in the http-codec</li>
      * <li>{@code false} not to validate HTTP headers in the http-codec</li>
      * </ul>
-     * @param alloc The {@link ByteBufAllocator} to use to generate the content of the message
+     * @param alloc The {@link BufferAllocator} to use to generate the content of the message
      * @throws Http2Exception If there is an error when creating {@link FullHttpMessage} from
      *                        {@link Http2Stream} and {@link Http2Headers}
      */
-    protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
-                                         ByteBufAllocator alloc) throws Http2Exception {
+    protected FullHttpMessage<?> newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
+                                            BufferAllocator alloc) throws Http2Exception {
         return connection.isServer() ? HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc,
                 validateHttpHeaders) : HttpConversionUtil.toFullHttpResponse(stream.id(), headers, alloc,
                 validateHttpHeaders);
@@ -180,13 +185,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      *         {@code allowAppend} is {@code false} and the stream already exists.
      * @throws Http2Exception If the stream id is not in the correct state to process the headers request
      */
-    protected FullHttpMessage processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream, Http2Headers headers,
-                                                  boolean endOfStream, boolean allowAppend, boolean appendToTrailer)
+    protected FullHttpMessage<?> processHeadersBegin(ChannelHandlerContext ctx, Http2Stream stream,
+                                                     Http2Headers headers, boolean endOfStream, boolean allowAppend,
+                                                     boolean appendToTrailer)
             throws Http2Exception {
-        FullHttpMessage msg = getMessage(stream);
+        FullHttpMessage<?> msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
-            msg = newMessage(stream, headers, validateHttpHeaders, ctx.alloc());
+            msg = newMessage(stream, headers, validateHttpHeaders, ctx.bufferAllocator());
         } else if (allowAppend) {
             release = false;
             HttpConversionUtil.addHttp2ToHttpHeaders(stream.id(), headers, msg, appendToTrailer);
@@ -198,7 +204,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         if (sendDetector.mustSendImmediately(msg)) {
             // Copy the message (if necessary) before sending. The content is not expected to be copied (or used) in
             // this operation but just in case it is used do the copy before sending and the resource may be released
-            final FullHttpMessage copy = endOfStream ? null : sendDetector.copyIfNeeded(ctx.alloc(), msg);
+            final FullHttpMessage<?> copy = endOfStream ? null : sendDetector.copyIfNeeded(ctx.bufferAllocator(), msg);
             fireChannelRead(ctx, msg, release, stream);
             return copy;
         }
@@ -215,7 +221,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * @param msg The object which represents all headers/data for corresponding to {@code stream}
      * @param endOfStream {@code true} if this is the last event for the stream
      */
-    private void processHeadersEnd(ChannelHandlerContext ctx, Http2Stream stream, FullHttpMessage msg,
+    private void processHeadersEnd(ChannelHandlerContext ctx, Http2Stream stream, FullHttpMessage<?> msg,
                                    boolean endOfStream) {
         if (endOfStream) {
             // Release if the msg from the map is different from the object being forwarded up the pipeline.
@@ -229,19 +235,20 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
             throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
-        FullHttpMessage msg = getMessage(stream);
+        FullHttpMessage<?> msg = getMessage(stream);
         if (msg == null) {
             throw connectionError(PROTOCOL_ERROR, "Data Frame received for unknown stream id %d", streamId);
         }
 
-        ByteBuf content = msg.content();
+        Buffer content = msg.payload();
         final int dataReadableBytes = data.readableBytes();
         if (content.readableBytes() > maxContentLength - dataReadableBytes) {
             throw connectionError(INTERNAL_ERROR,
                     "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 
-        content.writeBytes(data, data.readerIndex(), dataReadableBytes);
+        content.ensureWritable(dataReadableBytes);
+        content.writeBytes(ByteBufAdaptor.extractOrCopy(ctx.bufferAllocator(), data.retain()));
 
         if (endOfStream) {
             fireChannelRead(ctx, msg, false, stream);
@@ -255,7 +262,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
-        FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
+        FullHttpMessage<?> msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
             processHeadersEnd(ctx, stream, msg, endOfStream);
         }
@@ -266,7 +273,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                               short weight, boolean exclusive, int padding, boolean endOfStream)
             throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
-        FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
+        FullHttpMessage<?> msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
             // Add headers for dependency and weight.
             // See https://github.com/netty/netty/issues/5866
@@ -283,7 +290,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
-        FullHttpMessage msg = getMessage(stream);
+        FullHttpMessage<?> msg = getMessage(stream);
         if (msg != null) {
             onRstStreamRead(stream, msg);
         }
@@ -304,7 +311,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
             // server, as a PUSH_PROMISE frame.
             headers.status(OK.codeAsText());
         }
-        FullHttpMessage msg = processHeadersBegin(ctx, promisedStream, headers, false, false, false);
+        FullHttpMessage<?> msg = processHeadersBegin(ctx, promisedStream, headers, false, false, false);
         if (msg == null) {
             throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d",
                     promisedStreamId);
@@ -328,7 +335,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     /**
      * Called if a {@code RST_STREAM} is received but we have some data for that stream.
      */
-    protected void onRstStreamRead(Http2Stream stream, FullHttpMessage msg) {
+    protected void onRstStreamRead(Http2Stream stream, FullHttpMessage<?> msg) {
         removeMessage(stream, true);
     }
 
@@ -344,7 +351,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * @return {@code true} if the message should be sent immediately
          *         {@code false) if we should wait for the end of the stream
          */
-        boolean mustSendImmediately(FullHttpMessage msg);
+        boolean mustSendImmediately(FullHttpMessage<?> msg);
 
         /**
          * Determine if a copy must be made after an immediate send happens.
@@ -353,10 +360,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
          * with a 'Expect: 100-continue' header. The message will be sent immediately,
          * and the data will be queued and sent at the end of the stream.
          *
-         * @param allocator The {@link ByteBufAllocator} that can be used to allocate
+         * @param allocator The {@link BufferAllocator} that can be used to allocate
          * @param msg The message which has just been sent due to {@link #mustSendImmediately(FullHttpMessage)}
          * @return A modified copy of the {@code msg} or {@code null} if a copy is not needed.
          */
-        FullHttpMessage copyIfNeeded(ByteBufAllocator allocator, FullHttpMessage msg);
+        FullHttpMessage<?> copyIfNeeded(BufferAllocator allocator, FullHttpMessage<?> msg);
     }
 }

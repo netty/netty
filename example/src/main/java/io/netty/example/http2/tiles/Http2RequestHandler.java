@@ -16,16 +16,8 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.example.http2.Http2ExampleUtil.firstValue;
-import static io.netty.example.http2.Http2ExampleUtil.toInt;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpUtil.setContentLength;
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static java.lang.Integer.parseInt;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -36,6 +28,16 @@ import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
+import static io.netty.example.http2.Http2ExampleUtil.firstValue;
+import static io.netty.example.http2.Http2ExampleUtil.toInt;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpUtil.setContentLength;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.lang.Integer.parseInt;
 
 /**
  * Handles all the requests for data. It receives a {@link FullHttpRequest},
@@ -70,7 +72,8 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private static void sendBadRequest(ChannelHandlerContext ctx, String streamId) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
+                ctx.bufferAllocator().allocate(0));
         streamId(response, streamId);
         ctx.writeAndFlush(response);
     }
@@ -78,14 +81,15 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     private void handleImage(String x, String y, ChannelHandlerContext ctx, String streamId, int latency,
             FullHttpRequest request) {
         ByteBuf image = ImageCache.INSTANCE.image(parseInt(x), parseInt(y));
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, image.duplicate());
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,
+                extractOrCopy(ctx.bufferAllocator(), image.duplicate()));
         response.headers().set(CONTENT_TYPE, "image/jpeg");
         sendResponse(ctx, streamId, latency, response, request);
     }
 
     private void handlePage(ChannelHandlerContext ctx, String streamId, int latency, FullHttpRequest request) {
         byte[] body = Html.body(latency);
-        ByteBuf content = ctx.alloc().buffer(Html.HEADER.length + body.length + Html.FOOTER.length);
+        Buffer content = ctx.bufferAllocator().allocate(Html.HEADER.length + body.length + Html.FOOTER.length);
         content.writeBytes(Html.HEADER);
         content.writeBytes(body);
         content.writeBytes(Html.FOOTER);
@@ -96,7 +100,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
 
     protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
-        setContentLength(response, response.content().readableBytes());
+        setContentLength(response, response.payload().readableBytes());
         streamId(response, streamId);
         ctx.executor().schedule(() -> {
             ctx.writeAndFlush(response);

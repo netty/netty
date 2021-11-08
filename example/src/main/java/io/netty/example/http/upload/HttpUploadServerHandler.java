@@ -15,7 +15,7 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,13 +42,11 @@ import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpData;
-import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
@@ -61,7 +59,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
@@ -69,12 +67,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
     private HttpRequest request;
 
-    private HttpData partialContent;
+    private HttpData<?> partialContent;
 
     private final StringBuilder responseContent = new StringBuilder();
-
-    private static final HttpDataFactory factory =
-            new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if size exceed
 
     private HttpPostRequestDecoder decoder;
 
@@ -151,7 +146,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 return;
             }
             try {
-                decoder = new HttpPostRequestDecoder(factory, request);
+                decoder = new HttpPostRequestDecoder(ctx.bufferAllocator(),
+                        new DefaultHttpDataFactory(ctx.bufferAllocator(), DefaultHttpDataFactory.MINSIZE), request);
             } catch (ErrorDataDecoderException e1) {
                 e1.printStackTrace();
                 responseContent.append(e1.getMessage());
@@ -173,7 +169,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         if (decoder != null) {
             if (msg instanceof HttpContent) {
                 // New chunk is received
-                HttpContent chunk = (HttpContent) msg;
+                HttpContent<?> chunk = (HttpContent<?>) msg;
                 try {
                     decoder.offer(chunk);
                 } catch (ErrorDataDecoderException e1) {
@@ -212,7 +208,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     private void readHttpDataChunkByChunk() {
         try {
             while (decoder.hasNext()) {
-                InterfaceHttpData data = decoder.next();
+                InterfaceHttpData<?> data = decoder.next();
                 if (data != null) {
                     // check if current HttpData is a FileUpload and previously set as partial
                     if (partialContent == data) {
@@ -224,14 +220,14 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 }
             }
             // Check partial decoding for a FileUpload
-            InterfaceHttpData data = decoder.currentPartialHttpData();
+            InterfaceHttpData<?> data = decoder.currentPartialHttpData();
             if (data != null) {
                 StringBuilder builder = new StringBuilder();
                 if (partialContent == null) {
-                    partialContent = (HttpData) data;
+                    partialContent = (HttpData<?>) data;
                     if (partialContent instanceof FileUpload) {
                         builder.append("Start FileUpload: ")
-                            .append(((FileUpload) partialContent).getFilename()).append(" ");
+                            .append(((FileUpload<?>) partialContent).getFilename()).append(" ");
                     } else {
                         builder.append("Start Attribute: ")
                             .append(partialContent.getName()).append(" ");
@@ -253,9 +249,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         }
     }
 
-    private void writeHttpData(InterfaceHttpData data) {
+    private void writeHttpData(InterfaceHttpData<?> data) {
         if (data.getHttpDataType() == HttpDataType.Attribute) {
-            Attribute attribute = (Attribute) data;
+            Attribute<?> attribute = (Attribute<?>) data;
             String value;
             try {
                 value = attribute.getValue();
@@ -277,7 +273,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             responseContent.append("\r\nBODY FileUpload: " + data.getHttpDataType().name() + ": " + data
                     + "\r\n");
             if (data.getHttpDataType() == HttpDataType.FileUpload) {
-                FileUpload fileUpload = (FileUpload) data;
+                FileUpload<?> fileUpload = (FileUpload<?>) data;
                 if (fileUpload.isCompleted()) {
                     if (fileUpload.length() < 10000) {
                         responseContent.append("\tContent of file\r\n");
@@ -310,7 +306,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
     private void writeResponse(Channel channel, boolean forceClose) {
         // Convert the response content to a ChannelBuffer.
-        ByteBuf buf = copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
+        final byte[] bytes = responseContent.toString().getBytes(UTF_8);
+        Buffer buf = channel.bufferAllocator().allocate(bytes.length).writeBytes(bytes);
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
@@ -421,7 +418,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         responseContent.append("</body>");
         responseContent.append("</html>");
 
-        ByteBuf buf = copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
+        final byte[] bytes = responseContent.toString().getBytes(UTF_8);
+        Buffer buf = ctx.bufferAllocator().copyOf(bytes);
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);

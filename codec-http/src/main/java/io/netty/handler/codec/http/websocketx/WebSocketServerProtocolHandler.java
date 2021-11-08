@@ -256,8 +256,10 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
+            final byte[] bytes = cause.getMessage().getBytes();
             FullHttpResponse response = new DefaultFullHttpResponse(
-                    HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
+                    HTTP_1_1, HttpResponseStatus.BAD_REQUEST,
+                    ctx.bufferAllocator().allocate(bytes.length).writeBytes(bytes));
             ctx.channel().writeAndFlush(response).addListener(ctx, ChannelFutureListeners.CLOSE);
         } else {
             ctx.fireExceptionCaught(cause);

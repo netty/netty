@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import org.junit.jupiter.api.Test;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MemoryFileUploadTest {
@@ -24,7 +25,8 @@ public class MemoryFileUploadTest {
     @Test
     public final void testMemoryFileUploadEquals() {
         MemoryFileUpload f1 =
-                new MemoryFileUpload("m1", "m1", "application/json", null, null, 100);
+                new MemoryFileUpload(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, "m1", "m1",
+                        "application/json", null, null, 100);
         assertEquals(f1, f1);
     }
 }

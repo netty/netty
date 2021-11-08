@@ -18,9 +18,9 @@ package io.netty.example.http.upload;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
@@ -55,8 +55,8 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
             }
         }
         if (msg instanceof HttpContent) {
-            HttpContent chunk = (HttpContent) msg;
-            System.err.println(chunk.content().toString(CharsetUtil.UTF_8));
+            HttpContent<?> chunk = (HttpContent<?>) msg;
+            System.err.println(chunk.payload().toString(CharsetUtil.UTF_8));
 
             if (chunk instanceof LastHttpContent) {
                 if (readingChunks) {
@@ -66,7 +66,7 @@ public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObj
                 }
                 readingChunks = false;
             } else {
-                System.err.println(chunk.content().toString(CharsetUtil.UTF_8));
+                System.err.println(chunk.payload().toString(CharsetUtil.UTF_8));
             }
         }
     }

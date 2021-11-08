@@ -15,14 +15,14 @@
  */
 package io.netty.example.http.file;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.EmptyLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpChunkedInput;
@@ -31,9 +31,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -43,7 +41,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -63,6 +60,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -205,10 +203,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             sendFileFuture =
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
             // Write the end marker.
-            lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            lastContentFuture = ctx.writeAndFlush(new EmptyLastHttpContent(ctx.bufferAllocator()));
         } else {
             sendFileFuture =
-                    ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)));
+//                    ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)));
+                    ctx.writeAndFlush(new HttpChunkedInput());
             // HttpChunkedInput will write the end marker (LastHttpContent) for us.
             lastContentFuture = sendFileFuture;
         }
@@ -235,7 +234,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     private static String sanitizeUri(String uri) {
         // Decode the path.
-        uri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
+        uri = URLDecoder.decode(uri, UTF_8);
 
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
@@ -296,7 +295,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         buf.append("</ul></body></html>\r\n");
 
-        ByteBuf buffer = ctx.alloc().buffer(buf.length());
+        Buffer buffer = ctx.bufferAllocator().allocate(buf.length());
         buffer.writeCharSequence(buf.toString(), CharsetUtil.UTF_8);
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, buffer);
@@ -306,15 +305,16 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND, ctx.bufferAllocator().allocate(0));
         response.headers().set(HttpHeaderNames.LOCATION, newUri);
 
         sendAndCleanupConnection(ctx, response);
     }
 
     private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
+        final byte[] contentBytes = ("Failure: " + status + "\r\n").getBytes(UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
+                HTTP_1_1, status, ctx.bufferAllocator().allocate(contentBytes.length).writeBytes(contentBytes));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         sendAndCleanupConnection(ctx, response);
@@ -327,7 +327,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
      *            Context
      */
     private void sendNotModified(ChannelHandlerContext ctx) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED,
+                ctx.bufferAllocator().allocate(0));
         setDateHeader(response);
 
         sendAndCleanupConnection(ctx, response);
@@ -340,7 +341,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     private void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response) {
         final FullHttpRequest request = this.request;
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-        HttpUtil.setContentLength(response, response.content().readableBytes());
+        HttpUtil.setContentLength(response, response.payload().readableBytes());
         if (!keepAlive) {
             // We're going to close the connection as soon as the response is sent,
             // so we should also make it clear for the client.

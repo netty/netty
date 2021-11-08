@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * FileUpload interface that could be in memory, on temporary file or any other implementations.
  *
  * Most methods are inspired from java.io.File API.
  */
-public interface FileUpload extends HttpData {
+public interface FileUpload<R extends FileUpload<R>> extends HttpData<R> {
     /**
      * Returns the original filename in the client's filesystem,
      * as provided by the browser (or other client software).
@@ -57,28 +55,4 @@ public interface FileUpload extends HttpData {
      * @return the Content-Transfer-Encoding
      */
     String getContentTransferEncoding();
-
-    @Override
-    FileUpload copy();
-
-    @Override
-    FileUpload duplicate();
-
-    @Override
-    FileUpload retainedDuplicate();
-
-    @Override
-    FileUpload replace(ByteBuf content);
-
-    @Override
-    FileUpload retain();
-
-    @Override
-    FileUpload retain(int increment);
-
-    @Override
-    FileUpload touch();
-
-    @Override
-    FileUpload touch(Object hint);
 }

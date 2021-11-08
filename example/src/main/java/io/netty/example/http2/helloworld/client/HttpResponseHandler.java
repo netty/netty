@@ -15,6 +15,7 @@
 package io.netty.example.http2.helloworld.client;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -99,11 +100,12 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
             System.err.println("Message received for unknown stream id " + streamId);
         } else {
             // Do stuff with the message (for now just print it)
-            ByteBuf content = msg.content();
-            if (content.isReadable()) {
+            Buffer content = msg.payload();
+            if (content.readableBytes() > 0) {
                 int contentLength = content.readableBytes();
                 byte[] arr = new byte[contentLength];
-                content.readBytes(arr);
+                content.copyInto(content.readerOffset(), arr, 0, contentLength);
+                content.skipReadable(contentLength);
                 System.out.println(new String(arr, 0, contentLength, CharsetUtil.UTF_8));
             }
 

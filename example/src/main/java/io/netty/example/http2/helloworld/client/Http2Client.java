@@ -15,7 +15,6 @@
 package io.netty.example.http2.helloworld.client;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -44,7 +43,6 @@ import io.netty.util.CharsetUtil;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -69,6 +67,7 @@ public final class Http2Client {
     static final String URL = System.getProperty("url", "/whatever");
     static final String URL2 = System.getProperty("url2");
     static final String URL2DATA = System.getProperty("url2data", "test data!");
+    static final byte[] URL_2_DATA_BYTES = URL2DATA.getBytes(CharsetUtil.UTF_8);
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -121,7 +120,8 @@ public final class Http2Client {
             System.err.println("Sending request(s)...");
             if (URL != null) {
                 // Create a simple GET request.
-                FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, URL, Unpooled.EMPTY_BUFFER);
+                FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, URL,
+                        channel.bufferAllocator().allocate(0));
                 request.headers().add(HttpHeaderNames.HOST, hostName);
                 request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
@@ -132,7 +132,7 @@ public final class Http2Client {
             if (URL2 != null) {
                 // Create a simple POST request with a body.
                 FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, URL2,
-                        wrappedBuffer(URL2DATA.getBytes(CharsetUtil.UTF_8)));
+                        channel.bufferAllocator().allocate(URL_2_DATA_BYTES.length).writeBytes(URL_2_DATA_BYTES));
                 request.headers().add(HttpHeaderNames.HOST, hostName);
                 request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);

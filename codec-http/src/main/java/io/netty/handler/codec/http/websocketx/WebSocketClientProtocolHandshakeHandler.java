@@ -82,19 +82,16 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             return;
         }
 
-        FullHttpResponse response = (FullHttpResponse) msg;
-        try {
+        try (FullHttpResponse response = (FullHttpResponse) msg) {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
                 handshakePromise.trySuccess(null);
                 ctx.fireUserEventTriggered(
-                        WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                        ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
                 ctx.pipeline().remove(this);
                 return;
             }
             throw new IllegalStateException("WebSocketClientHandshaker should have been non finished yet");
-        } finally {
-            response.release();
         }
     }
 

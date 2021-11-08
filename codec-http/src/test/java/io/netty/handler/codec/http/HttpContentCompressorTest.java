@@ -15,20 +15,23 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Send;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
+import static io.netty.buffer.ByteBufUtil.hexDump;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -36,6 +39,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -43,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class HttpContentCompressorTest {
 
     @Test
-    public void testGetTargetContentEncoding() throws Exception {
+    public void testGetTargetContentEncoding() {
         HttpContentCompressor compressor = new HttpContentCompressor();
 
         String[] tests = {
@@ -80,238 +84,262 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testSplitContent() throws Exception {
+    public void testSplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII)));
 
         assertEncodedResponse(ch);
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b0800000000000000f248cdc901000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("cad7512807000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("ca2fca4901000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testChunkedContent() throws Exception {
+    public void testChunkedContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII)));
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b0800000000000000f248cdc901000000ffff"));
-        chunk.release();
-
-        chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("cad7512807000000ffff"));
-        chunk.release();
-
-        chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("ca2fca4901000000ffff"));
-        chunk.release();
+        assertNotNull(chunk);
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("0300c2a99ae70c000000"));
+        assertNotNull(chunk);
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        chunk.close();
+
+        chunk = ch.readOutbound();
+        assertNotNull(chunk);
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        chunk.close();
+
+        chunk = ch.readOutbound();
+        assertNotNull(chunk);
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testChunkedContentWithAssembledResponse() throws Exception {
+    public void testChunkedContentWithAssembledResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        HttpResponse res = new AssembledHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII));
+        HttpResponse res = new AssembledHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                        .writeCharSequence("Hell", US_ASCII));
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertAssembledEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII)));
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b0800000000000000f248cdc901000000ffff"));
-        chunk.release();
-
-        chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("cad7512807000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("ca2fca4901000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        chunk.close();
+
+        chunk = ch.readOutbound();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testChunkedContentWithAssembledResponseIdentityEncoding() throws Exception {
+    public void testChunkedContentWithAssembledResponseIdentityEncoding() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
-        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
 
-        HttpResponse res = new AssembledHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII));
+        HttpResponse res = new AssembledHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                        .writeCharSequence("Hell", US_ASCII));
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII)));
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("Hell"));
-        chunk.release();
-
-        chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("o, w"));
-        chunk.release();
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("Hell"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("orld"));
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("o, w"));
+        chunk.close();
+
+        chunk = ch.readOutbound();
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("orld"));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testContentWithAssembledResponseIdentityEncodingHttp10() throws Exception {
+    public void testContentWithAssembledResponseIdentityEncodingHttp10() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
-        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/"));
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
 
         HttpResponse res = new AssembledHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII));
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence("Hell", US_ASCII));
         ch.writeOutbound(res);
 
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII)));
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("Hell"));
-        chunk.release();
-
-        chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("o, w"));
-        chunk.release();
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("Hell"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().toString(StandardCharsets.UTF_8), is("orld"));
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("o, w"));
+        chunk.close();
+
+        chunk = ch.readOutbound();
+        assertThat(chunk.payload().toString(StandardCharsets.UTF_8), is("orld"));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testChunkedContentWithTrailingHeader() throws Exception {
+    public void testChunkedContentWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("Hell", CharsetUtil.US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("o, w", CharsetUtil.US_ASCII)));
-        LastHttpContent content = new DefaultLastHttpContent(Unpooled.copiedBuffer("orld", CharsetUtil.US_ASCII));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("o, w", US_ASCII)));
+        LastHttpContent<?> content = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("orld", US_ASCII));
         content.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(content);
 
-        HttpContent chunk;
+        HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b0800000000000000f248cdc901000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("cad7512807000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("ca2fca4901000000ffff"));
-        chunk.release();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
+        assertEquals("Netty", ((LastHttpContent<?>) chunk).trailingHeaders().get(of("X-Test")));
         assertEquals(DecoderResult.SUCCESS, chunk.decoderResult());
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testFullContentWithContentLength() throws Exception {
+    public void testFullContentWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
         FullHttpResponse fullRes = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        fullRes.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullRes.content().readableBytes());
+                HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                        .writeCharSequence("Hello, World", US_ASCII));
+        fullRes.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullRes.payload().readableBytes());
         ch.writeOutbound(fullRes);
 
         HttpResponse res = ch.readOutbound();
@@ -323,46 +351,46 @@ public class HttpContentCompressorTest {
         long contentLengthHeaderValue = HttpUtil.getContentLength(res);
         long observedLength = 0;
 
-        HttpContent c = ch.readOutbound();
-        observedLength += c.content().readableBytes();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
-        c.release();
+        HttpContent<?> c = ch.readOutbound();
+        observedLength += c.payload().readableBytes();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+        c.close();
 
         c = ch.readOutbound();
-        observedLength += c.content().readableBytes();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("0300c6865b260c000000"));
-        c.release();
+        observedLength += c.payload().readableBytes();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("0300c6865b260c000000"));
+        c.close();
 
-        LastHttpContent last = ch.readOutbound();
-        assertThat(last.content().readableBytes(), is(0));
-        last.release();
+        LastHttpContent<?> last = ch.readOutbound();
+        assertThat(last.payload().readableBytes(), is(0));
+        last.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertEquals(contentLengthHeaderValue, observedLength);
     }
 
     @Test
-    public void testFullContent() throws Exception {
+    public void testFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-            Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+            HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("Hello, World", US_ASCII));
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
-        HttpContent c = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
-        c.release();
+        HttpContent<?> c = ch.readOutbound();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+        c.close();
 
         c = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("0300c6865b260c000000"));
-        c.release();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("0300c6865b260c000000"));
+        c.close();
 
-        LastHttpContent last = ch.readOutbound();
-        assertThat(last.content().readableBytes(), is(0));
-        last.release();
+        LastHttpContent<?> last = ch.readOutbound();
+        assertThat(last.payload().readableBytes(), is(0));
+        last.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -372,23 +400,23 @@ public class HttpContentCompressorTest {
      * even if the actual length is turned out to be 0.
      */
     @Test
-    public void testEmptySplitContent() throws Exception {
+    public void testEmptySplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
+        ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
-        HttpContent chunk = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b080000000000000003000000000000000000"));
+        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        HttpContent<?> chunk = ch.readOutbound();
+        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b080000000000000003000000000000000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        chunk.release();
+        chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -397,12 +425,12 @@ public class HttpContentCompressorTest {
      * If the length of the content is 0 for sure, {@link HttpContentEncoder} should skip encoding.
      */
     @Test
-    public void testEmptyFullContent() throws Exception {
+    public void testEmptyFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -413,20 +441,20 @@ public class HttpContentCompressorTest {
 
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.content().readableBytes(), is(0));
-        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
-        res.release();
+        assertThat(res.payload().readableBytes(), is(0));
+        assertThat(res.payload().toString(US_ASCII), is(""));
+        res.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testEmptyFullContentWithTrailer() throws Exception {
+    public void testEmptyFullContentWithTrailer() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -438,15 +466,15 @@ public class HttpContentCompressorTest {
 
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.content().readableBytes(), is(0));
-        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        assertThat(res.payload().readableBytes(), is(0));
+        assertThat(res.payload().toString(US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void test100Continue() throws Exception {
+    public void test100Continue() {
         FullHttpRequest request = newRequest();
         HttpUtil.set100ContinueExpected(request, true);
 
@@ -454,12 +482,12 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         FullHttpResponse continueResponse = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+                HTTP_1_1, HttpResponseStatus.CONTINUE, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
 
         ch.writeOutbound(continueResponse);
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -468,7 +496,7 @@ public class HttpContentCompressorTest {
 
         res = (FullHttpResponse) o;
         assertSame(continueResponse, res);
-        res.release();
+        res.close();
 
         o = ch.readOutbound();
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
@@ -478,25 +506,25 @@ public class HttpContentCompressorTest {
 
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.content().readableBytes(), is(0));
-        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        assertThat(res.payload().readableBytes(), is(0));
+        assertThat(res.payload().toString(US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
     @Test
-    public void testTooManyResponses() throws Exception {
+    public void testTooManyResponses() {
         FullHttpRequest request = newRequest();
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(request);
 
         ch.writeOutbound(new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
 
         try {
             ch.writeOutbound(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
+                    HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
             fail();
         } catch (EncoderException e) {
             assertTrue(e.getCause() instanceof IllegalStateException);
@@ -519,14 +547,14 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testIdentity() throws Exception {
+    public void testIdentity() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        int len = res.content().readableBytes();
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                .writeCharSequence("Hello, World", US_ASCII));
+        int len = res.payload().readableBytes();
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, len);
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.IDENTITY);
         assertTrue(ch.writeOutbound(res));
@@ -534,21 +562,21 @@ public class HttpContentCompressorTest {
         FullHttpResponse response = ch.readOutbound();
         assertEquals(String.valueOf(len), response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals(HttpHeaderValues.IDENTITY.toString(), response.headers().get(HttpHeaderNames.CONTENT_ENCODING));
-        assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));
-        response.release();
+        assertEquals("Hello, World", response.payload().toString(US_ASCII));
+        response.close();
 
         assertTrue(ch.finishAndReleaseAll());
     }
 
     @Test
-    public void testCustomEncoding() throws Exception {
+    public void testCustomEncoding() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        int len = res.content().readableBytes();
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                        .writeCharSequence("Hello, World", US_ASCII));
+        int len = res.payload().readableBytes();
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, len);
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, "ascii");
         assertTrue(ch.writeOutbound(res));
@@ -556,20 +584,21 @@ public class HttpContentCompressorTest {
         FullHttpResponse response = ch.readOutbound();
         assertEquals(String.valueOf(len), response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals("ascii", response.headers().get(HttpHeaderNames.CONTENT_ENCODING));
-        assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));
-        response.release();
+        assertEquals("Hello, World", response.payload().toString(US_ASCII));
+        response.close();
 
         assertTrue(ch.finishAndReleaseAll());
     }
 
     @Test
-    public void testCompressThresholdAllCompress() throws Exception {
+    public void testCompressThresholdAllCompress() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res1023 = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(new byte[1023]));
+                HTTP_1_1, HttpResponseStatus.OK,
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1023)
+                        .writeBytes(new byte[1023]));
         assertTrue(ch.writeOutbound(res1023));
         DefaultHttpResponse response1023 = ch.readOutbound();
         assertThat(response1023.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -577,8 +606,8 @@ public class HttpContentCompressorTest {
 
         assertTrue(ch.writeInbound(newRequest()));
         FullHttpResponse res1024 = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(new byte[1024]));
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1024)
+                        .writeBytes(new byte[1024]));
         assertTrue(ch.writeOutbound(res1024));
         DefaultHttpResponse response1024 = ch.readOutbound();
         assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -586,13 +615,13 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testCompressThresholdNotCompress() throws Exception {
+    public void testCompressThresholdNotCompress() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(6, 15, 8, 1024));
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res1023 = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(new byte[1023]));
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1023)
+                        .writeBytes(new byte[1023]));
         assertTrue(ch.writeOutbound(res1023));
         DefaultHttpResponse response1023 = ch.readOutbound();
         assertFalse(response1023.headers().contains(HttpHeaderNames.CONTENT_ENCODING));
@@ -600,8 +629,8 @@ public class HttpContentCompressorTest {
 
         assertTrue(ch.writeInbound(newRequest()));
         FullHttpResponse res1024 = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(new byte[1024]));
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1024)
+                        .writeBytes(new byte[1024]));
         assertTrue(ch.writeOutbound(res1024));
         DefaultHttpResponse response1024 = ch.readOutbound();
         assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -620,29 +649,30 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeInbound(request));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Gzip Win", CharsetUtil.US_ASCII));
+                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
+                        .writeCharSequence("Gzip Win", US_ASCII));
         assertTrue(ch.writeOutbound(res));
 
         assertEncodedResponse(ch);
-        HttpContent c = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("1f8b080000000000000072afca2c5008cfcc03000000ffff"));
-        c.release();
+        HttpContent<?> c = ch.readOutbound();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b080000000000000072afca2c5008cfcc03000000ffff"));
+        c.close();
 
         c = ch.readOutbound();
-        assertThat(ByteBufUtil.hexDump(c.content()), is("03001f2ebf0f08000000"));
-        c.release();
+        assertThat(hexDump(intoByteBuf(c.payload())), is("03001f2ebf0f08000000"));
+        c.close();
 
-        LastHttpContent last = ch.readOutbound();
-        assertThat(last.content().readableBytes(), is(0));
-        last.release();
+        LastHttpContent<?> last = ch.readOutbound();
+        assertThat(last.payload().readableBytes(), is(0));
+        last.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertTrue(ch.finishAndReleaseAll());
     }
 
     private static FullHttpRequest newRequest() {
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/",
+                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return req;
     }
@@ -662,87 +692,47 @@ public class HttpContentCompressorTest {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(AssembledHttpResponse.class)));
 
-        AssembledHttpResponse res = (AssembledHttpResponse) o;
-        try {
+        try (AssembledHttpResponse res = (AssembledHttpResponse) o) {
             assertThat(res, is(instanceOf(HttpContent.class)));
             assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
-        } finally {
-            res.release();
         }
     }
 
-    static class AssembledHttpResponse extends DefaultHttpResponse implements HttpContent {
+    static class AssembledHttpResponse extends DefaultHttpResponse implements HttpContent<AssembledHttpResponse> {
 
-        private final ByteBuf content;
+        private final Buffer payload;
 
-        AssembledHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
+        AssembledHttpResponse(HttpVersion version, HttpResponseStatus status, Buffer payload) {
             super(version, status);
-            this.content = content;
+            this.payload = payload;
         }
 
         @Override
-        public HttpContent copy() {
-            throw new UnsupportedOperationException();
+        public Buffer payload() {
+            return payload;
         }
 
         @Override
-        public HttpContent duplicate() {
-            throw new UnsupportedOperationException();
+        public Send<AssembledHttpResponse> send() {
+            return payload.send().map(AssembledHttpResponse.class,
+                    p -> new AssembledHttpResponse(protocolVersion(), status(), p));
         }
 
         @Override
-        public HttpContent retainedDuplicate() {
-            throw new UnsupportedOperationException();
+        public void close() {
+            payload.close();
         }
 
         @Override
-        public HttpContent replace(ByteBuf content) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public AssembledHttpResponse retain() {
-            content.retain();
-            return this;
-        }
-
-        @Override
-        public AssembledHttpResponse retain(int increment) {
-            content.retain(increment);
-            return this;
-        }
-
-        @Override
-        public ByteBuf content() {
-            return content;
-        }
-
-        @Override
-        public int refCnt() {
-            return content.refCnt();
-        }
-
-        @Override
-        public boolean release() {
-            return content.release();
-        }
-
-        @Override
-        public boolean release(int decrement) {
-            return content.release(decrement);
-        }
-
-        @Override
-        public AssembledHttpResponse touch() {
-            content.touch();
-            return this;
+        public boolean isAccessible() {
+            return payload.isAccessible();
         }
 
         @Override
         public AssembledHttpResponse touch(Object hint) {
-            content.touch(hint);
+            payload.touch(hint);
             return this;
         }
     }

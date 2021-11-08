@@ -15,27 +15,38 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.util.AbstractReferenceCounted;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.CompositeBuffer;
+import io.netty.buffer.api.Send;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This Attribute is only for Encoder use to insert special command between object if needed
  * (like Multipart Mixed mode)
  */
-final class InternalAttribute extends AbstractReferenceCounted implements InterfaceHttpData {
-    private final List<ByteBuf> value = new ArrayList<>();
+final class InternalAttribute implements InterfaceHttpData<InternalAttribute> {
+    private final List<Buffer> value;
     private final Charset charset;
+    private final BufferAllocator allocator;
     private int size;
 
-    InternalAttribute(Charset charset) {
+    InternalAttribute(Charset charset, BufferAllocator allocator) {
         this.charset = charset;
+        this.allocator = allocator;
+        value = new ArrayList<>();
+    }
+
+    private InternalAttribute(List<Buffer> value, Charset charset, BufferAllocator allocator) {
+        this.value = value;
+        this.charset = charset;
+        this.allocator = allocator;
     }
 
     @Override
@@ -45,25 +56,25 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
 
     public void addValue(String value) {
         requireNonNull(value, "value");
-        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
+        Buffer buf = allocator.allocate(value.length()).writeCharSequence(value, charset);
         this.value.add(buf);
         size += buf.readableBytes();
     }
 
     public void addValue(String value, int rank) {
         requireNonNull(value, "value");
-        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
+        Buffer buf = allocator.allocate(value.length()).writeCharSequence(value, charset);
         this.value.add(rank, buf);
         size += buf.readableBytes();
     }
 
     public void setValue(String value, int rank) {
         requireNonNull(value, "value");
-        ByteBuf buf = Unpooled.copiedBuffer(value, charset);
-        ByteBuf old = this.value.set(rank, buf);
+        Buffer buf = allocator.allocate(value.length()).writeCharSequence(value, charset);
+        Buffer old = this.value.set(rank, buf);
         if (old != null) {
             size -= old.readableBytes();
-            old.release();
+            old.close();
         }
         size += buf.readableBytes();
     }
@@ -98,7 +109,7 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        for (ByteBuf elt : value) {
+        for (Buffer elt : value) {
             result.append(elt.toString(charset));
         }
         return result.toString();
@@ -108,8 +119,8 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
         return size;
     }
 
-    public ByteBuf toByteBuf() {
-        return Unpooled.compositeBuffer().addComponents(value).writerIndex(size()).readerIndex(0);
+    List<Buffer> values() {
+        return value;
     }
 
     @Override
@@ -118,38 +129,56 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     }
 
     @Override
-    protected void deallocate() {
-        // Do nothing
-    }
-
-    @Override
-    public InterfaceHttpData retain() {
-        for (ByteBuf buf: value) {
-            buf.retain();
+    public Send<InternalAttribute> send() {
+        List<Send<Buffer>> sends = new ArrayList<>(value.size());
+        for (Buffer buffer : value) {
+            sends.add(buffer.send());
         }
-        return this;
+        return new Send<>() {
+            @Override
+            public InternalAttribute receive() {
+                List<Buffer> values = new ArrayList<>(sends.size());
+                for (Send<Buffer> send : sends) {
+                    values.add(send.receive());
+                }
+                return new InternalAttribute(values, charset, allocator);
+            }
+
+            @Override
+            public void close() {
+                for (Send<Buffer> send : sends) {
+                    send.close();
+                }
+            }
+
+            @Override
+            public boolean referentIsInstanceOf(Class<?> cls) {
+                return cls.isAssignableFrom(InternalAttribute.class);
+            }
+        };
     }
 
     @Override
-    public InterfaceHttpData retain(int increment) {
-        for (ByteBuf buf: value) {
-            buf.retain(increment);
+    public void close() {
+        for (Buffer buffer : value) {
+            buffer.close();
         }
-        return this;
     }
 
     @Override
-    public InterfaceHttpData touch() {
-        for (ByteBuf buf: value) {
-            buf.touch();
+    public boolean isAccessible() {
+        for (Buffer buffer : value) {
+            if (!buffer.isAccessible()) {
+                return false;
+            }
         }
-        return this;
+        return true;
     }
 
     @Override
-    public InterfaceHttpData touch(Object hint) {
-        for (ByteBuf buf: value) {
-            buf.touch(hint);
+    public InternalAttribute touch(Object hint) {
+        for (Buffer buffer : value) {
+            buffer.touch(hint);
         }
         return this;
     }

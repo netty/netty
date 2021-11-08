@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.compression.Compressor;
 import io.netty.util.ReferenceCountUtil;
@@ -32,7 +30,9 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpContent}.
@@ -54,7 +54,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.*;
  * <p>
  * This handler must be placed after {@link HttpObjectEncoder} in the pipeline
  * so that this handler can intercept HTTP responses before {@link HttpObjectEncoder}
- * converts them into {@link ByteBuf}s.
+ * converts them into {@link Buffer}s.
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpRequest, HttpObject> {
 
@@ -112,6 +112,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             case AWAIT_HEADERS: {
                 ensureHeaders(msg);
                 assert compressor == null;
+                assert msg instanceof HttpResponse;
 
                 final HttpResponse res = (HttpResponse) msg;
                 final int code = res.status().code();
@@ -142,33 +143,28 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                  * See https://github.com/netty/netty/issues/5382
                  */
                 if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
-                    if (isFull) {
-                        out.add(ReferenceCountUtil.retain(res));
-                    } else {
-                        out.add(ReferenceCountUtil.retain(res));
+                    out.add(res);
+                    if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
                     break;
                 }
 
-                if (isFull) {
-                    // Pass through the full response with empty content and continue waiting for the next resp.
-                    if (!((ByteBufHolder) res).content().isReadable()) {
-                        out.add(ReferenceCountUtil.retain(res));
-                        break;
-                    }
+                // Pass through the full response with empty content and continue waiting for the next resp.
+                if (isFull && ((LastHttpContent<?>) res).payload().readableBytes() == 0) {
+                    out.add(res);
+                    break;
                 }
 
                 // Prepare to encode the content.
+                assert acceptEncoding != null;
                 final Result result = beginEncode(res, acceptEncoding.toString());
 
                 // If unable to encode, pass through.
                 if (result == null) {
-                    if (isFull) {
-                        out.add(ReferenceCountUtil.retain(res));
-                    } else {
-                        out.add(ReferenceCountUtil.retain(res));
+                    out.add(res);
+                    if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
@@ -189,14 +185,14 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     out.add(newRes);
 
                     ensureContent(res);
-                    encodeFullResponse(newRes, ctx.alloc(), (HttpContent) res, out);
+                    encodeFullResponse(ctx, newRes, (HttpContent<?>) res, out);
                     break;
                 } else {
                     // Make the response chunked to simplify content transformation.
                     res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
                     res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
-                    out.add(ReferenceCountUtil.retain(res));
+                    out.add(res);
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
                         // only break out the switch statement if we have not content to process
@@ -208,14 +204,14 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case AWAIT_CONTENT: {
                 ensureContent(msg);
-                if (encodeContent((HttpContent) msg, ctx.alloc(), out)) {
+                if (encodeContent(ctx, (HttpContent<?>) msg, out)) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
             }
             case PASS_THROUGH: {
                 ensureContent(msg);
-                out.add(ReferenceCountUtil.retain(msg));
+                out.add(msg);
                 // Passed through all following contents of the current response.
                 if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
@@ -225,10 +221,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encodeFullResponse(HttpResponse newRes, ByteBufAllocator allocator,
-                                    HttpContent content, List<Object> out) {
+    private void encodeFullResponse(ChannelHandlerContext ctx, HttpResponse newRes, HttpContent<?> content,
+                                    List<Object> out) {
         int existingMessages = out.size();
-        encodeContent(content, allocator, out);
+        encodeContent(ctx, content, out);
 
         if (HttpUtil.isContentLengthSet(newRes)) {
             // adjust the content-length header
@@ -236,7 +232,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             for (int i = existingMessages; i < out.size(); i++) {
                 Object item = out.get(i);
                 if (item instanceof HttpContent) {
-                    messageSize += ((HttpContent) item).content().readableBytes();
+                    messageSize += ((HttpContent<?>) item).payload().readableBytes();
                 }
             }
             HttpUtil.setContentLength(newRes, messageSize);
@@ -267,22 +263,22 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private boolean encodeContent(HttpContent c, ByteBufAllocator allocator, List<Object> out) {
-        ByteBuf content = c.content();
+    private boolean encodeContent(ChannelHandlerContext ctx, HttpContent<?> c, List<Object> out) {
+        Buffer content = c.payload();
 
-        encode(content, allocator, out);
+        encode(content, ctx.alloc(), ctx.bufferAllocator(), out);
 
         if (c instanceof LastHttpContent) {
-            finishEncode(allocator, out);
-            LastHttpContent last = (LastHttpContent) c;
+            finishEncode(ctx.alloc(), ctx.bufferAllocator(), out);
+            LastHttpContent<?> last = (LastHttpContent<?>) c;
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
             HttpHeaders headers = last.trailingHeaders();
             if (headers.isEmpty()) {
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                out.add(new EmptyLastHttpContent(ctx.bufferAllocator()));
             } else {
-                out.add(new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
+                out.add(new DefaultLastHttpContent(ctx.bufferAllocator().allocate(0), headers));
             }
             return true;
         }
@@ -334,19 +330,20 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(ByteBuf in, ByteBufAllocator allocator, List<Object> out) {
-        ByteBuf compressed = compressor.compress(in, allocator);
-        if (!compressed.isReadable()) {
-            compressed.release();
+    private void encode(Buffer in, ByteBufAllocator byteBufAllocator, BufferAllocator allocator, List<Object> out) {
+        Buffer compressed = extractOrCopy(allocator, compressor.compress(ByteBufAdaptor.intoByteBuf(in),
+                byteBufAllocator));
+        if (compressed.readableBytes() == 0) {
+            compressed.close();
             return;
         }
         out.add(new DefaultHttpContent(compressed));
     }
 
-    private void finishEncode(ByteBufAllocator allocator, List<Object> out) {
-        ByteBuf trailer = compressor.finish(allocator);
-        if (!trailer.isReadable()) {
-            trailer.release();
+    private void finishEncode(ByteBufAllocator byteBufAllocator, BufferAllocator allocator, List<Object> out) {
+        Buffer trailer = extractOrCopy(allocator, compressor.finish(byteBufAllocator));
+        if (trailer.readableBytes() == 0) {
+            trailer.close();
             return;
         }
         out.add(new DefaultHttpContent(trailer));

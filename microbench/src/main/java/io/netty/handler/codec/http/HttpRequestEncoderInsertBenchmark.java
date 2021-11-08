@@ -15,9 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -27,7 +25,11 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 @State(Scope.Benchmark)
 @Warmup(iterations = 10)
@@ -39,26 +41,20 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
     private final HttpRequestEncoder encoderNew = new HttpRequestEncoder();
 
     @Benchmark
-    public ByteBuf oldEncoder() throws Exception {
-        ByteBuf buffer = Unpooled.buffer(100);
-        try {
+    public Buffer oldEncoder() {
+        try (Buffer buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(100)) {
             encoderOld.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, uri));
             return buffer;
-        } finally {
-            buffer.release();
         }
     }
 
     @Benchmark
-    public ByteBuf newEncoder() throws Exception {
-        ByteBuf buffer = Unpooled.buffer(100);
-        try {
+    public Buffer newEncoder() throws Exception {
+        try (Buffer buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(100)) {
             encoderNew.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, uri));
             return buffer;
-        } finally {
-            buffer.release();
         }
     }
 
@@ -73,9 +69,9 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
+        protected void encodeInitialLine(Buffer buf, HttpRequest request) {
             AsciiString method = request.method().asciiName();
-            ByteBufUtil.copy(method, method.arrayOffset(), buf, method.length());
+            buf.writeCharSequence(method, US_ASCII);
             buf.writeByte(SP);
 
             // Add / as absolute path if no is present.

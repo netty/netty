@@ -16,47 +16,45 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.util.CharsetUtil.UTF_8;
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+
+import java.nio.charset.StandardCharsets;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Handles the exceptional case where HTTP 1.x was negotiated under TLS.
  */
 public final class FallbackRequestHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
-    private static final ByteBuf response = unreleasableBuffer(copiedBuffer("<!DOCTYPE html>"
+    private static final byte[] responseBytes = ("<!DOCTYPE html>"
             + "<html><body><h2>To view the example you need a browser that supports HTTP/2 ("
             + Http2CodecUtil.TLS_UPGRADE_PROTOCOL_NAME
-            + ")</h2></body></html>", UTF_8)).asReadOnly();
+            + ")</h2></body></html>").getBytes(StandardCharsets.UTF_8);
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
         if (HttpUtil.is100ContinueExpected(req)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, EMPTY_BUFFER));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, ctx.bufferAllocator().allocate(0)));
         }
 
-        ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(response.duplicate());
+        Buffer content = ctx.bufferAllocator().allocate(responseBytes.length).writeBytes(responseBytes);
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+        response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
 
         ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
     }

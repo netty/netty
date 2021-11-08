@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -228,7 +228,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, Buffer buffer) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {
@@ -236,7 +236,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                     // https://github.com/netty/netty/issues/1159
                     return;
                 }
-                ctx.fireChannelRead(buffer.readBytes(readable));
+                ctx.fireChannelRead(buffer.readSplit(readable));
             } else {
                 super.decode(context, buffer);
             }

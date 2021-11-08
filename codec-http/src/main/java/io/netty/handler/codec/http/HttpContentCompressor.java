@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliCompressor;
 import io.netty.handler.codec.compression.BrotliOptions;
@@ -33,6 +29,10 @@ import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdCompressor;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
@@ -220,10 +220,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
         if (this.contentSizeThreshold > 0) {
             if (httpResponse instanceof HttpContent &&
-                    ((HttpContent) httpResponse).content().readableBytes() < contentSizeThreshold) {
+                    ((HttpContent<?>) httpResponse).payload().readableBytes() < contentSizeThreshold) {
                 return null;
             }
         }

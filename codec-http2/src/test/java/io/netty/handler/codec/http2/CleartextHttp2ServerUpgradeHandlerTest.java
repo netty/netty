@@ -17,11 +17,13 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -74,13 +76,14 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, upgradeCodecFactory);
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2ConnectionHandler);
         channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 userEvents.add(evt);
             }
         });
@@ -112,7 +115,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void upgrade() throws Exception {
+    public void upgrade() {
         String upgradeString = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: Upgrade, HTTP2-Settings\r\n" +
@@ -165,7 +168,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void downgrade() throws Exception {
+    public void downgrade() {
         setUpServerChannel();
 
         String requestString = "GET / HTTP/1.1\r\n" +
@@ -182,16 +185,16 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
         assertEquals(new DefaultHttpHeaders().add("Host", "example.com"), request.headers());
 
-        ((LastHttpContent) channel.readInbound()).release();
+        ((LastHttpContent<?>) channel.readInbound()).close();
 
         assertNull(channel.readInbound());
     }
 
     @Test
-    public void usedHttp2MultiplexCodec() throws Exception {
-        final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
+    public void usedHttp2MultiplexCodec() {
+        final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
             }
         }).build();
         UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2Codec);
@@ -200,13 +203,14 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, upgradeCodecFactory);
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2Codec);
         channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 userEvents.add(evt);
             }
         });
@@ -266,14 +270,14 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
                 "connection: upgrade\r\n" +
                 "upgrade: h2c\r\n\r\n";
-        ByteBuf responseBuffer = channel.readOutbound();
-        assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
-        responseBuffer.release();
+        try (Buffer responseBuffer = channel.readOutbound()) {
+            assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
+        }
 
         // Check that the preface was send (a.k.a the settings frame)
-        ByteBuf settingsBuffer = channel.readOutbound();
-        assertNotNull(settingsBuffer);
-        settingsBuffer.release();
+        try (Buffer settingsBuffer = channel.readOutbound()) {
+            assertNotNull(settingsBuffer);
+        }
 
         assertNull(channel.readOutbound());
     }

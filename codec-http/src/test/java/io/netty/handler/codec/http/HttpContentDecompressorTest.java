@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -62,7 +61,7 @@ public class HttpContentDecompressorTest {
 
         assertTrue(channel.readInbound() instanceof HttpResponse);
 
-        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertFalse(channel.writeInbound(new DefaultHttpContent(channel.bufferAllocator().allocate(0))));
 
         // read was triggered by the HttpContentDecompressor itself as it did not produce any message to the next
         // inbound handler.

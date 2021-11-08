@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
@@ -34,6 +33,8 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 
 
 @Threads(1)
@@ -61,55 +62,37 @@ public class HttpPostMultipartRequestDecoderBenchmark
                                     "\nContent-Disposition: form-data; name=\"msg2\"; filename=\"file2.txt\"\n\n" +
                                     data).getBytes(CharsetUtil.UTF_8);
         byte[] finalBigBytes = ("\n" + "--" + BOUNDARY + "--\n").getBytes(CharsetUtil.UTF_8);
-        ByteBuf firstBuf = Unpooled.wrappedBuffer(bodyStartBytes);
-        ByteBuf finalBuf = Unpooled.wrappedBuffer(finalBigBytes);
-        ByteBuf nextBuf;
-        if (big) {
-            nextBuf = Unpooled.wrappedBuffer(bodyPartBigBytes);
-        } else {
-            nextBuf = Unpooled.wrappedBuffer(intermediaryBytes);
-        }
-        DefaultHttpRequest req =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/up");
-        req.headers().add(HttpHeaderNames.CONTENT_TYPE,
-                          "multipart/form-data; boundary=" + BOUNDARY);
+        try (Buffer firstBuf = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bodyStartBytes.length)
+                .writeBytes(bodyStartBytes);
+             Buffer finalBuf = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(finalBigBytes.length).writeBytes(finalBigBytes);
+             Buffer nextBuf = big ?
+                     DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bodyPartBigBytes.length).writeBytes(bodyPartBigBytes) :
+                     DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(intermediaryBytes.length).writeBytes(intermediaryBytes)) {
+            DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/up");
+            req.headers().add(HttpHeaderNames.CONTENT_TYPE,
+                              "multipart/form-data; boundary=" + BOUNDARY);
 
-        long start = System.nanoTime();
+            long start = System.nanoTime();
 
-        DefaultHttpDataFactory defaultHttpDataFactory =
-                new DefaultHttpDataFactory(noDisk? 1024 * 1024 : 16 * 1024);
-        HttpPostRequestDecoder decoder =
-                new HttpPostRequestDecoder(defaultHttpDataFactory, req);
-        firstBuf.retain();
-        decoder.offer(new DefaultHttpContent(firstBuf));
-        firstBuf.release();
-        for (int i = 1; i < chunkNumber; i++) {
-            nextBuf.retain();
-            decoder.offer(new DefaultHttpContent(nextBuf));
-            nextBuf.release();
-            nextBuf.readerIndex(0);
+            DefaultHttpDataFactory defaultHttpDataFactory =
+                    new DefaultHttpDataFactory(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, noDisk? 1024 * 1024 : 16 * 1024);
+            HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(DEFAULT_GLOBAL_BUFFER_ALLOCATOR,
+                    defaultHttpDataFactory, req);
+            decoder.offer(new DefaultHttpContent(firstBuf.copy()));
+            for (int i = 1; i < chunkNumber; i++) {
+                decoder.offer(new DefaultHttpContent(nextBuf.copy()));
+            }
+            decoder.offer(new DefaultLastHttpContent(finalBuf.copy()));
+            while (decoder.hasNext()) {
+                decoder.next();
+            }
+            long stop = System.nanoTime();
+            double time = (stop - start) / 1000000.0;
+            defaultHttpDataFactory.cleanAllHttpData();
+            defaultHttpDataFactory.cleanRequestHttpData(req);
+            decoder.destroy();
+            return time;
         }
-        finalBuf.retain();
-        decoder.offer(new DefaultLastHttpContent(finalBuf));
-        finalBuf.release();
-        while (decoder.hasNext()) {
-            InterfaceHttpData httpData = decoder.next();
-        }
-        while (finalBuf.refCnt() > 0) {
-            finalBuf.release();
-        }
-        while (nextBuf.refCnt() > 0) {
-            nextBuf.release();
-        }
-        while (finalBuf.refCnt() > 0) {
-            finalBuf.release();
-        }
-        long stop = System.nanoTime();
-        double time = (stop - start) / 1000000.0;
-        defaultHttpDataFactory.cleanAllHttpData();
-        defaultHttpDataFactory.cleanRequestHttpData(req);
-        decoder.destroy();
-        return time;
     }
 
     @Benchmark

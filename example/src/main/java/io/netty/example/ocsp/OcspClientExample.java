@@ -17,7 +17,6 @@
 package io.netty.example.ocsp;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
@@ -163,7 +162,7 @@ public class OcspClientExample {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             FullHttpRequest request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/", ctx.bufferAllocator().allocate(0));
             request.headers().set(HttpHeaderNames.HOST, host);
             request.headers().set(HttpHeaderNames.USER_AGENT, "netty-ocsp-example/1.0");
 

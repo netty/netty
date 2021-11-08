@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -194,7 +194,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      *
      */
     @Override
-    protected FullHttpRequest newHandshakeRequest() {
+    protected FullHttpRequest newHandshakeRequest(BufferAllocator allocator) {
         URI wsURL = uri();
 
         // Get 16 bit nonce and base 64 encode it
@@ -213,7 +213,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
 
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
-                Unpooled.EMPTY_BUFFER);
+                allocator.allocate(0));
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
