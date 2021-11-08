@@ -134,7 +134,7 @@ abstract class Cache<E> {
     }
 
     /**
-     * Return the number of hostames for which we have cached something.
+     * Return the number of hostnames for which we have cached something.
      */
     final int size() {
         return resolveCache.size();
