@@ -49,6 +49,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -232,7 +233,7 @@ abstract class DnsResolveContext<T> {
                         }
                     } else {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
                             newPromise.addListener(this);
@@ -240,7 +241,7 @@ abstract class DnsResolveContext<T> {
                         } else if (!startWithoutSearchDomain) {
                             internalResolve(hostname, promise);
                         } else {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
                         }
                     }
                 }
@@ -261,13 +262,11 @@ abstract class DnsResolveContext<T> {
     private static final class SearchDomainUnknownHostException extends UnknownHostException {
         private static final long serialVersionUID = -8573510133644997085L;
 
-        SearchDomainUnknownHostException(Throwable cause, String originalHostname) {
-            super("Failed to resolve '" + originalHostname + "' and search domain query for configured domain" +
-                    " failed as well. " + cause.getMessage());
-            setStackTrace(cause.getStackTrace());
-
+        SearchDomainUnknownHostException(Throwable cause, String originalHostname, String[] searchDomains) {
+            super("Failed to resolve '" + originalHostname + "' and search domain query for configured domains" +
+                    " failed as well: " + Arrays.toString(searchDomains));
             // Preserve the cause
-            initCause(cause.getCause());
+            initCause(cause);
         }
 
         // Suppress a warning since this method doesn't need synchronization
