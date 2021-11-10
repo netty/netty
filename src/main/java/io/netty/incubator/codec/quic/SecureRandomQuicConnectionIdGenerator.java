@@ -45,4 +45,9 @@ final class SecureRandomQuicConnectionIdGenerator implements QuicConnectionIdGen
     public int maxConnectionIdLength() {
         return Quiche.QUICHE_MAX_CONN_ID_LEN;
     }
+
+    @Override
+    public boolean isIdempotent() {
+        return false;
+    }
 }

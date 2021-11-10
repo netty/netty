@@ -64,4 +64,28 @@ public class QuicConnectionIdGeneratorTest extends AbstractQuicTest {
         assertThrows(IllegalArgumentException.class, () ->
                 idGenerator.newId(ByteBuffer.wrap(new byte[8]), Integer.MAX_VALUE));
     }
+
+    @Test
+    public void testSignIdGenerator() {
+        QuicConnectionIdGenerator idGenerator = QuicConnectionIdGenerator.signGenerator();
+
+        byte[] input = new byte[1024];
+        byte[] input2 = new byte[1024];
+        ThreadLocalRandom.current().nextBytes(input);
+        ThreadLocalRandom.current().nextBytes(input2);
+        ByteBuffer id = idGenerator.newId(ByteBuffer.wrap(input), 10);
+        ByteBuffer id2 = idGenerator.newId(ByteBuffer.wrap(input), 10);
+        ByteBuffer id3 = idGenerator.newId(ByteBuffer.wrap(input2), 10);
+        assertEquals(10, id.remaining());
+        assertEquals(10, id2.remaining());
+        assertEquals(10, id3.remaining());
+        assertEquals(id, id2);
+        assertNotEquals(id, id3);
+
+        assertThrows(UnsupportedOperationException.class, () -> idGenerator.newId(10));
+        assertThrows(NullPointerException.class, () -> idGenerator.newId(null, 10));
+        assertThrows(IllegalArgumentException.class, () -> idGenerator.newId(ByteBuffer.wrap(new byte[0]), 10));
+        assertThrows(IllegalArgumentException.class, () ->
+                idGenerator.newId(ByteBuffer.wrap(input), Integer.MAX_VALUE));
+    }
 }

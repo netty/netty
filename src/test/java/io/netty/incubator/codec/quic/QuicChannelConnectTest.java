@@ -307,23 +307,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         CountDownLatch serverLatch = new CountDownLatch(1);
         CountDownLatch clientLatch = new CountDownLatch(1);
 
-        Channel server = QuicTestUtils.newServer(new QuicTokenHandler() {
-            // Disable token validation
-            @Override
-            public boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
-                return false;
-            }
-
-            @Override
-            public int validateToken(ByteBuf token, InetSocketAddress address) {
-                return 0;
-            }
-
-            @Override
-            public int maxTokenLength() {
-                return 0;
-            }
-        }, serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
+        // Disable token validation
+        Channel server = QuicTestUtils.newServer(NoValidationQuicTokenHandler.INSTANCE,
+                serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient();
         try {

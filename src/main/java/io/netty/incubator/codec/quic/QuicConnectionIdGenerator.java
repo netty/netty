@@ -22,7 +22,10 @@ import java.nio.ByteBuffer;
  */
 public interface QuicConnectionIdGenerator {
     /**
-     * Creates a new {@link QuicConnectionAddress} with the given length.
+     * Creates a new connection id with the given length. This method may not be supported by
+     * a sign id generator implementation as a sign id generator should always have an input
+     * to sign with, otherwise this method may generate the same id which may cause some
+     * unpredictable issues when we use it.
      *
      * @param length    the length of the id.
      * @return          the id.
@@ -47,11 +50,28 @@ public interface QuicConnectionIdGenerator {
     int maxConnectionIdLength();
 
     /**
+     * Returns true if the implementation is idempotent, which means we will get the same id
+     * with the same input ByteBuffer. Otherwise, returns false.
+     *
+     * @return whether the implementation is idempotent.
+     */
+    boolean isIdempotent();
+
+    /**
      * Return a {@link QuicConnectionIdGenerator} which randomly generates new connection ids.
      *
      * @return a {@link QuicConnectionIdGenerator} which randomly generated ids.
      */
     static QuicConnectionIdGenerator randomGenerator() {
         return SecureRandomQuicConnectionIdGenerator.INSTANCE;
+    }
+
+    /**
+     * Return a {@link QuicConnectionIdGenerator} which generates new connection ids by signing the given input.
+     *
+     * @return a {@link QuicConnectionIdGenerator} which generates ids by signing the given input.
+     */
+    static QuicConnectionIdGenerator signGenerator() {
+        return HmacSignQuicConnectionIdGenerator.INSTANCE;
     }
 }

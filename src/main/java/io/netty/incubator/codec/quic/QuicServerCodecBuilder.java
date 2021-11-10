@@ -189,7 +189,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         QuicTokenHandler tokenHandler = this.tokenHandler;
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
         if (generator == null) {
-            generator = QuicConnectionIdGenerator.randomGenerator();
+            generator = QuicConnectionIdGenerator.signGenerator();
         }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
