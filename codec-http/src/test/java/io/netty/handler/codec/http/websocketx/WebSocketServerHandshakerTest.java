@@ -65,9 +65,7 @@ public abstract class WebSocketServerHandshakerTest {
                 .set(HttpHeaderNames.WEBSOCKET_PROTOCOL, "superchat")
                 .set("custom", "header");
 
-        if (webSocketVersion() != WebSocketVersion.V00) {
-            customResponseHeaders.set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345");
-        }
+        customResponseHeaders.set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345");
 
         FullHttpResponse response = null;
         try {
@@ -79,14 +77,9 @@ public abstract class WebSocketServerHandshakerTest {
             assertEquals(1, responseHeaders.getAll(HttpHeaderNames.UPGRADE).size());
             assertTrue(responseHeaders.containsValue("custom", "header", true));
 
-            if (webSocketVersion() != WebSocketVersion.V00) {
-                assertFalse(responseHeaders.containsValue(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345", false));
-                assertEquals(1, responseHeaders.getAll(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL).size());
-                assertEquals("chat", responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
-            } else {
-                assertEquals(1, responseHeaders.getAll(HttpHeaderNames.WEBSOCKET_PROTOCOL).size());
-                assertEquals("chat", responseHeaders.get(HttpHeaderNames.WEBSOCKET_PROTOCOL));
-            }
+            assertFalse(responseHeaders.containsValue(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345", false));
+            assertEquals(1, responseHeaders.getAll(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL).size());
+            assertEquals("chat", responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } finally {
             request.close();
             if (response != null) {
