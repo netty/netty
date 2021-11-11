@@ -265,8 +265,9 @@ abstract class DnsResolveContext<T> {
         SearchDomainUnknownHostException(Throwable cause, String originalHostname, String[] searchDomains) {
             super("Failed to resolve '" + originalHostname + "' and search domain query for configured domains" +
                     " failed as well: " + Arrays.toString(searchDomains));
+            setStackTrace(cause.getStackTrace());
             // Preserve the cause
-            initCause(cause);
+            initCause(cause.getCause());
         }
 
         // Suppress a warning since this method doesn't need synchronization
