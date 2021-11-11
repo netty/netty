@@ -2324,8 +2324,9 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = builder.build();
         Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").awaitUninterruptibly();
         Throwable cause = result.cause();
-        assertTrue(cause instanceof UnknownHostException);
-        assertTrue(cause.getCause() instanceof DnsNameResolverTimeoutException);
+        assertThat(cause, Matchers.instanceOf(UnknownHostException.class));
+        cause.getCause().printStackTrace();
+        assertThat(cause.getCause(), Matchers.instanceOf(DnsNameResolverTimeoutException.class));
         assertTrue(DnsNameResolver.isTimeoutError(cause));
         assertTrue(DnsNameResolver.isTransportOrTimeoutError(cause));
         resolver.close();
