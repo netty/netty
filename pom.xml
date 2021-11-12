@@ -70,7 +70,7 @@
     <skipTests>false</skipTests>
     <netty.version>4.1.70.Final</netty.version>
     <netty.build.version>30</netty.build.version>
-    <netty.quic.version>0.0.20.Final</netty.quic.version>
+    <netty.quic.version>0.0.21.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     <release.gpg.keyname />
     <release.gpg.passphrase />
@@ -363,9 +363,15 @@
     </dependency>
     <dependency>
       <groupId>io.netty.incubator</groupId>
-      <artifactId>netty-incubator-codec-quic</artifactId>
+      <artifactId>netty-incubator-codec-classes-quic</artifactId>
+      <version>${netty.quic.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-native-quic</artifactId>
       <version>${netty.quic.version}</version>
       <classifier>${netty.quic.classifier}</classifier>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
