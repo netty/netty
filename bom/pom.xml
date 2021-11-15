@@ -307,7 +307,13 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
-        <classifier>linux-aarch_64</classifier>
+        <classifier>linux-x86_64-fedora</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>${tcnative.version}</version>
+        <classifier>linux-aarch_64-fedora</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
