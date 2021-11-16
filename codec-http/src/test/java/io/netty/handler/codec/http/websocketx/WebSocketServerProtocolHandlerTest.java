@@ -95,26 +95,6 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequestInvalidUpgradeHeader() {
-        EmbeddedChannel ch = createChannel();
-        FullHttpRequest httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
-                .method(HttpMethod.GET)
-                .uri("/test")
-                .connection("Upgrade")
-                .version00()
-                .upgrade("BogusSocket")
-                .build();
-
-        ch.writeInbound(httpRequestWithEntity);
-
-        FullHttpResponse response = responses.remove();
-        assertEquals(BAD_REQUEST, response.status());
-        assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
-        response.close();
-        assertFalse(ch.finish());
-    }
-
-    @Test
     public void testHttpUpgradeRequestMissingWSKeyHeader() {
         EmbeddedChannel ch = createChannel();
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)

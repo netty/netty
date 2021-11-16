@@ -147,20 +147,6 @@ public final class WebSocketClientHandshakerFactory {
                     webSocketURL, V13, subprotocol, allowExtensions, customHeaders,
                     maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis);
         }
-        if (version == V08) {
-            return new WebSocketClientHandshaker08(
-                    webSocketURL, V08, subprotocol, allowExtensions, customHeaders,
-                    maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis);
-        }
-        if (version == V07) {
-            return new WebSocketClientHandshaker07(
-                    webSocketURL, V07, subprotocol, allowExtensions, customHeaders,
-                    maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis);
-        }
-        if (version == V00) {
-            return new WebSocketClientHandshaker00(
-                    webSocketURL, V00, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis);
-        }
 
         throw new WebSocketClientHandshakeException("Protocol version " + version + " not supported.");
     }
@@ -203,21 +189,6 @@ public final class WebSocketClientHandshakerFactory {
             return new WebSocketClientHandshaker13(
                 webSocketURL, V13, subprotocol, allowExtensions, customHeaders,
                 maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis, absoluteUpgradeUrl);
-        }
-        if (version == V08) {
-            return new WebSocketClientHandshaker08(
-                webSocketURL, V08, subprotocol, allowExtensions, customHeaders,
-                maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis, absoluteUpgradeUrl);
-        }
-        if (version == V07) {
-            return new WebSocketClientHandshaker07(
-                webSocketURL, V07, subprotocol, allowExtensions, customHeaders,
-                maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis, absoluteUpgradeUrl);
-        }
-        if (version == V00) {
-            return new WebSocketClientHandshaker00(
-                webSocketURL, V00, subprotocol, customHeaders,
-                maxFramePayloadLength, forceCloseTimeoutMillis, absoluteUpgradeUrl);
         }
 
         throw new WebSocketClientHandshakeException("Protocol version " + version + " not supported.");

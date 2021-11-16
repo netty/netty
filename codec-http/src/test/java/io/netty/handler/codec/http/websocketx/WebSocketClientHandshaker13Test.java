@@ -20,7 +20,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
 
-public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07Test {
+public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTest {
 
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -35,4 +35,19 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07
         return HttpHeaderNames.ORIGIN;
     }
 
+    @Override
+    protected CharSequence getProtocolHeaderName() {
+        return HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL;
+    }
+
+    @Override
+    protected CharSequence[] getHandshakeRequiredHeaderNames() {
+        return new CharSequence[] {
+                HttpHeaderNames.UPGRADE,
+                HttpHeaderNames.CONNECTION,
+                HttpHeaderNames.SEC_WEBSOCKET_KEY,
+                HttpHeaderNames.HOST,
+                HttpHeaderNames.SEC_WEBSOCKET_VERSION,
+        };
+    }
 }
