@@ -1313,7 +1313,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -2029,7 +2029,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param position the file position at which the transfer is to begin
      * @param length the maximum number of bytes to transfer
      *
-     * @return the actual number of bytes read in from the specified channel
+     * @return the actual number of bytes read in from the specified channel.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IOException
      *         if the specified channel threw an exception during I/O
