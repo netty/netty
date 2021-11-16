@@ -512,7 +512,6 @@
     <module>codec-smtp</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
-    <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
