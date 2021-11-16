@@ -122,7 +122,11 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
         ByteBuf buffer = allocator.buffer(chunkSize);
         try {
             // transfer to buffer
-            offset += buffer.writeBytes(in, chunkSize);
+            int written = buffer.writeBytes(in, chunkSize);
+            if (written < 0) {
+                return null;
+            }
+            offset += written;
             release = false;
             return buffer;
         } finally {
