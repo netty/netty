@@ -62,7 +62,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>${tcnative.artifactId}</artifactId>
+      <artifactId>netty-tcnative-classes</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
