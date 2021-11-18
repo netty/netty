@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -112,7 +113,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final ChannelHandler streamHandler;
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
-    private final TimeoutHandler timeoutHandler = new TimeoutHandler();
+    private final TimeoutHandler timeoutHandler;
 
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
@@ -156,6 +157,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                       InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
+        this(parent, server, key, remote, supportsDatagram, streamHandler, streamOptionsArray, streamAttrsArray, null);
+    }
+
+    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key,
+                              InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
+                              Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                              Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
+                              Consumer<QuicheQuicChannel> timeoutTask) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
         this.server = server;
@@ -169,6 +178,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.streamHandler = streamHandler;
         this.streamOptionsArray = streamOptionsArray;
         this.streamAttrsArray = streamAttrsArray;
+        timeoutHandler = new TimeoutHandler(timeoutTask);
     }
 
     static QuicheQuicChannel forClient(Channel parent, InetSocketAddress remote, ChannelHandler streamHandler,
@@ -184,6 +194,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray);
+    }
+
+    static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress remote,
+                                       boolean supportsDatagram, ChannelHandler streamHandler,
+                                       Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
+                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
+                                       Consumer<QuicheQuicChannel> timeoutTask) {
+        return new QuicheQuicChannel(parent, true, key, remote, supportsDatagram,
+                streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask);
     }
 
     @Override
@@ -1469,6 +1488,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private final class TimeoutHandler implements Runnable {
         private ScheduledFuture<?> timeoutFuture;
+        private final Consumer<QuicheQuicChannel> timeoutTask;
+
+        TimeoutHandler(Consumer<QuicheQuicChannel> timeoutTask) {
+            this.timeoutTask = timeoutTask;
+        }
 
         @Override
         public void run() {
@@ -1480,6 +1504,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 if (Quiche.quiche_conn_is_closed(connAddr)) {
                     forceClose();
+                    if (timeoutTask != null){
+                        timeoutTask.accept(QuicheQuicChannel.this);
+                    }
                 } else {
                     // We need to call connectionSend when a timeout was triggered.
                     // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.send.

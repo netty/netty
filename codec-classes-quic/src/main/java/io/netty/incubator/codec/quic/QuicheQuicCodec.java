@@ -71,6 +71,10 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         connections.put(channel.key(), channel);
     }
 
+    protected void removeChannel(QuicheQuicChannel channel) {
+        connections.remove(channel.key());
+    }
+
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         sockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);

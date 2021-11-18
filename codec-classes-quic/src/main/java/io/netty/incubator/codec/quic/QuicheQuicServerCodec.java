@@ -197,10 +197,10 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             dcid.getBytes(dcid.readerIndex(), bytes);
             key = ByteBuffer.wrap(bytes);
         }
-
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
                 ctx.channel(), key, sender, config.isDatagramSupported(),
-                streamHandler, streamOptionsArray, streamAttrsArray);
+                streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel);
+
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         QuicSslEngine engine = sslEngineProvider.apply(channel);
         if (!(engine instanceof QuicheQuicSslEngine)) {
