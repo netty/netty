@@ -507,7 +507,6 @@
     <module>codec-http</module>
     <module>codec-http2</module>
     <module>codec-mqtt</module>
-    <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
