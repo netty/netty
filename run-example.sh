@@ -41,7 +41,6 @@ EXAMPLE_MAP=(
   'objectecho-server:io.netty.example.objectecho.ObjectEchoServer'
   'quote-client:org.jboss.netty.example.qotm.QuoteOfTheMomentClient'
   'quote-server:org.jboss.netty.example.qotm.QuoteOfTheMomentServer'
-  'redis-client:io.netty.example.redis.RedisClient'
   'securechat-client:io.netty.example.securechat.SecureChatClient'
   'securechat-server:io.netty.example.securechat.SecureChatServer'
   'telnet-client:io.netty.example.telnet.TelnetClient'
