@@ -45,7 +45,6 @@
   <suppress message="http://status.com" checks="NoHttp"/>
   <suppress message="http://www-di.inf.puc-rio.br/~laber/public/spire98.ps" checks="NoHttp"/>
   <suppress message="http://www.javaconcurrencyinpractice.com/annotations/doc/" checks="NoHttp"/>
-  <suppress message="http://www.jmesnil.net/stomp-websocket/doc/" checks="NoHttp"/>
   <suppress message="http://www.oid-info.com/get/2.16.840.1.101.3.4.2.1" checks="NoHttp"/>
   <suppress message="http://www.soap-service.by/foo/add" checks="NoHttp"/>
   <suppress message="http://www.tavendo.de/autobahn/testsuite.html" checks="NoHttp"/>
