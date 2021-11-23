@@ -40,7 +40,6 @@ are listed below:
  * `io.netty.codec.haproxy`
  * `io.netty.codec.http`
  * `io.netty.codec.http2`
- * `io.netty.codec.memcache`
  * `io.netty.codec.mqtt`
  * `io.netty.codec.redis`
  * `io.netty.codec.smtp`
