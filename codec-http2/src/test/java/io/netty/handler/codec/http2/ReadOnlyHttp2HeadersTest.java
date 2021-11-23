@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -23,7 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.*;
+import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.verifyPseudoHeadersFirst;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -212,6 +213,15 @@ public class ReadOnlyHttp2HeadersTest {
                    headers.get(Http2Headers.PseudoHeaderName.PATH.value())));
         assertNull(headers.get(Http2Headers.PseudoHeaderName.STATUS.value()));
         assertNull(headers.get("a missing header"));
+
+        headers = ReadOnlyHttp2Headers.clientHeaders(
+                false, new AsciiString("meth"), new AsciiString("/foo"),
+                new AsciiString("schemer"), new AsciiString("respect_my_authority"),
+                new AsciiString("age"), new AsciiString(CharSequenceValueConverter.INSTANCE.convertTimeMillis(1000)),
+                new AsciiString("not-a-date"), new AsciiString("not a date"));
+        assertNull(headers.getTimeMillis("not-a-date"));
+        assertEquals(-1L, headers.getTimeMillis("not-a-date", -1));
+        assertEquals(1000L, headers.getTimeMillis("age", -1));
     }
 
     @Test

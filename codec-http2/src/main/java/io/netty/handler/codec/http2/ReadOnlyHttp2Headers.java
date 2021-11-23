@@ -28,10 +28,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import static io.netty.handler.codec.CharSequenceValueConverter.*;
-import static io.netty.handler.codec.http2.DefaultHttp2Headers.*;
-import static io.netty.util.AsciiString.*;
-import static io.netty.util.internal.EmptyArrays.*;
+import static io.netty.handler.codec.CharSequenceValueConverter.INSTANCE;
+import static io.netty.handler.codec.http2.DefaultHttp2Headers.HTTP2_NAME_VALIDATOR;
+import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
+import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
+import static io.netty.util.internal.EmptyArrays.EMPTY_ASCII_STRINGS;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 
 /**
@@ -321,7 +322,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Long getTimeMillis(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToTimeMillis(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToTimeMillis(value);
+            } catch (RuntimeException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
