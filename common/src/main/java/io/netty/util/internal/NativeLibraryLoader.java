@@ -27,7 +27,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.security.AccessController;
@@ -232,7 +231,7 @@ public final class NativeLibraryLoader {
     }
 
     private static URL getResource(String path, ClassLoader loader) {
-        Enumeration<URL> urls;
+        final Enumeration<URL> urls;
         try {
             if (loader == null) {
                 urls = ClassLoader.getSystemResources(path);
@@ -243,14 +242,16 @@ public final class NativeLibraryLoader {
             throw new RuntimeException("An error occurred while getting the resources for " + path, iox);
         }
 
-        URL url = null;
         List<URL> urlsList = Collections.list(urls);
-        if (urlsList.size() == 1) {
-            url = urlsList.get(0);
-        } else if (urlsList.size() > 1) {
-            throw new IllegalStateException("Multiple resources found for '" + path + "': " + urlsList);
+        int size = urlsList.size();
+        switch (size) {
+            case 0:
+                return null;
+            case 1:
+                return urlsList.get(0);
+            default:
+                throw new IllegalStateException("Multiple resources found for '" + path + "': " + urlsList);
         }
-        return url;
     }
 
     static void tryPatchShadedLibraryIdAndSign(File libraryFile, String originalName) {

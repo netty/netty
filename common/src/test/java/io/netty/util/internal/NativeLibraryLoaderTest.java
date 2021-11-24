@@ -60,7 +60,7 @@ public class NativeLibraryLoaderTest {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
         URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
-        String resourceName = "test";
+        String resourceName = "test1";
         try {
             NativeLibraryLoader.load(resourceName, loader);
             fail("Expected IllegalStateException because there are more than one resources with the same name");
@@ -68,6 +68,16 @@ public class NativeLibraryLoaderTest {
             assertTrue(ise.getMessage()
                     .contains("Multiple resources found for 'META-INF/native/lib" + resourceName + ".so'"));
         }
+    }
+
+    @Test
+    void testSingleResourceInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        String resourceName = "test2";
+
+        NativeLibraryLoader.load(resourceName, loader);
     }
 
     @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
