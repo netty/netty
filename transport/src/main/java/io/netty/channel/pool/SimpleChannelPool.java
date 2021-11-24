@@ -204,7 +204,7 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+    protected void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
         Channel channel = null;
         try {
             if (future.isSuccess()) {
