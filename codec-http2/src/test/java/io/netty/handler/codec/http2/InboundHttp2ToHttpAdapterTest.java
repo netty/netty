@@ -44,7 +44,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +56,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
-import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -233,27 +231,6 @@ public class InboundHttp2ToHttpAdapterTest {
         } finally {
             request.release();
         }
-    }
-
-    @Test
-    public void clientRequestSingleHeaderNonAsciiShouldThrow() throws Exception {
-        boostrapEnv(1, 1, 1);
-        final Http2Headers http2Headers = new DefaultHttp2Headers()
-                .method(new AsciiString("GET"))
-                .scheme(new AsciiString("https"))
-                .authority(new AsciiString("example.org"))
-                .path(new AsciiString("/some/path/resource2"))
-                .add(new AsciiString("çã".getBytes(CharsetUtil.UTF_8)),
-                        new AsciiString("Ãã".getBytes(CharsetUtil.UTF_8)));
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() throws Http2Exception {
-                clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
-                clientChannel.flush();
-            }
-        });
-        awaitResponses();
-        assertTrue(isStreamError(clientException));
     }
 
     @Test

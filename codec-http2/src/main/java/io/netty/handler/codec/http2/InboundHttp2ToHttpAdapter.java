@@ -285,8 +285,6 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         if (msg != null) {
             onRstStreamRead(stream, msg);
         }
-        ctx.fireExceptionCaught(Http2Exception.streamError(streamId, Http2Error.valueOf(errorCode),
-                "HTTP/2 to HTTP layer caught stream reset"));
     }
 
     @Override
