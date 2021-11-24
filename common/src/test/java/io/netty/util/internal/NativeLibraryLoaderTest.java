@@ -16,6 +16,7 @@
 package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,6 +27,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.condition.OS.LINUX;
 
 public class NativeLibraryLoaderTest {
 
@@ -56,6 +58,7 @@ public class NativeLibraryLoaderTest {
     }
 
     @Test
+    @EnabledOnOs(LINUX)
     void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
@@ -71,6 +74,7 @@ public class NativeLibraryLoaderTest {
     }
 
     @Test
+    @EnabledOnOs(LINUX)
     void testSingleResourceInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
