@@ -177,7 +177,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: prepare-release-workspace
-          path: prepare-release-workspace
+          path: ${{ github.workspace }}/prepare-release-workspace
 
       - name: Setup git configuration
         run: |
@@ -241,18 +241,20 @@ jobs:
             }]
 
       - name: Stage release to local staging directory
-        working-directory: prepare-release-workspace
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
+        working-directory: ${{ github.workspace }}/prepare-release-workspace
+        env:
+          LOCAL_STAGING_DIR: ${{ github.workspace }}/prepare-release-workspace/local-staging
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=D:\a\netty-incubator-codec-quic\netty-incubator-codec-quic\prepare-release-workspace\local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v2
         with:
           name: windows-x86_64-local-staging
-          path: prepare-release-workspace/local-staging
+          path: ${{ github.workspace }}/prepare-release-workspace/local-staging
           if-no-files-found: error
 
       - name: Rollback release on failure
-        working-directory: prepare-release-workspace
+        working-directory: ${{ github.workspace }}/prepare-release-workspace
         if: ${{ failure() }}
         # Rollback the release in case of an failure
         run: ./.github/scripts/release_rollback.ps1 release.properties netty/netty-incubator-codec-quic main
