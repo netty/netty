@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-parent-quic</artifactId>
-  <version>0.0.23.Final-SNAPSHOT</version>
+  <version>0.0.23.Final</version>
   <name>Netty/Incubator/Codec/Parent/Quic</name>
   <packaging>pom</packaging>
   <url>https://netty.io/</url>
@@ -51,7 +51,7 @@
     <url>https://github.com/netty/netty-incubator-codec-quic</url>
     <connection>scm:git:git://github.com/netty/netty-incubator-codec-quic.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty-incubator-codec-quic.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-incubator-codec-parent-quic-0.0.23.Final</tag>
   </scm>
 
   <developers>
