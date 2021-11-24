@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -187,7 +188,7 @@ public class RecyclerTest {
             assertNotSame(a, b);
             IllegalStateException exception = exceptionStore.get();
             if (exception != null) {
-                assertEquals("recycled already", exception.getMessage());
+                assertThat(exception).hasMessageContaining("recycled already");
                 assertEquals(0, exception.getSuppressed().length);
             }
         } finally {
@@ -235,9 +236,7 @@ public class RecyclerTest {
             HandledObject b = recycler.get();
             assertNotSame(a, b);
             IllegalStateException exception = exceptionStore.get();
-            if (exception != null) {
-                throw exception;
-            }
+            assertNotNull(exception); // Object got recycled twice, so at least one of the calls must throw.
         } finally {
             thread1.join(1000);
         }
@@ -276,27 +275,6 @@ public class RecyclerTest {
         object3.recycle();
     }
 
-    @Test
-    public void testRecycleDisableDelayedQueueDrop() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(1024, 2, 1, 2, 0);
-        final HandledObject o = recycler.get();
-        final HandledObject o2 = recycler.get();
-        final HandledObject o3 = recycler.get();
-        final Thread thread = new Thread() {
-            @Override
-            public void run() {
-                o.recycle();
-                o2.recycle();
-                o3.recycle();
-            }
-        };
-        thread.start();
-        thread.join();
-        // In reverse order
-        assertSame(o3, recycler.get());
-        assertSame(o, recycler.get());
-    }
-
     /**
      * Test to make sure bug #2848 never happens again
      * https://github.com/netty/netty/issues/2848
@@ -322,8 +300,8 @@ public class RecyclerTest {
             objects[i] = null;
         }
 
-        assertTrue(maxCapacity >= recycler.threadLocalCapacity(),
-                "The threadLocalCapacity (" + recycler.threadLocalCapacity() + ") must be <= maxCapacity ("
+        assertTrue(maxCapacity >= recycler.threadLocalSize(),
+                "The threadLocalSize (" + recycler.threadLocalSize() + ") must be <= maxCapacity ("
                 + maxCapacity + ") as we not pool all new handles internally");
     }
 
@@ -413,14 +391,12 @@ public class RecyclerTest {
         thread.start();
         thread.join();
 
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
         assertEquals(1, recycler.threadLocalSize());
 
         for (int i = 0; i < array.length; i ++) {
             recycler.get();
         }
 
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
         assertEquals(0, recycler.threadLocalSize());
     }
 
