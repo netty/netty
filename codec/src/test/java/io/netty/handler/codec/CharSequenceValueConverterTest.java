@@ -17,6 +17,8 @@ package io.netty.handler.codec;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
+import java.time.format.DateTimeParseException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -80,7 +82,8 @@ public class CharSequenceValueConverterTest {
     @Test
     public void testTimeMillis() {
         // Zero out the millis as this is what the convert is doing as well.
-        long millis = (System.currentTimeMillis() / 1000) * 1000;
+        long millis = System.currentTimeMillis() / 1000 * 1000;
         assertEquals(millis, converter.convertToTimeMillis(converter.convertTimeMillis(millis)));
+        assertThrows(DateTimeParseException.class, () -> converter.convertToTimeMillis("not a date"));
     }
 }

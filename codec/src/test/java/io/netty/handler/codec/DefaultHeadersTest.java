@@ -257,6 +257,8 @@ public class DefaultHeadersTest {
         assertTrue(headers.containsTimeMillis(of("millis"), millis));
         // This test doesn't work on midnight, January 1, 1970 UTC
         assertFalse(headers.containsTimeMillis(of("millis"), 0));
+        headers.add(of("not a date"), "not a date");
+        assertNull(headers.getTimeMillis(of("not a date")));
 
         headers.addObject(of("object"), "Hello World");
         assertTrue(headers.containsObject(of("object"), "Hello World"));
@@ -494,9 +496,7 @@ public class DefaultHeadersTest {
         headers.add(of("name2"), of("value4"));
         assertEquals(4, headers.size());
 
-        Iterator<Entry<CharSequence, CharSequence>> iter = headers.iterator();
-        while (iter.hasNext()) {
-            Entry<CharSequence, CharSequence> header = iter.next();
+        for (Entry<CharSequence, CharSequence> header : headers) {
             if (of("name1").equals(header.getKey()) && of("value2").equals(header.getValue())) {
                 header.setValue(of("updatedvalue2"));
                 assertEquals(of("updatedvalue2"), header.getValue());
@@ -790,7 +790,7 @@ public class DefaultHeadersTest {
         List<CharSequence> cookies = headers.getAll("Cookie");
 
         assertThat(cookies, hasSize(3));
-        assertThat(cookies, containsInAnyOrder((CharSequence) "a=b", "c=d", "e=f"));
+        assertThat(cookies, containsInAnyOrder("a=b", "c=d", "e=f"));
     }
 
     /**

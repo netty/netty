@@ -118,13 +118,27 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
     @Override
     public Long getTimeMillis(CharSequence name) {
         CharSequence value = get0(name);
-        return value == null ? null : INSTANCE.convertToTimeMillis(value);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return INSTANCE.convertToTimeMillis(value);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     @Override
     public long getTimeMillis(CharSequence name, long defaultValue) {
         CharSequence value = get0(name);
-        return value == null ? defaultValue : INSTANCE.convertToTimeMillis(value);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return INSTANCE.convertToTimeMillis(value);
+        } catch (RuntimeException e) {
+            return defaultValue;
+        }
     }
 
     @Override
