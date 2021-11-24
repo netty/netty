@@ -17,7 +17,11 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,6 +52,21 @@ public class NativeLibraryLoaderTest {
             if (PlatformDependent.javaVersion() >= 7) {
                 verifySuppressedException(error, ClassNotFoundException.class);
             }
+        }
+    }
+
+    @Test
+    void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        String resourceName = "test";
+        try {
+            NativeLibraryLoader.load(resourceName, loader);
+            fail("Expected IllegalStateException because there are more than one resources with the same name");
+        } catch (IllegalStateException ise) {
+            assertTrue(ise.getMessage()
+                    .contains("Multiple resources found for 'META-INF/native/lib" + resourceName + ".so'"));
         }
     }
 
