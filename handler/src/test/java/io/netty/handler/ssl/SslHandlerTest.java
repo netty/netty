@@ -108,6 +108,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SslHandlerTest {
 
+    private static final Executor DIRECT_EXECUTOR = new Executor() {
+        @Override
+        public void execute(Runnable command) {
+            command.run();
+        }
+    };
+
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testNonApplicationDataFailureFailsQueuedWrites() throws NoSuchAlgorithmException, InterruptedException {
@@ -980,55 +987,160 @@ public class SslHandlerTest {
     }
 
     @Test
-    public void testHandshakeWithExecutorThatExecuteDirecty() throws Exception {
-        testHandshakeWithExecutor(new Executor() {
-            @Override
-            public void execute(Runnable command) {
-                command.run();
-            }
-        });
+    public void testHandshakeWithExecutorThatExecuteDirectlyJDK() throws Throwable {
+        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.JDK, false);
     }
 
     @Test
-    public void testHandshakeWithImmediateExecutor() throws Exception {
-        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE);
+    public void testHandshakeWithImmediateExecutorJDK() throws Throwable {
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.JDK, false);
     }
 
     @Test
-    public void testHandshakeWithImmediateEventExecutor() throws Exception {
-        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE);
+    public void testHandshakeWithImmediateEventExecutorJDK() throws Throwable {
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.JDK, false);
     }
 
     @Test
-    public void testHandshakeWithExecutor() throws Exception {
+    public void testHandshakeWithExecutorJDK() throws Throwable {
         ExecutorService executorService = Executors.newCachedThreadPool();
         try {
-            testHandshakeWithExecutor(executorService);
+            testHandshakeWithExecutor(executorService, SslProvider.JDK, false);
         } finally {
             executorService.shutdown();
         }
     }
 
-    private static void testHandshakeWithExecutor(Executor executor) throws Exception {
-        final SslContext sslClientCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(SslProvider.JDK).build();
+    @Test
+    public void testHandshakeWithExecutorThatExecuteDirectlyOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.OPENSSL, false);
+    }
 
+    @Test
+    public void testHandshakeWithImmediateExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.OPENSSL, false);
+    }
+
+    @Test
+    public void testHandshakeWithImmediateEventExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.OPENSSL, false);
+    }
+
+    @Test
+    public void testHandshakeWithExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try {
+            testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, false);
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    @Test
+    public void testHandshakeMTLSWithExecutorThatExecuteDirectlyJDK() throws Throwable {
+        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.JDK, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithImmediateExecutorJDK() throws Throwable {
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.JDK, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithImmediateEventExecutorJDK() throws Throwable {
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.JDK, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithExecutorJDK() throws Throwable {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try {
+            testHandshakeWithExecutor(executorService, SslProvider.JDK, true);
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    @Test
+    public void testHandshakeMTLSWithExecutorThatExecuteDirectlyOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.OPENSSL, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithImmediateExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.OPENSSL, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithImmediateEventExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.OPENSSL, true);
+    }
+
+    @Test
+    public void testHandshakeMTLSWithExecutorOpenSsl() throws Throwable {
+        OpenSsl.ensureAvailability();
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try {
+            testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, true);
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    private static void testHandshakeWithExecutor(Executor executor, SslProvider provider, boolean mtls)
+            throws Throwable {
         final SelfSignedCertificate cert = new SelfSignedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.JDK).build();
+        final SslContext sslClientCtx;
+        final SslContext sslServerCtx;
+        if (mtls) {
+            sslClientCtx = SslContextBuilder.forClient().protocols(SslProtocols.TLS_v1_2)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE).keyManager(cert.key(), cert.cert())
+                    .sslProvider(provider).build();
+
+            sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert()).protocols(SslProtocols.TLS_v1_2)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .clientAuth(ClientAuth.REQUIRE)
+                    .sslProvider(provider).build();
+        } else {
+            sslClientCtx = SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .sslProvider(provider).build();
+
+            sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                    .sslProvider(provider).build();
+        }
 
         EventLoopGroup group = new NioEventLoopGroup();
         Channel sc = null;
         Channel cc = null;
-        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
-        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
-
+        final SslHandler clientSslHandler = new SslHandler(
+                sslClientCtx.newEngine(UnpooledByteBufAllocator.DEFAULT), executor);
+        final SslHandler serverSslHandler = new SslHandler(
+                sslServerCtx.newEngine(UnpooledByteBufAllocator.DEFAULT), executor);
+        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
         try {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(serverSslHandler)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(serverSslHandler);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    causeRef.compareAndSet(null, cause);
+                                }
+                            });
+                        }
+                    })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
             ChannelFuture future = new Bootstrap()
@@ -1038,12 +1150,22 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    causeRef.compareAndSet(null, cause);
+                                }
+                            });
                         }
                     }).connect(sc.localAddress());
             cc = future.syncUninterruptibly().channel();
 
             assertTrue(clientSslHandler.handshakeFuture().await().isSuccess());
             assertTrue(serverSslHandler.handshakeFuture().await().isSuccess());
+            Throwable cause = causeRef.get();
+            if (cause != null) {
+                throw cause;
+            }
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
