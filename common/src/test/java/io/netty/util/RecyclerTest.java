@@ -365,7 +365,7 @@ public class RecyclerTest {
     @Test
     public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
         final int maxCapacity = 4; // Choose the number smaller than WeakOrderQueue.LINK_CAPACITY
-        final Recycler<HandledObject> recycler = newRecycler(maxCapacity);
+        final Recycler<HandledObject> recycler = newRecycler(maxCapacity, 0, 4, 0, 0);
 
         // Borrow 2 * maxCapacity objects.
         // Return the half from the same thread.
@@ -391,7 +391,7 @@ public class RecyclerTest {
         thread.start();
         thread.join();
 
-        assertEquals(1, recycler.threadLocalSize());
+        assertEquals(maxCapacity * 3 / 4, recycler.threadLocalSize());
 
         for (int i = 0; i < array.length; i ++) {
             recycler.get();

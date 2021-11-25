@@ -17,11 +17,12 @@ package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
@@ -38,6 +39,11 @@ public abstract class Recycler<T> {
         @Override
         public void recycle(Object object) {
             // NOOP
+        }
+
+        @Override
+        public String toString() {
+            return "NOOP_HANDLE";
         }
     };
     private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 4 * 1024; // Use 4k instances as default.
@@ -100,7 +106,7 @@ public abstract class Recycler<T> {
     private final FastThreadLocal<LocalPool<T>> threadLocal = new FastThreadLocal<LocalPool<T>>() {
         @Override
         protected LocalPool<T> initialValue() {
-            return new LocalPool<T>(Recycler.this, maxCapacityPerThread, interval);
+            return new LocalPool<T>(maxCapacityPerThread, interval);
         }
     };
 
@@ -161,22 +167,8 @@ public abstract class Recycler<T> {
             return false;
         }
 
-        DefaultHandle<T> h = (DefaultHandle<T>) handle;
-        if (h.recycler != this) {
-            return false;
-        }
-
-        h.recycle(o);
+        handle.recycle(o);
         return true;
-    }
-
-    void release(DefaultHandle<T> handle, LocalPool<T> sourceLocalPool) {
-        LocalPool<T> currentLocalPool = threadLocal.get();
-        if (currentLocalPool == sourceLocalPool) {
-            sourceLocalPool.release(handle);
-        } else {
-            sourceLocalPool.releaseExternal(handle);
-        }
     }
 
     final int threadLocalSize() {
@@ -200,12 +192,10 @@ public abstract class Recycler<T> {
 
         @SuppressWarnings({"FieldMayBeFinal", "unused"}) // Updated by STATE_UPDATER.
         private volatile int state; // State is initialised to STATE_CLAIMED (aka. 0) so they can be released.
-        private final Recycler<T> recycler;
         private final LocalPool<T> localPool;
         private T value;
 
-        DefaultHandle(Recycler<T> recycler, LocalPool<T> localPool) {
-            this.recycler = recycler;
+        DefaultHandle(LocalPool<T> localPool) {
             this.localPool = localPool;
         }
 
@@ -214,7 +204,7 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-            recycler.release(this, localPool);
+            localPool.release(this);
         }
 
         T get() {
@@ -241,68 +231,38 @@ public abstract class Recycler<T> {
     }
 
     private static final class LocalPool<T> {
-        private final Recycler<T> parent;
         private final int maxCapacity;
         private final int ratioInterval;
-        private final ArrayDeque<DefaultHandle<T>> pooledHandles;
-        private final ArrayDeque<DefaultHandle<T>> externalInbox; // Must always be synchronised.
+        private final Queue<DefaultHandle<T>> pooledHandles;
         private int ratioCounter;
-        private volatile boolean flagInbox; // Signals that someone put a handle in the external inbox.
 
-        LocalPool(Recycler<T> parent, int maxCapacity, int ratioInterval) {
-            this.parent = parent;
+        LocalPool(int maxCapacity, int ratioInterval) {
             this.maxCapacity = maxCapacity;
             this.ratioInterval = ratioInterval;
-            pooledHandles = new ArrayDeque<DefaultHandle<T>>();
-            externalInbox = new ArrayDeque<DefaultHandle<T>>();
+            pooledHandles = PlatformDependent.newMpscQueue();
             ratioCounter = ratioInterval; // Start at interval so the first one will be recycled.
         }
 
         DefaultHandle<T> claim() {
-            if (flagInbox) {
-                drainInbox();
-            }
-
-            ArrayDeque<DefaultHandle<T>> pooledHandles = this.pooledHandles;
+            Queue<DefaultHandle<T>> pooledHandles = this.pooledHandles;
             DefaultHandle<T> handle;
             do {
-                handle = pooledHandles.pollLast();
+                handle = pooledHandles.poll();
             } while (handle != null && !handle.availableToClaim());
             return handle;
-        }
-
-        private void drainInbox() {
-            flagInbox = false;
-            ArrayDeque<DefaultHandle<T>> pooledHandles = this.pooledHandles;
-            DefaultHandle<T> handle;
-            synchronized (externalInbox) {
-                while ((handle = externalInbox.pollLast()) != null) {
-                    if (pooledHandles.size() < maxCapacity) {
-                        pooledHandles.offerLast(handle);
-                    }
-                }
-            }
         }
 
         void release(DefaultHandle<T> handle) {
             handle.toAvailable();
             if (pooledHandles.size() < maxCapacity) {
-                pooledHandles.offerLast(handle);
+                pooledHandles.offer(handle);
             }
-        }
-
-        void releaseExternal(DefaultHandle<T> handle) {
-            handle.toAvailable();
-            synchronized (externalInbox) {
-                externalInbox.offerLast(handle);
-            }
-            flagInbox = true;
         }
 
         DefaultHandle<T> newHandle() {
             if (++ratioCounter >= ratioInterval) {
                 ratioCounter = 0;
-                return new DefaultHandle<T>(parent, this);
+                return new DefaultHandle<T>(this);
             }
             return null;
         }
