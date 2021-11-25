@@ -16,6 +16,7 @@
 package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 
 import java.io.File;
@@ -29,10 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.condition.OS.LINUX;
 
-public class NativeLibraryLoaderTest {
+class NativeLibraryLoaderTest {
+
+    private static final String OS_ARCH = System.getProperty("os.arch");
+    private boolean is_x86_64() {
+        return "x86_64".equals(OS_ARCH) || "amd64".equals(OS_ARCH);
+    }
 
     @Test
-    public void testFileNotFound() {
+    void testFileNotFound() {
         try {
             NativeLibraryLoader.load(UUID.randomUUID().toString(), NativeLibraryLoaderTest.class.getClassLoader());
             fail();
@@ -45,7 +51,7 @@ public class NativeLibraryLoaderTest {
     }
 
     @Test
-    public void testFileNotFoundWithNullClassLoader() {
+    void testFileNotFoundWithNullClassLoader() {
         try {
             NativeLibraryLoader.load(UUID.randomUUID().toString(), null);
             fail();
@@ -59,6 +65,7 @@ public class NativeLibraryLoaderTest {
 
     @Test
     @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
     void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
@@ -75,6 +82,7 @@ public class NativeLibraryLoaderTest {
 
     @Test
     @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
     void testSingleResourceInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
@@ -82,6 +90,7 @@ public class NativeLibraryLoaderTest {
         String resourceName = "test2";
 
         NativeLibraryLoader.load(resourceName, loader);
+        assertTrue(true);
     }
 
     @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
