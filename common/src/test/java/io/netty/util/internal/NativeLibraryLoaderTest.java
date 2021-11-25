@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,6 +27,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.condition.OS.LINUX;
@@ -69,15 +71,17 @@ class NativeLibraryLoaderTest {
     void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
-        URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
-        String resourceName = "test1";
-        try {
-            NativeLibraryLoader.load(resourceName, loader);
-            fail("Expected IllegalStateException because there are more than one resources with the same name");
-        } catch (IllegalStateException ise) {
-            assertTrue(ise.getMessage()
+        final URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        final String resourceName = "test1";
+
+        Exception ise = assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                NativeLibraryLoader.load(resourceName, loader);
+            }
+        });
+        assertTrue(ise.getMessage()
                     .contains("Multiple resources found for 'META-INF/native/lib" + resourceName + ".so'"));
-        }
     }
 
     @Test
