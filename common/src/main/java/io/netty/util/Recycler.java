@@ -661,10 +661,13 @@ public abstract class Recycler<T> {
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
                 pushNow(item);
+            } else if (threadRef.get() == null) {
+                // when the thread that belonged to the Stack was died or GC'ed，
+                // There is no need to add this item to WeakOrderQueue-linked-list which belonged to the Stack any more
+                item.stack = null;
             } else {
                 // The current Thread is not the one that belongs to the Stack
-                // (or the Thread that belonged to the Stack was collected already), we need to signal that the push
-                // happens later.
+                // we need to signal that the push happens later.
                 pushLater(item, currentThread);
             }
         }
