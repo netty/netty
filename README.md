@@ -37,7 +37,6 @@ are listed below:
  * `io.netty.buffer`
  * `io.netty.codec`
  * `io.netty.codec.dns`
- * `io.netty.codec.haproxy`
  * `io.netty.codec.http`
  * `io.netty.codec.http2`
  * `io.netty.codec.mqtt`
