@@ -43,7 +43,6 @@ are listed below:
  * `io.netty.codec.mqtt`
  * `io.netty.codec.smtp`
  * `io.netty.codec.socks`
- * `io.netty.codec.stomp`
  * `io.netty.codec.xml`
  * `io.netty.common`
  * `io.netty.handler`

@@ -509,7 +509,6 @@
     <module>codec-mqtt</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
-    <module>codec-stomp</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
