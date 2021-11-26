@@ -90,6 +90,12 @@ public abstract class Recycler<T> {
         protected LocalPool<T> initialValue() {
             return new LocalPool<T>(maxCapacityPerThread, interval, chunkSize);
         }
+
+        @Override
+        protected void onRemoval(LocalPool<T> value) throws Exception {
+            super.onRemoval(value);
+            value.pooledHandles.clear();
+        }
     };
 
     protected Recycler() {
