@@ -49,6 +49,9 @@ static jmethodID servernameCallbackMethod = NULL;
 static jclass keylogCallbackClass = NULL;
 static jmethodID keylogCallbackMethod = NULL;
 
+static jclass sessionCallbackClass = NULL;
+static jmethodID sessionCallbackMethod = NULL;
+
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 
@@ -57,6 +60,7 @@ static int verifyCallbackIdx = -1;
 static int certificateCallbackIdx = -1;
 static int servernameCallbackIdx = -1;
 static int keylogCallbackIdx = -1;
+static int sessionCallbackIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
 
@@ -154,6 +158,17 @@ static jobjectArray stackToArray(JNIEnv *e, const STACK_OF(CRYPTO_BUFFER)* stack
     return array;
 }
 
+static jbyteArray to_byte_array(JNIEnv* env, uint8_t* bytes, size_t len) {
+    if (bytes == NULL || len == 0) {
+        return NULL;
+    }
+     jbyteArray array = (*env)->NewByteArray(env, len);
+     if (array == NULL) {
+        return NULL;
+     }
+     (*env)->SetByteArrayRegion(env,array, 0, len, (jbyte*) bytes);
+     return array;
+}
 
 enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_alert) {
     enum ssl_verify_result_t ret = ssl_verify_invalid;
@@ -597,12 +612,65 @@ void keylog_callback(const SSL* ssl, const char* line) {
     (*e)->CallVoidMethod(e, keylogCallback, keylogCallbackMethod, (jlong) ssl, keyString);
 }
 
-static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jobject keylogCallback, jint verifyMode, jobjectArray subjectNames) {
+// Always return 0 as we serialize the session / params to byte[] and so no take ownership.
+// See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_CTX_sess_set_new_cb
+int new_session_callback(SSL *ssl, SSL_SESSION *session) {
+    SSL_CTX* ctx = SSL_get_SSL_CTX(ssl);
+    if (ctx == NULL) {
+        return 0;
+    }
+
+    JNIEnv* e = NULL;
+    if (quic_get_java_env(&e) != JNI_OK) {
+        return 0;
+    }
+
+    jobject sessionCallback = SSL_CTX_get_ex_data(ctx, sessionCallbackIdx);
+    if (sessionCallback == NULL) {
+        return 0;
+    }
+
+    uint8_t *session_data = NULL;
+    size_t session_data_len = 0;
+    if (SSL_SESSION_to_bytes(session, &session_data, &session_data_len) == 0) {
+        // Get session error
+        return 0;
+    }
+
+    jbyteArray sessionBytes = to_byte_array(e, session_data, session_data_len);
+    // We need to explicit free the session_data after we copied it to byte[].
+    // See  https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_SESSION_to_bytes
+    OPENSSL_free((void *)session_data);
+    if (sessionBytes == NULL) {
+        // Get session error
+        return 0;
+    }
+
+    jbyteArray peerParamsBytes = NULL;
+    // There is not need to explicit free peer_params as it will be freed as soon as SSL*.
+    // See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_get_peer_quic_transport_params
+    const uint8_t *peer_params = NULL;
+    size_t peer_params_len = 0;
+    SSL_get_peer_quic_transport_params((SSL*) ssl, &peer_params, &peer_params_len);
+    if (peer_params_len != 0) {
+        peerParamsBytes = to_byte_array(e, (uint8_t *) peer_params, peer_params_len);
+    }
+
+    jboolean singleUse = SSL_SESSION_should_be_single_use(session) == 1 ? JNI_TRUE : JNI_FALSE;
+
+    // Execute the java callback
+    (*e)->CallVoidMethod(e, sessionCallback, sessionCallbackMethod, (jlong) ssl, (jlong) SSL_SESSION_get_time(session), (jlong) SSL_SESSION_get_timeout(session), sessionBytes, singleUse, peerParamsBytes);
+
+    return 0;
+}
+
+static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jobject keylogCallback, jobject sessionCallback, jint verifyMode, jobjectArray subjectNames) {
     jobject handshakeCompleteCallbackRef = NULL;
     jobject certificateCallbackRef = NULL;
     jobject verifyCallbackRef = NULL;
     jobject servernameCallbackRef = NULL;
     jobject keylogCallbackRef = NULL;
+    jobject sessionCallbackRef = NULL;
 
     if ((handshakeCompleteCallbackRef = (*env)->NewGlobalRef(env, handshakeCompleteCallback)) == NULL) {
         goto error;
@@ -624,6 +692,12 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
 
     if (keylogCallback != NULL) {
         if ((keylogCallbackRef = (*env)->NewGlobalRef(env, keylogCallback)) == NULL) {
+            goto error;
+        }
+    }
+
+    if (sessionCallback != NULL) {
+        if ((sessionCallbackRef = (*env)->NewGlobalRef(env, sessionCallback)) == NULL) {
             goto error;
         }
     }
@@ -659,6 +733,14 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
         SSL_CTX_set_ex_data(ctx, keylogCallbackIdx, keylogCallbackRef);
         SSL_CTX_set_keylog_callback(ctx, keylog_callback);
     }
+
+    if (sessionCallbackRef != NULL) {
+        SSL_CTX_set_ex_data(ctx, sessionCallbackIdx, sessionCallbackRef);
+        // The internal cache is never used on a client, this only enables the callbacks.
+        SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT);
+        SSL_CTX_sess_set_new_cb(ctx, new_session_callback);
+    }
+
     // Use a pool for our certificates so we can share these across connections.
     SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
 
@@ -724,6 +806,11 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
         (*env)->DeleteGlobalRef(env, keylogCallbackRef);
     }
 
+    jobject sessionCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, sessionCallbackIdx);
+    if (sessionCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, sessionCallbackRef);
+    }
+
     alpn_data* data = SSL_CTX_get_ex_data(ssl_ctx, alpn_data_idx);
     OPENSSL_free(data);
 
@@ -744,8 +831,9 @@ static jlong netty_boringssl_SSLContext_setSessionCacheTimeout(JNIEnv* env, jcla
 static jlong netty_boringssl_SSLContext_setSessionCacheSize(JNIEnv* env, jclass clazz, jlong ctx, jlong size) {
     if (size >= 0) {
         SSL_CTX* ssl_ctx = (SSL_CTX*) ctx;
-        // Caching only works on the server side for now.
-        SSL_CTX_set_session_cache_mode(ssl_ctx, SSL_SESS_CACHE_SERVER);
+        int mode = SSL_CTX_get_session_cache_mode(ssl_ctx);
+        // Internal Cache only works on the server side for now.
+        SSL_CTX_set_session_cache_mode(ssl_ctx, SSL_SESS_CACHE_SERVER | mode);
         return SSL_CTX_sess_set_cache_size(ssl_ctx, size);
     }
 
@@ -864,7 +952,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
-  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
+  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
@@ -934,11 +1022,16 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, keylogCallbackClass, name, done);
     NETTY_JNI_UTIL_GET_METHOD(env, keylogCallbackClass, keylogCallbackMethod, "logKey", "(JLjava/lang/String;)V", done);
 
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLSessionCallback", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, sessionCallbackClass, name, done);
+    NETTY_JNI_UTIL_GET_METHOD(env, sessionCallbackClass, sessionCallbackMethod, "newSession", "(JJJ[BZ[B)V", done);
+
     verifyCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     certificateCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     handshakeCompleteCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     servernameCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     keylogCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    sessionCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
@@ -959,6 +1052,7 @@ done:
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
     }
     return ret;
 }
@@ -970,6 +1064,7 @@ void netty_boringssl_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, packagePrefix, CLASSNAME);

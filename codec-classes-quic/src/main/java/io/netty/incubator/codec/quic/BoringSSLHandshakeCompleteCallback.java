@@ -26,7 +26,7 @@ final class BoringSSLHandshakeCompleteCallback {
     @SuppressWarnings("unused")
     void handshakeComplete(long ssl, byte[] id, String cipher, String protocol, byte[] peerCertificate,
                            byte[][] peerCertificateChain, long creationTime, long timeout, byte[] applicationProtocol) {
-        QuicheQuicSslEngine engine = map.remove(ssl);
+        QuicheQuicSslEngine engine = map.get(ssl);
         if (engine != null) {
             engine.handshakeFinished(id, cipher, protocol, peerCertificate, peerCertificateChain, creationTime,
                     timeout, applicationProtocol);

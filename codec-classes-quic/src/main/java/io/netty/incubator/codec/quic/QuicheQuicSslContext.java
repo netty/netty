@@ -62,6 +62,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     private long sessionTimeout;
     private final QuicheQuicSslSessionContext sessionCtx;
     private final QuicheQuicSslEngineMap engineMap = new QuicheQuicSslEngineMap();
+    private final QuicClientSessionCache sessionCache;
     final NativeSslContext nativeSslContext;
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
@@ -95,17 +96,28 @@ final class QuicheQuicSslContext extends QuicSslContext {
         } else {
             keyManager = chooseKeyManager(keyManagerFactory);
         }
+        sessionCache = server ? null : new QuicClientSessionCache();
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
         nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
                 new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
                 mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
-                keylog ? new BoringSSLKeylogCallback() : null, verifyMode,
+                keylog ? new BoringSSLKeylogCallback() : null,
+                server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), verifyMode,
                 BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
-        this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), sessionCacheSize);
-        this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), sessionTimeout);
+        if (this.sessionCache != null) {
+            // Cache is handled via our own implementation.
+            this.sessionCache.setSessionCacheSize((int) sessionCacheSize);
+            this.sessionCache.setSessionTimeout((int) sessionTimeout);
+        } else {
+            // Cache is handled by BoringSSL internally
+            this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(
+                    nativeSslContext.address(), sessionCacheSize);
+            this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(
+                    nativeSslContext.address(), sessionTimeout);
+        }
         if (earlyData != null) {
             BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), earlyData);
         }
@@ -196,7 +208,12 @@ final class QuicheQuicSslContext extends QuicSslContext {
      */
     void remove(QuicheQuicSslEngine engine) {
         QuicheQuicSslEngine removed = engineMap.remove(engine.connection.ssl);
-        assert removed == engine;
+        assert removed == null || removed == engine;
+        engine.removeSessionFromCacheIfInvalid();
+    }
+
+    QuicClientSessionCache getSessionCache() {
+        return sessionCache;
     }
 
     @Override
@@ -210,13 +227,25 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     @Override
-    public synchronized long sessionCacheSize() {
-        return sessionCacheSize;
+    public long sessionCacheSize() {
+        if (sessionCache != null) {
+            return sessionCache.getSessionCacheSize();
+        } else {
+            synchronized (this) {
+                return sessionCacheSize;
+            }
+        }
     }
 
     @Override
-    public synchronized long sessionTimeout() {
-        return sessionTimeout;
+    public long sessionTimeout() {
+        if (sessionCache != null) {
+            return sessionCache.getSessionTimeout();
+        } else {
+            synchronized (this) {
+                return sessionTimeout;
+            }
+        }
     }
 
     @Override
@@ -281,11 +310,19 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     void setSessionTimeout(int seconds) throws IllegalArgumentException {
-        sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), seconds);
+        if (sessionCache != null) {
+            sessionCache.setSessionTimeout(seconds);
+        } else {
+            sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), seconds);
+        }
     }
 
     void setSessionCacheSize(int size) throws IllegalArgumentException {
-        sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), size);
+        if (sessionCache != null) {
+            sessionCache.setSessionCacheSize(size);
+        } else {
+            sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), size);
+        }
     }
 
     @SuppressWarnings("deprecation")

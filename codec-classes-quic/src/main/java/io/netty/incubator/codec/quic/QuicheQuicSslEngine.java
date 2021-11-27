@@ -263,14 +263,20 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         handshakeFinished = true;
     }
 
+    void removeSessionFromCacheIfInvalid() {
+        session.removeFromCacheIfInvalid();
+    }
+
     private final class QuicheQuicSslSession implements SSLSession {
         private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
         private String protocol;
         private String cipher;
         private byte[] id;
-        private long creationTime;
-        private long timeout;
+        private long creationTime = -1;
+        private long timeout = -1;
+        private boolean invalid;
+        private long lastAccessedTime = -1;
 
         // lazy init for memory reasons
         private Map<String, Object> values;
@@ -291,6 +297,22 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
                 this.protocol = protocol;
                 this.creationTime = creationTime * 1000L;
                 this.timeout = timeout * 1000L;
+                lastAccessedTime = System.currentTimeMillis();
+            }
+        }
+
+        void removeFromCacheIfInvalid() {
+            if (!isValid()) {
+                // Shouldn't be re-used again
+                removeFromCache();
+            }
+        }
+
+        private void removeFromCache() {
+            // Shouldn't be re-used again
+            QuicClientSessionCache cache = ctx.getSessionCache();
+            if (cache != null) {
+                cache.removeSession(getPeerHost(), getPeerPort());
             }
         }
 
@@ -365,18 +387,25 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
 
         @Override
         public long getLastAccessedTime() {
-            return getCreationTime();
+            return lastAccessedTime;
         }
 
         @Override
         public void invalidate() {
-            // NOOP
+            boolean removeFromCache;
+            synchronized (this) {
+                removeFromCache = !invalid;
+                invalid = true;
+            }
+            if (removeFromCache) {
+                removeFromCache();
+            }
         }
 
         @Override
         public boolean isValid() {
             synchronized (QuicheQuicSslEngine.this) {
-                return System.currentTimeMillis() - timeout < creationTime;
+                return !invalid && System.currentTimeMillis() - timeout < creationTime;
             }
         }
 

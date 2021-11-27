@@ -351,7 +351,8 @@ public final class QuicSslContextBuilder {
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
         } else {
             return new QuicheQuicSslContext(false, sessionCacheSize, sessionTimeout, clientAuth, trustManagerFactory,
-                    keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
+                    keyManagerFactory, keyPassword, mapping, earlyData, keylog,
+                    applicationProtocols);
         }
     }
 }

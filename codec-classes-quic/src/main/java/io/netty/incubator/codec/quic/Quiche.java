@@ -330,6 +330,7 @@ final class Quiche {
     static native byte[] quiche_conn_source_id(long connAddr);
 
     static native byte[] quiche_conn_destination_id(long connAddr);
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
      */
@@ -467,6 +468,13 @@ final class Quiche {
      *     quiche_conn_dgram_send</a>.
      */
     static native int quiche_conn_dgram_send(long connAddr, long buf, int size);
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.10.0/include/quiche.h#L267">
+     *     quiche_conn_set_session</a>.
+     */
+    static native int quiche_conn_set_session(long connAddr, byte[] sessionBytes);
 
     /**
      * See

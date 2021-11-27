@@ -82,6 +82,7 @@ final class QuicheQuicConnection {
             if (connection != -1) {
                 try {
                     Quiche.quiche_conn_free(connection);
+                    engine.ctx.remove(engine);
                     release = true;
                     refCnt.release();
                 } finally {

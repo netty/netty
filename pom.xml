@@ -265,7 +265,7 @@
           <trimStackTrace>false</trimStackTrace>
           <argLine>${test.argLine}</argLine>
         </configuration>
-        </plugin>
+      </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
         <groupId>org.apache.felix</groupId>
