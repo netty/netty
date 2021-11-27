@@ -33,7 +33,9 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 
@@ -94,6 +96,7 @@ public final class NativeLibraryLoader {
         for (String name : names) {
             try {
                 load(name, loader);
+                logger.debug("Loaded library with name '{}'", name);
                 return;
             } catch (Throwable t) {
                 suppressed.add(t);
@@ -145,22 +148,13 @@ public final class NativeLibraryLoader {
         InputStream in = null;
         OutputStream out = null;
         File tmpFile = null;
-        URL url;
-        if (loader == null) {
-            url = ClassLoader.getSystemResource(path);
-        } else {
-            url = loader.getResource(path);
-        }
+        URL url = getResource(path, loader);
         try {
             if (url == null) {
                 if (PlatformDependent.isOsx()) {
                     String fileName = path.endsWith(".jnilib") ? NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib" :
                             NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib";
-                    if (loader == null) {
-                        url = ClassLoader.getSystemResource(fileName);
-                    } else {
-                        url = loader.getResource(fileName);
-                    }
+                    url = getResource(fileName, loader);
                     if (url == null) {
                         FileNotFoundException fnf = new FileNotFoundException(fileName);
                         ThrowableUtil.addSuppressedAndClear(fnf, suppressed);
@@ -236,6 +230,30 @@ public final class NativeLibraryLoader {
         }
     }
 
+    private static URL getResource(String path, ClassLoader loader) {
+        final Enumeration<URL> urls;
+        try {
+            if (loader == null) {
+                urls = ClassLoader.getSystemResources(path);
+            } else {
+                urls = loader.getResources(path);
+            }
+        } catch (IOException iox) {
+            throw new RuntimeException("An error occurred while getting the resources for " + path, iox);
+        }
+
+        List<URL> urlsList = Collections.list(urls);
+        int size = urlsList.size();
+        switch (size) {
+            case 0:
+                return null;
+            case 1:
+                return urlsList.get(0);
+            default:
+                throw new IllegalStateException("Multiple resources found for '" + path + "': " + urlsList);
+        }
+    }
+
     static void tryPatchShadedLibraryIdAndSign(File libraryFile, String originalName) {
         String newId = new String(generateUniqueId(originalName.length()), CharsetUtil.UTF_8);
         if (!tryExec("install_name_tool -id " + newId + " " + libraryFile.getAbsolutePath())) {
@@ -288,7 +306,7 @@ public final class NativeLibraryLoader {
         Throwable suppressed = null;
         try {
             try {
-                // Make sure the helper is belong to the target ClassLoader.
+                // Make sure the helper belongs to the target ClassLoader.
                 final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
                 loadLibraryByHelper(newHelper, name, absolute);
                 logger.debug("Successfully loaded the library {}", name);
