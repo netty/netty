@@ -69,25 +69,7 @@ public final class NioHandler implements IoHandler {
 
     private final IntSupplier selectNowSupplier = this::selectNow;
 
-    // Workaround for JDK NIO bug.
-    //
-    // See:
-    // - https://bugs.java.com/view_bug.do?bug_id=6427854
-    // - https://github.com/netty/netty/issues/203
     static {
-        final String key = "sun.nio.ch.bugLevel";
-        final String bugLevel = SystemPropertyUtil.get(key);
-        if (bugLevel == null) {
-            try {
-                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    System.setProperty(key, "");
-                    return null;
-                });
-            } catch (final SecurityException e) {
-                logger.debug("Unable to get/set System Property: " + key, e);
-            }
-        }
-
         int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 512);
         if (selectorAutoRebuildThreshold < MIN_PREMATURE_SELECTOR_RETURNS) {
             selectorAutoRebuildThreshold = 0;
