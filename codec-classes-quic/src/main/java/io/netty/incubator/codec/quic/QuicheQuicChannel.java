@@ -937,6 +937,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return connection == null;
     }
 
+    private void fireExceptionEvents(Throwable cause) {
+        if (cause instanceof SSLHandshakeException) {
+            pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+        }
+        pipeline().fireExceptionCaught(cause);
+    }
+
     private boolean connectionSendSegments(SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
         List<ByteBuf> bufferList = new ArrayList<>(segmentedDatagramPacketAllocator.maxNumSegments());
         long connAddr = connection.address();
@@ -962,10 +969,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 done = Quiche.throwIfError(written);
             } catch (Exception e) {
                 done = true;
-                if (e instanceof SSLHandshakeException) {
-                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
-                }
-                pipeline().fireExceptionCaught(e);
+                fireExceptionEvents(e);
             }
             if (done) {
                 // We are done, release the buffer and send what we did build up so far.
@@ -1058,10 +1062,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             } catch (Exception e) {
                 out.release();
-                if (e instanceof SSLHandshakeException) {
-                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
-                }
-                pipeline().fireExceptionCaught(e);
+                fireExceptionEvents(e);
                 break;
             }
 
@@ -1246,10 +1247,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             if (tryFailConnectPromise(e)) {
                                 break;
                             }
-                            if (e instanceof SSLHandshakeException) {
-                                pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
-                            }
-                            pipeline().fireExceptionCaught(e);
+                            fireExceptionEvents(e);
                             done = true;
                         }
 
@@ -1437,6 +1435,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
+                pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
                 fireDatagramExtensionEvent();
                 if (!promiseSet) {
                     this.close(this.voidPromise());

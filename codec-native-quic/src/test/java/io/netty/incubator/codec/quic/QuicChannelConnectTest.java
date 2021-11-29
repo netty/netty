@@ -789,6 +789,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Test
     @Timeout(5)
     public void testSessionReusedOnClientSide() throws Exception {
+        CountDownLatch serverSslCompletionEventLatch = new CountDownLatch(2);
         Channel server = QuicTestUtils.newServer(
                 new ChannelInboundHandlerAdapter() {
                     @Override
@@ -808,6 +809,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         });
                         ctx.fireChannelActive();
                     }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            serverSslCompletionEventLatch.countDown();
+                        }
+                    }
                 },
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
@@ -817,7 +825,22 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().sslEngineProvider(c ->
                 clientSslContext.newEngine(c.alloc(), "localhost", 9999)));
         try {
-            QuicChannelBootstrap bootstrap =  QuicChannel.newBootstrap(channel)
+            CountDownLatch clientSslCompletionEventLatch = new CountDownLatch(2);
+
+            QuicChannelBootstrap bootstrap = QuicChannel.newBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public boolean isSharable() {
+                            return true;
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                            if (evt instanceof SslHandshakeCompletionEvent) {
+                                clientSslCompletionEventLatch.countDown();
+                            }
+                        }
+                    })
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address);
 
@@ -842,6 +865,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             quicChannel1.close().sync();
             quicChannel2.close().sync();
+
+            serverSslCompletionEventLatch.await();
+            clientSslCompletionEventLatch.await();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
