@@ -113,10 +113,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
             this.sessionCache.setSessionTimeout((int) sessionTimeout);
         } else {
             // Cache is handled by BoringSSL internally
-            this.sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(
+            BoringSSL.SSLContext_setSessionCacheSize(
                     nativeSslContext.address(), sessionCacheSize);
-            this.sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(
+            this.sessionCacheSize = sessionCacheSize;
+
+            BoringSSL.SSLContext_setSessionCacheTimeout(
                     nativeSslContext.address(), sessionTimeout);
+            this.sessionTimeout = sessionTimeout;
         }
         if (earlyData != null) {
             BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), earlyData);
@@ -313,7 +316,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
         if (sessionCache != null) {
             sessionCache.setSessionTimeout(seconds);
         } else {
-            sessionTimeout = BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), seconds);
+            BoringSSL.SSLContext_setSessionCacheTimeout(nativeSslContext.address(), seconds);
+            this.sessionTimeout = seconds;
         }
     }
 
@@ -321,7 +325,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
         if (sessionCache != null) {
             sessionCache.setSessionCacheSize(size);
         } else {
-            sessionCacheSize = BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), size);
+            BoringSSL.SSLContext_setSessionCacheSize(nativeSslContext.address(), size);
+            sessionCacheSize = size;
         }
     }
 

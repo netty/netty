@@ -347,10 +347,10 @@ public final class QuicSslContextBuilder {
      */
     public QuicSslContext build() {
         if (forServer) {
-            return new QuicheQuicSslContext(true, sessionCacheSize, sessionTimeout, clientAuth, trustManagerFactory,
+            return new QuicheQuicSslContext(true, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
         } else {
-            return new QuicheQuicSslContext(false, sessionCacheSize, sessionTimeout, clientAuth, trustManagerFactory,
+            return new QuicheQuicSslContext(false, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog,
                     applicationProtocols);
         }
