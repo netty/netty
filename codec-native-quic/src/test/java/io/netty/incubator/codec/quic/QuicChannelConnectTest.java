@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -59,6 +60,7 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -782,6 +784,78 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             // Close the parent Datagram channel as well.
             channel.close().sync();
         }
+    }
+
+    @Test
+    @Timeout(5)
+    public void testSessionReusedOnClientSide() throws Exception {
+        Channel server = QuicTestUtils.newServer(
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) {
+                        ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
+                                new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelActive(ChannelHandlerContext ctx) {
+                                ctx.writeAndFlush(ctx.alloc().directBuffer(10).writeZero(10))
+                                        .addListener(f -> ctx.close());
+                            }
+                        });
+                        ctx.fireChannelActive();
+                    }
+                },
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(QuicTestUtils.PROTOS).build();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().sslEngineProvider(c ->
+                clientSslContext.newEngine(c.alloc(), "localhost", 9999)));
+        try {
+            QuicChannelBootstrap bootstrap =  QuicChannel.newBootstrap(channel)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address);
+
+            CountDownLatch latch1 = new CountDownLatch(1);
+            QuicChannel quicChannel1 = bootstrap
+                    .streamHandler(new BytesCountingHandler(latch1, 10))
+                    .connect()
+                    .get();
+            latch1.await();
+            assertSessionReused(quicChannel1, false);
+
+            CountDownLatch latch2 = new CountDownLatch(1);
+            QuicChannel quicChannel2 = bootstrap
+                    .streamHandler(new BytesCountingHandler(latch2, 10))
+                    .connect()
+                    .get();
+
+            latch2.await();
+
+            // Ensure the session is reused.
+            assertSessionReused(quicChannel2, true);
+
+            quicChannel1.close().sync();
+            quicChannel2.close().sync();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
+    private static void assertSessionReused(QuicChannel channel, boolean reused) throws Exception {
+        QuicheQuicSslEngine engine =  (QuicheQuicSslEngine) channel.sslEngine();
+        while (engine.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
+            // Let's wait a bit and re-check if the handshake is done.
+            Thread.sleep(50);
+        }
+        assertEquals(reused, engine.isSessionReused());
     }
 
     private static final class BytesCountingHandler extends ChannelInboundHandlerAdapter {

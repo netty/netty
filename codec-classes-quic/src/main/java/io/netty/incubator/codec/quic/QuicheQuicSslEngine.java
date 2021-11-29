@@ -50,6 +50,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     private List<SNIServerName> sniHostNames;
     private boolean handshakeFinished;
     private String applicationProtocol;
+    private boolean sessionReused;
     final String tlsHostName;
     volatile QuicheQuicConnection connection;
 
@@ -253,18 +254,23 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     synchronized void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
                                         byte[][] peerCertificateChain,
                                         long creationTime, long timeout,
-                                        byte[] applicationProtocol) {
+                                        byte[] applicationProtocol, boolean sessionReused) {
         if (applicationProtocol == null) {
             this.applicationProtocol = null;
         } else {
             this.applicationProtocol = new String(applicationProtocol);
         }
         session.handshakeFinished(id, cipher, protocol, peerCertificate, peerCertificateChain, creationTime, timeout);
+        this.sessionReused = sessionReused;
         handshakeFinished = true;
     }
 
     void removeSessionFromCacheIfInvalid() {
         session.removeFromCacheIfInvalid();
+    }
+
+    synchronized boolean isSessionReused() {
+        return sessionReused;
     }
 
     private final class QuicheQuicSslSession implements SSLSession {
