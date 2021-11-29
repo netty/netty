@@ -16,12 +16,10 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -42,7 +40,7 @@ public class WebSocketUtf8FrameValidatorTest {
 
     private void assertCorruptedFrameExceptionHandling(byte[] data) {
         EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
-        TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
+        TextWebSocketFrame frame = new TextWebSocketFrame(channel.bufferAllocator().copyOf(data));
         try {
             channel.writeInbound(frame);
             fail();
@@ -58,6 +56,6 @@ public class WebSocketUtf8FrameValidatorTest {
             buf.release();
         }
         assertNull(channel.readOutbound());
-        assertEquals(0, frame.refCnt());
+        assertFalse(frame.isAccessible());
     }
 }

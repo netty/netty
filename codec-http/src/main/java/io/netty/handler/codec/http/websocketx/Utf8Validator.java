@@ -35,7 +35,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.ByteCursor;
 import io.netty.util.ByteProcessor;
 
 /**
@@ -63,14 +64,19 @@ final class Utf8Validator implements ByteProcessor {
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
             12, 12, 12, 12, 12, 12 };
 
-    @SuppressWarnings("RedundantFieldInitialization")
     private int state = UTF8_ACCEPT;
     private int codep;
     private boolean checking;
 
-    public void check(ByteBuf buffer) {
+    public void check(Buffer buffer) {
         checking = true;
-        buffer.forEachByte(this);
+        buffer.forEachReadable(0, (index, component) -> {
+            ByteCursor cursor = component.openCursor();
+            while (cursor.readByte()) {
+                process(cursor.getByte());
+            }
+            return true;
+        });
     }
 
     public void finish() {

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.CompositeBuffer;
@@ -38,7 +37,6 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -47,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
-import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -244,14 +241,12 @@ public abstract class WebSocketClientHandshakerTest {
         }
     }
 
-    @Disabled("buffer migration")
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHttpResponseAndFrameInSameBuffer() {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
-    @Disabled("buffer migration")
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHttpResponseAndFrameInSameBufferCodec() {
@@ -296,19 +291,19 @@ public abstract class WebSocketClientHandshakerTest {
         request.close();
         EmbeddedChannel websocketChannel = new EmbeddedChannel(socketServerHandshaker.newWebSocketEncoder(),
                 socketServerHandshaker.newWebsocketDecoder());
-        assertTrue(websocketChannel.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data))));
+        assertTrue(websocketChannel.writeOutbound(
+                new BinaryWebSocketFrame(websocketChannel.bufferAllocator().copyOf(data))));
 
         byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\nContent-Length: 0\r\n\r\n".getBytes(CharsetUtil.US_ASCII);
 
         CompositeBuffer compositeBuffer = CompositeBuffer.compose(websocketChannel.bufferAllocator());
         compositeBuffer.extendWith(websocketChannel.bufferAllocator().allocate(bytes.length).writeBytes(bytes).send());
         for (;;) {
-            final ByteBuf byteBuf = websocketChannel.readOutbound();
-            if (byteBuf == null) {
+            final Buffer buffer = websocketChannel.readOutbound();
+            if (buffer == null) {
                 break;
             }
-            Buffer frameBytes = extractOrCopy(websocketChannel.bufferAllocator(), byteBuf);
-            compositeBuffer.extendWith(frameBytes.send());
+            compositeBuffer.extendWith(buffer.send());
         }
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(Integer.MAX_VALUE),
@@ -338,13 +333,11 @@ public abstract class WebSocketClientHandshakerTest {
         assertTrue(ch.writeInbound(compositeBuffer));
         assertTrue(ch.finish());
 
-        BinaryWebSocketFrame frame = ch.readInbound();
-        try (Buffer expect = ch.bufferAllocator().allocate(data.length).writeBytes(data)) {
-            assertEquals(expect, frame.content());
+        try (BinaryWebSocketFrame frame = ch.readInbound();
+             Buffer expect = ch.bufferAllocator().allocate(data.length).writeBytes(data)) {
+            assertEquals(expect, frame.binaryData());
             assertTrue(frame.isFinalFragment());
             assertEquals(0, frame.rsv());
-        } finally {
-            frame.release();
         }
     }
 

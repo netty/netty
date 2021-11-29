@@ -16,8 +16,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,17 +43,19 @@ public class WebSocketProtocolHandlerTest {
 
     @Test
     public void testPingFrame() {
-        ByteBuf pingData = Unpooled.copiedBuffer("Hello, world", UTF_8);
+        String message = "Hello, world";
+        Buffer pingData = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(message.getBytes(UTF_8));
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
         PingWebSocketFrame inputMessage = new PingWebSocketFrame(pingData);
         assertFalse(channel.writeInbound(inputMessage)); // the message was not propagated inbound
 
         // a Pong frame was written to the channel
-        PongWebSocketFrame response = channel.readOutbound();
-        assertEquals(pingData, response.content());
+        try (PongWebSocketFrame response = channel.readOutbound()) {
+            assertEquals(message, response.binaryData().toString(UTF_8));
+        }
 
-        pingData.release();
+        pingData.close();
         assertFalse(channel.finish());
     }
 
@@ -71,11 +73,11 @@ public class WebSocketProtocolHandlerTest {
 
         // When
         assertFalse(channel.writeInbound(
-            new PingWebSocketFrame(Unpooled.copiedBuffer(text1, UTF_8)),
-            new TextWebSocketFrame(text2),
-            new TextWebSocketFrame(text3),
-            new PingWebSocketFrame(Unpooled.copiedBuffer(text4, UTF_8))
-        ));
+                new PingWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text1.getBytes(UTF_8))),
+                new TextWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, text2),
+                new TextWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, text3),
+                new PingWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text4.getBytes(UTF_8))
+                )));
 
         // Then - no messages were handled or propagated
         assertNull(channel.readInbound());
@@ -85,34 +87,32 @@ public class WebSocketProtocolHandlerTest {
         channel.read();
 
         // Then - pong frame was written to the outbound
-        PongWebSocketFrame response1 = channel.readOutbound();
-        assertEquals(text1, response1.content().toString(UTF_8));
+        try (PongWebSocketFrame response1 = channel.readOutbound()) {
+            assertEquals(text1, response1.binaryData().toString(UTF_8));
 
-        // And - one requested message was handled and propagated inbound
-        TextWebSocketFrame message2 = channel.readInbound();
-        assertEquals(text2, message2.text());
+            // And - one requested message was handled and propagated inbound
+            try (TextWebSocketFrame message2 = channel.readInbound()) {
+                assertEquals(text2, message2.text());
 
-        // And - no more messages were handled or propagated
-        assertNull(channel.readInbound());
-        assertNull(channel.readOutbound());
+                // And - no more messages were handled or propagated
+                assertNull(channel.readInbound());
+                assertNull(channel.readOutbound());
 
-        // When
-        channel.read();
+                // When
+                channel.read();
 
-        // Then - one requested message was handled and propagated inbound
-        TextWebSocketFrame message3 = channel.readInbound();
-        assertEquals(text3, message3.text());
+                // Then - one requested message was handled and propagated inbound
+                try (TextWebSocketFrame message3 = channel.readInbound()) {
+                    assertEquals(text3, message3.text());
 
-        // And - no more messages were handled or propagated
-        // Precisely, ping frame 'text4' was NOT read or handled.
-        // It would be handle ONLY on the next 'channel.read()' call.
-        assertNull(channel.readInbound());
-        assertNull(channel.readOutbound());
-
-        // Cleanup
-        response1.release();
-        message2.release();
-        message3.release();
+                    // And - no more messages were handled or propagated
+                    // Precisely, ping frame 'text4' was NOT read or handled.
+                    // It would be handle ONLY on the next 'channel.read()' call.
+                    assertNull(channel.readInbound());
+                    assertNull(channel.readOutbound());
+                }
+            }
+        }
         assertFalse(channel.finish());
     }
 
@@ -120,12 +120,12 @@ public class WebSocketProtocolHandlerTest {
     public void testPongFrameDropFrameFalse() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(false) { });
 
-        PongWebSocketFrame pingResponse = new PongWebSocketFrame();
+        PongWebSocketFrame pingResponse = new PongWebSocketFrame(channel.bufferAllocator());
         assertTrue(channel.writeInbound(pingResponse));
 
         assertPropagatedInbound(pingResponse, channel);
 
-        pingResponse.release();
+        pingResponse.close();
         assertFalse(channel.finish());
     }
 
@@ -133,7 +133,7 @@ public class WebSocketProtocolHandlerTest {
     public void testPongFrameDropFrameTrue() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(true) { });
 
-        PongWebSocketFrame pingResponse = new PongWebSocketFrame();
+        PongWebSocketFrame pingResponse = new PongWebSocketFrame(channel.bufferAllocator());
         assertFalse(channel.writeInbound(pingResponse)); // message was not propagated inbound
     }
 
@@ -141,12 +141,12 @@ public class WebSocketProtocolHandlerTest {
     public void testTextFrame() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
-        TextWebSocketFrame textFrame = new TextWebSocketFrame();
+        TextWebSocketFrame textFrame = new TextWebSocketFrame(channel.bufferAllocator());
         assertTrue(channel.writeInbound(textFrame));
 
         assertPropagatedInbound(textFrame, channel);
 
-        textFrame.release();
+        textFrame.close();
         assertFalse(channel.finish());
     }
 
@@ -165,7 +165,7 @@ public class WebSocketProtocolHandlerTest {
             }
         }, handler);
 
-        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame());
+        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame(channel.bufferAllocator()));
         ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
         handler.close(ctx);
 

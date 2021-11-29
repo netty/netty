@@ -53,24 +53,21 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteOrder;
 import java.util.Objects;
-
-import static io.netty.buffer.ByteBufUtil.readBytes;
 
 /**
  * Decodes a web socket frame from wire protocol version 13 format. V13 is essentially the same as V8.
  */
-public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements WebSocketFrameDecoder {
+public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer implements WebSocketFrameDecoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket13FrameDecoder.class);
     private static final byte OPCODE_CONT = 0x0;
@@ -139,28 +136,28 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
      *            Frames decoder configuration.
      */
     public WebSocket13FrameDecoder(WebSocketDecoderConfig decoderConfig) {
-        this.config = Objects.requireNonNull(decoderConfig, "decoderConfig");
+        config = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
-    private static int toFrameLength(long l) {
-        if (l > Integer.MAX_VALUE) {
-            throw new TooLongFrameException("Length:" + l);
+    private static int toFrameLength(long length) {
+        if (length > Integer.MAX_VALUE) {
+            throw new TooLongFrameException("Length:" + length);
         } else {
-            return (int) l;
+            return (int) length;
         }
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
-            in.skipBytes(actualReadableBytes());
+            in.skipReadable(actualReadableBytes());
             return;
         }
 
         switch (state) {
-        case READING_FIRST:
-            if (!in.isReadable()) {
+        case READING_FIRST: {
+            if (in.readableBytes() <= 0) {
                 return;
             }
 
@@ -177,12 +174,13 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
             }
 
             state = State.READING_SECOND;
-        case READING_SECOND:
-            if (!in.isReadable()) {
+        }
+        case READING_SECOND: {
+            if (in.readableBytes() <= 0) {
                 return;
             }
             // MASK, PAYLOAD LEN 1
-            b = in.readByte();
+            byte b = in.readByte();
             frameMasked = (b & 0x80) != 0;
             framePayloadLen1 = b & 0x7F;
 
@@ -247,8 +245,8 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
             }
 
             state = State.READING_SIZE;
-        case READING_SIZE:
-
+        }
+        case READING_SIZE: {
             // Read frame payload length
             if (framePayloadLen1 == 126) {
                 if (in.readableBytes() < 2) {
@@ -277,7 +275,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
 
             if (framePayloadLength > config.maxFramePayloadLength()) {
                 protocolViolation(ctx, in, WebSocketCloseStatus.MESSAGE_TOO_BIG,
-                    "Max frame length of " + config.maxFramePayloadLength() + " has been exceeded.");
+                                  "Max frame length of " + config.maxFramePayloadLength() + " has been exceeded.");
                 return;
             }
 
@@ -286,7 +284,8 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
             }
 
             state = State.MASKING_KEY;
-        case MASKING_KEY:
+        }
+        case MASKING_KEY: {
             if (frameMasked) {
                 if (in.readableBytes() < 4) {
                     return;
@@ -294,17 +293,20 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
                 if (maskingKey == null) {
                     maskingKey = new byte[4];
                 }
-                in.readBytes(maskingKey);
+                in.copyInto(in.readerOffset(), maskingKey, 0, maskingKey.length);
+                in.skipReadable(maskingKey.length);
             }
             state = State.PAYLOAD;
-        case PAYLOAD:
+        }
+        case PAYLOAD: {
             if (in.readableBytes() < framePayloadLength) {
                 return;
             }
 
-            ByteBuf payloadBuffer = null;
+            Buffer payloadBuffer = null;
             try {
-                payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
+                in.readSplit(0).close(); // Truncate off the frame header, so payload start at offset 0.
+                payloadBuffer = in.readSplit(toFrameLength(framePayloadLength));
 
                 // Now we have all the data, the next checkpoint must be the next
                 // frame
@@ -371,64 +373,58 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
                 }
             } finally {
                 if (payloadBuffer != null) {
-                    payloadBuffer.release();
+                    payloadBuffer.close();
                 }
             }
-        case CORRUPT:
-            if (in.isReadable()) {
+        }
+        case CORRUPT: {
+            if (in.readableBytes() > 0) {
                 // If we don't keep reading Netty will throw an exception saying
                 // we can't return null if no bytes read and state not changed.
                 in.readByte();
             }
             return;
+        }
         default:
             throw new Error("Shouldn't reach here.");
         }
     }
 
-    private void unmask(ByteBuf frame) {
-        int i = frame.readerIndex();
-        int end = frame.writerIndex();
-
-        ByteOrder order = frame.order();
+    private void unmask(Buffer frame) {
+        int i = frame.readerOffset();
+        int end = frame.writerOffset();
 
         // Remark: & 0xFF is necessary because Java will do signed expansion from
         // byte to int which we don't want.
-        int intMask = ((maskingKey[0] & 0xFF) << 24)
-                    | ((maskingKey[1] & 0xFF) << 16)
-                    | ((maskingKey[2] & 0xFF) << 8)
-                    | (maskingKey[3] & 0xFF);
-
-        // If the byte order of our buffers it little endian we have to bring our mask
-        // into the same format, because getInt() and writeInt() will use a reversed byte order
-        if (order == ByteOrder.LITTLE_ENDIAN) {
-            intMask = Integer.reverseBytes(intMask);
-        }
+        int intMask = (maskingKey[0] & 0xFF) << 24
+                      | (maskingKey[1] & 0xFF) << 16
+                      | (maskingKey[2] & 0xFF) << 8
+                      | maskingKey[3] & 0xFF;
 
         for (; i + 3 < end; i += 4) {
             int unmasked = frame.getInt(i) ^ intMask;
             frame.setInt(i, unmasked);
         }
         for (; i < end; i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey[i % 4]);
+            frame.setByte(i, (byte) (frame.getByte(i) ^ maskingKey[i % 4]));
         }
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, String reason) {
+    private void protocolViolation(ChannelHandlerContext ctx, Buffer in, String reason) {
         protocolViolation(ctx, in, WebSocketCloseStatus.PROTOCOL_ERROR, reason);
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, WebSocketCloseStatus status, String reason) {
+    private void protocolViolation(ChannelHandlerContext ctx, Buffer in, WebSocketCloseStatus status, String reason) {
         protocolViolation(ctx, in, new CorruptedWebSocketFrameException(status, reason));
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, CorruptedWebSocketFrameException ex) {
+    private void protocolViolation(ChannelHandlerContext ctx, Buffer in, CorruptedWebSocketFrameException ex) {
         state = State.CORRUPT;
         int readableBytes = in.readableBytes();
         if (readableBytes > 0) {
             // Fix for memory leak, caused by ByteToMessageDecoder#channelRead:
             // buffer 'cumulation' is released ONLY when no more readable bytes available.
-            in.skipBytes(readableBytes);
+            in.skipReadable(readableBytes);
         }
         if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {
             Object closeMessage;
@@ -440,7 +436,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
                 if (reasonText == null) {
                     reasonText = closeStatus.reasonText();
                 }
-                closeMessage = new CloseWebSocketFrame(closeStatus, reasonText);
+                closeMessage = new CloseWebSocketFrame(ctx.bufferAllocator(), closeStatus, reasonText);
             }
             ctx.writeAndFlush(closeMessage).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
@@ -448,9 +444,8 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
     }
 
     /** */
-    protected void checkCloseFrameBody(
-            ChannelHandlerContext ctx, ByteBuf buffer) {
-        if (buffer == null || !buffer.isReadable()) {
+    protected void checkCloseFrameBody(ChannelHandlerContext ctx, Buffer buffer) {
+        if (buffer == null || buffer.readableBytes() <= 0) {
             return;
         }
         if (buffer.readableBytes() == 1) {
@@ -458,8 +453,8 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
         }
 
         // Save reader index
-        int idx = buffer.readerIndex();
-        buffer.readerIndex(0);
+        int offset = buffer.readerOffset();
+        buffer.readerOffset(0);
 
         // Must have 2 byte integer within the valid range
         int statusCode = buffer.readShort();
@@ -468,7 +463,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
         }
 
         // May have UTF-8 message
-        if (buffer.isReadable()) {
+        if (buffer.readableBytes() > 0) {
             try {
                 new Utf8Validator().check(buffer);
             } catch (CorruptedWebSocketFrameException ex) {
@@ -476,8 +471,8 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
             }
         }
 
-        // Restore reader index
-        buffer.readerIndex(idx);
+        // Restore reader offset
+        buffer.readerOffset(offset);
     }
 
     enum State {

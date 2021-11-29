@@ -15,6 +15,7 @@ package io.netty.handler.codec.http.websocketx;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -22,50 +23,34 @@ class CloseWebSocketFrameTest {
 
     @Test
     void testInvalidCode() {
-        doTestInvalidCode(new ThrowableAssert.ThrowingCallable() {
+        doTestInvalidCode(() ->
+                new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, WebSocketCloseStatus.ABNORMAL_CLOSURE));
 
-            @Override
-            public void call() throws RuntimeException {
-                new CloseWebSocketFrame(WebSocketCloseStatus.ABNORMAL_CLOSURE);
-            }
-        });
+        doTestInvalidCode(() ->
+                new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, WebSocketCloseStatus.ABNORMAL_CLOSURE,
+                "invalid code"));
 
-        doTestInvalidCode(new ThrowableAssert.ThrowingCallable() {
+        doTestInvalidCode(() ->
+                new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, 1006, "invalid code"));
 
-            @Override
-            public void call() throws RuntimeException {
-                new CloseWebSocketFrame(WebSocketCloseStatus.ABNORMAL_CLOSURE, "invalid code");
-            }
-        });
-
-        doTestInvalidCode(new ThrowableAssert.ThrowingCallable() {
-
-            @Override
-            public void call() throws RuntimeException {
-                new CloseWebSocketFrame(1006, "invalid code");
-            }
-        });
-
-        doTestInvalidCode(new ThrowableAssert.ThrowingCallable() {
-
-            @Override
-            public void call() throws RuntimeException {
-                new CloseWebSocketFrame(true, 0, 1006, "invalid code");
-            }
-        });
+        doTestInvalidCode(() ->
+                new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, true, 0, 1006, "invalid code"));
     }
 
     @Test
     void testValidCode() {
-        doTestValidCode(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE),
+        doTestValidCode(new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, WebSocketCloseStatus.NORMAL_CLOSURE),
                 WebSocketCloseStatus.NORMAL_CLOSURE.code(), WebSocketCloseStatus.NORMAL_CLOSURE.reasonText());
 
-        doTestValidCode(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "valid code"),
+        doTestValidCode(new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR,
+                        WebSocketCloseStatus.NORMAL_CLOSURE, "valid code"),
                 WebSocketCloseStatus.NORMAL_CLOSURE.code(), "valid code");
 
-        doTestValidCode(new CloseWebSocketFrame(1000, "valid code"), 1000, "valid code");
+        doTestValidCode(new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, 1000, "valid code"),
+                1000, "valid code");
 
-        doTestValidCode(new CloseWebSocketFrame(true, 0, 1000, "valid code"), 1000, "valid code");
+        doTestValidCode(new CloseWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, true, 0, 1000, "valid code"),
+                1000, "valid code");
     }
 
     private static void doTestInvalidCode(ThrowableAssert.ThrowingCallable callable) {

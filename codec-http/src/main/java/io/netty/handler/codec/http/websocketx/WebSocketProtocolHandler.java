@@ -61,8 +61,11 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
-            frame.content().retain();
-            ctx.channel().writeAndFlush(new PongWebSocketFrame(frame.content()));
+            // We need to `send` the binary data to the pong frame, because the MessageToMessageDecoder
+            // is going to close the ping frame, which would otherwise cause the data to be freed.
+            try (frame) {
+                ctx.channel().writeAndFlush(new PongWebSocketFrame(frame.binaryData().send()));
+            }
             readIfNeeded(ctx);
             return;
         }
@@ -71,7 +74,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
 
-        ctx.fireChannelRead(frame.retain());
+        ctx.fireChannelRead(frame);
     }
 
     private static void readIfNeeded(ChannelHandlerContext ctx) {
@@ -86,7 +89,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return ctx.close();
         }
         final Future<Void> future = closeSent == null ?
-                write(ctx, new CloseWebSocketFrame(closeStatus)) : closeSent.asFuture();
+                write(ctx, new CloseWebSocketFrame(ctx.bufferAllocator(), closeStatus)) : closeSent.asFuture();
 
         flush(ctx);
         applyCloseSentTimeout(ctx);

@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -31,17 +31,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
-import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
 import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -60,13 +56,11 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         return WebSocketVersion.V13;
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testPerformOpeningHandshake() {
         testPerformOpeningHandshake0(true);
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testPerformOpeningHandshakeSubProtocolNotSupported() {
         testPerformOpeningHandshake0(false);
@@ -89,13 +83,11 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         assertFalse(ch.finish());
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testCloseReasonWithEncoderAndDecoder() {
         testCloseReason0(new HttpResponseEncoder(), new HttpRequestDecoder());
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testCloseReasonWithCodec() {
         testCloseReason0(new HttpServerCodec());
@@ -108,17 +100,17 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         testUpgrade0(ch, new WebSocketServerHandshaker13("ws://example.com/chat", "chat",
                 WebSocketDecoderConfig.newBuilder().maxFramePayloadLength(4).closeOnProtocolViolation(true).build()));
 
-        ch.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(new byte[8])));
-        ByteBuf buffer = ch.readOutbound();
+        ch.writeOutbound(new BinaryWebSocketFrame(ch.bufferAllocator().copyOf(new byte[8])));
+        Buffer buffer = ch.readOutbound();
         try {
             ch.writeInbound(buffer);
             fail();
         } catch (CorruptedWebSocketFrameException expected) {
             // expected
         }
-        ReferenceCounted closeMessage = ch.readOutbound();
-        assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
-        closeMessage.release();
+        Resource<?> closeMessage = ch.readOutbound();
+        assertThat(closeMessage).isInstanceOf(Buffer.class);
+        closeMessage.close();
         assertFalse(ch.finish());
     }
 
@@ -135,22 +127,17 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
 
             handshaker.handshake(ch, req);
 
-            ByteBuf resBuf = ch.readOutbound();
-
             EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());
-            ch2.writeInbound(resBuf);
+            ch2.writeInbound(ch.<Buffer>readOutbound());
             HttpResponse res = ch2.readInbound();
 
-            assertEquals(
-                    "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
+            assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
             Iterator<String> subProtocols = handshaker.subprotocols().iterator();
             if (subProtocols.hasNext()) {
-                assertEquals(subProtocols.next(),
-                        res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
+                assertEquals(subProtocols.next(), res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
             } else {
                 assertNull(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
             }
-            ReferenceCountUtil.release(res);
         }
     }
 }

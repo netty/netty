@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -27,9 +27,11 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new empty continuation frame.
+     *
+     * @param allocator {@link BufferAllocator} to use for allocating data.
      */
-    public ContinuationWebSocketFrame() {
-        this(Unpooled.buffer(0));
+    public ContinuationWebSocketFrame(BufferAllocator allocator) {
+        this(allocator.allocate(0));
     }
 
     /**
@@ -38,100 +40,59 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *
      * @param binaryData the content of the frame.
      */
-    public ContinuationWebSocketFrame(ByteBuf binaryData) {
+    public ContinuationWebSocketFrame(Buffer binaryData) {
         super(binaryData);
     }
 
     /**
      * Creates a new continuation frame with the specified binary data.
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param binaryData
-     *            the content of the frame.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions
+     * @param binaryData the content of the frame.
      */
-    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
+    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, Buffer binaryData) {
         super(finalFragment, rsv, binaryData);
     }
 
     /**
      * Creates a new continuation frame with the specified text data
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param text
-     *            text content of the frame.
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions
+     * @param text text content of the frame.
      */
-    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        this(finalFragment, rsv, fromText(text));
+    public ContinuationWebSocketFrame(BufferAllocator allocator, boolean finalFragment, int rsv, String text) {
+        this(finalFragment, rsv, fromText(allocator, text));
+    }
+
+    private ContinuationWebSocketFrame(ContinuationWebSocketFrame copyFrom, Buffer data) {
+        super(copyFrom, data);
     }
 
     /**
      * Returns the text data in this frame.
      */
     public String text() {
-        return content().toString(CharsetUtil.UTF_8);
+        return binaryData().toString(CharsetUtil.UTF_8);
     }
 
     /**
      * Sets the string for this frame.
      *
-     * @param text
-     *            text to store.
+     * @param text text to store.
      */
-    private static ByteBuf fromText(String text) {
+    private static Buffer fromText(BufferAllocator allocator, String text) {
         if (text == null || text.isEmpty()) {
-            return Unpooled.EMPTY_BUFFER;
+            return allocator.allocate(0);
         } else {
-            return Unpooled.copiedBuffer(text, CharsetUtil.UTF_8);
+            return allocator.copyOf(text.getBytes(CharsetUtil.UTF_8));
         }
     }
 
     @Override
-    public ContinuationWebSocketFrame copy() {
-        return (ContinuationWebSocketFrame) super.copy();
-    }
-
-    @Override
-    public ContinuationWebSocketFrame duplicate() {
-        return (ContinuationWebSocketFrame) super.duplicate();
-    }
-
-    @Override
-    public ContinuationWebSocketFrame retainedDuplicate() {
-        return (ContinuationWebSocketFrame) super.retainedDuplicate();
-    }
-
-    @Override
-    public ContinuationWebSocketFrame replace(ByteBuf content) {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content);
-    }
-
-    @Override
-    public ContinuationWebSocketFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public ContinuationWebSocketFrame retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public ContinuationWebSocketFrame touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public ContinuationWebSocketFrame touch(Object hint) {
-        super.touch(hint);
-        return this;
+    protected WebSocketFrame receive(Buffer buf) {
+        return new ContinuationWebSocketFrame(this, buf);
     }
 }

@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelFutureListeners;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -48,7 +48,7 @@ public class Utf8FrameValidator implements ChannelHandler {
                         if ((frame instanceof TextWebSocketFrame) ||
                                 (utf8Validator != null && utf8Validator.isChecking())) {
                             // Check UTF-8 correctness for this payload
-                            checkUTF8String(frame.content());
+                            checkUTF8String(frame.binaryData());
 
                             // This does a second check to make sure UTF-8
                             // correctness for entire text message
@@ -61,12 +61,12 @@ public class Utf8FrameValidator implements ChannelHandler {
                     if (fragmentedFramesCount == 0) {
                         // First text or binary frame for a fragmented set
                         if (frame instanceof TextWebSocketFrame) {
-                            checkUTF8String(frame.content());
+                            checkUTF8String(frame.binaryData());
                         }
                     } else {
                         // Subsequent frames - only check if init frame is text
                         if (utf8Validator != null && utf8Validator.isChecking()) {
-                            checkUTF8String(frame.content());
+                            checkUTF8String(frame.binaryData());
                         }
                     }
 
@@ -74,7 +74,7 @@ public class Utf8FrameValidator implements ChannelHandler {
                     fragmentedFramesCount++;
                 }
             } catch (CorruptedWebSocketFrameException e) {
-                frame.release();
+                frame.close();
                 throw e;
             }
         }
@@ -82,7 +82,7 @@ public class Utf8FrameValidator implements ChannelHandler {
         ctx.fireChannelRead(msg);
     }
 
-    private void checkUTF8String(ByteBuf buffer) {
+    private void checkUTF8String(Buffer buffer) {
         if (utf8Validator == null) {
             utf8Validator = new Utf8Validator();
         }

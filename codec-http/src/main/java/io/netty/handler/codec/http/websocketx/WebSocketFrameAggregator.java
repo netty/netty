@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.CompositeBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.MessageAggregator;
+import io.netty.handler.codec.MessageAggregatorNew;
 import io.netty.handler.codec.TooLongFrameException;
 
 /**
@@ -27,7 +28,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * just get forwarded to the next handler in the pipeline.
  */
 public class WebSocketFrameAggregator
-        extends MessageAggregator<WebSocketFrame, WebSocketFrame, ContinuationWebSocketFrame, WebSocketFrame> {
+        extends MessageAggregatorNew<WebSocketFrame, WebSocketFrame, ContinuationWebSocketFrame, WebSocketFrame> {
 
     /**
      * Creates a new instance
@@ -40,23 +41,27 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected boolean isStartMessage(WebSocketFrame msg) throws Exception {
-        return msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame;
+    protected WebSocketFrame tryStartMessage(Object msg) {
+        return isStartMessage(msg) ? (WebSocketFrame) msg : null;
     }
 
     @Override
-    protected boolean isContentMessage(WebSocketFrame msg) throws Exception {
-        return msg instanceof ContinuationWebSocketFrame;
+    protected ContinuationWebSocketFrame tryContentMessage(Object msg) {
+        return isContentMessage(msg) ? (ContinuationWebSocketFrame) msg : null;
     }
 
     @Override
-    protected boolean isLastContentMessage(ContinuationWebSocketFrame msg) throws Exception {
+    protected boolean isLastContentMessage(ContinuationWebSocketFrame msg) {
         return isContentMessage(msg) && msg.isFinalFragment();
     }
 
     @Override
-    protected boolean isAggregated(WebSocketFrame msg) throws Exception {
-        if (msg.isFinalFragment()) {
+    protected boolean isAggregated(Object msg) throws Exception {
+        if (!(msg instanceof WebSocketFrame)) {
+            return false;
+        }
+        WebSocketFrame frame = (WebSocketFrame) msg;
+        if (frame.isFinalFragment()) {
             return !isContentMessage(msg);
         }
 
@@ -84,16 +89,43 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected WebSocketFrame beginAggregation(WebSocketFrame start, ByteBuf content) throws Exception {
+    protected int lengthForContent(ContinuationWebSocketFrame msg) {
+        return msg.binaryData().readableBytes();
+    }
+
+    @Override
+    protected int lengthForAggregation(WebSocketFrame msg) {
+        return msg.binaryData().readableBytes();
+    }
+
+    @Override
+    protected WebSocketFrame beginAggregation(BufferAllocator allocator, WebSocketFrame start) {
         if (start instanceof TextWebSocketFrame) {
+            final CompositeBuffer content = CompositeBuffer.compose(allocator, start.binaryData().send());
             return new TextWebSocketFrame(true, start.rsv(), content);
         }
 
         if (start instanceof BinaryWebSocketFrame) {
+            final CompositeBuffer content = CompositeBuffer.compose(allocator, start.binaryData().send());
             return new BinaryWebSocketFrame(true, start.rsv(), content);
         }
 
         // Should not reach here.
         throw new Error();
+    }
+
+    @Override
+    protected void aggregate(BufferAllocator allocator, WebSocketFrame aggregated, ContinuationWebSocketFrame content)
+            throws Exception {
+        final CompositeBuffer payload = (CompositeBuffer) aggregated.binaryData();
+        payload.extendWith(content.binaryData().send());
+    }
+
+    private boolean isStartMessage(Object msg) {
+        return msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame;
+    }
+
+    private boolean isContentMessage(Object msg) {
+        return msg instanceof ContinuationWebSocketFrame;
     }
 }

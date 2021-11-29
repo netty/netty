@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,7 +39,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
@@ -186,7 +185,7 @@ public class WebSocketServerProtocolHandlerTest {
             ch.pipeline().remove(HttpRequestDecoder.class);
         }
 
-        ch.writeInbound(new TextWebSocketFrame("payload"));
+        ch.writeInbound(new TextWebSocketFrame(ch.bufferAllocator(), "payload"));
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
         assertFalse(ch.finish());
@@ -279,27 +278,26 @@ public class WebSocketServerProtocolHandlerTest {
         assertNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testExplicitCloseFrameSentWhenServerChannelClosed() {
         WebSocketCloseStatus closeStatus = WebSocketCloseStatus.ENDPOINT_UNAVAILABLE;
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
-        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
+        assertFalse(client.writeInbound((Buffer) server.readOutbound()));
 
         // When server channel closed with explicit close-frame
-        assertTrue(server.writeOutbound(new CloseWebSocketFrame(closeStatus)));
+        assertTrue(server.writeOutbound(new CloseWebSocketFrame(server.bufferAllocator(), closeStatus)));
         server.close();
 
         // Then client receives provided close-frame
-        assertTrue(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertTrue(client.writeInbound((Buffer) server.readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
-        assertEquals(closeMessage.statusCode(), closeStatus.code());
-        closeMessage.release();
+        assertEquals(closeStatus.code(), closeMessage.statusCode());
+        closeMessage.close();
 
         client.close();
         assertTrue(ReferenceCountUtil.release(client.readOutbound()));
@@ -307,25 +305,24 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(server.finishAndReleaseAll());
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testCloseFrameSentWhenServerChannelClosedSilently() {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
-        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
+        assertFalse(client.writeInbound((Buffer) server.readOutbound()));
 
         // When server channel closed without explicit close-frame
         server.close();
 
         // Then client receives NORMAL_CLOSURE close-frame
-        assertTrue(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertTrue(client.writeInbound((Buffer) server.readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
         assertEquals(closeMessage.statusCode(), WebSocketCloseStatus.NORMAL_CLOSURE.code());
-        closeMessage.release();
+        closeMessage.close();
 
         client.close();
         assertTrue(ReferenceCountUtil.release(client.readOutbound()));
@@ -333,59 +330,58 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(server.finishAndReleaseAll());
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testExplicitCloseFrameSentWhenClientChannelClosed() {
         WebSocketCloseStatus closeStatus = WebSocketCloseStatus.INVALID_PAYLOAD_DATA;
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
-        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
+        assertFalse(client.writeInbound((Buffer) server.readOutbound()));
 
         // When client channel closed with explicit close-frame
-        assertTrue(client.writeOutbound(new CloseWebSocketFrame(closeStatus)));
+        assertTrue(client.writeOutbound(new CloseWebSocketFrame(client.bufferAllocator(), closeStatus)));
         client.close();
 
         // Then client receives provided close-frame
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = decode(server.readOutbound(), CloseWebSocketFrame.class);
         assertEquals(closeMessage.statusCode(), closeStatus.code());
-        closeMessage.release();
+        closeMessage.close();
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testCloseFrameSentWhenClientChannelClosedSilently() {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
-        assertFalse(client.writeInbound((ByteBuf) server.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
+        assertFalse(client.writeInbound((Buffer) server.readOutbound()));
 
         // When client channel closed without explicit close-frame
         client.close();
 
         // Then server receives NORMAL_CLOSURE close-frame
-        assertFalse(server.writeInbound((ByteBuf) client.readOutbound()));
+        assertFalse(server.writeInbound((Buffer) client.readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = decode(server.readOutbound(), CloseWebSocketFrame.class);
-        assertEquals(closeMessage, new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
-        closeMessage.release();
+        assertEquals(closeMessage, new CloseWebSocketFrame(client.bufferAllocator(),
+                WebSocketCloseStatus.NORMAL_CLOSURE));
+        closeMessage.close();
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
     }
 
-    private EmbeddedChannel createClient(ChannelHandler... handlers) {
+    private static EmbeddedChannel createClient(ChannelHandler... handlers) {
         WebSocketClientProtocolConfig clientConfig = WebSocketClientProtocolConfig.newBuilder()
             .webSocketUri("http://test/test")
             .dropPongFrames(false)
@@ -401,7 +397,7 @@ public class WebSocketServerProtocolHandlerTest {
         return ch;
     }
 
-    private EmbeddedChannel createServer(ChannelHandler... handlers) {
+    private static EmbeddedChannel createServer(ChannelHandler... handlers) {
         WebSocketServerProtocolConfig serverConfig = WebSocketServerProtocolConfig.newBuilder()
             .websocketPath("/test")
             .dropPongFrames(false)
@@ -417,7 +413,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @SuppressWarnings("SameParameterValue")
-    private <T> T decode(ByteBuf input, Class<T> clazz) {
+    private static <T> T decode(Buffer input, Class<T> clazz) {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocket13FrameDecoder(true, false, 65536, true));
         assertTrue(ch.writeInbound(input));
         Object decoded = ch.readInbound();

@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -97,9 +96,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                             ctx.fireExceptionCaught(future.cause());
                         } else {
                             localHandshakePromise.trySuccess(null);
-                            // Kept for compatibility
-                            ctx.fireUserEventTriggered(
-                                    ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
                             ctx.fireUserEventTriggered(
                                     new WebSocketServerProtocolHandler.HandshakeComplete(
                                             req.uri(), req.headers(), handshaker.selectedSubprotocol()));

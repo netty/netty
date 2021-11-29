@@ -84,7 +84,6 @@
           </cases>
           <excludeCases />
           <failOnNonStrict>false</failOnNonStrict>
-          <!-- Disable: buffer migration -->
           <skip>true</skip>
         </configuration>
         <executions>

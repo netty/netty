@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
+
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extract;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChunkedInput} that fetches data chunk by chunk for use with WebSocket chunked transfers.
@@ -100,7 +101,7 @@ public final class WebSocketChunkedInput implements ChunkedInput<WebSocketFrame>
         if (buf == null) {
             return null;
         }
-        return new ContinuationWebSocketFrame(input.isEndOfInput(), rsv, buf);
+        return new ContinuationWebSocketFrame(input.isEndOfInput(), rsv, extract(buf));
     }
 
     @Override
