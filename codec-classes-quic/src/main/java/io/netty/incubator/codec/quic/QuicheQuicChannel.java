@@ -114,6 +114,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler;
+    private final EarlyDataSendCallback earlyDataSendCallback;
 
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
@@ -131,6 +132,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private boolean recvStreamPending;
     private boolean streamReadable;
+    private boolean handshakeCompletionNotified;
 
     private int reantranceGuard = 0;
     private static final int IN_RECV = 1 << 1;
@@ -147,7 +149,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile QuicheQuicConnection connection;
     private volatile QuicConnectionAddress remoteIdAddr;
     private volatile QuicConnectionAddress localIdAdrr;
-    private final EarlyDataSendCallback earlyDataSendCallback;
 
     private static final AtomicLongFieldUpdater<QuicheQuicChannel> UNI_STREAMS_LEFT_UPDATER =
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "uniStreamsLeft");
@@ -222,6 +223,34 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     public SSLEngine sslEngine() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.engine();
+    }
+
+    private void notifyAboutHandshakeCompletionIfNeeded(SSLHandshakeException cause) {
+        if (handshakeCompletionNotified) {
+            return;
+        }
+        if (cause != null) {
+            pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            return;
+        }
+        QuicheQuicConnection connection = this.connection;
+        if (connection == null) {
+            return;
+        }
+        switch (connection.engine().getHandshakeStatus()) {
+            case NOT_HANDSHAKING:
+            case FINISHED:
+                handshakeCompletionNotified = true;
+                String sniHostname = connection.engine().sniHostname;
+                if (sniHostname != null) {
+                    connection.engine().sniHostname = null;
+                    pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname));
+                }
+                pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+                break;
+            default:
+                break;
+        }
     }
 
     @Override
@@ -939,7 +968,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private void fireExceptionEvents(Throwable cause) {
         if (cause instanceof SSLHandshakeException) {
-            pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            notifyAboutHandshakeCompletionIfNeeded((SSLHandshakeException) cause);
         }
         pipeline().fireExceptionCaught(cause);
     }
@@ -1257,6 +1286,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             return;
                         }
 
+                        notifyAboutHandshakeCompletionIfNeeded(null);
+
                         if (Quiche.quiche_conn_is_established(connAddr) ||
                                 Quiche.quiche_conn_is_in_early_data(connAddr)) {
                             long uniLeftOld = uniStreamsLeft;
@@ -1419,12 +1450,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     initAddresses(connection);
 
                     pipeline().fireChannelActive();
-                    String sniHostname = connection.engine().sniHostname;
-                    if (sniHostname != null) {
-                        connection.engine().sniHostname = null;
-                        pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname));
-                    }
-                    pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+                    notifyAboutHandshakeCompletionIfNeeded(null);
                     fireDatagramExtensionEvent();
                 }
             } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
@@ -1435,7 +1461,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
-                pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+                notifyAboutHandshakeCompletionIfNeeded(null);
                 fireDatagramExtensionEvent();
                 if (!promiseSet) {
                     this.close(this.voidPromise());
