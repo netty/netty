@@ -51,10 +51,10 @@
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
     <quicheHomeBuildDir>${quicheHomeDir}/build</quicheHomeBuildDir>
-    <quicheHomeIncludeDir>${quicheHomeDir}/include</quicheHomeIncludeDir>
+    <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>fe56de9c7a1117621ea01edc165bc5635f37fe27</quicheCommitSha>
+    <quicheCommitSha>3ab88cad6e67bb08307d02e19adb01f54e9dd334</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -730,7 +730,7 @@
                     <mkdir dir="${quicheHomeDir}" />
                     <copy file="${quicheBuildDir}/${libquiche}" todir="${quicheHomeBuildDir}/" />
                     <copy todir="${quicheHomeIncludeDir}">
-                      <fileset dir="${quicheSourceDir}/include" />
+                      <fileset dir="${quicheSourceDir}/quiche/include" />
                     </copy>
                   </else>
                 </if>
