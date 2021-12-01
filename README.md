@@ -40,7 +40,6 @@ are listed below:
  * `io.netty.codec.http`
  * `io.netty.codec.http2`
  * `io.netty.codec.smtp`
- * `io.netty.codec.socks`
  * `io.netty.codec.xml`
  * `io.netty.common`
  * `io.netty.handler`

@@ -491,7 +491,6 @@
     <module>codec-http</module>
     <module>codec-http2</module>
     <module>codec-smtp</module>
-    <module>codec-socks</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
@@ -504,7 +503,6 @@
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
     <module>handler</module>
-    <module>handler-proxy</module>
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
