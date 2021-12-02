@@ -70,38 +70,6 @@ public final class TestUtils {
     }
 
     /**
-     * Return {@code true} if SCTP is supported by the running os.
-     *
-     */
-    public static boolean isSctpSupported() {
-        String os = System.getProperty("os.name").toLowerCase(Locale.US);
-        if ("unix".equals(os) || "linux".equals(os) || "sun".equals(os) || "solaris".equals(os)) {
-            try {
-                // Try to open a SCTP Channel, by using reflection to make it compile also on
-                // operation systems that not support SCTP like OSX and Windows
-                Class<?> sctpChannelClass = Class.forName("com.sun.nio.sctp.SctpChannel");
-                Channel channel = (Channel) sctpChannelClass.getMethod("open").invoke(null);
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            } catch (UnsupportedOperationException e) {
-                // This exception may get thrown if the OS does not have
-                // the shared libs installed.
-                System.out.print("Not supported: " + e.getMessage());
-                return false;
-            } catch (Throwable t) {
-                if (!(t instanceof IOException)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Returns the method name of the current test.
      */
     public static String testMethodName(TestInfo testInfo) {

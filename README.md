@@ -53,9 +53,6 @@ are listed below:
  * `io.netty.transport.epoll` (`native` omitted - reserved keyword in Java)
  * `io.netty.transport.kqueue` (`native` omitted - reserved keyword in Java)
  * `io.netty.transport.unix.common` (`native` omitted - reserved keyword in Java)
- * `io.netty.transport.rxtx`
- * `io.netty.transport.sctp`
- * `io.netty.transport.udt`
 
 
 

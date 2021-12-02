@@ -286,11 +286,6 @@
       <artifactId>netty-transport</artifactId>
       <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-sctp</artifactId>
-      <scope>compile</scope>
-    </dependency>
     <!--
       The dependencies with the classifier are added by the native-dependencies profile.
       -->

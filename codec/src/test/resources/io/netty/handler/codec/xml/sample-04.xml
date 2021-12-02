@@ -92,7 +92,6 @@
     <module>codec-socks</module>
     <module>transport</module>
     <module>transport-rxtx</module>
-    <module>transport-sctp</module>
     <module>transport-udt</module>
     <module>handler</module>
     <module>example</module>
