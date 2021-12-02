@@ -141,14 +141,6 @@ and decompression library written by William Kinney. It can be obtained at:
   * HOMEPAGE:
     * https://code.google.com/p/jfastlz/
 
-This product contains a modified portion of and optionally depends on 'Protocol Buffers', Google's data
-interchange format, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.protobuf.txt (New BSD License)
-  * HOMEPAGE:
-    * https://github.com/google/protobuf
-
 This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
 a temporary self-signed X.509 certificate when the JVM does not provide the
 equivalent functionality.  It can be obtained at:
@@ -165,14 +157,6 @@ by Google Inc, which can be obtained at:
     * license/LICENSE.snappy.txt (New BSD License)
   * HOMEPAGE:
     * https://github.com/google/snappy
-
-This product optionally depends on 'JBoss Marshalling', an alternative Java
-serialization API, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.jboss-marshalling.txt (Apache License 2.0)
-  * HOMEPAGE:
-    * https://github.com/jboss-remoting/jboss-marshalling
 
 This product optionally depends on 'Caliper', Google's micro-
 benchmarking framework, which can be obtained at:

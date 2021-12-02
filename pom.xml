@@ -195,8 +195,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -220,8 +218,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -245,8 +241,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -269,8 +263,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -290,8 +282,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -312,8 +302,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -334,8 +322,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -445,7 +431,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>30</netty.build.version>
-    <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
     <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
@@ -559,15 +544,6 @@
         <version>1.2.0</version>
       </dependency>
 
-      <!-- JBoss Marshalling - completely optional -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
       <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
         <groupId>org.eclipse.jetty.npn</groupId>
@@ -580,18 +556,6 @@
         <artifactId>alpn-api</artifactId>
         <version>1.1.2.v20150522</version>
         <scope>provided</scope> <!-- Provided by alpn-boot -->
-      </dependency>
-
-      <!-- Google Protocol Buffers - completely optional -->
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>2.6.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf.nano</groupId>
-        <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-5</version>
       </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
@@ -822,20 +786,6 @@
         <groupId>io.github.artsok</groupId>
         <artifactId>rerunner-jupiter</artifactId>
         <version>2.1.6</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependencies for jboss marshalling encoder/decoder -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-serial</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-river</artifactId>
-        <version>${jboss.marshalling.version}</version>
         <scope>test</scope>
       </dependency>
 
