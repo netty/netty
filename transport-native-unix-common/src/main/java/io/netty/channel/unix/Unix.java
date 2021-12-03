@@ -53,11 +53,9 @@ public final class Unix {
      * @param registerTask
      */
     @UnstableApi
-    public static void registerInternal(Runnable registerTask) {
-        if (registered.compareAndSet(false, true)) {
-            registerTask.run();
-            Socket.initialize();
-        }
+    public static synchronized void registerInternal(Runnable registerTask) {
+        registerTask.run();
+        Socket.initialize();
     }
 
     /**
