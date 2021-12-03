@@ -46,7 +46,6 @@ EXAMPLE_MAP=(
   'telnet-client:io.netty.example.telnet.TelnetClient'
   'telnet-server:io.netty.example.telnet.TelnetServer'
   'proxy-server:io.netty.example.proxy.HexDumpProxy'
-  'socksproxy-server:io.netty.example.socksproxy.SocksServer'
   'uptime-client:io.netty.example.uptime.UptimeClient'
   'uptime-server:io.netty.example.uptime.UptimeServer'
   'localecho:io.netty.example.localecho.LocalEcho'
