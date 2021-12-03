@@ -175,9 +175,9 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     private static void assertArenaMetrics(
             List<PoolArenaMetric> arenaMetrics, int expectedActive, int expectedAlloc, int expectedDealloc) {
-        int active = 0;
-        int alloc = 0;
-        int dealloc = 0;
+        long active = 0;
+        long alloc = 0;
+        long dealloc = 0;
         for (PoolArenaMetric arena : arenaMetrics) {
             active += arena.numActiveAllocations();
             alloc += arena.numAllocations();
