@@ -1449,6 +1449,9 @@
               <configuration>
                 <resources>
                   <resource>
+                    <directory>src/test/resources</directory>
+                  </resource>
+                  <resource>
                     <directory>${project.build.outputDirectory}/</directory>
                     <excludes>
                       <!--
