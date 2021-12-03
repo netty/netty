@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.protobuf.ProtobufDecoder;
+import io.netty.handler.codec.bytes.ByteArrayDecoder;
 
 /**
  * A decoder that decodes the content of the received {@link DatagramPacket} using
@@ -29,7 +29,7 @@ import io.netty.handler.codec.protobuf.ProtobufDecoder;
  *
  * <pre><code>
  * {@link ChannelPipeline} pipeline = ...;
- * pipeline.addLast("udpDecoder", new {@link DatagramPacketDecoder}(new {@link ProtobufDecoder}(...));
+ * pipeline.addLast("udpDecoder", new {@link DatagramPacketDecoder}(new {@link ByteArrayDecoder}(...));
  * </code></pre>
  */
 public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacket> {

@@ -20,7 +20,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.protobuf.ProtobufEncoder;
+import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
@@ -36,7 +36,7 @@ import static java.util.Objects.requireNonNull;
  *
  * <pre><code>
  * {@link ChannelPipeline} pipeline = ...;
- * pipeline.addLast("udpEncoder", new {@link DatagramPacketEncoder}(new {@link ProtobufEncoder}(...));
+ * pipeline.addLast("udpEncoder", new {@link DatagramPacketEncoder}(new {@link ByteArrayEncoder}(...));
  * </code></pre>
  *
  * Note: As UDP packets are out-of-order, you should make sure the encoded message size are not greater than
