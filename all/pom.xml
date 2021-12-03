@@ -228,11 +228,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-haproxy</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http</artifactId>
       <scope>compile</scope>
     </dependency>
