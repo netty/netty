@@ -519,7 +519,6 @@
     <module>transport-native-epoll</module>
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
-    <module>transport-sctp</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>example</module>

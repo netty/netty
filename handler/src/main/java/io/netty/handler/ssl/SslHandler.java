@@ -161,7 +161,7 @@ public class SslHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslHandler.class);
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
+            "^.*(?:Socket|Datagram)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
     private static final int STATE_SENT_FIRST_MESSAGE = 1;
@@ -1099,11 +1099,6 @@ public class SslHandler extends ByteToMessageDecoder {
 
                     if (SocketChannel.class.isAssignableFrom(clazz)
                             || DatagramChannel.class.isAssignableFrom(clazz)) {
-                        return true;
-                    }
-
-                    // also match against SctpChannel via String matching as it may not present.
-                    if ("com.sun.nio.sctp.SctpChannel".equals(clazz.getSuperclass().getName())) {
                         return true;
                     }
                 } catch (Throwable cause) {
