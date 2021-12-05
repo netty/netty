@@ -497,6 +497,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (localAddress == null) {
             future = b.register();
         } else {
+            b.option(ChannelOption.SO_REUSEADDR, true);
             future = b.bind(localAddress);
         }
         Throwable cause = future.cause();
