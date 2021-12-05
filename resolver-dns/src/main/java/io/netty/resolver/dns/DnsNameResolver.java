@@ -483,6 +483,7 @@ public class DnsNameResolver extends InetNameResolver {
         b.group(executor());
         b.channelFactory(channelFactory);
         b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+        b.option(ChannelOption.SO_REUSEADDR, true);
         final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().<Channel>newPromise());
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
