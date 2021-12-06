@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -210,7 +209,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 // skip all bytes as we will consume all of them
                 uncompressed.skipBytes(len);
             } else {
-                heapBuf = PooledByteBufAllocator.DEFAULT.heapBuffer(len, len);
+                heapBuf = ctx.alloc().heapBuffer(len, len);
                 uncompressed.readBytes(heapBuf, len);
                 inAry = heapBuf.array();
                 offset = heapBuf.arrayOffset() + heapBuf.readerIndex();
