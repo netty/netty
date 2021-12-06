@@ -36,6 +36,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -359,7 +360,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    abstract class AbstractKQueueUnsafe extends AbstractUnsafe {
+    @UnstableApi
+    public abstract class AbstractKQueueUnsafe extends AbstractUnsafe {
         boolean readPending;
         boolean maybeMoreDataToRead;
         private KQueueRecvByteAllocatorHandle allocHandle;
