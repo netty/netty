@@ -1525,25 +1525,29 @@
           <executions>
             <execution>
               <id>default-testResources</id>
-              <phase>test-compile</phase>
+              <phase>process-test-resources</phase>
               <goals>
                 <goal>testResources</goal>
               </goals>
               <configuration>
                 <resources>
                   <resource>
-                    <directory>src/test/resources</directory>
+                    <directory>${project.basedir}/src/test/resources</directory>
                   </resource>
                   <resource>
-                    <directory>${project.build.outputDirectory}/</directory>
+                    <directory>${project.build.outputDirectory}</directory>
                     <excludes>
                       <!--
-                        Exclude native files as these are already in the classes directory. This is needed as
-                        otherwise NativeLibraryLoader will fail to load the native lib as it detects duplicates on
-                        the classpath.
-                      -->
+-                       Exclude native files as these are already in the classes directory. This is needed as
+-                       otherwise NativeLibraryLoader will fail to load the native lib as it detects duplicates on
+-                       the classpath.
+-                     -->
                       <exclude>META-INF/native/*.*</exclude>
                     </excludes>
+                    <includes>
+                      <!-- Include everything else -->
+                      <include>*.*</include>
+                    </includes>
                   </resource>
                 </resources>
               </configuration>
