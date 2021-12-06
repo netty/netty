@@ -554,6 +554,7 @@ public final class DnsNameResolverBuilder {
 
         copiedBuilder.queryTimeoutMillis(queryTimeoutMillis);
         copiedBuilder.resolvedAddressTypes(resolvedAddressTypes);
+        copiedBuilder.localAddress(localAddress);
         copiedBuilder.recursionDesired(recursionDesired);
         copiedBuilder.maxQueriesPerResolve(maxQueriesPerResolve);
         copiedBuilder.traceEnabled(traceEnabled);

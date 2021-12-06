@@ -483,7 +483,6 @@ public class DnsNameResolver extends InetNameResolver {
         b.group(executor());
         b.channelFactory(channelFactory);
         b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-        b.option(ChannelOption.SO_REUSEADDR, true);
         final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().<Channel>newPromise());
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
@@ -498,7 +497,7 @@ public class DnsNameResolver extends InetNameResolver {
             future = b.register();
         } else {
             b.option(ChannelOption.SO_REUSEADDR, true);
-            future = b.bind(localAddress);
+            future = b.bind(localAddress).awaitUninterruptibly();
         }
         Throwable cause = future.cause();
         if (cause != null) {
