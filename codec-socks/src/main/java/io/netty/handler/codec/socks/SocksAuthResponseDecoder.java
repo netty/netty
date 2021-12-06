@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksAuthResponseDecoder.State;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -55,7 +56,8 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
         channelHandlerContext.pipeline().remove(this);
     }
 
-    enum State {
+    @UnstableApi
+    public enum State {
         CHECK_PROTOCOL_VERSION,
         READ_AUTH_RESPONSE
     }

@@ -23,6 +23,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder.State;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -34,7 +35,8 @@ import java.util.List;
  */
 public class Socks5InitialResponseDecoder extends ReplayingDecoder<State> {
 
-    enum State {
+    @UnstableApi
+    public enum State {
         INIT,
         SUCCESS,
         FAILURE

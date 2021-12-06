@@ -26,6 +26,7 @@ import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -55,7 +56,8 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     private static final int DEFAULT_CHUNK_SIZE = 8132;
     private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
 
-    enum State {
+    @UnstableApi
+    public enum State {
         SKIP_CONTROL_CHARACTERS,
         READ_HEADERS,
         READ_CONTENT,
