@@ -27,8 +27,6 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
