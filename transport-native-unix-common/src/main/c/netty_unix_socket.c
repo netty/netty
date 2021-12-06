@@ -50,7 +50,6 @@ static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID domainDatagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
 static jclass inetSocketAddressClass = NULL;
-static int socketType = AF_INET;
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
@@ -209,31 +208,27 @@ jbyteArray netty_unix_socket_createInetSocketAddressArray(JNIEnv* env, const str
     return bArray;
 }
 
-static void netty_unix_socket_initialize(JNIEnv* env, jclass clazz, jboolean ipv4Preferred) {
+static jboolean netty_unix_socket_isIPv6Preferred0(JNIEnv* env, jclass clazz, jboolean ipv4Preferred) {
     if (ipv4Preferred) {
         // User asked to use ipv4 explicitly.
-        socketType = AF_INET;
-    } else {
-        int fd = nettyNonBlockingSocket(AF_INET6, SOCK_STREAM, 0);
-        if (fd == -1) {
-            socketType = errno == EAFNOSUPPORT ? AF_INET : AF_INET6;
-        } else {
-            // Explicitly try to bind to ::1 to ensure IPV6 can really be used.
-            // See https://github.com/netty/netty/issues/7021.
-            struct sockaddr_in6 addr;
-            memset(&addr, 0, sizeof(addr));
-            addr.sin6_family = AF_INET6;
-            addr.sin6_addr.s6_addr[15] = 1; /* [::1]:0 */
-            int res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
-
-            close(fd);
-            socketType = res == 0 ? AF_INET6 : AF_INET;
-        }
+        return JNI_FALSE;
     }
-}
 
-static jboolean netty_unix_socket_isIPv6Preferred(JNIEnv* env, jclass clazz) {
-    return socketType == AF_INET6;
+    int fd = nettyNonBlockingSocket(AF_INET6, SOCK_STREAM, 0);
+    if (fd == -1) {
+        return errno == EAFNOSUPPORT ? JNI_FALSE : JNI_TRUE;
+    }
+
+    // Explicitly try to bind to ::1 to ensure IPV6 can really be used.
+    // See https://github.com/netty/netty/issues/7021.
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin6_family = AF_INET6;
+    addr.sin6_addr.s6_addr[15] = 1; /* [::1]:0 */
+    int res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+
+    close(fd);
+    return res == 0 ? JNI_TRUE : JNI_FALSE;
 }
 
 
@@ -1110,8 +1105,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoLinger", "(I)I", (void *) netty_unix_socket_getSoLinger },
   { "getTrafficClass", "(IZ)I", (void *) netty_unix_socket_getTrafficClass },
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
-  { "initialize", "(Z)V", (void *) netty_unix_socket_initialize },
-  { "isIPv6Preferred", "()Z", (void *) netty_unix_socket_isIPv6Preferred },
+  { "isIPv6Preferred0", "(Z)Z", (void *) netty_unix_socket_isIPv6Preferred0 },
   { "isIPv6", "(I)Z", (void *) netty_unix_socket_isIPv6 },
   { "msgFastopen", "()I", (void *) netty_unit_socket_msgFastopen }
 };
