@@ -60,6 +60,37 @@ public class BufferCompositionTest extends BufferTestSupport {
                      allocator.allocate(8).send(),
                      allocator.allocate(8).send()))) {
             assertEquals(24, composite.capacity());
+            assertEquals(0, composite.readableBytes());
+            assertEquals(24, composite.writableBytes());
+            assertTrue(isOwned((ResourceSupport<?, ?>) composite));
+        }
+    }
+
+    @Test
+    public void compositeBufferFromSendsWithReadableData() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer composite = allocator.compose(asList(
+                     allocator.allocate(8).writeInt(42).send(),
+                     allocator.allocate(8).send(),
+                     allocator.allocate(8).send()))) {
+            assertEquals(24, composite.capacity());
+            assertEquals(4, composite.readableBytes());
+            assertEquals(20, composite.writableBytes());
+            assertTrue(isOwned((ResourceSupport<?, ?>) composite));
+        }
+    }
+
+    @Test
+    public void compositeBufferFromSendsWithHole() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer composite = allocator.compose(asList(
+                     allocator.allocate(8).writeInt(42).send(),
+                     // This leaves the 4 writable bytes in prior buffer inaccessible (creates a hole):
+                     allocator.allocate(8).writeInt(42).send(),
+                     allocator.allocate(8).send()))) {
+            assertEquals(20, composite.capacity());
+            assertEquals(8, composite.readableBytes());
+            assertEquals(12, composite.writableBytes());
             assertTrue(isOwned((ResourceSupport<?, ?>) composite));
         }
     }
@@ -237,32 +268,53 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void whenExtendingCompositeBufferWithWriteOffsetLessThanCapacityExtensionWriteOffsetMustBeZero() {
+    public void whenExtendingCompositeBufferWithWriteOffsetLessThanCapacityThenReadableBytesMustConcatenate() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
                 composite = allocator.compose(a.send());
             }
             try (composite) {
-                composite.writeInt(0);
+                composite.writeInt(1);
                 try (Buffer b = allocator.allocate(8)) {
-                    b.writeInt(1);
-                    var exc = assertThrows(IllegalArgumentException.class,
-                            () -> composite.extendWith(b.send()));
-                    assertThat(exc).hasMessageContaining("unwritten gap");
+                    b.writeInt(2);
+                    composite.extendWith(b.send());
                 }
-                try (Buffer b = allocator.allocate(8)) {
-                    b.writeLong(1);
-                    var exc = assertThrows(IllegalArgumentException.class,
-                            () -> composite.extendWith(b.send()));
-                    assertThat(exc).hasMessageContaining("unwritten gap");
+                assertThat(composite.readableBytes()).isEqualTo(8);
+                assertThat(composite.readLong()).isEqualTo(0x00000001_00000002L);
+                assertThat(composite.capacity()).isEqualTo(12);
+                try (Buffer c = allocator.allocate(8)) {
+                    c.writeLong(3);
+                    composite.extendWith(c.send());
                 }
+                assertThat(composite.readableBytes()).isEqualTo(8);
+                assertThat(composite.readLong()).isEqualTo(0x00000000_00000003L);
+                assertThat(composite.capacity()).isEqualTo(16); // 2*4 writable bytes lost in the gaps. 24 - 8 = 16.
                 try (Buffer b = allocator.allocate(8)) {
                     b.setInt(0, 1);
                     composite.extendWith(b.send());
-                    assertThat(composite.capacity()).isEqualTo(16);
-                    assertThat(composite.writerOffset()).isEqualTo(4);
                 }
+                assertThat(composite.capacity()).isEqualTo(24);
+                assertThat(composite.writerOffset()).isEqualTo(16);
+            }
+        }
+    }
+
+    @Test
+    public void mustConcatenateWritableBytesWhenExtensionWriteOffsetIsZero() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            try (CompositeBuffer composite = allocator.compose(allocator.allocate(8).send())) {
+                composite.writeInt(0x01020304);
+                assertThat(composite.writableBytes()).isEqualTo(4);
+                composite.extendWith(allocator.allocate(8).send());
+                assertThat(composite.writableBytes()).isEqualTo(12);
+                assertThat(composite.capacity()).isEqualTo(16);
+                composite.writeLong(0x05060708_0A0B0C0DL);
+                assertThat(composite.writableBytes()).isEqualTo(4);
+                assertThat(composite.readableBytes()).isEqualTo(12);
+                assertEquals(0x01020304, composite.readInt());
+                assertEquals(0x05060708_0A0B0C0DL, composite.readLong());
+                assertThat(composite.readableBytes()).isEqualTo(0);
             }
         }
     }
@@ -289,7 +341,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void whenExtendingCompositeBufferWithReadOffsetLessThanCapacityExtensionReadOffsetMustZero() {
+    public void whenExtendingCompositeBufferWithReadOffsetLessThanCapacityThenReadableBytesMustConcatenate() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              CompositeBuffer composite = allocator.compose(allocator.allocate(8).send())) {
             composite.writeLong(0);
@@ -297,24 +349,25 @@ public class BufferCompositionTest extends BufferTestSupport {
 
             Buffer b = allocator.allocate(8);
             b.writeInt(1);
-            b.readInt();
-            var exc = assertThrows(IllegalArgumentException.class,
-                    () -> composite.extendWith(b.send()));
-            assertThat(exc).hasMessageContaining("unread gap");
-            assertThat(composite.capacity()).isEqualTo(8);
-            assertThat(composite.writerOffset()).isEqualTo(8);
+            b.readInt(); // 'b' has 4 writable bytes, no readable bytes.
+            composite.extendWith(b.send());
+            assertThat(composite.capacity()).isEqualTo(12);
+            assertThat(composite.writerOffset()).isEqualTo(8); // woff from first component
             assertThat(composite.readerOffset()).isEqualTo(4);
+            assertThat(composite.readableBytes()).isEqualTo(4);
+            assertThat(composite.writableBytes()).isEqualTo(4);
 
             Buffer c = allocator.allocate(8);
             c.writeLong(1);
-            c.readLong();
-            exc = assertThrows(IllegalArgumentException.class,
-                    () -> composite.extendWith(c.send()));
-            assertThat(exc).hasMessageContaining("unread gap");
-            assertThat(composite.capacity()).isEqualTo(8);
+            c.readLong(); // no readable or writable bytes.
+            composite.extendWith(c.send());
+            assertThat(composite.capacity()).isEqualTo(12);
             assertThat(composite.writerOffset()).isEqualTo(8);
             assertThat(composite.readerOffset()).isEqualTo(4);
+            assertThat(composite.readableBytes()).isEqualTo(4);
+            assertThat(composite.writableBytes()).isEqualTo(4);
 
+            // contribute 4 readable bytes, but make the existing writable bytes unavailable
             composite.extendWith(allocator.allocate(8).writeInt(1).send());
             assertThat(composite.capacity()).isEqualTo(16);
             assertThat(composite.writerOffset()).isEqualTo(12);

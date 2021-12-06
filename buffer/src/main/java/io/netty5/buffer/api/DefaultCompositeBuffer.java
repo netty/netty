@@ -121,13 +121,13 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         } else {
             bufs = new ArrayList<>(4);
         }
-        RuntimeException ise = null;
+        RuntimeException receiveException = null;
         for (Send<Buffer> buf: sends) {
-            if (ise != null) {
+            if (receiveException != null) {
                 try {
                     buf.close();
                 } catch (Exception closeExc) {
-                    ise.addSuppressed(closeExc);
+                    receiveException.addSuppressed(closeExc);
                 }
             } else {
                 try {
@@ -135,19 +135,19 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 } catch (RuntimeException e) {
                     // We catch RuntimeException instead of IllegalStateException to ensure cleanup always happens
                     // regardless of the exception thrown.
-                    ise = e;
+                    receiveException = e;
                     for (Buffer b: bufs) {
                         try {
                             b.close();
                         } catch (Exception closeExc) {
-                            ise.addSuppressed(closeExc);
+                            receiveException.addSuppressed(closeExc);
                         }
                     }
                 }
             }
         }
-        if (ise != null) {
-            throw ise;
+        if (receiveException != null) {
+            throw receiveException;
         }
         return new DefaultCompositeBuffer(allocator, filterExternalBufs(bufs.stream()), COMPOSITE_DROP);
     }
@@ -239,6 +239,35 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private void computeBufferOffsets() {
+        int firstReadable = -1;
+        int lastReadable = -1;
+        int len = bufs.length;
+        for (int i = 0; i < len; i++) {
+            if (bufs[i].readableBytes() != 0) {
+                if (firstReadable == -1) {
+                    firstReadable = i;
+                }
+                lastReadable = i;
+            }
+        }
+        // Bytes already read, in components after the first readable section, must be trimmed off.
+        // Likewise, writable bytes prior to the last readable section must be trimmed off.
+        if (firstReadable != -1) {
+            for (int i = firstReadable + 1; i < len; i++) {
+                Buffer buf = bufs[i];
+                if (buf.readerOffset() > 0) {
+                    buf.readSplit(0).close();
+                }
+            }
+            for (int i = 0; i < lastReadable; i++) {
+                Buffer buf = bufs[i];
+                if (buf.writableBytes() > 0) {
+                    bufs[i] = buf.split();
+                    buf.close();
+                }
+            }
+        }
+
         int woff = 0;
         int roff = 0;
         if (bufs.length > 0) {
@@ -253,7 +282,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                     }
                 } else if (buf.writerOffset() != 0) {
                     // We're past the composite write-offset, so all component writer-offsets must be zero from here.
-                    throw new IllegalArgumentException(
+                    throw new AssertionError(
                             "The given buffers cannot be composed because they leave an unwritten gap: " +
                             Arrays.toString(bufs) + '.');
                 }
@@ -267,7 +296,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                         roffMidpoint = true;
                     }
                 } else if (buf.readerOffset() != 0) {
-                    throw new IllegalArgumentException(
+                    throw new AssertionError(
                             "The given buffers cannot be composed because they leave an unread gap: " +
                             Arrays.toString(bufs) + '.');
                 }

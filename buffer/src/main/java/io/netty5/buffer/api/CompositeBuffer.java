@@ -31,6 +31,11 @@ import java.nio.charset.Charset;
  *         will have ownership, because it is guaranteed that there are no other references to its constituent buffers.
  *     </li>
  *     <li>
+ *         {@link BufferAllocator#compose(Send)} creates a composite buffer with a single component.
+ *         Since {@link Send#receive()} transfers ownership, the resulting composite buffer
+ *         will have ownership, because it is guaranteed that there are no other references to its constituent buffer.
+ *     </li>
+ *     <li>
  *         {@link BufferAllocator#compose()} creates an empty, zero capacity, composite buffer. Such empty buffers may
  *         change their {@linkplain #readOnly() read-only} states when they gain their first component.
  *     </li>
@@ -38,24 +43,49 @@ import java.nio.charset.Charset;
  * Composite buffers can later be extended with internally allocated components, with {@link #ensureWritable(int)},
  * or with externally allocated buffers, using {@link #extendWith(Send)}.
  *
- * <h3>Constituent buffer requirements</h3>
+ * <h3>How buffers compose</h3>
  *
- * The buffers that are being composed to form the composite buffer, need to live up to a number of requirements.
- * Basically, if we imagine that the constituent buffers have their memory regions concatenated together, then the
- * result needs to make sense.
+ * A buffer can be thought of as having three distinct regions, in order:
+ * <ol>
+ *     <li>Memory that have been read.</li>
+ *     <li>Memory that is readable.</li>
+ *     <li>Memory that can be written to.</li>
+ * </ol>
+ *
+ * A composite buffer must present itself similarly, but may be composed of buffers where their offsets don't line up,
+ * and thus end up producing "gaps" in the composite buffer.
+ * The solution is that the composite buffer hide these gaps from view.
  * <p>
- * The read and write offsets of the constituent buffers must be arranged such that there are no "gaps" when viewed
- * as a single connected chunk of memory.
- * Specifically, there can be at most one buffer whose write offset is neither zero nor at capacity,
- * and all buffers prior to it must have their write offsets at capacity, and all buffers after it must have a
- * write-offset of zero.
- * Likewise, there can be at most one buffer whose read offset is neither zero nor at capacity,
- * and all buffers prior to it must have their read offsets at capacity, and all buffers after it must have a read
- * offset of zero.
- * Furthermore, the sum of the read offsets must be less than or equal to the sum of the write-offsets.
+ * For example, if we compose two buffers that both have non-zero read-offset, then the composite buffer will get the
+ * read-offset of the first buffer, followed by a concatenation of the readable memory from both.
+ * Similarly, the write-offset of the composite buffer will come from the last buffer with a non-zero write-offset,
+ * and any writable memory prior to the last readable memory region will be hidden:
+ *
+ * <pre>
+ *     First buffer                Second buffer
+ *      +----------------------+    +--------------------+
+ *     0|    |r/o      |w/o    |   0|    |r/o     |w/o   |
+ *      +----+---------+-------+    +----+--------+------+
+ *       \    \         \  ,____________/   ,___________/
+ *        \    \         \/                /
+ *         +----+---------+--------+------+
+ *        0|    |r/o      :        |w/o   |  Composite buffer
+ *         +------------------------------+
+ * </pre>
+ *
+ * Components in the middle can have both their end-regions hidden in the same way, so only their readable memory is
+ * included in the composite buffer.
+ * Buffers that consist entirely of memory that has already been read, or memory that is writable, can also concatenate
+ * onto those regions at the ends.
+ * The final capacity of the composite buffer, will be the sum of all the visible regions.
  * <p>
  * Reads and writes to the composite buffer that modifies the read or write offsets, will also modify the relevant
  * offsets in the constituent buffers.
+ *
+ * <h3>Constituent buffer requirements</h3>
+ *
+ * The buffers that are being composed must all have the same writability.
+ * Either all components must be {@linkplain Buffer#readOnly() read-only}, or they must all be writable.
  * <p>
  * It is not a requirement that the buffers have the same size.
  * <p>
