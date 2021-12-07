@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  *         broken in a non-major release!</li>
  * </ol>
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 @Target({
         ElementType.ANNOTATION_TYPE,
         ElementType.CONSTRUCTOR,

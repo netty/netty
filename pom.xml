@@ -910,6 +910,37 @@
 
     <plugins>
       <plugin>
+        <groupId>org.revapi</groupId>
+        <artifactId>revapi-maven-plugin</artifactId>
+        <version>0.14.6</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.revapi</groupId>
+            <artifactId>revapi-java</artifactId>
+            <version>0.26.1</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <versionFormat>.*\.Final</versionFormat>
+          <analysisConfiguration>
+            <revapi.versions>
+              <enabled>true</enabled>
+              <onAllowed>
+                <criticality>documented</criticality>
+              </onAllowed>
+            </revapi.versions>
+          </analysisConfiguration>
+        </configuration>
+        <executions>
+          <execution>
+            <id>api-check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
         <version>0.15.4</version>

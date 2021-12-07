@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -159,7 +160,8 @@ final class NativeDatagramPacketArray {
      * Used to pass needed data to JNI.
      */
     @SuppressWarnings("unused")
-    final class NativeDatagramPacket {
+    @UnstableApi
+    public final class NativeDatagramPacket {
 
         // This is the actual struct iovec*
         private long memoryAddress;
