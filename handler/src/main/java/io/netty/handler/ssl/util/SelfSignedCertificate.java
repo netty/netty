@@ -219,7 +219,7 @@ public final class SelfSignedCertificate {
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
 
-        if (!algorithm.equalsIgnoreCase("EC") && !algorithm.equalsIgnoreCase("RSA")) {
+        if (!"EC".equalsIgnoreCase(algorithm) && !"RSA".equalsIgnoreCase(algorithm)) {
             throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
         }
 
