@@ -923,20 +923,12 @@
         <configuration>
           <versionFormat>.*\.Final</versionFormat>
           <analysisConfiguration>
-            <revapi.java.filter.annotated>
-              <exclude>
-                <item>@io.netty.util.internal.UnstableApi</item>
-              </exclude>
-            </revapi.java.filter.annotated>
-            <revapi.java.filter.packages>
-              <regex>true</regex>
-              <exclude>
-                <item>.*\.internal\..*</item>
-              </exclude>
-            </revapi.java.filter.packages>
-            <revapi.semver.ignore>
+            <revapi.versions>
               <enabled>true</enabled>
-            </revapi.semver.ignore>
+              <onAllowed>
+                <criticality>documented</criticality>
+              </onAllowed>
+            </revapi.versions>
           </analysisConfiguration>
         </configuration>
         <executions>
