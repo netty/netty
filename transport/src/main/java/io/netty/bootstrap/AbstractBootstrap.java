@@ -50,21 +50,41 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
  * transports such as datagram (UDP).</p>
  */
+//B继承自AbstractBootstrap，用于表示自身的类型
+//C继承自Channel类，表示创建的Channel类型
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
     @SuppressWarnings("unchecked")
     private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
     @SuppressWarnings("unchecked")
     private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
+    /**
+     * EventLoopGroup对象
+     */
     volatile EventLoopGroup group;
+    /**
+     * Channel工厂，用于创建Channel对象
+     */
     @SuppressWarnings("deprecation")
     private volatile ChannelFactory<? extends C> channelFactory;
+    /**
+     * 本地地址
+     */
     private volatile SocketAddress localAddress;
 
     // The order in which ChannelOptions are applied is important they may depend on each other for validation
     // purposes.
+    /**
+     * 可选项集合
+     */
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    /**
+     * 属性集合，可以理解成java.nio.channels.SelectionKey的attachment属性，并且类型为Map
+     */
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
+    /**
+     * 处理器
+     */
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -76,6 +96,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
         localAddress = bootstrap.localAddress;
+        /**
+         * 这里为何设置options时要加锁？因为options可能再另外的线程被修改，例如option方法{@link #option(ChannelOption, Object)}
+         */
         synchronized (bootstrap.options) {
             options.putAll(bootstrap.options);
         }
@@ -138,7 +161,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * The {@link SocketAddress} which is used to bind the local "end" to.
+     * 设置创建Channel的本地地址，一般都会调用#bind方法进行配置
      */
     public B localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
@@ -199,6 +222,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
+     *
+     * 校验配置是否正确，#bind方法会调用此方法
      */
     public B validate() {
         if (group == null) {
@@ -214,6 +239,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
      * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
      * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
+     *
+     * 深拷贝一个AbstractBootstrap实例，但并不是所有的属性都是深拷贝，具体可以看构造方法，只有options和attrs才深拷贝，其他的都是浅拷贝
      */
     @Override
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")

@@ -49,16 +49,19 @@ public final class EchoServer {
         }
 
         // Configure the server.
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        //创建两个EventLoopGroup对象
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);//创建boos线程组，用于服务端接受客户端的连接
+        EventLoopGroup workerGroup = new NioEventLoopGroup();//创建worker线程组，用于进行SocketChannel的数据读写，处理业务逻辑
+        //创建Handler
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
+            //创建ServerBootstrap对象
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
-             .channel(NioServerSocketChannel.class)
-             .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
-             .childHandler(new ChannelInitializer<SocketChannel>() {
+            b.group(bossGroup, workerGroup)//设置EventLoopGroup
+             .channel(NioServerSocketChannel.class)//设置要被实例化的NioServerSocketChannel类
+             .option(ChannelOption.SO_BACKLOG, 100) //设置NioServerSocketChannel的可设置项
+             .handler(new LoggingHandler(LogLevel.INFO))//设置NioServerSocketChannel的处理器
+             .childHandler(new ChannelInitializer<SocketChannel>() {//设置处理连入的Client的SocketChannel的处理器
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline p = ch.pipeline();
@@ -71,12 +74,16 @@ public final class EchoServer {
              });
 
             // Start the server.
+            //绑定端口，并同步等待成功，即启动服务端
             ChannelFuture f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
+            //监听服务端关闭，并阻塞等待
+            //这里并不是关闭服务器，而是“监听”服务端关闭
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
+            //优雅关闭两个EventLoopGroup对象
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }

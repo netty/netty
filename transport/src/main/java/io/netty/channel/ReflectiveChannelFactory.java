@@ -26,6 +26,9 @@ import java.lang.reflect.Constructor;
  */
 public class ReflectiveChannelFactory<T extends Channel> implements ChannelFactory<T> {
 
+    /**
+     * 需要在初始化时就获取到对应Channel的默认构造器，为创建Channel实例时减少开销
+     */
     private final Constructor<? extends T> constructor;
 
     public ReflectiveChannelFactory(Class<? extends T> clazz) {
