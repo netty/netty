@@ -227,7 +227,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             }
 
             deflater.setInput(inAry, offset, len);
-            for (; ;) {
+            for (;;) {
                 deflate(out);
                 if (deflater.needsInput()) {
                     // Consumed everything
