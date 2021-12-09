@@ -20,6 +20,7 @@ import io.netty.buffer.api.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
@@ -234,5 +235,31 @@ public class BufferStreamTest {
         try (BufferInputStream in = new BufferInputStream(buf.send())) {
             assertThrows(EOFException.class, in::readByte);
         }
+    }
+
+    @Test
+    public void writesToClosedStreamMustThrow() throws IOException {
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(16);
+        BufferOutputStream stream = new BufferOutputStream(buf);
+        stream.close();
+        assertThrows(IOException.class, () -> stream.write(0));
+        assertThrows(IOException.class, () -> stream.write(new byte[1]));
+        assertThrows(IOException.class, () -> stream.write(new byte[1], 0, 1));
+        stream.write(EMPTY_BYTES);
+        stream.write(new byte[1], 0, 0);
+        assertThrows(IOException.class, () -> stream.writeBoolean(true));
+        assertThrows(IOException.class, () -> stream.writeByte(0));
+        assertThrows(IOException.class, () -> stream.writeBytes("0"));
+        assertThrows(IOException.class, () -> stream.writeBytes(""));
+        assertThrows(IOException.class, () -> stream.writeChar(0));
+        assertThrows(IOException.class, () -> stream.writeChars("0"));
+        assertThrows(IOException.class, () -> stream.writeChars(""));
+        assertThrows(IOException.class, () -> stream.writeFloat(0));
+        assertThrows(IOException.class, () -> stream.writeInt(0));
+        assertThrows(IOException.class, () -> stream.writeShort(0));
+        assertThrows(IOException.class, () -> stream.writeLong(0));
+        assertThrows(IOException.class, () -> stream.writeDouble(0));
+        assertThrows(IOException.class, () -> stream.writeUTF("0"));
+        assertThrows(IOException.class, () -> stream.writeUTF(""));
     }
 }

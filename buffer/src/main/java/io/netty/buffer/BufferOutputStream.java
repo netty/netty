@@ -47,8 +47,7 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
      * Creates a new stream which writes data to the specified {@code buffer}.
      */
     public BufferOutputStream(Buffer buffer) {
-        requireNonNull(buffer, "buffer");
-        this.buffer = buffer;
+        this.buffer = requireNonNull(buffer, "buffer");
         startIndex = buffer.writerOffset();
     }
 
@@ -71,6 +70,9 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void write(byte[] b) throws IOException {
+        if (b.length == 0) {
+            return;
+        }
         prepareWrite(b.length);
         buffer.writeBytes(b);
     }
@@ -180,7 +182,10 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
         }
     }
 
-    private void prepareWrite(int len) {
+    private void prepareWrite(int len) throws IOException {
+        if (closed) {
+            throw new IOException("Stream closed");
+        }
         buffer.ensureWritable(len, buffer.capacity() >> 2, true);
     }
 }

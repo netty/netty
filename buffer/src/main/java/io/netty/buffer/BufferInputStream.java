@@ -59,8 +59,7 @@ public class BufferInputStream extends InputStream implements DataInput {
      * @param buffer The buffer which provides the content for this {@link InputStream}.
      */
     public BufferInputStream(Send<Buffer> buffer) {
-        requireNonNull(buffer, "buffer");
-        this.buffer = buffer.receive();
+        this.buffer = requireNonNull(buffer, "buffer").receive();
         int readableBytes = this.buffer.readableBytes();
         startIndex = this.buffer.readerOffset();
         endIndex = startIndex + readableBytes;
@@ -88,7 +87,7 @@ public class BufferInputStream extends InputStream implements DataInput {
 
     @Override
     public int available() throws IOException {
-        return endIndex - buffer.readerOffset();
+        return Math.max(0, endIndex - buffer.readerOffset());
     }
 
     // Suppress a warning since the class is not thread-safe
@@ -262,7 +261,6 @@ public class BufferInputStream extends InputStream implements DataInput {
      *
      * @return The internal buffer instance.
      */
-    @UnstableApi
     Buffer buffer() {
         return buffer;
     }
