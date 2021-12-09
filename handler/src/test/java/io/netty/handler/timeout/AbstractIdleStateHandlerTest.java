@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,7 @@
  */
 package io.netty.handler.timeout;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-public class IdleStateHandlerTest {
+public abstract class AbstractIdleStateHandlerTest {
 
     @Test
     public void testReaderIdle() throws Exception {
@@ -183,7 +183,9 @@ public class IdleStateHandlerTest {
         observeOutputIdle(false);
     }
 
-    private static void observeOutputIdle(boolean writer) throws Exception {
+    protected abstract Object bufferOf(byte[] array);
+
+    private void observeOutputIdle(boolean writer) throws Exception {
 
         long writerIdleTime = 0L;
         long allIdleTime = 0L;
@@ -211,10 +213,10 @@ public class IdleStateHandlerTest {
         ObservableChannel channel = new ObservableChannel(idleStateHandler, handler);
         try {
             // We're writing 3 messages that will be consumed at different rates!
-            channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 }));
-            channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 2 }));
-            channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 3 }));
-            channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[5 * 1024]));
+            channel.writeAndFlush(bufferOf(new byte[] { 1 }));
+            channel.writeAndFlush(bufferOf(new byte[] { 2 }));
+            channel.writeAndFlush(bufferOf(new byte[] { 3 }));
+            channel.writeAndFlush(bufferOf(new byte[5 * 1024]));
 
             // Establish a baseline. We're not consuming anything and let it idle once.
             idleStateHandler.tickRun();
@@ -406,7 +408,11 @@ public class IdleStateHandlerTest {
             if (buf != null) {
                 Object msg = buf.current();
                 if (msg != null) {
-                    ReferenceCountUtil.retain(msg);
+                    if (msg instanceof Buffer) {
+                        msg = ((Buffer) msg).copy();
+                    } else {
+                        ReferenceCountUtil.retain(msg);
+                    }
                     buf.removeBytes(byteCount);
                     return msg;
                 }

@@ -15,10 +15,12 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Resource;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Promise;
@@ -64,10 +66,12 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    private static final FastThreadLocal<ByteBuffer[]> NIO_BUFFERS = new FastThreadLocal<ByteBuffer[]>() {
+    private static final FastThreadLocal<BufferCache> NIO_BUFFERS = new FastThreadLocal<BufferCache>() {
         @Override
-        protected ByteBuffer[] initialValue() throws Exception {
-            return new ByteBuffer[1024];
+        protected BufferCache initialValue() throws Exception {
+            BufferCache cache = new BufferCache();
+            cache.buffers = new ByteBuffer[1024];
+            return cache;
         }
     };
 
@@ -263,7 +267,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            ReferenceCountUtil.safeRelease(msg);
+            releaseOrClose(msg);
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -272,6 +276,14 @@ public final class ChannelOutboundBuffer {
         e.recycle();
 
         return true;
+    }
+
+    static void releaseOrClose(Object msg) {
+        if (msg instanceof Resource<?>) {
+            ((Resource<?>) msg).close();
+        } else {
+            ReferenceCountUtil.safeRelease(msg);
+        }
     }
 
     /**
@@ -298,7 +310,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
-            ReferenceCountUtil.safeRelease(msg);
+            releaseOrClose(msg);
 
             safeFail(promise, cause);
             decrementPendingOutboundBytes(size, false, notifyWritability);
@@ -325,32 +337,39 @@ public final class ChannelOutboundBuffer {
 
     /**
      * Removes the fully written entries and update the reader index of the partially written entry.
-     * This operation assumes all messages in this buffer is {@link ByteBuf}.
+     * This operation assumes all messages in this buffer are either {@link ByteBuf}s or {@link Buffer}s.
      */
     public void removeBytes(long writtenBytes) {
-        for (;;) {
+        while (writtenBytes > 0) {
             Object msg = current();
-            if (!(msg instanceof ByteBufConvertible)) {
-                assert writtenBytes == 0;
-                break;
-            }
-
-            final ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-            final int readerIndex = buf.readerIndex();
-            final int readableBytes = buf.writerIndex() - readerIndex;
-
-            if (readableBytes <= writtenBytes) {
-                if (writtenBytes != 0) {
+            if (msg instanceof Buffer) {
+                Buffer buf = (Buffer) msg;
+                final int readableBytes = buf.readableBytes();
+                if (readableBytes <= writtenBytes) {
                     progress(readableBytes);
                     writtenBytes -= readableBytes;
+                    remove();
+                } else { // readableBytes > writtenBytes
+                    buf.readSplit(Math.toIntExact(writtenBytes)).close();
+                    progress(writtenBytes);
+                    break;
                 }
-                remove();
-            } else { // readableBytes > writtenBytes
-                if (writtenBytes != 0) {
+            } else if (msg instanceof ByteBufConvertible) {
+                final ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
+                final int readerIndex = buf.readerIndex();
+                final int readableBytes = buf.writerIndex() - readerIndex;
+
+                if (readableBytes <= writtenBytes) {
+                    progress(readableBytes);
+                    writtenBytes -= readableBytes;
+                    remove();
+                } else { // readableBytes > writtenBytes
                     buf.readerIndex(readerIndex + (int) writtenBytes);
                     progress(writtenBytes);
+                    break;
                 }
-                break;
+            } else {
+                break; // Don't know how to process this message. Might be null.
             }
         }
         clearNioBuffers();
@@ -362,7 +381,7 @@ public final class ChannelOutboundBuffer {
         int count = nioBufferCount;
         if (count > 0) {
             nioBufferCount = 0;
-            Arrays.fill(NIO_BUFFERS.get(), 0, count, null);
+            Arrays.fill(NIO_BUFFERS.get().buffers, 0, count, null);
         }
     }
 
@@ -398,61 +417,100 @@ public final class ChannelOutboundBuffer {
         long nioBufferSize = 0;
         int nioBufferCount = 0;
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
-        ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
+        BufferCache cache = NIO_BUFFERS.get(threadLocalMap);
+        cache.dataSize = 0;
+        cache.bufferCount = 0;
+        ByteBuffer[] nioBuffers = cache.buffers;
         Entry entry = flushedEntry;
-        while (isFlushedEntry(entry) && entry.msg instanceof ByteBufConvertible) {
+        while (isFlushedEntry(entry) && (entry.msg instanceof ByteBufConvertible || entry.msg instanceof Buffer)) {
             if (!entry.cancelled) {
-                ByteBuf buf = ((ByteBufConvertible) entry.msg).asByteBuf();
-                final int readerIndex = buf.readerIndex();
-                final int readableBytes = buf.writerIndex() - readerIndex;
-
-                if (readableBytes > 0) {
-                    if (maxBytes - readableBytes < nioBufferSize && nioBufferCount != 0) {
-                        // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least one entry
-                        // we stop populate the ByteBuffer array. This is done for 2 reasons:
-                        // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one writev(...) call
-                        // and so will return 'EINVAL', which will raise an IOException. On Linux it may work depending
-                        // on the architecture and kernel but to be safe we also enforce the limit here.
-                        // 2. There is no sense in putting more data in the array than is likely to be accepted by the
-                        // OS.
-                        //
-                        // See also:
-                        // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                        // - https://linux.die.net//man/2/writev
-                        break;
-                    }
-                    nioBufferSize += readableBytes;
-                    int count = entry.count;
-                    if (count == -1) {
-                        entry.count = count = buf.nioBufferCount();
-                    }
-                    int neededSpace = min(maxCount, nioBufferCount + count);
-                    if (neededSpace > nioBuffers.length) {
-                        nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
-                        NIO_BUFFERS.set(threadLocalMap, nioBuffers);
-                    }
-                    if (count == 1) {
-                        ByteBuffer nioBuf = entry.buf;
-                        if (nioBuf == null) {
-                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
-                            // derived buffer
-                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                if (entry.msg instanceof Buffer) {
+                    Buffer buf = (Buffer) entry.msg;
+                    if (buf.readableBytes() > 0) {
+                        int count = buf.forEachReadable(0, (index, component) -> {
+                            ByteBuffer byteBuffer = component.readableBuffer();
+                            if (cache.bufferCount > 0 && cache.dataSize + byteBuffer.remaining() > maxBytes) {
+                                // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least
+                                // one entry we stop populate the ByteBuffer array. This is done for 2 reasons:
+                                // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one
+                                // writev(...) call and so will return 'EINVAL', which will raise an IOException.
+                                // On Linux it may work depending on the architecture and kernel but to be safe we also
+                                // enforce the limit here.
+                                // 2. There is no sense in putting more data in the array than is likely to be accepted
+                                // by the OS.
+                                //
+                                // See also:
+                                // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
+                                // - https://linux.die.net//man/2/writev
+                                return false;
+                            }
+                            cache.dataSize += byteBuffer.remaining();
+                            ByteBuffer[] buffers = cache.buffers;
+                            int bufferCount = cache.bufferCount;
+                            if (buffers.length == bufferCount && bufferCount < maxCount) {
+                                buffers = cache.buffers = expandNioBufferArray(buffers, bufferCount + 1, bufferCount);
+                            }
+                            buffers[cache.bufferCount] = byteBuffer;
+                            bufferCount++;
+                            cache.bufferCount = bufferCount;
+                            return bufferCount < maxCount;
+                        });
+                        if (count < 0) {
+                            break;
                         }
-                        nioBuffers[nioBufferCount++] = nioBuf;
-                    } else {
-                        // The code exists in an extra method to ensure the method is not too big to inline as this
-                        // branch is not very likely to get hit very frequently.
-                        nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
                     }
-                    if (nioBufferCount >= maxCount) {
-                        break;
+                } else {
+                    ByteBuf buf = ((ByteBufConvertible) entry.msg).asByteBuf();
+                    final int readerIndex = buf.readerIndex();
+                    final int readableBytes = buf.writerIndex() - readerIndex;
+
+                    if (readableBytes > 0) {
+                        if (maxBytes - readableBytes < nioBufferSize && nioBufferCount != 0) {
+                            // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least one
+                            // entry we stop populate the ByteBuffer array. This is done for 2 reasons:
+                            // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one writev(...)
+                            // call and so will return 'EINVAL', which will raise an IOException. On Linux it may work
+                            // depending on the architecture and kernel but to be safe we also enforce the limit here.
+                            // 2. There is no sense in putting more data in the array than is likely to be accepted by
+                            // the OS.
+                            //
+                            // See also:
+                            // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
+                            // - https://linux.die.net//man/2/writev
+                            break;
+                        }
+                        nioBufferSize += readableBytes;
+                        int count = entry.count;
+                        if (count == -1) {
+                            entry.count = count = buf.nioBufferCount();
+                        }
+                        int neededSpace = min(maxCount, nioBufferCount + count);
+                        if (neededSpace > nioBuffers.length) {
+                            cache.buffers = nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
+                        }
+                        if (count == 1) {
+                            ByteBuffer nioBuf = entry.buf;
+                            if (nioBuf == null) {
+                                // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                                // derived buffer
+                                entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
+                            }
+                            nioBuffers[nioBufferCount++] = nioBuf;
+                        } else {
+                            // The code exists in an extra method to ensure the method is not too big to inline as this
+                            // branch is not very likely to get hit very frequently.
+                            nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
+                        }
+                        if (nioBufferCount >= maxCount) {
+                            break;
+                        }
                     }
                 }
             }
             entry = entry.next;
         }
-        this.nioBufferCount = nioBufferCount;
-        this.nioBufferSize = nioBufferSize;
+        this.nioBufferCount = nioBufferCount + cache.bufferCount;
+        this.nioBufferSize = nioBufferSize + cache.dataSize;
 
         return nioBuffers;
     }
@@ -468,7 +526,8 @@ public final class ChannelOutboundBuffer {
             ByteBuffer nioBuf = nioBufs[i];
             if (nioBuf == null) {
                 break;
-            } else if (!nioBuf.hasRemaining()) {
+            }
+            if (!nioBuf.hasRemaining()) {
                 continue;
             }
             nioBuffers[nioBufferCount++] = nioBuf;
@@ -678,7 +737,7 @@ public final class ChannelOutboundBuffer {
                 TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 if (!e.cancelled) {
-                    ReferenceCountUtil.safeRelease(e.msg);
+                    releaseOrClose(e.msg);
                     safeFail(e.promise, cause);
                 }
                 e = e.recycleAndGetNext();
@@ -809,7 +868,7 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
-                ReferenceCountUtil.safeRelease(msg);
+                releaseOrClose(msg);
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;
@@ -841,5 +900,14 @@ public final class ChannelOutboundBuffer {
             recycle();
             return next;
         }
+    }
+
+    /**
+     * Thread-local cache of {@link ByteBuffer} array, and processing meta-data.
+     */
+    static final class BufferCache {
+        ByteBuffer[] buffers;
+        long dataSize;
+        int bufferCount;
     }
 }

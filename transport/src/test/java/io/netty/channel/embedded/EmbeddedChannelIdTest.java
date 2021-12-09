@@ -15,10 +15,14 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.BufferInputStream;
+import io.netty.buffer.BufferOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelId;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class EmbeddedChannelIdTest {
 
     @Test
-    public void testSerialization() throws IOException, ClassNotFoundException {
+    public void testSerializationByteBuf() throws Exception {
         // test that a deserialized instance works the same as a normal instance (issue #2869)
         ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
 
@@ -56,4 +60,29 @@ public class EmbeddedChannelIdTest {
         assertEquals(0, normalInstance.compareTo(deserializedInstance));
     }
 
+    @Test
+    public void testSerialization() throws Exception {
+        // test that a deserialized instance works the same as a normal instance (issue #2869)
+        ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
+
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(1024);
+        ObjectOutputStream outStream = new ObjectOutputStream(new BufferOutputStream(buf));
+        try {
+            outStream.writeObject(normalInstance);
+        } finally {
+            outStream.close();
+        }
+
+        ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf.send()));
+        final ChannelId deserializedInstance;
+        try {
+            deserializedInstance = (ChannelId) inStream.readObject();
+        } finally {
+            inStream.close();
+        }
+
+        assertEquals(normalInstance, deserializedInstance);
+        assertEquals(normalInstance.hashCode(), deserializedInstance.hashCode());
+        assertEquals(0, normalInstance.compareTo(deserializedInstance));
+    }
 }
