@@ -354,7 +354,7 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</argLine.leak>
+        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32 -Dio.netty.buffer.lifecycleTracingEnabled=true</argLine.leak>
       </properties>
     </profile>
     <profile>
