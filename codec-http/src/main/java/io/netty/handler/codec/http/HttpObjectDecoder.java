@@ -824,7 +824,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int valueStart;
         int valueEnd;
 
-        nameStart = findNonWhitespace(sb, 0, false);
+        nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAtUnsafe(nameEnd);
             // https://tools.ietf.org/html/rfc7230#section-3.2.4
@@ -859,7 +859,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         name = sb.subStringUnsafe(nameStart, nameEnd);
-        valueStart = findNonWhitespace(sb, colonEnd, true);
+        valueStart = findNonWhitespace(sb, colonEnd);
         if (valueStart == length) {
             value = EMPTY_VALUE;
         } else {
@@ -898,12 +898,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return c == ' ' || c == (char) 0x09 || c == (char) 0x0B || c == (char) 0x0C || c == (char) 0x0D;
     }
 
-    private static int findNonWhitespace(AppendableCharSequence sb, int offset, boolean validateOWS) {
+    private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
             char c = sb.charAtUnsafe(result);
             if (!Character.isWhitespace(c)) {
                 return result;
-            } else if (validateOWS && !isOWS(c)) {
+            } else if (!isOWS(c)) {
                 // Only OWS is supported for whitespace
                 throw new IllegalArgumentException("Invalid separator, only a single space or horizontal tab allowed," +
                         " but received a '" + c + "' (0x" + Integer.toHexString(c) + ")");

@@ -799,4 +799,82 @@ public class HttpResponseDecoderTest {
         c.release();
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testHeaderNameStartsWithControlChar1c() {
+        testHeaderNameStartsWithControlChar(0x1c);
+    }
+
+    @Test
+    public void testHeaderNameStartsWithControlChar1d() {
+        testHeaderNameStartsWithControlChar(0x1d);
+    }
+
+    @Test
+    public void testHeaderNameStartsWithControlChar1e() {
+        testHeaderNameStartsWithControlChar(0x1e);
+    }
+
+    @Test
+    public void testHeaderNameStartsWithControlChar1f() {
+        testHeaderNameStartsWithControlChar(0x1f);
+    }
+
+    @Test
+    public void testHeaderNameStartsWithControlChar0c() {
+        testHeaderNameStartsWithControlChar(0x0c);
+    }
+
+    private void testHeaderNameStartsWithControlChar(int controlChar) {
+        ByteBuf responseBuffer = Unpooled.buffer();
+        responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
+                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
+        responseBuffer.writeByte(controlChar);
+        responseBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        testInvalidHeaders0(responseBuffer);
+    }
+
+    @Test
+    public void testHeaderNameEndsWithControlChar1c() {
+        testHeaderNameEndsWithControlChar(0x1c);
+    }
+
+    @Test
+    public void testHeaderNameEndsWithControlChar1d() {
+        testHeaderNameEndsWithControlChar(0x1d);
+    }
+
+    @Test
+    public void testHeaderNameEndsWithControlChar1e() {
+        testHeaderNameEndsWithControlChar(0x1e);
+    }
+
+    @Test
+    public void testHeaderNameEndsWithControlChar1f() {
+        testHeaderNameEndsWithControlChar(0x1f);
+    }
+
+    @Test
+    public void testHeaderNameEndsWithControlChar0c() {
+        testHeaderNameEndsWithControlChar(0x0c);
+    }
+
+    private void testHeaderNameEndsWithControlChar(int controlChar) {
+        ByteBuf responseBuffer = Unpooled.buffer();
+        responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
+                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
+        responseBuffer.writeCharSequence("Transfer-Encoding", CharsetUtil.US_ASCII);
+        responseBuffer.writeByte(controlChar);
+        responseBuffer.writeCharSequence(": chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        testInvalidHeaders0(responseBuffer);
+    }
+
+    private static void testInvalidHeaders0(ByteBuf responseBuffer) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(responseBuffer));
+        HttpResponse response = channel.readInbound();
+        assertThat(response.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
+        assertTrue(response.decoderResult().isFailure());
+        assertFalse(channel.finish());
+    }
 }
