@@ -356,6 +356,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     private static void validateHeaderNameElement(byte value) {
         switch (value) {
+        case 0x1c:
+        case 0x1d:
+        case 0x1e:
+        case 0x1f:
         case 0x00:
         case '\t':
         case '\n':
@@ -380,6 +384,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     private static void validateHeaderNameElement(char value) {
         switch (value) {
+        case 0x1c:
+        case 0x1d:
+        case 0x1e:
+        case 0x1f:
         case 0x00:
         case '\t':
         case '\n':
