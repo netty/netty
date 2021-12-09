@@ -75,7 +75,8 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public Send<FullHttpRequest> send() {
         return payload.send().map(FullHttpRequest.class,
-                payload -> new DefaultFullHttpRequest(protocolVersion(), method(), uri(), payload));
+                payload -> new DefaultFullHttpRequest(
+                        protocolVersion(), method(), uri(), payload, headers(), trailingHeader));
     }
 
     @Override

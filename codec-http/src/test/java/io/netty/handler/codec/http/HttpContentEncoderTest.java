@@ -442,10 +442,10 @@ public class HttpContentEncoderTest {
         assertNull(ch.readInbound());
 
         HttpResponse response = ch.readOutbound();
-        assertSame(res, response);
+        assertEquals(res, response);
 
         LastHttpContent<?> content = ch.readOutbound();
-        assertSame(lastContent, content);
+        assertEquals(lastContent, content);
         content.close();
         assertNull(ch.readOutbound());
     }
