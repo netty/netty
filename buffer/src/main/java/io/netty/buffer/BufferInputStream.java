@@ -103,6 +103,7 @@ public class BufferInputStream extends InputStream implements DataInput {
 
     @Override
     public int read() throws IOException {
+        checkOpen();
         int available = available();
         if (available == 0) {
             return -1;
@@ -112,6 +113,7 @@ public class BufferInputStream extends InputStream implements DataInput {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
+        checkOpen();
         int available = available();
         if (available == 0) {
             return -1;
@@ -265,7 +267,14 @@ public class BufferInputStream extends InputStream implements DataInput {
         return buffer;
     }
 
+    private void checkOpen() throws IOException {
+        if (closed) {
+            throw new IOException("Stream closed");
+        }
+    }
+
     private void checkAvailable(int fieldSize) throws IOException {
+        checkOpen();
         if (fieldSize < 0) {
             throw new IndexOutOfBoundsException("fieldSize cannot be a negative number");
         }

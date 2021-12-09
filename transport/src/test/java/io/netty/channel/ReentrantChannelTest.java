@@ -34,7 +34,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testWritabilityChangedByteBuf() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testWritabilityChanged");
+        LocalAddress addr = new LocalAddress("testWritabilityChangedByteBuf");
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync();
@@ -175,7 +175,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testFlushInWritabilityChangedByteBuf() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
+        LocalAddress addr = new LocalAddress("testFlushInWritabilityChangedByteBuf");
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync();
@@ -278,7 +278,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testWriteFlushPingPongByteBuf() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
+        LocalAddress addr = new LocalAddress("testWriteFlushPingPongByteBuf");
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync();
@@ -422,7 +422,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testCloseInFlush() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testCloseInFlush");
+        LocalAddress addr = new LocalAddress("testCloseInFlushByteBuf");
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync();
@@ -452,7 +452,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testFlushFailureByteBuf() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testFlushFailure");
+        LocalAddress addr = new LocalAddress("testFlushFailureByteBuf");
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync();

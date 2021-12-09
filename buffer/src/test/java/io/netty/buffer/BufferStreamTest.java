@@ -242,6 +242,7 @@ public class BufferStreamTest {
         Buffer buf = BufferAllocator.onHeapUnpooled().allocate(16);
         BufferOutputStream stream = new BufferOutputStream(buf);
         stream.close();
+        buf.close();
         assertThrows(IOException.class, () -> stream.write(0));
         assertThrows(IOException.class, () -> stream.write(new byte[1]));
         assertThrows(IOException.class, () -> stream.write(new byte[1], 0, 1));
@@ -261,5 +262,35 @@ public class BufferStreamTest {
         assertThrows(IOException.class, () -> stream.writeDouble(0));
         assertThrows(IOException.class, () -> stream.writeUTF("0"));
         assertThrows(IOException.class, () -> stream.writeUTF(""));
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Test
+    public void readsToClosedStreamMustThrow() throws IOException {
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(16);
+        BufferInputStream stream = new BufferInputStream(buf.send());
+        stream.close();
+        assertThrows(IOException.class, () -> stream.read());
+        assertThrows(IOException.class, () -> stream.read(new byte[1]));
+        assertThrows(IOException.class, () -> stream.read(new byte[1], 0, 1));
+        assertThrows(IOException.class, () -> stream.readFully(new byte[1]));
+        assertThrows(IOException.class, () -> stream.readFully(new byte[1], 0, 1));
+        assertThrows(IOException.class, () -> stream.readNBytes(0));
+        assertThrows(IOException.class, () -> stream.read(EMPTY_BYTES));
+        assertThrows(IOException.class, () -> stream.read(new byte[1], 0, 0));
+        assertThrows(IOException.class, () -> stream.readBoolean());
+        assertThrows(IOException.class, () -> stream.readByte());
+        assertThrows(IOException.class, () -> stream.readUnsignedByte());
+        assertThrows(IOException.class, () -> stream.readAllBytes());
+        assertThrows(IOException.class, () -> stream.readNBytes(1));
+        assertThrows(IOException.class, () -> stream.readChar());
+        assertThrows(IOException.class, () -> stream.readFloat());
+        assertThrows(IOException.class, () -> stream.readInt());
+        assertThrows(IOException.class, () -> stream.readShort());
+        assertThrows(IOException.class, () -> stream.readUnsignedShort());
+        assertThrows(IOException.class, () -> stream.readLong());
+        assertThrows(IOException.class, () -> stream.readDouble());
+        assertThrows(IOException.class, () -> stream.readUTF());
+        stream.readBytes(); // Query method... not actually reading
     }
 }

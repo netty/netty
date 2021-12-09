@@ -148,11 +148,11 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeUTF(String s) throws IOException {
+        if (closed) {
+            throw new IOException("The stream is closed");
+        }
         DataOutputStream out = utf8out;
         if (out == null) {
-            if (closed) {
-                throw new IOException("The stream is closed");
-            }
             // Suppress a warning since the stream is closed in the close() method
             utf8out = out = new DataOutputStream(this); // lgtm[java/output-resource-leak]
         }
