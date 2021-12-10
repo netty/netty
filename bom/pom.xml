@@ -68,6 +68,18 @@
     <tcnative.version>2.0.46.Final</tcnative.version>
   </properties>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.commsen.maven</groupId>
+        <artifactId>bom-helper-maven-plugin</artifactId>
+        <version>0.4.0</version>
+        <goals>
+          <goal>resolve</goal>
+        </goals>
+      </plugin>
+    </plugins>
+  </build>
   <dependencyManagement>
     <dependencies>
       <!-- All release modules -->
