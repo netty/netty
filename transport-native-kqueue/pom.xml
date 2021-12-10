@@ -35,7 +35,7 @@
         </os>
       </activation>
       <properties>
-        <jni.compiler.args.ldflags>LDFLAGS=-Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a</jni.compiler.args.ldflags>
+        <jni.compiler.args.ldflags>LDFLAGS=-Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a -Wl,-platform_version,macos,10.6,10.6</jni.compiler.args.ldflags>
         <skipTests>false</skipTests>
       </properties>
       <build>
@@ -143,7 +143,7 @@
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
         <jni.compiler.args.cflags>CFLAGS=-target arm64-apple-macos11 -O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
-        <jni.compiler.args.ldflags>LDFLAGS=-arch arm64 -Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a</jni.compiler.args.ldflags>
+        <jni.compiler.args.ldflags>LDFLAGS=-arch arm64 -Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a -Wl,-platform_version,macos,11.0,11.0</jni.compiler.args.ldflags>
         <skipTests>true</skipTests>
       </properties>
       <build>
@@ -188,6 +188,7 @@
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
+                    <arg>MACOSX_DEPLOYMENT_TARGET=11.0</arg>
                     <configureArg>--host=aarch64-apple-darwin</configureArg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>

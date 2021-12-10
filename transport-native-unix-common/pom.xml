@@ -154,7 +154,7 @@
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
                       <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.2,10.2" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                       <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
                            explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
@@ -227,8 +227,9 @@
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
                       <env key="CFLAGS" value="-target arm64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-arch arm64 -Wl,--no-as-needed -lrt" />
+                      <env key="LDFLAGS" value="-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,11.0,11.0" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="11.0" />
                     </exec>
                   </target>
                 </configuration>
