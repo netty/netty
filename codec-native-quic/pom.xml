@@ -121,7 +121,7 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-Wl,-exported_symbol,_JNI_*</extraLdflags>
+        <extraLdflags>-Wl,-exported_symbol,_JNI_* -Wl,-platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
         <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
@@ -131,7 +131,7 @@
       <properties>
         <jniLibName>netty_quiche_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
-        <macosxDeploymentTarget />
+        <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
         <extraCflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCflags>
         <extraCxxflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
@@ -143,7 +143,7 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-arch arm64 -Wl,-exported_symbol,_JNI_*</extraLdflags>
+        <extraLdflags>-arch arm64 -Wl,-exported_symbol,_JNI_* -Wl,-platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
         <extraConfigureArg>--host=aarch64-apple-darwin</extraConfigureArg>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=aarch_64</bundleNativeCode>
         <!-- Don't run tests as we can't load the aarch64 lib on a x86_64 system -->
