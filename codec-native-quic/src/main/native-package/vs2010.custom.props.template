@@ -20,7 +20,7 @@
       <AdditionalIncludeDirectories>$(JAVA_HOME)\include;$(JAVA_HOME)\include\win32;@BORINGSSL_INCLUDE_DIR@;@QUICHE_INCLUDE_DIR@;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;crypt32.lib;userenv.lib;@BORINGSSL_LIB_DIR@\@SSL_LIB@;@BORINGSSL_LIB_DIR@\@CRYPTO_LIB@;@QUICHE_LIB_DIR@\@QUICHE_LIB@;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;crypt32.lib;bcrypt.lib;userenv.lib;@BORINGSSL_LIB_DIR@\@SSL_LIB@;@BORINGSSL_LIB_DIR@\@CRYPTO_LIB@;@QUICHE_LIB_DIR@\@QUICHE_LIB@;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 </Project>
