@@ -70,6 +70,9 @@ jobs:
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build.output
 
+      - name: Checking bom dependency versions
+        run: ./.github/scripts/check_bom_dependencies.sh
+
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:

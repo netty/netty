@@ -46,6 +46,9 @@ jobs:
       - name: Verify with Maven
         run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true
 
+      - name: Checking bom dependency versions
+        run: ./.github/scripts/check_bom_dependencies.sh
+
   build-pr-windows:
     runs-on: windows-2016
     name: windows-x86_64-java11-boringssl
