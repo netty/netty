@@ -48,7 +48,7 @@ public class DefaultHostsFileEntriesResolverTest {
             Collections.singletonMap("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
 
     @BeforeAll
-    static void beforeAll() {
+    public static void beforeAll() {
         System.setProperty("io.netty.hostsFileRefreshInterval", String.valueOf(TimeUnit.MINUTES.toNanos(1)));
     }
 
@@ -148,7 +148,7 @@ public class DefaultHostsFileEntriesResolverTest {
     }
 
     @Test
-    void shouldNotRefreshHostsFileContentBeforeRefreshIntervalElapsed() {
+    public void shouldNotRefreshHostsFileContentBeforeRefreshIntervalElapsed() {
         Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
         Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
@@ -163,7 +163,7 @@ public class DefaultHostsFileEntriesResolverTest {
     }
 
     @Test
-    void shouldRefreshHostsFileContentAfterRefreshInterval() {
+    public void shouldRefreshHostsFileContentAfterRefreshInterval() {
         System.setProperty("io.netty.hostsFileRefreshInterval", String.valueOf(TimeUnit.MINUTES.toNanos(-1)));
         Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
         Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
