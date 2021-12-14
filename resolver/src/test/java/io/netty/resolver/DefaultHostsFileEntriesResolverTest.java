@@ -181,7 +181,7 @@ public class DefaultHostsFileEntriesResolverTest {
         assertEquals(NetUtil.LOCALHOST6, resolver.address(newHost, ResolvedAddressTypes.IPV6_ONLY));
     }
 
-    public HostsFileEntriesProvider.Parser givenHostsParserWith(final Map<String, List<InetAddress>> inet4Entries,
+    private HostsFileEntriesProvider.Parser givenHostsParserWith(final Map<String, List<InetAddress>> inet4Entries,
                                                                 final Map<String, List<InetAddress>> inet6Entries) {
         HostsFileEntriesProvider.Parser mockParser = mock(HostsFileEntriesProvider.Parser.class);
 
