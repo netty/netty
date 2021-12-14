@@ -24,21 +24,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
  */
 public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
 
-    private final Map<String, List<InetAddress>> inet4Entries;
-    private final Map<String, List<InetAddress>> inet6Entries;
+    private final long refreshInterval;
+    private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
+    private final HostsFileEntriesProvider.Parser hostsFileParser;
+    private volatile Map<String, List<InetAddress>> inet4Entries;
+    private volatile Map<String, List<InetAddress>> inet6Entries;
 
     public DefaultHostsFileEntriesResolver() {
-        this(parseEntries());
+        this(HostsFileEntriesProvider.parser(), TimeUnit.SECONDS.toNanos(10));
     }
 
     // for testing purpose only
-    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider entries) {
+    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser, long refreshInterval) {
+        this.hostsFileParser = hostsFileParser;
+        this.refreshInterval = refreshInterval;
+        HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
         inet4Entries = entries.ipv4Entries();
         inet6Entries = entries.ipv6Entries();
     }
@@ -48,15 +56,15 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         String normalized = normalize(inetHost);
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-                return firstAddress(inet4Entries.get(normalized));
+                return firstAddress(retrieveCurrentInet4Entries().get(normalized));
             case IPV6_ONLY:
-                return firstAddress(inet6Entries.get(normalized));
+                return firstAddress(retrieveCurrentInet6Entries().get(normalized));
             case IPV4_PREFERRED:
-                InetAddress inet4Address = firstAddress(inet4Entries.get(normalized));
+                InetAddress inet4Address = firstAddress(retrieveCurrentInet4Entries().get(normalized));
                 return inet4Address != null ? inet4Address : firstAddress(inet6Entries.get(normalized));
             case IPV6_PREFERRED:
-                InetAddress inet6Address = firstAddress(inet6Entries.get(normalized));
-                return inet6Address != null ? inet6Address : firstAddress(inet4Entries.get(normalized));
+                InetAddress inet6Address = firstAddress(retrieveCurrentInet6Entries().get(normalized));
+                return inet6Address != null ? inet6Address : firstAddress(retrieveCurrentInet4Entries().get(normalized));
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
@@ -74,19 +82,40 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         String normalized = normalize(inetHost);
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-                return inet4Entries.get(normalized);
+                return retrieveCurrentInet4Entries().get(normalized);
             case IPV6_ONLY:
-                return inet6Entries.get(normalized);
+                return retrieveCurrentInet6Entries().get(normalized);
             case IPV4_PREFERRED:
-                List<InetAddress> allInet4Addresses = inet4Entries.get(normalized);
-                return allInet4Addresses != null ? allAddresses(allInet4Addresses, inet6Entries.get(normalized)) :
-                        inet6Entries.get(normalized);
+                List<InetAddress> allInet4Addresses = retrieveCurrentInet4Entries().get(normalized);
+                return allInet4Addresses != null ? allAddresses(allInet4Addresses, retrieveCurrentInet6Entries().get(normalized)) :
+                        retrieveCurrentInet6Entries().get(normalized);
             case IPV6_PREFERRED:
-                List<InetAddress> allInet6Addresses = inet6Entries.get(normalized);
-                return allInet6Addresses != null ? allAddresses(allInet6Addresses, inet4Entries.get(normalized)) :
-                        inet4Entries.get(normalized);
+                List<InetAddress> allInet6Addresses = retrieveCurrentInet6Entries().get(normalized);
+                return allInet6Addresses != null ? allAddresses(allInet6Addresses, retrieveCurrentInet4Entries().get(normalized)) :
+                        retrieveCurrentInet4Entries().get(normalized);
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
+        }
+    }
+
+    private Map<String, List<InetAddress>> retrieveCurrentInet4Entries() {
+        ensureHostsFileEntriesAreFresh();
+        return this.inet4Entries;
+    }
+
+    private Map<String, List<InetAddress>> retrieveCurrentInet6Entries() {
+        ensureHostsFileEntriesAreFresh();
+        return this.inet6Entries;
+    }
+
+    private void ensureHostsFileEntriesAreFresh() {
+        long last = lastRefresh.get();
+        if (System.nanoTime() - last > refreshInterval) {
+            if (lastRefresh.compareAndSet(last, System.nanoTime())) {
+                HostsFileEntriesProvider entries = parseEntries(this.hostsFileParser);
+                this.inet4Entries = entries.ipv4Entries();
+                this.inet6Entries = entries.ipv6Entries();
+            }
         }
     }
 
@@ -108,14 +137,13 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         return addresses != null && !addresses.isEmpty() ? addresses.get(0) : null;
     }
 
-    private static HostsFileEntriesProvider parseEntries() {
+    private static HostsFileEntriesProvider parseEntries(HostsFileEntriesProvider.Parser parser) {
         if (PlatformDependent.isWindows()) {
             // Ony windows there seems to be no standard for the encoding used for the hosts file, so let us
             // try multiple until we either were able to parse it or there is none left and so we return an
             // empty instance.
-            return HostsFileEntriesProvider.parser()
-                    .parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
+            return parser.parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
         }
-        return HostsFileEntriesProvider.parser().parseSilently();
+        return parser.parseSilently();
     }
 }
