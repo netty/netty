@@ -49,11 +49,6 @@ public abstract class InternalLoggerFactory {
             return f;
         }
 
-        f = useLog4JLoggerFactory(name);
-        if (f != null) {
-            return f;
-        }
-
         return useJdkLoggerFactory(name);
     }
 
@@ -74,19 +69,6 @@ public abstract class InternalLoggerFactory {
         try {
             InternalLoggerFactory f = Log4J2LoggerFactory.INSTANCE;
             f.newInstance(name).debug("Using Log4J2 as the default logging framework");
-            return f;
-        } catch (LinkageError ignore) {
-            return null;
-        } catch (Exception ignore) {
-            // We catch Exception and not ReflectiveOperationException as we still support java 6
-            return null;
-        }
-    }
-
-    private static InternalLoggerFactory useLog4JLoggerFactory(String name) {
-        try {
-            InternalLoggerFactory f = Log4JLoggerFactory.INSTANCE;
-            f.newInstance(name).debug("Using Log4J as the default logging framework");
             return f;
         } catch (LinkageError ignore) {
             return null;

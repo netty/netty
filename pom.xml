@@ -686,30 +686,6 @@
         <artifactId>log4j-api</artifactId>
         <version>${log4j2.version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-1.2-api</artifactId>
-        <version>${log4j2.version}</version>
-        <exclusions>
-          <exclusion>
-            <artifactId>mail</artifactId>
-            <groupId>javax.mail</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jms</artifactId>
-            <groupId>javax.jms</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jmxtools</artifactId>
-            <groupId>com.sun.jdmk</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jmxri</artifactId>
-            <groupId>com.sun.jmx</groupId>
-          </exclusion>
-        </exclusions>
-        <optional>true</optional>
-      </dependency>
 
       <!-- Metrics providers -->
       <dependency>
