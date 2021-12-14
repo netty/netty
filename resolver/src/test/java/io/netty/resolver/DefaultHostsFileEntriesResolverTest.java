@@ -25,7 +25,10 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,7 +41,7 @@ public class DefaultHostsFileEntriesResolverTest {
             Collections.singletonMap("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
     private final Map<String, List<InetAddress>> localhostV6Addresses =
             Collections.singletonMap("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
-    private final long entriesTTL = TimeUnit.SECONDS.toNanos(10);
+    private final long entriesTTL = TimeUnit.MINUTES.toNanos(1);
 
     /**
      * show issue https://github.com/netty/netty/issues/5182
@@ -143,10 +146,10 @@ public class DefaultHostsFileEntriesResolverTest {
 
     @Test
     void shouldNotRefreshHostsFileContentBeforeRefreshIntervalElapsed() {
-        HashMap<String, List<InetAddress>> v4Addresses = Maps.newHashMap(localhostV4Addresses);
-        HashMap<String, List<InetAddress>> v6Addresses = Maps.newHashMap(localhostV4Addresses);
+        Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(localhostV4Addresses);
+        Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(localhostV4Addresses);
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), TimeUnit.MINUTES.toNanos(1));
+                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), entriesTTL);
         String newHost = UUID.randomUUID().toString();
 
         v4Addresses.put(newHost, Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
@@ -158,8 +161,8 @@ public class DefaultHostsFileEntriesResolverTest {
 
     @Test
     void shouldRefreshHostsFileContentAfterRefreshInterval() {
-        HashMap<String, List<InetAddress>> v4Addresses = Maps.newHashMap(localhostV4Addresses);
-        HashMap<String, List<InetAddress>> v6Addresses = Maps.newHashMap(localhostV4Addresses);
+        Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(localhostV4Addresses);
+        Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(localhostV4Addresses);
         DefaultHostsFileEntriesResolver resolver =
                 new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), -1);
         String newHost = UUID.randomUUID().toString();

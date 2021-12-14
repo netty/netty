@@ -56,15 +56,15 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         String normalized = normalize(inetHost);
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-                return firstAddress(retrieveCurrentInet4Entries().get(normalized));
+                return firstAddress(retrieveInet4Entries(normalized));
             case IPV6_ONLY:
-                return firstAddress(retrieveCurrentInet6Entries().get(normalized));
+                return firstAddress(retrieveInet6Entries(normalized));
             case IPV4_PREFERRED:
-                InetAddress inet4Address = firstAddress(retrieveCurrentInet4Entries().get(normalized));
-                return inet4Address != null ? inet4Address : firstAddress(inet6Entries.get(normalized));
+                InetAddress inet4Address = firstAddress(retrieveInet4Entries(normalized));
+                return inet4Address != null ? inet4Address : firstAddress(retrieveInet6Entries(normalized));
             case IPV6_PREFERRED:
-                InetAddress inet6Address = firstAddress(retrieveCurrentInet6Entries().get(normalized));
-                return inet6Address != null ? inet6Address : firstAddress(retrieveCurrentInet4Entries().get(normalized));
+                InetAddress inet6Address = firstAddress(retrieveInet6Entries(normalized));
+                return inet6Address != null ? inet6Address : firstAddress(retrieveInet4Entries(normalized));
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
@@ -82,30 +82,30 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         String normalized = normalize(inetHost);
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-                return retrieveCurrentInet4Entries().get(normalized);
+                return retrieveInet4Entries(normalized);
             case IPV6_ONLY:
-                return retrieveCurrentInet6Entries().get(normalized);
+                return retrieveInet6Entries(normalized);
             case IPV4_PREFERRED:
-                List<InetAddress> allInet4Addresses = retrieveCurrentInet4Entries().get(normalized);
-                return allInet4Addresses != null ? allAddresses(allInet4Addresses, retrieveCurrentInet6Entries().get(normalized)) :
-                        retrieveCurrentInet6Entries().get(normalized);
+                List<InetAddress> allInet4Addresses = retrieveInet4Entries(normalized);
+                return allInet4Addresses != null ? allAddresses(allInet4Addresses, retrieveInet6Entries(normalized)) :
+                        retrieveInet6Entries(normalized);
             case IPV6_PREFERRED:
-                List<InetAddress> allInet6Addresses = retrieveCurrentInet6Entries().get(normalized);
-                return allInet6Addresses != null ? allAddresses(allInet6Addresses, retrieveCurrentInet4Entries().get(normalized)) :
-                        retrieveCurrentInet4Entries().get(normalized);
+                List<InetAddress> allInet6Addresses = retrieveInet6Entries(normalized);
+                return allInet6Addresses != null ? allAddresses(allInet6Addresses, retrieveInet4Entries(normalized)) :
+                        retrieveInet4Entries(normalized);
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
     }
 
-    private Map<String, List<InetAddress>> retrieveCurrentInet4Entries() {
+    private List<InetAddress> retrieveInet4Entries(String host) {
         ensureHostsFileEntriesAreFresh();
-        return this.inet4Entries;
+        return this.inet4Entries.get(host);
     }
 
-    private Map<String, List<InetAddress>> retrieveCurrentInet6Entries() {
+    private List<InetAddress> retrieveInet6Entries(String host) {
         ensureHostsFileEntriesAreFresh();
-        return this.inet6Entries;
+        return this.inet6Entries.get(host);
     }
 
     private void ensureHostsFileEntriesAreFresh() {
