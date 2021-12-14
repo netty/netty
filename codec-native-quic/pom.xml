@@ -19,11 +19,11 @@
   <parent>
     <groupId>io.netty.incubator</groupId>
     <artifactId>netty-incubator-codec-parent-quic</artifactId>
-    <version>0.0.25.Final-SNAPSHOT</version>
+    <version>0.0.25.Final</version>
   </parent>
 
   <artifactId>netty-incubator-codec-native-quic</artifactId>
-  <version>0.0.25.Final-SNAPSHOT</version>
+  <version>0.0.25.Final</version>
   <name>Netty/Incubator/Codec/Native/Quic</name>
   <packaging>${packaging.type}</packaging>
 
