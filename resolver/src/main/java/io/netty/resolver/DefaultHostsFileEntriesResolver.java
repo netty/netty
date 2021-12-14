@@ -53,21 +53,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
 
     @Override
     public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
-        String normalized = normalize(inetHost);
-        switch (resolvedAddressTypes) {
-            case IPV4_ONLY:
-                return firstAddress(retrieveInet4Entries(normalized));
-            case IPV6_ONLY:
-                return firstAddress(retrieveInet6Entries(normalized));
-            case IPV4_PREFERRED:
-                InetAddress inet4Address = firstAddress(retrieveInet4Entries(normalized));
-                return inet4Address != null ? inet4Address : firstAddress(retrieveInet6Entries(normalized));
-            case IPV6_PREFERRED:
-                InetAddress inet6Address = firstAddress(retrieveInet6Entries(normalized));
-                return inet6Address != null ? inet6Address : firstAddress(retrieveInet4Entries(normalized));
-            default:
-                throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
-        }
+        return firstAddress(addresses(inetHost, resolvedAddressTypes));
     }
 
     /**
@@ -80,41 +66,33 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
      */
     public List<InetAddress> addresses(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
         String normalized = normalize(inetHost);
+        ensureHostsFileEntriesAreFresh();
+
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-                return retrieveInet4Entries(normalized);
+                return inet4Entries.get(normalized);
             case IPV6_ONLY:
-                return retrieveInet6Entries(normalized);
+                return inet6Entries.get(normalized);
             case IPV4_PREFERRED:
-                List<InetAddress> allInet4Addresses = retrieveInet4Entries(normalized);
-                return allInet4Addresses != null ? allAddresses(allInet4Addresses, retrieveInet6Entries(normalized)) :
-                        retrieveInet6Entries(normalized);
+                List<InetAddress> allInet4Addresses = inet4Entries.get(normalized);
+                return allInet4Addresses != null ? allAddresses(allInet4Addresses, inet6Entries.get(normalized)) :
+                        inet6Entries.get(normalized);
             case IPV6_PREFERRED:
-                List<InetAddress> allInet6Addresses = retrieveInet6Entries(normalized);
-                return allInet6Addresses != null ? allAddresses(allInet6Addresses, retrieveInet4Entries(normalized)) :
-                        retrieveInet4Entries(normalized);
+                List<InetAddress> allInet6Addresses = inet6Entries.get(normalized);
+                return allInet6Addresses != null ? allAddresses(allInet6Addresses, inet4Entries.get(normalized)) :
+                        inet4Entries.get(normalized);
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
-    }
-
-    private List<InetAddress> retrieveInet4Entries(String host) {
-        ensureHostsFileEntriesAreFresh();
-        return this.inet4Entries.get(host);
-    }
-
-    private List<InetAddress> retrieveInet6Entries(String host) {
-        ensureHostsFileEntriesAreFresh();
-        return this.inet6Entries.get(host);
     }
 
     private void ensureHostsFileEntriesAreFresh() {
         long last = lastRefresh.get();
         if (System.nanoTime() - last > refreshInterval) {
             if (lastRefresh.compareAndSet(last, System.nanoTime())) {
-                HostsFileEntriesProvider entries = parseEntries(this.hostsFileParser);
-                this.inet4Entries = entries.ipv4Entries();
-                this.inet6Entries = entries.ipv6Entries();
+                HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
+                inet4Entries = entries.ipv4Entries();
+                inet6Entries = entries.ipv6Entries();
             }
         }
     }
