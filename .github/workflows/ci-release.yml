@@ -74,7 +74,7 @@ jobs:
         run: ./mvnw -B --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
 
       - name: Perform release with Maven
-        run: ./mvnw -B --file pom.xml release:perform -Drelease.gpg.keyname=${{ secrets.GPG_KEYNAME }} -Drelease.gpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
+        run: ./mvnw -B --file pom.xml release:perform -Drelease.gpg.keyname=${{ secrets.GPG_KEYNAME }} -Drelease.gpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -DstagingProgressTimeoutMinutes=10
 
       - name: Rollback release on failure
         if: ${{ failure() }}
