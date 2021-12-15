@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
  */
 public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
-    private static final long DEFAULT_REFRESH_INTERVAL = TimeUnit.SECONDS.toNanos(60);
+    private static final long DEFAULT_REFRESH_INTERVAL;
 
     private final long refreshInterval;
     private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
@@ -40,15 +40,19 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     private volatile Map<String, List<InetAddress>> inet4Entries;
     private volatile Map<String, List<InetAddress>> inet6Entries;
 
+    static {
+        DEFAULT_REFRESH_INTERVAL = SystemPropertyUtil.getLong(
+                "io.netty.hostsFileRefreshInterval", TimeUnit.SECONDS.toNanos(60));
+    }
+
     public DefaultHostsFileEntriesResolver() {
-        this(HostsFileEntriesProvider.parser());
+        this(HostsFileEntriesProvider.parser(), DEFAULT_REFRESH_INTERVAL);
     }
 
     // for testing purpose only
-    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser) {
+    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser, long refreshInterval) {
         this.hostsFileParser = hostsFileParser;
-        this.refreshInterval = SystemPropertyUtil.getLong(
-                "io.netty.hostsFileRefreshInterval", DEFAULT_REFRESH_INTERVAL);
+        this.refreshInterval = refreshInterval;
         HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
         inet4Entries = entries.ipv4Entries();
         inet6Entries = entries.ipv6Entries();

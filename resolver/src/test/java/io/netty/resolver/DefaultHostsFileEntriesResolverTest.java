@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import com.google.common.collect.Maps;
 import io.netty.util.NetUtil;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -46,11 +45,7 @@ public class DefaultHostsFileEntriesResolverTest {
             Collections.singletonMap("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
     private static final Map<String, List<InetAddress>> LOCALHOST_V6_ADDRESSES =
             Collections.singletonMap("localhost", Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
-
-    @BeforeAll
-    public static void beforeAll() {
-        System.setProperty("io.netty.hostsFileRefreshInterval", String.valueOf(TimeUnit.MINUTES.toNanos(1)));
-    }
+    private static final long ENTRIES_TTL = TimeUnit.MINUTES.toNanos(1);
 
     /**
      * show issue https://github.com/netty/netty/issues/5182
@@ -70,7 +65,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 Collections.<String, List<InetAddress>>emptyMap()
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV6_ONLY);
         assertNull(address, "Should pick an IPv6 address");
@@ -83,7 +78,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 LOCALHOST_V6_ADDRESSES
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
         assertThat("Should pick an IPv4 address", address, instanceOf(Inet4Address.class));
@@ -96,7 +91,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 LOCALHOST_V6_ADDRESSES
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
         assertThat("Should pick an IPv6 address", address, instanceOf(Inet6Address.class));
@@ -109,7 +104,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 Collections.<String, List<InetAddress>>emptyMap()
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV6_ONLY);
         assertNull(addresses, "Should pick an IPv6 address");
@@ -122,7 +117,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 LOCALHOST_V6_ADDRESSES
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
         assertNotNull(addresses);
@@ -138,7 +133,7 @@ public class DefaultHostsFileEntriesResolverTest {
                 LOCALHOST_V6_ADDRESSES
         );
 
-        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser);
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
         assertNotNull(addresses);
@@ -152,7 +147,7 @@ public class DefaultHostsFileEntriesResolverTest {
         Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
         Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses));
+                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), ENTRIES_TTL);
         String newHost = UUID.randomUUID().toString();
 
         v4Addresses.put(newHost, Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
@@ -164,11 +159,10 @@ public class DefaultHostsFileEntriesResolverTest {
 
     @Test
     public void shouldRefreshHostsFileContentAfterRefreshInterval() {
-        System.setProperty("io.netty.hostsFileRefreshInterval", String.valueOf(TimeUnit.MINUTES.toNanos(-1)));
         Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
         Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses));
+                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), -1);
         String newHost = UUID.randomUUID().toString();
 
         InetAddress address = resolver.address(newHost, ResolvedAddressTypes.IPV6_ONLY);
