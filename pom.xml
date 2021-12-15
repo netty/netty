@@ -463,7 +463,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
-    <log4j2.version>2.15.0</log4j2.version>
+    <log4j2.version>2.16.0</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
     <junit.version>5.7.0</junit.version>
     <graalvm.version>19.3.6</graalvm.version>
