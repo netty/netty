@@ -95,8 +95,9 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
 
     private void ensureHostsFileEntriesAreFresh() {
         long last = lastRefresh.get();
-        if (System.nanoTime() - last > refreshInterval) {
-            if (lastRefresh.compareAndSet(last, System.nanoTime())) {
+        long currentTime = System.nanoTime();
+        if (currentTime - last > refreshInterval) {
+            if (lastRefresh.compareAndSet(last, currentTime)) {
                 HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
                 inet4Entries = entries.ipv4Entries();
                 inet6Entries = entries.ipv6Entries();
