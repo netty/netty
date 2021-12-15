@@ -18,6 +18,8 @@ package io.netty.resolver;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -32,6 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
  */
 public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(DefaultHostsFileEntriesResolver.class);
     private static final long DEFAULT_REFRESH_INTERVAL;
 
     private final long refreshInterval;
@@ -43,6 +48,10 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     static {
         DEFAULT_REFRESH_INTERVAL = SystemPropertyUtil.getLong(
                 "io.netty.hostsFileRefreshInterval", TimeUnit.SECONDS.toNanos(60));
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.hostsFileRefreshInterval: {}", DEFAULT_REFRESH_INTERVAL);
+        }
     }
 
     public DefaultHostsFileEntriesResolver() {
