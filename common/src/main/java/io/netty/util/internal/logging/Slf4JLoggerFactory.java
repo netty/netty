@@ -59,7 +59,7 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
         return NopInstanceHolder.INSTANCE_WITH_NOP_CHECK;
     }
 
-    private static class NopInstanceHolder {
+    private static final class NopInstanceHolder {
         private static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
     }
 }
