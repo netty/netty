@@ -17,6 +17,9 @@ package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -24,42 +27,49 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
  */
 public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
 
-    private final Map<String, List<InetAddress>> inet4Entries;
-    private final Map<String, List<InetAddress>> inet6Entries;
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(DefaultHostsFileEntriesResolver.class);
+    private static final long DEFAULT_REFRESH_INTERVAL;
+
+    private final long refreshInterval;
+    private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
+    private final HostsFileEntriesProvider.Parser hostsFileParser;
+    private volatile Map<String, List<InetAddress>> inet4Entries;
+    private volatile Map<String, List<InetAddress>> inet6Entries;
+
+    static {
+        DEFAULT_REFRESH_INTERVAL = SystemPropertyUtil.getLong(
+                "io.netty.hostsFileRefreshInterval", TimeUnit.SECONDS.toNanos(60));
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.hostsFileRefreshInterval: {}", DEFAULT_REFRESH_INTERVAL);
+        }
+    }
 
     public DefaultHostsFileEntriesResolver() {
-        this(parseEntries());
+        this(HostsFileEntriesProvider.parser(), DEFAULT_REFRESH_INTERVAL);
     }
 
     // for testing purpose only
-    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider entries) {
+    DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser, long refreshInterval) {
+        this.hostsFileParser = hostsFileParser;
+        this.refreshInterval = refreshInterval;
+        HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
         inet4Entries = entries.ipv4Entries();
         inet6Entries = entries.ipv6Entries();
     }
 
     @Override
     public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
-        String normalized = normalize(inetHost);
-        switch (resolvedAddressTypes) {
-            case IPV4_ONLY:
-                return firstAddress(inet4Entries.get(normalized));
-            case IPV6_ONLY:
-                return firstAddress(inet6Entries.get(normalized));
-            case IPV4_PREFERRED:
-                InetAddress inet4Address = firstAddress(inet4Entries.get(normalized));
-                return inet4Address != null ? inet4Address : firstAddress(inet6Entries.get(normalized));
-            case IPV6_PREFERRED:
-                InetAddress inet6Address = firstAddress(inet6Entries.get(normalized));
-                return inet6Address != null ? inet6Address : firstAddress(inet4Entries.get(normalized));
-            default:
-                throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
-        }
+        return firstAddress(addresses(inetHost, resolvedAddressTypes));
     }
 
     /**
@@ -72,6 +82,8 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
      */
     public List<InetAddress> addresses(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
         String normalized = normalize(inetHost);
+        ensureHostsFileEntriesAreFresh();
+
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
                 return inet4Entries.get(normalized);
@@ -87,6 +99,18 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
                         inet4Entries.get(normalized);
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
+        }
+    }
+
+    private void ensureHostsFileEntriesAreFresh() {
+        long last = lastRefresh.get();
+        long currentTime = System.nanoTime();
+        if (currentTime - last > refreshInterval) {
+            if (lastRefresh.compareAndSet(last, currentTime)) {
+                HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
+                inet4Entries = entries.ipv4Entries();
+                inet6Entries = entries.ipv6Entries();
+            }
         }
     }
 
@@ -108,14 +132,13 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
         return addresses != null && !addresses.isEmpty() ? addresses.get(0) : null;
     }
 
-    private static HostsFileEntriesProvider parseEntries() {
+    private static HostsFileEntriesProvider parseEntries(HostsFileEntriesProvider.Parser parser) {
         if (PlatformDependent.isWindows()) {
             // Ony windows there seems to be no standard for the encoding used for the hosts file, so let us
             // try multiple until we either were able to parse it or there is none left and so we return an
             // empty instance.
-            return HostsFileEntriesProvider.parser()
-                    .parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
+            return parser.parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
         }
-        return HostsFileEntriesProvider.parser().parseSilently();
+        return parser.parseSilently();
     }
 }
