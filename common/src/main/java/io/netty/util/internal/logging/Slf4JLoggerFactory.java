@@ -30,8 +30,6 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
     @SuppressWarnings("deprecation")
     public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
 
-    static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
-
     /**
      * @deprecated Use {@link #INSTANCE} instead.
      */
@@ -55,5 +53,13 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
     static InternalLogger wrapLogger(Logger logger) {
         return logger instanceof LocationAwareLogger ?
                 new LocationAwareSlf4JLogger((LocationAwareLogger) logger) : new Slf4JLogger(logger);
+    }
+
+    static InternalLoggerFactory getInstanceWithNopCheck() {
+        return NopInstanceHolder.INSTANCE_WITH_NOP_CHECK;
+    }
+
+    private static class NopInstanceHolder {
+        private static final InternalLoggerFactory INSTANCE_WITH_NOP_CHECK = new Slf4JLoggerFactory(true);
     }
 }
