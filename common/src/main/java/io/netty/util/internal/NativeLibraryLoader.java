@@ -54,6 +54,7 @@ public final class NativeLibraryLoader {
     private static final File WORKDIR;
     private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
     private static final boolean TRY_TO_PATCH_SHADED_ID;
+    private static final boolean DETECT_NATIVE_LIBRARY_DUPLICATES;
 
     // Just use a-Z and numbers as valid ID bytes.
     private static final byte[] UNIQUE_ID_BYTES =
@@ -85,6 +86,10 @@ public final class NativeLibraryLoader {
         TRY_TO_PATCH_SHADED_ID = SystemPropertyUtil.getBoolean(
                 "io.netty.native.tryPatchShadedId", true);
         logger.debug("-Dio.netty.native.tryPatchShadedId: {}", TRY_TO_PATCH_SHADED_ID);
+
+        DETECT_NATIVE_LIBRARY_DUPLICATES = SystemPropertyUtil.getBoolean(
+                "io.netty.native.detectNativeLibraryDuplicates", true);
+        logger.debug("-Dio.netty.native.detectNativeLibraryDuplicates: {}", DETECT_NATIVE_LIBRARY_DUPLICATES);
     }
 
     /**
@@ -253,33 +258,39 @@ public final class NativeLibraryLoader {
             case 1:
                 return urlsList.get(0);
             default:
-                try {
-                    MessageDigest md = MessageDigest.getInstance("SHA-256");
-                    // We found more than 1 resource with the same name. Let's check if the content of the file is the
-                    // same as in this case it will not have any bad effect.
-                    URL url = urlsList.get(0);
-                    byte[] digest = digest(md, url);
-                    boolean allSame = true;
-                    if (digest != null) {
-                        for (int i = 1; i < size; i++) {
-                            byte[] digest2 = digest(md, urlsList.get(i));
-                            if (digest2 == null || !Arrays.equals(digest, digest2)) {
-                                allSame = false;
-                                break;
+                if (DETECT_NATIVE_LIBRARY_DUPLICATES) {
+                    try {
+                        MessageDigest md = MessageDigest.getInstance("SHA-256");
+                        // We found more than 1 resource with the same name. Let's check if the content of the file is
+                        // the same as in this case it will not have any bad effect.
+                        URL url = urlsList.get(0);
+                        byte[] digest = digest(md, url);
+                        boolean allSame = true;
+                        if (digest != null) {
+                            for (int i = 1; i < size; i++) {
+                                byte[] digest2 = digest(md, urlsList.get(i));
+                                if (digest2 == null || !Arrays.equals(digest, digest2)) {
+                                    allSame = false;
+                                    break;
+                                }
                             }
+                        } else {
+                            allSame = false;
                         }
-                    } else {
-                        allSame = false;
+                        if (allSame) {
+                            return url;
+                        }
+                    } catch (NoSuchAlgorithmException e) {
+                        logger.debug("Don't support SHA-256, can't check if resources have same content.", e);
                     }
-                    if (allSame) {
-                        return url;
-                    }
-                } catch (NoSuchAlgorithmException e) {
-                    logger.debug("Don't support SHA-256, can't check if resources have same content.", e);
-                }
 
-                throw new IllegalStateException(
-                        "Multiple resources found for '" + path + "' with different content: " + urlsList);
+                    throw new IllegalStateException(
+                            "Multiple resources found for '" + path + "' with different content: " + urlsList);
+                } else {
+                    logger.warn("Multiple resources found for '" + path + "' with different content: " +
+                            urlsList + ". Please fix your dependency graph.");
+                    return urlsList.get(0);
+                }
         }
     }
 
