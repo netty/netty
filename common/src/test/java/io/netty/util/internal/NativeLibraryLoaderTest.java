@@ -65,6 +65,19 @@ class NativeLibraryLoaderTest {
     @Test
     @EnabledOnOs(LINUX)
     @EnabledIf("is_x86_64")
+    void testMultipleResourcesWithSameContentInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        final URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        final String resourceName = "test3";
+
+        NativeLibraryLoader.load(resourceName, loader);
+        assertTrue(true);
+    }
+
+    @Test
+    @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
     void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
         URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
         URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();

@@ -30,6 +30,8 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.security.AccessController;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -251,7 +253,51 @@ public final class NativeLibraryLoader {
             case 1:
                 return urlsList.get(0);
             default:
-                throw new IllegalStateException("Multiple resources found for '" + path + "': " + urlsList);
+                try {
+                    MessageDigest md = MessageDigest.getInstance("SHA-256");
+                    // We found more than 1 resource with the same name. Let's check if the content of the file is the
+                    // same as in this case it will not have any bad effect.
+                    URL url = urlsList.get(0);
+                    byte[] digest = digest(md, url);
+                    boolean allSame = true;
+                    if (digest != null) {
+                        for (int i = 1; i < size; i++) {
+                            byte[] digest2 = digest(md, urlsList.get(i));
+                            if (digest2 == null || !Arrays.equals(digest, digest2)) {
+                                allSame = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        allSame = false;
+                    }
+                    if (allSame) {
+                        return url;
+                    }
+                } catch (NoSuchAlgorithmException e) {
+                    logger.debug("Don't support SHA-256, can't check if resources have same content.", e);
+                }
+
+                throw new IllegalStateException(
+                        "Multiple resources found for '" + path + "' with different content: " + urlsList);
+        }
+    }
+
+    private static byte[] digest(MessageDigest digest, URL url) {
+        InputStream in = null;
+        try {
+            in = url.openStream();
+            byte[] bytes = new byte[8192];
+            int i;
+            while ((i = in.read(bytes)) != -1) {
+                digest.update(bytes, 0, i);
+            }
+            return digest.digest();
+        } catch (IOException e) {
+            logger.debug("Can't read resource.", e);
+            return null;
+        } finally {
+            closeQuietly(in);
         }
     }
 
