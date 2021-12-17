@@ -45,6 +45,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final AtomicInteger nextIndex = new AtomicInteger();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
+    private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
     private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
@@ -135,8 +136,10 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
-        if (index < 0) {
-            nextIndex.decrementAndGet();
+        // The 'index' can not greater than (Integer.MAX_VALUE - 1),
+        // because the max index of object array 'indexedVariables' is (Integer.MAX_VALUE - 1).
+        if (index == Integer.MAX_VALUE || index < 0) {
+            nextIndex.set(Integer.MAX_VALUE);
             throw new IllegalStateException("too many thread-local indexed variables");
         }
         return index;
@@ -331,13 +334,18 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private void expandIndexedVariableTableAndSet(int index, Object value) {
         Object[] oldArray = indexedVariables;
         final int oldCapacity = oldArray.length;
-        int newCapacity = index;
-        newCapacity |= newCapacity >>>  1;
-        newCapacity |= newCapacity >>>  2;
-        newCapacity |= newCapacity >>>  4;
-        newCapacity |= newCapacity >>>  8;
-        newCapacity |= newCapacity >>> 16;
-        newCapacity ++;
+        int newCapacity;
+        if (index < ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD) {
+            newCapacity = index;
+            newCapacity |= newCapacity >>>  1;
+            newCapacity |= newCapacity >>>  2;
+            newCapacity |= newCapacity >>>  4;
+            newCapacity |= newCapacity >>>  8;
+            newCapacity |= newCapacity >>> 16;
+            newCapacity ++;
+        } else {
+            newCapacity = Integer.MAX_VALUE;
+        }
 
         Object[] newArray = Arrays.copyOf(oldArray, newCapacity);
         Arrays.fill(newArray, oldCapacity, newArray.length, UNSET);
