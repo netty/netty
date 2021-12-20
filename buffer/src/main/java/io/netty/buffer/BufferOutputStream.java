@@ -60,21 +60,18 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        if (len == 0) {
-            return;
-        }
-
         prepareWrite(len);
-        buffer.writeBytes(b, off, len);
+        if (len > 0) {
+            buffer.writeBytes(b, off, len);
+        }
     }
 
     @Override
     public void write(byte[] b) throws IOException {
-        if (b.length == 0) {
-            return;
-        }
         prepareWrite(b.length);
-        buffer.writeBytes(b);
+        if (b.length > 0) {
+            buffer.writeBytes(b);
+        }
     }
 
     @Override
@@ -186,6 +183,8 @@ public class BufferOutputStream extends OutputStream implements DataOutput {
         if (closed) {
             throw new IOException("Stream closed");
         }
-        buffer.ensureWritable(len, buffer.capacity() >> 2, true);
+        if (len > 0) {
+            buffer.ensureWritable(len, buffer.capacity() >> 2, true);
+        }
     }
 }

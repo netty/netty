@@ -246,8 +246,8 @@ public class BufferStreamTest {
         assertThrows(IOException.class, () -> stream.write(0));
         assertThrows(IOException.class, () -> stream.write(new byte[1]));
         assertThrows(IOException.class, () -> stream.write(new byte[1], 0, 1));
-        stream.write(EMPTY_BYTES);
-        stream.write(new byte[1], 0, 0);
+        assertThrows(IOException.class, () -> stream.write(EMPTY_BYTES));
+        assertThrows(IOException.class, () -> stream.write(new byte[1], 0, 0));
         assertThrows(IOException.class, () -> stream.writeBoolean(true));
         assertThrows(IOException.class, () -> stream.writeByte(0));
         assertThrows(IOException.class, () -> stream.writeBytes("0"));
