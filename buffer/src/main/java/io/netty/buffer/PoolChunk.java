@@ -310,6 +310,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             if (handle < 0) {
                 return false;
             }
+            assert !isSubpage(handle);
         }
 
         ByteBuffer nioBuffer = cachedNioBuffers != null? cachedNioBuffers.pollLast() : null;
