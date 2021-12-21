@@ -54,7 +54,6 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, ctx.bufferAllocator().allocate(0)));
         }
-        boolean keepAlive = HttpUtil.isKeepAlive(req);
 
         final byte[] sourceBytes = (" - via " + req.protocolVersion() + " (" + establishApproach + ")")
                 .getBytes(US_ASCII);
@@ -65,6 +64,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
 
+        boolean keepAlive = HttpUtil.isKeepAlive(req);
         if (keepAlive) {
             if (req.protocolVersion().equals(HTTP_1_0)) {
                 response.headers().set(CONNECTION, KEEP_ALIVE);
