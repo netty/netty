@@ -18,13 +18,12 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectCleaner;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -241,35 +240,49 @@ public class FastThreadLocalTest {
     }
 
     @Test
-    public void testConstructionWithIndex() {
-        int i;
-        for (i = 1; i < Integer.MAX_VALUE; i++) {
-            new FastThreadLocal<Boolean>();
-        }
-        assertEquals(Integer.MAX_VALUE, i);
-        assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
-
+    public void testConstructionWithIndex() throws Exception {
+        Field nextIndexField =
+                InternalThreadLocalMap.class.getDeclaredField("nextIndex");
+        nextIndexField.setAccessible(true);
+        AtomicInteger nextIndex = (AtomicInteger) nextIndexField.get(AtomicInteger.class);
+        int nextIndex_before = nextIndex.get();
         try {
-            new FastThreadLocal<Boolean>();
-        } catch (Throwable t) {
-            // assert the max index cannot greater than (Integer.MAX_VALUE - 1)
-            assertTrue(t instanceof IllegalStateException);
+            while (nextIndex.get() < Integer.MAX_VALUE) {
+                new FastThreadLocal<Boolean>();
+            }
+            assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
+            try {
+                new FastThreadLocal<Boolean>();
+            } catch (Throwable t) {
+                // assert the max index cannot greater than (Integer.MAX_VALUE - 1)
+                assertTrue(t instanceof IllegalStateException);
+            }
+            // assert the index was reset to Integer.MAX_VALUE after it reaches Integer.MAX_VALUE
+            assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
+        } finally {
+            // restore the index
+            nextIndex.set(nextIndex_before);
         }
-        // assert the index was reset to Integer.MAX_VALUE after it reaches Integer.MAX_VALUE
-        assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
     }
 
     @Test
-    public void testInternalThreadLocalMapExpand() {
-        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
-        int expand_threshold = 1 << 30;
-        try {
-            InternalThreadLocalMap.get().setIndexedVariable(expand_threshold, null);
-        } catch (Throwable t) {
-            throwable.set(t);
-        }
-        Throwable t = throwable.get();
-        // assert the expanded size is not overflowed to negative value
-        assertTrue(!(t instanceof NegativeArraySizeException));
+    public void testInternalThreadLocalMapExpand() throws Exception {
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
+                int expand_threshold = 1 << 30;
+                try {
+                    InternalThreadLocalMap.get().setIndexedVariable(expand_threshold, null);
+                } catch (Throwable t) {
+                    throwable.set(t);
+                }
+                Throwable t = throwable.get();
+                // assert the expanded size is not overflowed to negative value
+                assertTrue(!(t instanceof NegativeArraySizeException));
+            }
+        };
+        FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
+        fastThreadLocalThread.start();
     }
 }
