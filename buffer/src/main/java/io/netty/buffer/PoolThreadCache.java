@@ -417,9 +417,11 @@ final class PoolThreadCache {
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
         private  void freeEntry(Entry entry, boolean finalizer) {
+            // Capture entry state before we recycle the entry object.
             PoolChunk chunk = entry.chunk;
             long handle = entry.handle;
             ByteBuffer nioBuffer = entry.nioBuffer;
+            int normCapacity = entry.normCapacity;
 
             if (!finalizer) {
                 // recycle now so PoolChunk can be GC'ed. This will only be done if this is not freed because of
@@ -427,7 +429,7 @@ final class PoolThreadCache {
                 entry.recycle();
             }
 
-            chunk.arena.freeChunk(chunk, handle, entry.normCapacity, sizeClass, nioBuffer, finalizer);
+            chunk.arena.freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, finalizer);
         }
 
         static final class Entry<T> {
