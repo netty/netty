@@ -270,22 +270,22 @@ public class FastThreadLocalTest {
 
     @Test
     public void testInternalThreadLocalMapExpand() throws Exception {
+        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
                 int expand_threshold = 1 << 30;
                 try {
                     InternalThreadLocalMap.get().setIndexedVariable(expand_threshold, null);
                 } catch (Throwable t) {
                     throwable.set(t);
                 }
-                Throwable t = throwable.get();
-                // assert the expanded size is not overflowed to negative value
-                assertTrue(!(t instanceof NegativeArraySizeException));
             }
         };
         FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
         fastThreadLocalThread.start();
+        fastThreadLocalThread.join();
+        // assert the expanded size is not overflowed to negative value
+        assertTrue(!(throwable.get() instanceof NegativeArraySizeException));
     }
 }
