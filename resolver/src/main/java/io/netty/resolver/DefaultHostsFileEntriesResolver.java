@@ -47,7 +47,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
 
     static {
         DEFAULT_REFRESH_INTERVAL = SystemPropertyUtil.getLong(
-                "io.netty.hostsFileRefreshInterval", /*seconds*/0);
+                "io.netty.hostsFileRefreshInterval", /*nanos*/0);
 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.hostsFileRefreshInterval: {}", DEFAULT_REFRESH_INTERVAL);
