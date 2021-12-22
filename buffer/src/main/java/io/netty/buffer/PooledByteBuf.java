@@ -59,6 +59,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
                        long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
+        assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
+                "Allocated small sub-page handle for a buffer size that isn't \"small.\"";
 
         this.chunk = chunk;
         memory = chunk.memory;
