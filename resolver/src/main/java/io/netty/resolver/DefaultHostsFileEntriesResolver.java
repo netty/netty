@@ -16,6 +16,7 @@
 package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -27,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -47,7 +47,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
 
     static {
         DEFAULT_REFRESH_INTERVAL = SystemPropertyUtil.getLong(
-                "io.netty.hostsFileRefreshInterval", TimeUnit.SECONDS.toNanos(60));
+                "io.netty.hostsFileRefreshInterval", /*nanos*/0);
 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.hostsFileRefreshInterval: {}", DEFAULT_REFRESH_INTERVAL);
@@ -61,7 +61,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     // for testing purpose only
     DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser, long refreshInterval) {
         this.hostsFileParser = hostsFileParser;
-        this.refreshInterval = refreshInterval;
+        this.refreshInterval = ObjectUtil.checkPositiveOrZero(refreshInterval, "refreshInterval");
         HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
         inet4Entries = entries.ipv4Entries();
         inet6Entries = entries.ipv6Entries();
@@ -103,9 +103,13 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     }
 
     private void ensureHostsFileEntriesAreFresh() {
+        long interval = refreshInterval;
+        if (interval == 0) {
+            return;
+        }
         long last = lastRefresh.get();
         long currentTime = System.nanoTime();
-        if (currentTime - last > refreshInterval) {
+        if (currentTime - last > interval) {
             if (lastRefresh.compareAndSet(last, currentTime)) {
                 HostsFileEntriesProvider entries = parseEntries(hostsFileParser);
                 inet4Entries = entries.ipv4Entries();
