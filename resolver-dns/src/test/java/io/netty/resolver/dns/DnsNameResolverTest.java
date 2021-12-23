@@ -3119,8 +3119,9 @@ public class DnsNameResolverTest {
 
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback also bind a TCP socket
-                serverSocket = new ServerSocket(dnsServer2.localAddress().getPort());
+                serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
+                serverSocket.bind(new InetSocketAddress(dnsServer2.localAddress().getPort()));
 
                 builder.socketChannelType(NioSocketChannel.class);
             }
