@@ -198,7 +198,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * @param executor
      *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
      */
-    public GlobalTrafficShapingHandler(EventExecutor executor) {
+    public GlobalTrafficShapingHandler(ScheduledExecutorService executor) {
         createGlobalTrafficCounter(executor);
     }
 
