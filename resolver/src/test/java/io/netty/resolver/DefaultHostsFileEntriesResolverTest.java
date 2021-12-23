@@ -158,16 +158,17 @@ public class DefaultHostsFileEntriesResolverTest {
     }
 
     @Test
-    public void shouldRefreshHostsFileContentAfterRefreshInterval() {
+    public void shouldRefreshHostsFileContentAfterRefreshInterval() throws Exception {
         Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
         Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
-                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), -1);
+                new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), /*nanos*/1);
         String newHost = UUID.randomUUID().toString();
 
         InetAddress address = resolver.address(newHost, ResolvedAddressTypes.IPV6_ONLY);
         assertNull(address);
-
+        /*let refreshIntervalNanos = 1 elapse*/
+        Thread.sleep(1);
         v4Addresses.put(newHost, Collections.<InetAddress>singletonList(NetUtil.LOCALHOST4));
         v6Addresses.put(newHost, Collections.<InetAddress>singletonList(NetUtil.LOCALHOST6));
 
