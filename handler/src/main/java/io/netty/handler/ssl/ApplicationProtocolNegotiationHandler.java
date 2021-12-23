@@ -171,7 +171,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
-        if (pipeline.context(this) != null) {
+        if (!ctx.isRemoved()) {
             pipeline.remove(this);
         }
     }
