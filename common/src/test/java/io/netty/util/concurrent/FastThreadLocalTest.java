@@ -244,24 +244,25 @@ public class FastThreadLocalTest {
 
     @Test
     public void testConstructionWithIndex() throws Exception {
+        int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
         Field nextIndexField =
                 InternalThreadLocalMap.class.getDeclaredField("nextIndex");
         nextIndexField.setAccessible(true);
         AtomicInteger nextIndex = (AtomicInteger) nextIndexField.get(AtomicInteger.class);
         int nextIndex_before = nextIndex.get();
         try {
-            while (nextIndex.get() < Integer.MAX_VALUE) {
+            while (nextIndex.get() < ARRAY_LIST_CAPACITY_MAX_SIZE) {
                 new FastThreadLocal<Boolean>();
             }
-            assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
+            assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
             try {
                 new FastThreadLocal<Boolean>();
             } catch (Throwable t) {
-                // assert the max index cannot greater than (Integer.MAX_VALUE - 1)
+                // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
                 assertTrue(t instanceof IllegalStateException);
             }
-            // assert the index was reset to Integer.MAX_VALUE after it reaches Integer.MAX_VALUE
-            assertEquals(Integer.MAX_VALUE - 1, InternalThreadLocalMap.lastVariableIndex());
+            // assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE
+            assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
         } finally {
             // restore the index
             nextIndex.set(nextIndex_before);

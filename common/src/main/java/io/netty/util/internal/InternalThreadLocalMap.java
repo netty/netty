@@ -46,6 +46,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
+    // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
+    private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
     private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
@@ -136,10 +138,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
-        // The 'index' can not greater than (Integer.MAX_VALUE - 1),
-        // because the max index of object array 'indexedVariables' is (Integer.MAX_VALUE - 1).
-        if (index == Integer.MAX_VALUE || index < 0) {
-            nextIndex.set(Integer.MAX_VALUE);
+        if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
+            nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
             throw new IllegalStateException("too many thread-local indexed variables");
         }
         return index;
@@ -344,7 +344,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             newCapacity |= newCapacity >>> 16;
             newCapacity ++;
         } else {
-            newCapacity = Integer.MAX_VALUE;
+            newCapacity = ARRAY_LIST_CAPACITY_MAX_SIZE;
         }
 
         Object[] newArray = Arrays.copyOf(oldArray, newCapacity);
