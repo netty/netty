@@ -80,7 +80,7 @@ public abstract class AbstractMultiSearchProcessorFactory implements MultiSearch
      * prefixes of the {@code needles}.
      * <br>
      * Search (the actual application of {@link MultiSearchProcessor}) time is linear in the size of
-     * {@link io.netty.buffer.ByteBuf} on which the search is peformed ({@code O(|haystack|)}).
+     * {@link io.netty.buffer.ByteBuf} on which the search is performed ({@code O(|haystack|)}).
      * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentually, regardles of
      * the number of {@code needles} being searched for.
      *
