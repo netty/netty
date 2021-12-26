@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SslContextBuilderTest {
@@ -112,27 +113,18 @@ public class SslContextBuilderTest {
     }
 
     @Test
-    public void testUnsupportedPrivateKeyFailsFastForServer() throws Exception {
+    public void testUnsupportedPrivateKeyFailsFastForServer() {
         assumeTrue(OpenSsl.isBoringSSL());
-        assertThrows(SSLException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testUnsupportedPrivateKeyFailsFast(true);
-            }
-        });
+        testUnsupportedPrivateKeyFailsFast(true);
     }
 
     @Test
-    public void testUnsupportedPrivateKeyFailsFastForClient() throws Exception {
+    public void testUnsupportedPrivateKeyFailsFastForClient() {
         assumeTrue(OpenSsl.isBoringSSL());
-        assertThrows(SSLException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testUnsupportedPrivateKeyFailsFast(false);
-            }
-        });
+        testUnsupportedPrivateKeyFailsFast(false);
     }
-    private static void testUnsupportedPrivateKeyFailsFast(boolean server) throws Exception {
+
+    private static void testUnsupportedPrivateKeyFailsFast(boolean server) {
         assumeTrue(OpenSsl.isBoringSSL());
         String cert = "-----BEGIN CERTIFICATE-----\n" +
                 "MIICODCCAY2gAwIBAgIEXKTrajAKBggqhkjOPQQDBDBUMQswCQYDVQQGEwJVUzEM\n" +
@@ -156,15 +148,30 @@ public class SslContextBuilderTest {
                 "hq7/O+wB4VuP+r7qx+PWN2dSTpCwzHbaQDCmVceZ3PXPlKFdDuYNk/ENuEI8QBRf\n" +
                 "MjM6q9YhnIAeAXFleZAoSETEDyfGBIi/NDe5wzA=\n" +
                 "-----END PRIVATE KEY-----";
-        if (server) {
-            SslContextBuilder.forServer(new ByteArrayInputStream(cert.getBytes(CharsetUtil.US_ASCII)),
-                    new ByteArrayInputStream(key.getBytes(CharsetUtil.US_ASCII)), null)
-                    .sslProvider(SslProvider.OPENSSL).build();
-        } else {
-            SslContextBuilder.forClient().keyManager(new ByteArrayInputStream(cert.getBytes(CharsetUtil.US_ASCII)),
-                new ByteArrayInputStream(key.getBytes(CharsetUtil.US_ASCII)), null)
-                    .sslProvider(SslProvider.OPENSSL).build();
+        ByteArrayInputStream certStream = new ByteArrayInputStream(cert.getBytes(CharsetUtil.US_ASCII));
+        ByteArrayInputStream keyStream = new ByteArrayInputStream(key.getBytes(CharsetUtil.US_ASCII));
+        final SslContextBuilder builder;
+        try {
+            if (server) {
+                builder = SslContextBuilder.forServer(certStream, keyStream, null);
+            } else {
+                builder = SslContextBuilder.forClient().keyManager(certStream, keyStream, null);
+            }
+        } catch (IllegalArgumentException e) {
+            assumeFalse("Input stream not contain valid certificates.".equals(e.getMessage())
+                            && e.getCause() != null
+                            && "java.io.IOException: Unknown named curve: 1.3.132.0.39".equals(
+                                    e.getCause().getMessage()),
+                    "Cannot test that SslProvider rejects certificates with curve " +
+                            "1.3.132.0.39 because the key manager does not know the curve either.");
+            throw e;
         }
+        assertThrows(SSLException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                builder.sslProvider(SslProvider.OPENSSL).build();
+            }
+        });
     }
 
     @Test
