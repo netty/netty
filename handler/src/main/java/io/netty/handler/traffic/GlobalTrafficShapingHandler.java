@@ -196,9 +196,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * default max time as delay allowed value of 15000 ms and no limit.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutor} to use for the {@link TrafficCounter}.
      */
-    public GlobalTrafficShapingHandler(ScheduledExecutorService executor) {
+    public GlobalTrafficShapingHandler(EventExecutor executor) {
         createGlobalTrafficCounter(executor);
     }
 
