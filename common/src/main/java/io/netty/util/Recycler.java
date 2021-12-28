@@ -21,6 +21,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.queues.MessagePassingQueue;
 
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -246,17 +247,24 @@ public abstract class Recycler<T> {
 
     private static final class LocalPool<T> {
         private final int ratioInterval;
-        private final Queue<DefaultHandle<T>> pooledHandles;
+        private final LocalPoolQueue<T> pooledHandles;
         private int ratioCounter;
 
+        @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
-            pooledHandles = PlatformDependent.newMpscQueue(chunkSize, maxCapacity);
+            Queue<DefaultHandle<T>> queue = PlatformDependent.newMpscQueue(chunkSize, maxCapacity);
+            // If the queue is of type MessagePassingQueue we can use a special LocalPoolQueue implementation.
+            if (queue instanceof MessagePassingQueue) {
+                pooledHandles = new LocalPoolPassingQueue<T>((MessagePassingQueue<DefaultHandle<T>>) queue);
+            } else {
+                pooledHandles = new LocalPoolQueue<T>(queue);
+            }
             ratioCounter = ratioInterval; // Start at interval so the first one will be recycled.
         }
 
         DefaultHandle<T> claim() {
-            Queue<DefaultHandle<T>> pooledHandles = this.pooledHandles;
+            LocalPoolQueue<T> pooledHandles = this.pooledHandles;
             DefaultHandle<T> handle;
             do {
                 handle = pooledHandles.poll();
@@ -275,6 +283,59 @@ public abstract class Recycler<T> {
                 return new DefaultHandle<T>(this);
             }
             return null;
+        }
+
+        /**
+         * {@link} LocalPoolQueue implementation which uses {@link MessagePassingQueue#relaxedPoll()}
+         * {@link MessagePassingQueue#relaxedOffer(Object)} for performance reasons which is still good enough for
+         *  our use-case.
+         * @param <T> the element type that is wrapped in the {@link DefaultHandle}
+         */
+        private static final class LocalPoolPassingQueue<T> extends LocalPoolQueue<T> {
+            @SuppressWarnings("unchecked")
+            LocalPoolPassingQueue(MessagePassingQueue<DefaultHandle<T>> queue) {
+                super((Queue<DefaultHandle<T>>) queue);
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            DefaultHandle<T> poll() {
+                return ((MessagePassingQueue<DefaultHandle<T>>) queue).relaxedPoll();
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            void offer(DefaultHandle<T> element) {
+                ((MessagePassingQueue<DefaultHandle<T>>) queue).relaxedOffer(element);
+            }
+        }
+
+        /**
+         * Some sort of queue that is used by the {@link LocalPool} internally.
+         * @param <T> the element type that is wrapped in the {@link DefaultHandle}
+         */
+        private static class LocalPoolQueue<T> {
+            protected final Queue<DefaultHandle<T>> queue;
+
+            LocalPoolQueue(Queue<DefaultHandle<T>> queue) {
+                this.queue = queue;
+            }
+
+            void offer(DefaultHandle<T> element) {
+                queue.offer(element);
+            }
+
+            DefaultHandle<T> poll() {
+                return queue.poll();
+            }
+
+            final int size() {
+                return queue.size();
+            }
+
+            final void clear() {
+                queue.clear();
+            }
         }
     }
 }
