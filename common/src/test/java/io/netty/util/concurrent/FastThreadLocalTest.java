@@ -29,7 +29,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -287,6 +289,6 @@ public class FastThreadLocalTest {
         fastThreadLocalThread.start();
         fastThreadLocalThread.join();
         // assert the expanded size is not overflowed to negative value
-        assertTrue(!(throwable.get() instanceof NegativeArraySizeException));
+        assertThat(throwable.get(), is(not(instanceOf(NegativeArraySizeException.class))));
     }
 }
