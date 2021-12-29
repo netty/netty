@@ -261,7 +261,7 @@ public class FastThreadLocalTest {
                 new FastThreadLocal<Boolean>();
             } catch (Throwable t) {
                 // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
-                assertTrue(t instanceof IllegalStateException);
+                assertThat(t, is(instanceOf(IllegalStateException.class)));
             }
             // assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE
             assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
