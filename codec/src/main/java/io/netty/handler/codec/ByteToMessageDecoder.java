@@ -162,6 +162,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     private boolean firedChannelRead;
 
+    private boolean selfFiredChannelRead = false;
+
     /**
      * A bitmask where the bits are defined as
      * <ul>
@@ -268,6 +270,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
+            selfFiredChannelRead = true;
             CodecOutputList out = CodecOutputList.newInstance();
             try {
                 first = cumulation == null;
@@ -329,7 +332,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (!firedChannelRead && !ctx.channel().config().isAutoRead()) {
+        if (selfFiredChannelRead && !firedChannelRead && !ctx.channel().config().isAutoRead()) {
             ctx.read();
         }
         firedChannelRead = false;
@@ -529,6 +532,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             // See https://github.com/netty/netty/issues/4386
             decodeRemovalReentryProtection(ctx, in, out);
         }
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        selfFiredChannelRead = false;
     }
 
     static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {

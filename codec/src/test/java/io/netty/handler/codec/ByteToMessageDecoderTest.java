@@ -25,6 +25,7 @@ import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.PlatformDependent;
@@ -434,17 +435,18 @@ public class ByteToMessageDecoderTest {
         }
     }
 
+    private static class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
+        private int readsTriggered;
+
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            readsTriggered++;
+            super.read(ctx);
+        }
+    }
+
     @Test
     public void testDoesNotOverRead() {
-        class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
-            private int readsTriggered;
-
-            @Override
-            public void read(ChannelHandlerContext ctx) throws Exception {
-                readsTriggered++;
-                super.read(ctx);
-            }
-        }
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
 
         EmbeddedChannel channel = new EmbeddedChannel();
@@ -537,5 +539,25 @@ public class ByteToMessageDecoderTest {
         assertTrue(channel.finish());
         assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    void testUnexpectRead() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setAutoRead(false);
+        ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
+        channel.pipeline().addLast(
+                interceptor,
+                new SimpleChannelInboundHandler<ByteBuf>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                        ctx.pipeline().replace(this, "fix", new FixedLengthFrameDecoder(3));
+                    }
+                }
+        );
+
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1}));
+        assertEquals(0, interceptor.readsTriggered);
+
     }
 }
