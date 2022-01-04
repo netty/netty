@@ -36,7 +36,6 @@
       </activation>
       <properties>
         <jni.compiler.args.ldflags>LDFLAGS=-Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a -Wl,-platform_version,macos,10.6,10.6</jni.compiler.args.ldflags>
-        <skipTests>false</skipTests>
       </properties>
       <build>
         <plugins>
@@ -251,9 +250,6 @@
           <name>openbsd</name>
         </os>
       </activation>
-      <properties>
-        <skipTests>false</skipTests>
-      </properties>
       <build>
         <plugins>
           <plugin>
@@ -357,9 +353,6 @@
           <name>freebsd</name>
         </os>
       </activation>
-      <properties>
-        <skipTests>false</skipTests>
-      </properties>
       <build>
         <plugins>
           <plugin>
@@ -455,6 +448,28 @@
         </dependency>
       </dependencies>
     </profile>
+    <profile>
+      <id>Windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
+    <profile>
+      <id>Linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
@@ -468,7 +483,6 @@
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
-    <skipTests>true</skipTests>
     <japicmp.skip>true</japicmp.skip>
   </properties>
 
