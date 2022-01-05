@@ -279,7 +279,7 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i <= memory) {
-                        return j;
+                        return j + bStartIndex;
                     }
                     j += per;
                     memory = m - per - 1;
@@ -304,7 +304,7 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i < 0) {
-                        return j;
+                        return j + bStartIndex;
                     }
                     j += per;
                 } else {
