@@ -16,8 +16,8 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.BlockingMessageQueue;
 import io.netty.util.internal.ObjectPool;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -25,6 +25,7 @@ import org.jctools.queues.MessagePassingQueue;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static io.netty.util.internal.PlatformDependent.newMpscQueue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -50,6 +51,7 @@ public abstract class Recycler<T> {
     private static final int DEFAULT_MAX_CAPACITY_PER_THREAD;
     private static final int RATIO;
     private static final int DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD;
+    private static final boolean BLOCKING_POOL;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -69,15 +71,19 @@ public abstract class Recycler<T> {
         // bursts.
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
 
+        BLOCKING_POOL = SystemPropertyUtil.getBoolean("io.netty.recycler.blocking", false);
+
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
                 logger.debug("-Dio.netty.recycler.maxCapacityPerThread: disabled");
                 logger.debug("-Dio.netty.recycler.ratio: disabled");
                 logger.debug("-Dio.netty.recycler.chunkSize: disabled");
+                logger.debug("-Dio.netty.recycler.blocking: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacityPerThread: {}", DEFAULT_MAX_CAPACITY_PER_THREAD);
                 logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
                 logger.debug("-Dio.netty.recycler.chunkSize: {}", DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
+                logger.debug("-Dio.netty.recycler.blocking: {}", BLOCKING_POOL);
             }
         }
     }
@@ -252,9 +258,11 @@ public abstract class Recycler<T> {
         @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
-            // If the queue is of type MessagePassingQueue we can use a special LocalPoolQueue implementation.
-            pooledHandles = (MessagePassingQueue<DefaultHandle<T>>) PlatformDependent
-                    .newMpscQueue(chunkSize, maxCapacity);
+            if (BLOCKING_POOL) {
+                pooledHandles = new BlockingMessageQueue<DefaultHandle<T>>(maxCapacity);
+            } else {
+                pooledHandles = (MessagePassingQueue<DefaultHandle<T>>) newMpscQueue(chunkSize, maxCapacity);
+            }
             ratioCounter = ratioInterval; // Start at interval so the first one will be recycled.
         }
 
