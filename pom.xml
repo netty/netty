@@ -387,6 +387,23 @@
       </properties>
     </profile>
     <profile>
+      <!-- Skip many checks for faster turn-around in local builds. -->
+      <id>fast</id>
+      <properties>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <checkstyle.skip>true</checkstyle.skip>
+        <japicmp.skip>true</japicmp.skip>
+        <revapi.skip>true</revapi.skip>
+        <xml.skip>true</xml.skip>
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+        <skipDeploy>true</skipDeploy>
+        <skipTests>true</skipTests>
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
+        <skipHttp2Testsuite>true</skipHttp2Testsuite>
+      </properties>
+    </profile>
+    <profile>
       <id>coverage</id>
       <properties>
         <argLine.coverage>${jacoco.argLine}</argLine.coverage>
@@ -485,6 +502,7 @@
     <junit.version>5.7.0</junit.version>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.4.2</brotli4j.version>
+    <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
@@ -1151,6 +1169,7 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
+          <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
