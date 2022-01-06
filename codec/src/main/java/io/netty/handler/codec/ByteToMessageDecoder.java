@@ -162,7 +162,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     private boolean firedChannelRead;
 
-    private boolean selfFiredChannelRead = false;
+    private boolean selfFiredChannelRead;
 
     /**
      * A bitmask where the bits are defined as
