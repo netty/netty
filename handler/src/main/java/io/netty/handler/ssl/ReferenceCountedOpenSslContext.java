@@ -225,6 +225,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean useTasks = USE_TASKS;
         OpenSslPrivateKeyMethod privateKeyMethod = null;
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
+        OpenSslCertificateCompressionConfig certCompressionConfig = null;
 
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
@@ -238,6 +239,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     privateKeyMethod = (OpenSslPrivateKeyMethod) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
                     asyncPrivateKeyMethod = (OpenSslAsyncPrivateKeyMethod) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS) {
+                    certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -384,6 +387,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
             if (asyncPrivateKeyMethod != null) {
                 SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engineMap, asyncPrivateKeyMethod));
+            }
+            if (certCompressionConfig != null) {
+                for (OpenSslCertificateCompressionConfig.AlgorithmDirectionPair configPair : certCompressionConfig) {
+                    SSLContext.addCertificateCompressionAlgorithm(ctx, configPair.direction, configPair.algorithm);
+                }
             }
             // Set the curves.
             SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
