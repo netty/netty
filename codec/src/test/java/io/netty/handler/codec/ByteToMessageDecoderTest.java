@@ -556,8 +556,10 @@ public class ByteToMessageDecoderTest {
                 }
         );
 
-        channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1}));
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1})));
         assertEquals(0, interceptor.readsTriggered);
+        assertNotNull(channel.pipeline().get(FixedLengthFrameDecoder.class));
+        assertFalse(channel.finish());
 
     }
 }
