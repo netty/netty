@@ -21,8 +21,8 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.queues.MessagePassingQueue;
 
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.max;
@@ -246,27 +246,29 @@ public abstract class Recycler<T> {
 
     private static final class LocalPool<T> {
         private final int ratioInterval;
-        private final Queue<DefaultHandle<T>> pooledHandles;
+        private final MessagePassingQueue<DefaultHandle<T>> pooledHandles;
         private int ratioCounter;
 
+        @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
-            pooledHandles = PlatformDependent.newMpscQueue(chunkSize, maxCapacity);
+            // If the queue is of type MessagePassingQueue we can use a special LocalPoolQueue implementation.
+            pooledHandles = (MessagePassingQueue<DefaultHandle<T>>) PlatformDependent
+                    .newMpscQueue(chunkSize, maxCapacity);
             ratioCounter = ratioInterval; // Start at interval so the first one will be recycled.
         }
 
         DefaultHandle<T> claim() {
-            Queue<DefaultHandle<T>> pooledHandles = this.pooledHandles;
             DefaultHandle<T> handle;
             do {
-                handle = pooledHandles.poll();
+                handle = pooledHandles.relaxedPoll();
             } while (handle != null && !handle.availableToClaim());
             return handle;
         }
 
         void release(DefaultHandle<T> handle) {
             handle.toAvailable();
-            pooledHandles.offer(handle);
+            pooledHandles.relaxedOffer(handle);
         }
 
         DefaultHandle<T> newHandle() {
