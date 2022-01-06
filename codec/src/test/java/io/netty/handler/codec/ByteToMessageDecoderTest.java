@@ -560,6 +560,5 @@ public class ByteToMessageDecoderTest {
         assertEquals(0, interceptor.readsTriggered);
         assertNotNull(channel.pipeline().get(FixedLengthFrameDecoder.class));
         assertFalse(channel.finish());
-
     }
 }
