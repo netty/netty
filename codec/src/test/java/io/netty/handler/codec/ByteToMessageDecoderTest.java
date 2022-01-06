@@ -435,7 +435,7 @@ public class ByteToMessageDecoderTest {
         }
     }
 
-    private static class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
+    private static final class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
         private int readsTriggered;
 
         @Override
