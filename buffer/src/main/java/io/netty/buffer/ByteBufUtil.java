@@ -226,21 +226,31 @@ public final class ByteBufUtil {
     }
 
     /**
+     * @param needle [readerIndex, writerIndex-readerIndex]
+     * @param haystack [readerIndex, writerIndex-readerIndex]
+     */
+    public static int indexOf(ByteBuf needle, ByteBuf haystack){
+        return indexOf(needle, haystack, needle.readerIndex(), needle.readableBytes(), haystack.readerIndex(), haystack.readableBytes());
+    }
+
+    /**
      * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
      * This method uses the <a href="https://en.wikipedia.org/wiki/Two-way_string-matching_algorithm">Two-Way
      * string matching algorithm</a>, which yields O(1) space complexity and excellent performance.
+     * @param needle [aStartIndex, m]
+     * @param haystack [bStartIndex, n]
      */
-    public static int indexOf(ByteBuf needle, ByteBuf haystack) {
+    public static int indexOf(ByteBuf needle, ByteBuf haystack, int aStartIndex, int m, int bStartIndex, int n) {
+        System.out.println(prettyHexDump(haystack,bStartIndex,n));
+        System.out.println(prettyHexDump(needle,aStartIndex,m));
         if (haystack == null || needle == null) {
             return -1;
         }
 
-        if (needle.readableBytes() > haystack.readableBytes()) {
+        if (m > n) {
             return -1;
         }
 
-        int n = haystack.readableBytes();
-        int m = needle.readableBytes();
         if (m == 0) {
             return 0;
         }
@@ -248,14 +258,12 @@ public final class ByteBufUtil {
         // When the needle has only one byte that can be read,
         // the ByteBuf.indexOf() can be used
         if (m == 1) {
-            return haystack.indexOf(haystack.readerIndex(), haystack.writerIndex(),
-                          needle.getByte(needle.readerIndex()));
+            return haystack.indexOf(bStartIndex, haystack.writerIndex(),
+                    needle.getByte(aStartIndex));
         }
 
         int i;
         int j = 0;
-        int aStartIndex = needle.readerIndex();
-        int bStartIndex = haystack.readerIndex();
         long suffixes =  maxSuf(needle, m, aStartIndex, true);
         long prefixes = maxSuf(needle, m, aStartIndex, false);
         int ell = Math.max((int) (suffixes >> 32), (int) (prefixes >> 32));
@@ -279,7 +287,8 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i <= memory) {
-                        return j + bStartIndex;
+                        //return j + bStartIndex;
+                        return j;
                     }
                     j += per;
                     memory = m - per - 1;
@@ -304,7 +313,8 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i < 0) {
-                        return j + bStartIndex;
+                        //return j + bStartIndex;
+                        return j;
                     }
                     j += per;
                 } else {

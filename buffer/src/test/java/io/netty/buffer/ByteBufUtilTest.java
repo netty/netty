@@ -132,13 +132,16 @@ public class ByteBufUtilTest {
         final ByteBuf needle = Unpooled.copiedBuffer("abc12", CharsetUtil.UTF_8);
         haystack.readerIndex(1);
         needle.readerIndex(1);
-        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(0, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack, needle.readerIndex(), needle.writerIndex()-1, haystack.readerIndex()-1, haystack.writerIndex()));
         haystack.readerIndex(2);
         needle.readerIndex(3);
-        assertEquals(3, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(3, ByteBufUtil.indexOf(needle, haystack, needle.readerIndex(), needle.writerIndex()-3, haystack.readerIndex()-2, haystack.writerIndex()));
         haystack.readerIndex(1);
         needle.readerIndex(2);
-        assertEquals(2, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(2, ByteBufUtil.indexOf(needle, haystack, needle.readerIndex(), needle.writerIndex()-2, haystack.readerIndex()-1, haystack.writerIndex()));
         haystack.release();
 
         haystack = new WrappedByteBuf(Unpooled.copiedBuffer("abc123", CharsetUtil.UTF_8));
