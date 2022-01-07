@@ -18,8 +18,6 @@ package io.netty.channel.epoll;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.Socket;
-import java.nio.charset.Charset;
-import java.util.Random;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
