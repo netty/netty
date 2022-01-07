@@ -24,6 +24,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import org.junit.jupiter.api.Disabled;
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -432,18 +434,19 @@ public class ByteToMessageDecoderTest {
         }
     }
 
+    private static final class ReadInterceptingHandler implements ChannelHandler {
+        private int readsTriggered;
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            readsTriggered++;
+            ctx.read();
+        }
+    }
+
     @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testDoesNotOverRead() {
-        class ReadInterceptingHandler implements ChannelHandler {
-            private int readsTriggered;
-
-            @Override
-            public void read(ChannelHandlerContext ctx) {
-                readsTriggered++;
-                ctx.read();
-            }
-        }
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
 
         EmbeddedChannel channel = new EmbeddedChannel();
@@ -536,5 +539,27 @@ public class ByteToMessageDecoderTest {
         assertTrue(channel.finish());
         assertBuffer(Unpooled.wrappedBuffer(bytes), channel.readInbound());
         assertNull(channel.readInbound());
+    }
+
+    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
+    @Test
+    void testUnexpectRead() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setAutoRead(false);
+        ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
+        channel.pipeline().addLast(
+                interceptor,
+                new SimpleChannelInboundHandler<ByteBuf>() {
+                    @Override
+                    protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                        ctx.pipeline().replace(this, "fix", new FixedLengthFrameDecoder(3));
+                    }
+                }
+        );
+
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1})));
+        assertEquals(0, interceptor.readsTriggered);
+        assertNotNull(channel.pipeline().get(FixedLengthFrameDecoder.class));
+        assertFalse(channel.finish());
     }
 }

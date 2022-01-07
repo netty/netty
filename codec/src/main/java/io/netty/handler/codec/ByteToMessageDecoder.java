@@ -165,6 +165,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      */
     private boolean firedChannelRead;
 
+    private boolean selfFiredChannelRead;
+
     private int discardAfterReads = 16;
     private int numReads;
     private ByteToMessageDecoderContext context;
@@ -269,6 +271,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBufConvertible) {
+            selfFiredChannelRead = true;
+
             try {
                 ByteBuf data = ((ByteBufConvertible) msg).asByteBuf();
                 first = cumulation == null;
@@ -308,7 +312,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (!firedChannelRead && !ctx.channel().config().isAutoRead()) {
+        if (selfFiredChannelRead && !firedChannelRead && !ctx.channel().config().isAutoRead()) {
             ctx.read();
         }
         firedChannelRead = false;
