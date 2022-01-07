@@ -16,10 +16,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.EmptyLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -31,6 +34,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
+
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -60,10 +64,19 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequest() {
+    public void testHttpUpgradeRequestFull() {
+        testHttpUpgradeRequest0(true);
+    }
+
+    @Test
+    public void testHttpUpgradeRequestNonFull() {
+        testHttpUpgradeRequest0(false);
+    }
+
+    private void testHttpUpgradeRequest0(boolean full) {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
-        writeUpgradeRequest(ch);
+        writeUpgradeRequest(ch, full);
 
         FullHttpResponse response = responses.remove();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
@@ -435,7 +448,28 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static void writeUpgradeRequest(EmbeddedChannel ch) {
-        ch.writeInbound(WebSocketRequestBuilder.successful());
+        writeUpgradeRequest(ch, true);
+    }
+
+    private static void writeUpgradeRequest(EmbeddedChannel ch, boolean full) {
+        HttpRequest request = WebSocketRequestBuilder.successful();
+        if (full) {
+            ch.writeInbound(request);
+        } else {
+            if (request instanceof FullHttpRequest) {
+                FullHttpRequest fullHttpRequest = (FullHttpRequest) request;
+                try (fullHttpRequest) {
+                    HttpRequest req = new DefaultHttpRequest(fullHttpRequest.protocolVersion(),
+                            fullHttpRequest.method(), fullHttpRequest.uri(), fullHttpRequest.headers().copy());
+                    ch.writeInbound(req);
+                    ch.writeInbound(new DefaultHttpContent(fullHttpRequest.payload().copy()));
+                    ch.writeInbound(new EmptyLastHttpContent(
+                            DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+                }
+            } else {
+                ch.writeInbound(request);
+            }
+        }
     }
 
     private static String getResponseMessage(FullHttpResponse response) {
