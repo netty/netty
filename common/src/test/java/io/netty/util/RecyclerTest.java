@@ -43,12 +43,6 @@ public class RecyclerTest {
         return newRecycler(maxCapacityPerThread, 8, maxCapacityPerThread >> 1);
     }
 
-    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
-                                                       int ratio, int maxDelayedQueuesPerThread,
-                                                       int delayedQueueRatio, int chunkSize) {
-        return newRecycler(maxCapacityPerThread, ratio, chunkSize);
-    }
-
     private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int ratio, int chunkSize) {
         return new Recycler<HandledObject>(maxCapacityPerThread, ratio, chunkSize) {
             @Override
