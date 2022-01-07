@@ -1688,7 +1688,7 @@ public class SslHandler extends ByteToMessageDecoder {
             // buffer if its empty which would then result in an IllegalReferenceCountException when we try to continue
             // decoding.
             //
-            // See https://github.com/netty/netty-tcnative/issues/68
+            // See https://github.com/netty/netty-tcnative/issues/680
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
