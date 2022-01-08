@@ -653,7 +653,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             // when a side enbale SO_LINGER and call showdownOutput to start TCP half-closure,we can not call doDeregister here
             // because we should ensure this side in fin_wait2 state can still receive and process the data which is send by another side in the close_wait state。
-            // See
+            // See https://github.com/netty/netty/issues/11981
             try {
                 //The shutdown function does not block regardless of the SO_LINGER setting on the socket,so we don't need to use
                 //GlobalEventExecutor to execute the shutdown
