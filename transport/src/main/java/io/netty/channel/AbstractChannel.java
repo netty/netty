@@ -656,7 +656,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // See https://github.com/netty/netty/issues/11981
             try {
                 //The shutdown function does not block regardless of the SO_LINGER setting on the socket,so we don't need to use
-                //GlobalEventExecutor to execute the shutdown
+                // GlobalEventExecutor to execute the shutdown
                 doShutdownOutput();
                 promise.setSuccess();
             } catch (Throwable err) {
