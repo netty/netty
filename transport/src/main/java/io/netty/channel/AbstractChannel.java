@@ -651,7 +651,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     new ChannelOutputShutdownException("Channel output shutdown") :
                     new ChannelOutputShutdownException("Channel output shutdown", cause);
 
-            // when a side enbale SO_LINGER and call showdownOutput to start TCP half-closure,we can not call doDeregister here
+            // When a side enables SO_LINGER and calls showdownOutput(...) to start TCP half-closure, we can not call doDeregister here
             // because we should ensure this side in fin_wait2 state can still receive and process the data which is send by another side in the close_wait state。
             // See https://github.com/netty/netty/issues/11981
             try {
