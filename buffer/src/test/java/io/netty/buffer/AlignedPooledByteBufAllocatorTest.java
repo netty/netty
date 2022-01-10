@@ -50,8 +50,8 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
                 PooledByteBufAllocator.defaultUseCacheForAllThreads(),
                 64);
 
-        ByteBuf a = allocator.buffer(0, 16384);
-        ByteBuf b = allocator.buffer(0, 16384);
+        ByteBuf a = allocator.directBuffer(0, 16384);
+        ByteBuf b = allocator.directBuffer(0, 16384);
         a.capacity(16);
         assertEquals(16, a.capacity());
         b.capacity(16);
