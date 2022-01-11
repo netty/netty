@@ -124,7 +124,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             serverChannel = sb.bind().sync().channel();
             clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
             waitHalfClosureDone.await();
-            assertTrue(clientReceiveDataOnFinalWait2.get());
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();
