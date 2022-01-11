@@ -22,6 +22,7 @@ import io.netty.buffer.api.BufferClosedException;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.internal.ResourceSupport;
+import io.netty.buffer.api.pool.PooledBufferAllocator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -125,7 +126,14 @@ public abstract class BufferTestSupport {
                 new Fixture("heap", BufferAllocator::onHeapUnpooled, HEAP),
                 new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT),
                 new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
-                new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT));
+                new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT),
+                new Fixture("pooledDirect", () ->
+                        new PooledBufferAllocator(MemoryManager.instance(), true,
+                                PooledBufferAllocator.defaultNumDirectArena(), PooledBufferAllocator.defaultPageSize(),
+                                PooledBufferAllocator.defaultMaxOrder(), PooledBufferAllocator.defaultSmallCacheSize(),
+                                PooledBufferAllocator.defaultNormalCacheSize(), true, 64),
+                        POOLED, DIRECT)
+        );
     }
 
     static List<Fixture> initialFixturesForEachImplementation() {

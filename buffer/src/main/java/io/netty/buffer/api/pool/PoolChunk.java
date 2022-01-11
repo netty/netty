@@ -561,7 +561,7 @@ final class PoolChunk implements PoolChunkMetric {
 
         PoolSubpage s = subpages[runOffset];
         assert s.doNotDestroy;
-        assert size <= s.elemSize;
+        assert size <= s.elemSize : size + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
         initAllocatorControl(control, threadCache, handle, s.elemSize);

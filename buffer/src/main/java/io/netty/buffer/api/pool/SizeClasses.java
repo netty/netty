@@ -104,7 +104,7 @@ abstract class SizeClasses implements SizeClassesMetric {
 
         SizeClassValue value = CACHE.computeIfAbsent(
                 new SizeClassKey(pageSize, pageShifts, chunkSize, directMemoryCacheAlignment),
-                SizeClassValue::new);
+                key -> new SizeClassValue(key, directMemoryCacheAlignment));
         nSizes = value.nSizes;
         nSubpages = value.nSubpages;
         nPSizes = value.nPSizes;
@@ -250,8 +250,13 @@ abstract class SizeClasses implements SizeClassesMetric {
 
     // Round size up to the nearest multiple of alignment.
     private int alignSize(int size) {
-        int delta = size & directMemoryCacheAlignment - 1;
-        return delta == 0? size : size + directMemoryCacheAlignment - delta;
+        return alignSize(size, directMemoryCacheAlignment);
+    }
+
+    // Round size up to the nearest multiple of alignment.
+    private static int alignSize(int size, int alignment) {
+        int delta = size & alignment - 1;
+        return delta == 0? size : size + alignment - delta;
     }
 
     @Override
@@ -338,7 +343,7 @@ abstract class SizeClasses implements SizeClassesMetric {
         final int[] sizeIdx2sizeTab;
         final int[] size2idxTab;
 
-        SizeClassValue(SizeClassKey key) {
+        SizeClassValue(SizeClassKey key, int directMemoryCacheAlignment) {
             this.key = key;
             int group = PoolThreadCache.log2(key.chunkSize) + 1 - LOG2_QUANTUM;
 
@@ -350,7 +355,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             //generate lookup table
             sizeIdx2sizeTab = new int[nSizes];
             pageIdx2sizeTab = new int[nPSizes];
-            idx2SizeTab(sizeIdx2sizeTab, pageIdx2sizeTab);
+            idx2SizeTab(sizeIdx2sizeTab, pageIdx2sizeTab, directMemoryCacheAlignment);
 
             size2idxTab = new int[lookupMaxSize >> LOG2_QUANTUM];
             size2idxTab(size2idxTab);
@@ -442,7 +447,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             return size;
         }
 
-        private void idx2SizeTab(int[] sizeIdx2sizeTab, int[] pageIdx2sizeTab) {
+        private void idx2SizeTab(int[] sizeIdx2sizeTab, int[] pageIdx2sizeTab, int directMemoryCacheAlignment) {
             int pageIdx = 0;
 
             for (int i = 0; i < nSizes; i++) {
@@ -452,6 +457,9 @@ abstract class SizeClasses implements SizeClassesMetric {
                 int nDelta = sizeClass[NDELTA_IDX];
 
                 int size = (1 << log2Group) + (nDelta << log2Delta);
+                if (directMemoryCacheAlignment > 0) {
+                   size = alignSize(size, directMemoryCacheAlignment);
+                }
                 sizeIdx2sizeTab[i] = size;
 
                 if (sizeClass[PAGESIZE_IDX] == yes) {
