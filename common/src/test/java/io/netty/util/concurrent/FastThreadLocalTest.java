@@ -16,17 +16,22 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectCleaner;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -237,5 +242,53 @@ public class FastThreadLocalTest {
         protected void onRemoval(String value) throws Exception {
             onRemovalCalled.set(value);
         }
+    }
+
+    @Test
+    public void testConstructionWithIndex() throws Exception {
+        int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
+        Field nextIndexField =
+                InternalThreadLocalMap.class.getDeclaredField("nextIndex");
+        nextIndexField.setAccessible(true);
+        AtomicInteger nextIndex = (AtomicInteger) nextIndexField.get(AtomicInteger.class);
+        int nextIndex_before = nextIndex.get();
+        try {
+            while (nextIndex.get() < ARRAY_LIST_CAPACITY_MAX_SIZE) {
+                new FastThreadLocal<Boolean>();
+            }
+            assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
+            try {
+                new FastThreadLocal<Boolean>();
+            } catch (Throwable t) {
+                // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
+                assertThat(t, is(instanceOf(IllegalStateException.class)));
+            }
+            // assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE
+            assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
+        } finally {
+            // restore the index
+            nextIndex.set(nextIndex_before);
+        }
+    }
+
+    @Test
+    public void testInternalThreadLocalMapExpand() throws Exception {
+        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                int expand_threshold = 1 << 30;
+                try {
+                    InternalThreadLocalMap.get().setIndexedVariable(expand_threshold, null);
+                } catch (Throwable t) {
+                    throwable.set(t);
+                }
+            }
+        };
+        FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
+        fastThreadLocalThread.start();
+        fastThreadLocalThread.join();
+        // assert the expanded size is not overflowed to negative value
+        assertThat(throwable.get(), is(not(instanceOf(NegativeArraySizeException.class))));
     }
 }
