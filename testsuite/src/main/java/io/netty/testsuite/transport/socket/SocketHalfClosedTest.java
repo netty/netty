@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -33,6 +34,8 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
@@ -51,6 +54,81 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
+
+    @Test
+    @Timeout(value = 5000, unit = MILLISECONDS)
+    public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(ServerBootstrap sb, Bootstrap cb)
+            throws Throwable {
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+
+        final CountDownLatch waitHalfClosureDone = new CountDownLatch(1);
+        try {
+            sb.childOption(ChannelOption.SO_LINGER, 1)
+              .childHandler(new ChannelInitializer<Channel>() {
+
+                  @Override
+                  protected void initChannel(Channel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+
+                            @Override
+                            public void channelActive(final ChannelHandlerContext ctx) {
+                                SocketChannel channel = (SocketChannel) ctx.channel();
+                                channel.shutdownOutput();
+                            }
+
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ReferenceCountUtil.release(msg);
+                                waitHalfClosureDone.countDown();
+                            }
+                        });
+                  }
+              });
+
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+              .handler(new ChannelInitializer<Channel>() {
+                  @Override
+                  protected void initChannel(Channel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+
+                            @Override
+                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                if (ChannelInputShutdownEvent.INSTANCE == evt) {
+                                    ctx.writeAndFlush(ctx.alloc().buffer().writeZero(16));
+                                }
+
+                                if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
+                                    ctx.close();
+                                }
+                            }
+                        });
+                  }
+              });
+
+            serverChannel = sb.bind().sync().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            waitHalfClosureDone.await();
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+        }
+    }
+
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void testHalfClosureOnlyOneEventWhenAutoRead(TestInfo testInfo) throws Throwable {
