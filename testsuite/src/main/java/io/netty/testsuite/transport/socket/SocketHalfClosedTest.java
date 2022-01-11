@@ -92,7 +92,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                clientReceiveDataOnFinalWait2.set(true);
                                 waitHalfClosureDone.countDown();
                                 ReferenceCountUtil.release(msg);
                             }
