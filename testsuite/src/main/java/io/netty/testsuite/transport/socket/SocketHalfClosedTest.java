@@ -95,7 +95,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                                 waitHalfClosureDone.countDown();
                                 ReferenceCountUtil.release(msg);
                             }
-
                         });
                   }
 
