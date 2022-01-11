@@ -481,31 +481,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             final Throwable shutdownCause = cause == null ?
                     new ChannelOutputShutdownException("Channel output shutdown") :
                     new ChannelOutputShutdownException("Channel output shutdown", cause);
-            Executor closeExecutor = prepareToClose();
-            if (closeExecutor != null) {
-                closeExecutor.execute(() -> {
-                    try {
-                        // Execute the shutdown.
-                        doShutdownOutput();
-                        promise.setSuccess(null);
-                    } catch (Throwable err) {
-                        promise.setFailure(err);
-                    } finally {
-                        // Dispatch to the EventLoop
-                        executor().execute(() ->
-                                closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause));
-                    }
-                });
-            } else {
-                try {
-                    // Execute the shutdown.
-                    doShutdownOutput();
-                    promise.setSuccess(null);
-                } catch (Throwable err) {
-                    promise.setFailure(err);
-                } finally {
-                    closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
-                }
+            // When a side enables SO_LINGER and calls showdownOutput(...) to start TCP half-closure
+            // we can not call doDeregister here because we should ensure this side in fin_wait2 state
+            // can still receive and process the data which is send by another side in the close_wait state。
+            // See https://github.com/netty/netty/issues/11981
+            try {
+                // The shutdown function does not block regardless of the SO_LINGER setting on the socket
+                // so we don't need to use GlobalEventExecutor to execute the shutdown
+                doShutdownOutput();
+                promise.setSuccess(null);
+            } catch (Throwable err) {
+                promise.setFailure(err);
+            } finally {
+                closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
             }
         }
 
