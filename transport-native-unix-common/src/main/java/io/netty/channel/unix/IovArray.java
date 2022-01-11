@@ -18,6 +18,8 @@ package io.netty.channel.unix;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.ReadableComponent;
+import io.netty.buffer.api.ReadableComponentProcessor;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -46,7 +48,7 @@ import static java.lang.Math.min;
  * <a href="https://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
  * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-public final class IovArray implements MessageProcessor {
+public final class IovArray implements MessageProcessor, ReadableComponentProcessor<RuntimeException> {
 
     /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = Buffer.addressSize();
@@ -225,7 +227,10 @@ public final class IovArray implements MessageProcessor {
 
     @Override
     public boolean processMessage(Object msg) throws Exception {
-        if (msg instanceof ByteBufConvertible) {
+        if (msg instanceof io.netty.buffer.api.Buffer) {
+            var buffer = (io.netty.buffer.api.Buffer) msg;
+            buffer.forEachReadable(0, this);
+        } else if (msg instanceof ByteBufConvertible) {
             ByteBuf buffer = ((ByteBufConvertible) msg).asByteBuf();
             return add(buffer, buffer.readerIndex(), buffer.readableBytes());
         }
@@ -234,5 +239,10 @@ public final class IovArray implements MessageProcessor {
 
     private static int idx(int index) {
         return IOV_SIZE * index;
+    }
+
+    @Override
+    public boolean process(int index, ReadableComponent component) {
+        return add(memoryAddress, component.readableNativeAddress(), component.readableBytes());
     }
 }

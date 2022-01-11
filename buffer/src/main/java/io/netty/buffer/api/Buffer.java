@@ -180,16 +180,12 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Returns the number of readable bytes which is equal to {@code (writerOffset() - readerOffset())}.
      */
-    default int readableBytes() {
-        return writerOffset() - readerOffset();
-    }
+    int readableBytes();
 
     /**
      * Returns the number of writable bytes which is equal to {@code (capacity() - writerOffset())}.
      */
-    default int writableBytes() {
-        return capacity() - writerOffset();
-    }
+    int writableBytes();
 
     /**
      * Fills the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link

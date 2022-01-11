@@ -121,6 +121,16 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
+    public int readableBytes() {
+        return writerOffset() - readerOffset();
+    }
+
+    @Override
+    public int writableBytes() {
+        return capacity() - writerOffset();
+    }
+
+    @Override
     public Buffer fill(byte value) {
         checkSet(0, capacity());
         if (rsize == CLOSED_SIZE) {

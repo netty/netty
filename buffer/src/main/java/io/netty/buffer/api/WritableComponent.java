@@ -65,6 +65,13 @@ public interface WritableComponent {
     long writableNativeAddress();
 
     /**
+     * Get the space available to be written to this component, as a number of bytes.
+     *
+     * @return The maximum number of bytes that can be written to this component.
+     */
+    int writableBytes();
+
+    /**
      * Get a {@link ByteBuffer} instance for this memory component, which can be used for modifying the buffer
      * contents.
      *
