@@ -45,7 +45,7 @@ public class PoolArenaTest {
     public void testNormalizeAlignedCapacity() {
         PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 64);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
-        int[] expectedResult = {16, 64, 512, 1024, 1024, 1280};
+        int[] expectedResult = {64, 64, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
             assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
         }

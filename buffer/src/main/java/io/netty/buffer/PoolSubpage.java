@@ -25,6 +25,7 @@ import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
+    final int elemSize;
     private final int pageShifts;
     private final int runOffset;
     private final int runSize;
@@ -34,7 +35,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     PoolSubpage<T> next;
 
     boolean doNotDestroy;
-    int elemSize;
     private int maxNumElems;
     private int bitmapLength;
     private int nextAvail;

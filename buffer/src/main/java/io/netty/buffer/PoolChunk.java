@@ -574,7 +574,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
         PoolSubpage<T> s = subpages[runOffset];
         assert s.doNotDestroy;
-        assert reqCapacity <= s.elemSize;
+        assert reqCapacity <= s.elemSize : reqCapacity + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
         buf.init(this, nioBuffer, handle, offset, reqCapacity, s.elemSize, threadCache);

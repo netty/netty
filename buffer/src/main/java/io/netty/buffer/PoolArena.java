@@ -554,9 +554,9 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     static final class HeapArena extends PoolArena<byte[]> {
 
         HeapArena(PooledByteBufAllocator parent, int pageSize, int pageShifts,
-                  int chunkSize, int directMemoryCacheAlignment) {
+                  int chunkSize) {
             super(parent, pageSize, pageShifts, chunkSize,
-                  directMemoryCacheAlignment);
+                  0);
         }
 
         private static byte[] newByteArray(int size) {
