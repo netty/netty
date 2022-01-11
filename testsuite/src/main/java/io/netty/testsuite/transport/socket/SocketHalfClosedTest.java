@@ -104,7 +104,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush(ctx.alloc(16).writeZero(16));
+                                    ctx.writeAndFlush(ctx.alloc().buffer().writeZero(16));
                                 }
 
                                 if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
