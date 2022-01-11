@@ -19,9 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.PriorityQueue;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
@@ -133,9 +131,6 @@ import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
  *
  */
 final class PoolChunk<T> implements PoolChunkMetric {
-    @SuppressWarnings("unchecked")
-    private static final AtomicIntegerFieldUpdater<PoolChunk<?>> PINNED_UPDATER = (AtomicIntegerFieldUpdater<PoolChunk<?>>)
-            (AtomicIntegerFieldUpdater<?>) newUpdater(PoolChunk.class, "pinnedBytes");
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
@@ -166,6 +161,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
      */
     private final PoolSubpage<T>[] subpages;
 
+    /**
+     * Accounting of pinned memory – memory that is currently in use by ByteBuf instances.
+     */
+    private final AtomicInteger pinnedBytes;
+
     private final int pageSize;
     private final int pageShifts;
     private final int chunkSize;
@@ -178,7 +178,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final Deque<ByteBuffer> cachedNioBuffers;
 
     int freeBytes;
-    volatile int pinnedBytes;
 
     PoolChunkList<T> parent;
     PoolChunk<T> prev;
@@ -208,6 +207,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         insertAvailRun(0, pages, initHandle);
 
         cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
+        pinnedBytes = new AtomicInteger();
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -223,6 +223,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         subpages = null;
         chunkSize = size;
         cachedNioBuffers = null;
+        pinnedBytes = new AtomicInteger();
     }
 
     private static LongPriorityQueue[] newRunsAvailqueueArray(int size) {
@@ -584,13 +585,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     void incrementPinnedMemory(int delta) {
         assert delta > 0;
-        int result = PINNED_UPDATER.addAndGet(this, delta);
+        int result = pinnedBytes.addAndGet(delta);
         assert result > 0;
     }
 
     void decrementPinnedMemory(int delta) {
         assert delta > 0;
-        PINNED_UPDATER.addAndGet(this, -delta);
+        int result = pinnedBytes.addAndGet(-delta);
+        assert result >= 0;
     }
 
     @Override
@@ -606,7 +608,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     public int pinnedBytes() {
-        return pinnedBytes;
+        return pinnedBytes.get();
     }
 
     @Override

@@ -825,26 +825,54 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    public void pinnedMemoryMustReflectBuffersInUse() {
-        PooledByteBufAllocator alloc = newAllocator(true);
+    public void pinnedMemoryMustReflectBuffersInUseWithThreadLocalCaching() {
+        pinnedMemoryMustReflectBuffersInUse(true);
+    }
+
+    @Test
+    public void pinnedMemoryMustReflectBuffersInUseWithoutThreadLocalCaching() {
+        pinnedMemoryMustReflectBuffersInUse(false);
+    }
+
+    private static void pinnedMemoryMustReflectBuffersInUse(boolean useThreadLocalCaching) {
+        int smallCacheSize;
+        int normalCacheSize;
+        if (useThreadLocalCaching) {
+            smallCacheSize = PooledByteBufAllocator.defaultSmallCacheSize();
+            normalCacheSize = PooledByteBufAllocator.defaultNormalCacheSize();
+        } else {
+            smallCacheSize = 0;
+            normalCacheSize = 0;
+        }
+        int directMemoryCacheAlignment = 0;
+        PooledByteBufAllocator alloc = new PooledByteBufAllocator(
+                PooledByteBufAllocator.defaultPreferDirect(),
+                PooledByteBufAllocator.defaultNumHeapArena(),
+                PooledByteBufAllocator.defaultNumDirectArena(),
+                PooledByteBufAllocator.defaultPageSize(),
+                PooledByteBufAllocator.defaultMaxOrder(),
+                smallCacheSize,
+                normalCacheSize,
+                useThreadLocalCaching,
+                directMemoryCacheAlignment);
         PooledByteBufAllocatorMetric metric = alloc.metric();
         AtomicLong capSum = new AtomicLong();
 
         for (long index = 0; index < 10000; index++) {
-            List<ByteBuf> buffers = new ArrayList<ByteBuf>();
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
-            int bufcount = rnd.nextInt(1, 100);
+            int bufCount = rnd.nextInt(1, 100);
+            List<ByteBuf> buffers = new ArrayList<ByteBuf>(bufCount);
 
             if (index % 2 == 0) {
                 // ensure that we allocate a small buffer
-                for (int i = 0; i < bufcount; i++) {
+                for (int i = 0; i < bufCount; i++) {
                     ByteBuf buf = alloc.directBuffer(rnd.nextInt(8, 128));
                     buffers.add(buf);
                     capSum.addAndGet(buf.capacity());
                 }
             } else {
                 // allocate a larger buffer
-                for (int i = 0; i < bufcount; i++) {
+                for (int i = 0; i < bufCount; i++) {
                     ByteBuf buf = alloc.directBuffer(rnd.nextInt(1024, 1024 * 100));
                     buffers.add(buf);
                     capSum.addAndGet(buf.capacity());
