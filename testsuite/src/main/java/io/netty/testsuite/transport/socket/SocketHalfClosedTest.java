@@ -88,7 +88,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             public void channelActive(final ChannelHandlerContext ctx) {
                                 SocketChannel channel = (SocketChannel)ctx.channel();
                                 channel.shutdownOutput();
-
                             }
 
                             @Override
