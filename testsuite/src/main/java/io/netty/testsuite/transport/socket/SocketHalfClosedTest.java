@@ -77,7 +77,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         try {
-
             sb.childOption(ChannelOption.SO_LINGER, 1)
               .childHandler(new ChannelInitializer<Channel>() {
 
