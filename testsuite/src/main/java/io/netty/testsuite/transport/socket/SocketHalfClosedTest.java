@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -27,20 +28,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
@@ -60,25 +55,37 @@ import static org.junit.jupiter.api.Assumptions.*;
 public class SocketHalfClosedTest extends AbstractSocketTest {
 
     @Test
-    public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet() throws Throwable {
+    public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+
+    private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+
         Channel serverChannel = null;
-        int PORT = 8005;
+        Channel clientChannel = null;
+
         final AtomicBoolean clientReceiveDataOnFinalWait2 = new AtomicBoolean(false);
-        EventLoopGroup servergroup = new NioEventLoopGroup(1);
-        EventLoopGroup clientgroup = new NioEventLoopGroup(1);
+        final CountDownLatch waitHalfClosureDone = new CountDownLatch(1);
+
+        final ByteBuf testHalfClosureSendMessage = Unpooled.buffer(16);
+        for (int i = 0; i < testHalfClosureSendMessage.capacity(); i ++) {
+            testHalfClosureSendMessage.writeByte((byte) i);
+        }
+
         try {
 
-            ServerBootstrap sb = new ServerBootstrap();
-            sb.group(servergroup)
-              .channel(NioServerSocketChannel.class)
-              .childOption(ChannelOption.SO_LINGER, 1)
+            sb.childOption(ChannelOption.SO_LINGER, 1)
               .childHandler(new ChannelInitializer<Channel>() {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ObjectEncoder())
-                        .addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)))
-                        .addLast(new  ChannelInboundHandlerAdapter(){
+                      ch.pipeline().addLast(new  ChannelInboundHandlerAdapter(){
 
                             @Override
                             public void channelActive(final ChannelHandlerContext ctx) {
@@ -90,6 +97,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 clientReceiveDataOnFinalWait2.set(true);
+                                waitHalfClosureDone.countDown();
+                                ReferenceCountUtil.release(msg);
                             }
 
                         });
@@ -98,25 +107,16 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               });
 
 
-            Bootstrap cb = new Bootstrap();
-            cb.group(clientgroup)
-              .channel(NioSocketChannel.class)
-              .option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ObjectEncoder())
-                        .addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)))
-                        .addLast(new ChannelInboundHandlerAdapter(){
-
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            }
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
 
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                                 if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush("test");
+                                    ctx.writeAndFlush(testHalfClosureSendMessage);
                                 }
 
                                 if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
@@ -127,17 +127,18 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                   }
               });
 
-            serverChannel = sb.bind(PORT).sync().channel();
-            Channel clientChannel = cb.connect("127.0.0.1",PORT).sync().channel();
-            Thread.sleep(1000);
+            serverChannel = sb.bind().sync().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            waitHalfClosureDone.await();
             assertTrue(clientReceiveDataOnFinalWait2.get());
         } finally {
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+
             if (serverChannel != null) {
                 serverChannel.close().sync();
             }
-
-            servergroup.shutdownGracefully();
-            clientgroup.shutdownGracefully();
         }
     }
 
