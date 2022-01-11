@@ -69,7 +69,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
 
-        final AtomicBoolean clientReceiveDataOnFinalWait2 = new AtomicBoolean(false);
         final CountDownLatch waitHalfClosureDone = new CountDownLatch(1);
 
         final ByteBuf testHalfClosureSendMessage = Unpooled.buffer(16);
