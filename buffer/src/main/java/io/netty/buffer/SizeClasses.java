@@ -237,6 +237,12 @@ abstract class SizeClasses implements SizeClassesMetric {
             int nDelta = sizeClass[NDELTA_IDX];
 
             int size = (1 << log2Group) + (nDelta << log2Delta);
+            if (directMemoryCacheAlignment > 0) {
+                // We need to ensure we align the size before storing it as otherwise we will use the incorrect element
+                // size when creating the PoolSubPage
+                size = alignSize(size);
+            }
+
             sizeIdx2sizeTab[i] = size;
 
             if (sizeClass[PAGESIZE_IDX] == yes) {

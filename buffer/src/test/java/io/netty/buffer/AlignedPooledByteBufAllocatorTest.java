@@ -15,6 +15,11 @@
  */
 package io.netty.buffer;
 
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTest {
     @Override
     protected PooledByteBufAllocator newAllocator(boolean preferDirect) {
@@ -29,5 +34,33 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
                 64,
                 PooledByteBufAllocator.defaultUseCacheForAllThreads(),
                 directMemoryCacheAlignment);
+    }
+
+    // https://github.com/netty/netty/issues/11955
+    @Test
+    public void testCorrectElementSize() {
+        ByteBufAllocator allocator = new PooledByteBufAllocator(
+                true,
+                PooledByteBufAllocator.defaultNumHeapArena(),
+                PooledByteBufAllocator.defaultNumDirectArena(),
+                PooledByteBufAllocator.defaultPageSize(),
+                11,
+                PooledByteBufAllocator.defaultSmallCacheSize(),
+                64,
+                PooledByteBufAllocator.defaultUseCacheForAllThreads(),
+                64);
+
+        ByteBuf a = allocator.directBuffer(0, 16384);
+        ByteBuf b = allocator.directBuffer(0, 16384);
+        a.capacity(16);
+        assertEquals(16, a.capacity());
+        b.capacity(16);
+        assertEquals(16, b.capacity());
+        a.capacity(17);
+        assertEquals(17, a.capacity());
+        b.capacity(18);
+        assertEquals(18, b.capacity());
+        assertTrue(a.release());
+        assertTrue(b.release());
     }
 }
