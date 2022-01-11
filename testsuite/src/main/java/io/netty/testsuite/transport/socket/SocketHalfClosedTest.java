@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFutureListeners;
@@ -76,7 +75,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      ch.pipeline().addLast(new ChannelHandler() {
 
                             @Override
                             public void channelActive(final ChannelHandlerContext ctx) {
@@ -97,7 +96,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      ch.pipeline().addLast(new ChannelHandler() {
 
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -113,8 +112,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                   }
               });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             waitHalfClosureDone.await();
         } finally {
             if (clientChannel != null) {
