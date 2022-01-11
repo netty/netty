@@ -30,7 +30,9 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Timeout;
@@ -820,5 +822,93 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
         trimCaches(allocator);
         assertEquals(0, allocator.pinnedDirectMemory());
+    }
+
+    @Test
+    public void pinnedMemoryMustReflectBuffersInUseWithThreadLocalCaching() {
+        pinnedMemoryMustReflectBuffersInUse(true);
+    }
+
+    @Test
+    public void pinnedMemoryMustReflectBuffersInUseWithoutThreadLocalCaching() {
+        pinnedMemoryMustReflectBuffersInUse(false);
+    }
+
+    private static void pinnedMemoryMustReflectBuffersInUse(boolean useThreadLocalCaching) {
+        int smallCacheSize;
+        int normalCacheSize;
+        if (useThreadLocalCaching) {
+            smallCacheSize = PooledByteBufAllocator.defaultSmallCacheSize();
+            normalCacheSize = PooledByteBufAllocator.defaultNormalCacheSize();
+        } else {
+            smallCacheSize = 0;
+            normalCacheSize = 0;
+        }
+        int directMemoryCacheAlignment = 0;
+        PooledByteBufAllocator alloc = new PooledByteBufAllocator(
+                PooledByteBufAllocator.defaultPreferDirect(),
+                PooledByteBufAllocator.defaultNumHeapArena(),
+                PooledByteBufAllocator.defaultNumDirectArena(),
+                PooledByteBufAllocator.defaultPageSize(),
+                PooledByteBufAllocator.defaultMaxOrder(),
+                smallCacheSize,
+                normalCacheSize,
+                useThreadLocalCaching,
+                directMemoryCacheAlignment);
+        PooledByteBufAllocatorMetric metric = alloc.metric();
+        AtomicLong capSum = new AtomicLong();
+
+        for (long index = 0; index < 10000; index++) {
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+            int bufCount = rnd.nextInt(1, 100);
+            List<ByteBuf> buffers = new ArrayList<ByteBuf>(bufCount);
+
+            if (index % 2 == 0) {
+                // ensure that we allocate a small buffer
+                for (int i = 0; i < bufCount; i++) {
+                    ByteBuf buf = alloc.directBuffer(rnd.nextInt(8, 128));
+                    buffers.add(buf);
+                    capSum.addAndGet(buf.capacity());
+                }
+            } else {
+                // allocate a larger buffer
+                for (int i = 0; i < bufCount; i++) {
+                    ByteBuf buf = alloc.directBuffer(rnd.nextInt(1024, 1024 * 100));
+                    buffers.add(buf);
+                    capSum.addAndGet(buf.capacity());
+                }
+            }
+
+            if (index % 100 == 0) {
+                long used = usedMemory(metric.directArenas());
+                long pinned = alloc.pinnedDirectMemory();
+                assertThat(capSum.get()).isLessThanOrEqualTo(pinned);
+                assertThat(pinned).isLessThanOrEqualTo(used);
+            }
+
+            for (ByteBuf buffer : buffers) {
+                buffer.release();
+            }
+            capSum.set(0);
+            // After releasing all buffers, pinned memory must be zero
+            assertThat(alloc.pinnedDirectMemory()).isZero();
+        }
+    }
+
+    /**
+     * Returns an estimate of bytes used by currently in-use buffers
+     */
+    private static long usedMemory(List<PoolArenaMetric> arenas) {
+        long totalUsed = 0;
+        for (PoolArenaMetric arenaMetrics : arenas) {
+            for (PoolChunkListMetric arenaMetric : arenaMetrics.chunkLists()) {
+                for (PoolChunkMetric chunkMetric : arenaMetric) {
+                    // chunkMetric.chunkSize() returns maximum of bytes that can be served out of the chunk
+                    // and chunkMetric.freeBytes() returns the bytes that are not yet allocated by in-use buffers
+                    totalUsed += chunkMetric.chunkSize() - chunkMetric.freeBytes();
+                }
+            }
+        }
+        return totalUsed;
     }
 }
