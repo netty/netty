@@ -136,8 +136,8 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
 
         // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
         // will attempt to write some data and make progress.
-        if ((maxBytes - len < size && count > 0) ||
-                // Check if we have enough space left
+        if (maxBytes - len < size && count > 0 ||
+            // Check if we have enough space left
                 memory.capacity() < (count + 1) * IOV_SIZE) {
             // If the size + len will overflow SSIZE_MAX we stop populate the IovArray. This is done as linux
             //  not allow to write more bytes then SSIZE_MAX with one writev(...) call and so will
@@ -226,7 +226,7 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
     }
 
     @Override
-    public boolean processMessage(Object msg) throws Exception {
+    public boolean processMessage(Object msg) {
         if (msg instanceof io.netty.buffer.api.Buffer) {
             var buffer = (io.netty.buffer.api.Buffer) msg;
             buffer.forEachReadable(0, this);
