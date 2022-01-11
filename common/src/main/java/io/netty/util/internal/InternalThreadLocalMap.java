@@ -46,6 +46,9 @@ public final class InternalThreadLocalMap {
     private static final AtomicInteger nextIndex = new AtomicInteger();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
+    private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
+    // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
+    private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
     private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
@@ -132,8 +135,8 @@ public final class InternalThreadLocalMap {
 
     public static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
-        if (index < 0) {
-            nextIndex.decrementAndGet();
+        if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
+            nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
             throw new IllegalStateException("too many thread-local indexed variables");
         }
         return index;
@@ -315,13 +318,18 @@ public final class InternalThreadLocalMap {
     private void expandIndexedVariableTableAndSet(int index, Object value) {
         Object[] oldArray = indexedVariables;
         final int oldCapacity = oldArray.length;
-        int newCapacity = index;
-        newCapacity |= newCapacity >>>  1;
-        newCapacity |= newCapacity >>>  2;
-        newCapacity |= newCapacity >>>  4;
-        newCapacity |= newCapacity >>>  8;
-        newCapacity |= newCapacity >>> 16;
-        newCapacity ++;
+        int newCapacity;
+        if (index < ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD) {
+            newCapacity = index;
+            newCapacity |= newCapacity >>>  1;
+            newCapacity |= newCapacity >>>  2;
+            newCapacity |= newCapacity >>>  4;
+            newCapacity |= newCapacity >>>  8;
+            newCapacity |= newCapacity >>> 16;
+            newCapacity ++;
+        } else {
+            newCapacity = ARRAY_LIST_CAPACITY_MAX_SIZE;
+        }
 
         Object[] newArray = Arrays.copyOf(oldArray, newCapacity);
         Arrays.fill(newArray, oldCapacity, newArray.length, UNSET);
