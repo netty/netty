@@ -340,8 +340,8 @@ public final class ChannelOutboundBuffer {
      * This operation assumes all messages in this buffer are either {@link ByteBuf}s or {@link Buffer}s.
      */
     public void removeBytes(long writtenBytes) {
-        while (writtenBytes > 0) {
-            Object msg = current();
+        Object msg = current();
+        while (writtenBytes > 0 || hasZeroReadable(msg)) {
             if (msg instanceof Buffer) {
                 Buffer buf = (Buffer) msg;
                 final int readableBytes = buf.readableBytes();
@@ -371,8 +371,19 @@ public final class ChannelOutboundBuffer {
             } else {
                 break; // Don't know how to process this message. Might be null.
             }
+            msg = current();
         }
         clearNioBuffers();
+    }
+
+    private static boolean hasZeroReadable(Object msg) {
+        if (msg instanceof Buffer) {
+            return ((Buffer) msg).readableBytes() == 0;
+        }
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().readableBytes() == 0;
+        }
+        return false;
     }
 
     // Clear all ByteBuffer from the array so these can be GC'ed.

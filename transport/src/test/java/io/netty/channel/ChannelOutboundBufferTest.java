@@ -21,6 +21,7 @@ import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.buffer.api.Send;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Promise;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.buffer;
@@ -55,6 +57,27 @@ public class ChannelOutboundBufferTest {
         }
         assertEquals(0, buffer.nioBufferCount());
         release(buffer);
+    }
+
+    @Test
+    public void flushingEmptyBuffers() throws Exception {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(0);
+        buffer.addMessage(buf, 0, channel.newPromise());
+        buffer.addFlush();
+        AtomicInteger messageCounter = new AtomicInteger();
+        MessageProcessor messageProcessor = msg -> {
+            assertNotNull(msg);
+            messageCounter.incrementAndGet();
+            return true;
+        };
+        buffer.forEachFlushedMessage(messageProcessor);
+        assertThat(messageCounter.get()).isOne();
+        buffer.removeBytes(0); // This must remove the empty buffer.
+        messageCounter.set(0);
+        buffer.forEachFlushedMessage(messageProcessor);
+        assertThat(messageCounter.get()).isZero();
     }
 
     @Test
