@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 public class SocketHalfClosedTest extends AbstractSocketTest {
 
     @Test
+    @Timeout(value = 5000, unit = MILLISECONDS)
     public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -65,54 +66,45 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         });
     }
 
-
-    private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-
+    private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(ServerBootstrap sb, Bootstrap cb)
+            throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
 
         final CountDownLatch waitHalfClosureDone = new CountDownLatch(1);
-
-        final ByteBuf testHalfClosureSendMessage = Unpooled.buffer(16);
-        for (int i = 0; i < testHalfClosureSendMessage.capacity(); i ++) {
-            testHalfClosureSendMessage.writeByte((byte) i);
-        }
-
         try {
             sb.childOption(ChannelOption.SO_LINGER, 1)
               .childHandler(new ChannelInitializer<Channel>() {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new  ChannelInboundHandlerAdapter(){
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
                             @Override
                             public void channelActive(final ChannelHandlerContext ctx) {
-                                SocketChannel channel = (SocketChannel)ctx.channel();
+                                SocketChannel channel = (SocketChannel) ctx.channel();
                                 channel.shutdownOutput();
                             }
 
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                waitHalfClosureDone.countDown();
                                 ReferenceCountUtil.release(msg);
+                                waitHalfClosureDone.countDown();
                             }
                         });
                   }
-
               });
-
 
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
                             @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush(testHalfClosureSendMessage);
+                                    ctx.writeAndFlush(ctx.alloc(16).writeZero(16));
                                 }
 
                                 if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
