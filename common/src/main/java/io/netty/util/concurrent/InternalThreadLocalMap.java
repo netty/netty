@@ -54,7 +54,7 @@ public final class InternalThreadLocalMap {
     private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
     private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
-    public static final Object UNSET = new Object();
+    static final Object UNSET = new Object();
 
     /** Used by {@link FastThreadLocal} */
     private Object[] indexedVariables;
