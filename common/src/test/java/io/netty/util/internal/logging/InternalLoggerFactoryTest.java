@@ -15,41 +15,50 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.logging.InternalLoggerFactory.InternalLoggerFactoryHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class InternalLoggerFactoryTest {
     private static final Exception e = new Exception();
-    private InternalLoggerFactory oldLoggerFactory;
+    private InternalLoggerFactory.InternalLoggerFactoryHolder holder;
     private InternalLogger mockLogger;
 
     @BeforeEach
     public void init() {
-        oldLoggerFactory = InternalLoggerFactory.getDefaultFactory();
-
         final InternalLoggerFactory mockFactory = mock(InternalLoggerFactory.class);
         mockLogger = mock(InternalLogger.class);
         when(mockFactory.newInstance("mock")).thenReturn(mockLogger);
-        InternalLoggerFactory.setDefaultFactory(mockFactory);
+        holder = new InternalLoggerFactoryHolder(mockFactory);
     }
 
     @AfterEach
     public void destroy() {
         reset(mockLogger);
-        InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
     }
 
     @Test
     public void shouldNotAllowNullDefaultFactory() {
         assertThrows(NullPointerException.class, () -> InternalLoggerFactory.setDefaultFactory(null));
-        holder.setFactory(null);
+        assertThrows(NullPointerException.class, () -> holder.setFactory(null));
     }
 
     @Test
@@ -68,7 +77,7 @@ public class InternalLoggerFactoryTest {
     public void testIsTraceEnabled() {
         when(mockLogger.isTraceEnabled()).thenReturn(true);
 
-        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        InternalLogger logger = holder.getInstance("mock");
         assertTrue(logger.isTraceEnabled());
         verify(mockLogger).isTraceEnabled();
     }
@@ -77,7 +86,7 @@ public class InternalLoggerFactoryTest {
     public void testIsDebugEnabled() {
         when(mockLogger.isDebugEnabled()).thenReturn(true);
 
-        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        InternalLogger logger = holder.getInstance("mock");
         assertTrue(logger.isDebugEnabled());
         verify(mockLogger).isDebugEnabled();
     }
@@ -86,7 +95,7 @@ public class InternalLoggerFactoryTest {
     public void testIsInfoEnabled() {
         when(mockLogger.isInfoEnabled()).thenReturn(true);
 
-        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        InternalLogger logger = holder.getInstance("mock");
         assertTrue(logger.isInfoEnabled());
         verify(mockLogger).isInfoEnabled();
     }
@@ -95,7 +104,7 @@ public class InternalLoggerFactoryTest {
     public void testIsWarnEnabled() {
         when(mockLogger.isWarnEnabled()).thenReturn(true);
 
-        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        InternalLogger logger = holder.getInstance("mock");
         assertTrue(logger.isWarnEnabled());
         verify(mockLogger).isWarnEnabled();
     }
@@ -104,108 +113,100 @@ public class InternalLoggerFactoryTest {
     public void testIsErrorEnabled() {
         when(mockLogger.isErrorEnabled()).thenReturn(true);
 
-        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        InternalLogger logger = holder.getInstance("mock");
         assertTrue(logger.isErrorEnabled());
         verify(mockLogger).isErrorEnabled();
     }
 
     @Test
     public void testTrace() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.trace("a");
         verify(mockLogger).trace("a");
     }
 
     @Test
     public void testTraceWithException() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.trace("a", e);
         verify(mockLogger).trace("a", e);
     }
 
     @Test
     public void testDebug() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.debug("a");
         verify(mockLogger).debug("a");
     }
 
     @Test
     public void testDebugWithException() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.debug("a", e);
         verify(mockLogger).debug("a", e);
     }
 
     @Test
     public void testInfo() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.info("a");
         verify(mockLogger).info("a");
     }
 
     @Test
     public void testInfoWithException() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.info("a", e);
         verify(mockLogger).info("a", e);
     }
 
     @Test
     public void testWarn() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.warn("a");
         verify(mockLogger).warn("a");
     }
 
     @Test
     public void testWarnWithException() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.warn("a", e);
         verify(mockLogger).warn("a", e);
     }
 
     @Test
     public void testError() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.error("a");
         verify(mockLogger).error("a");
     }
 
     @Test
     public void testErrorWithException() {
-        final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        final InternalLogger logger = holder.getInstance("mock");
         logger.error("a", e);
         verify(mockLogger).error("a", e);
     }
 
     @Test
     public void shouldNotAllowToSetFactoryTwice() {
-        try {
-            holder.setFactory(createMock(InternalLoggerFactory.class));
-            fail("should have thrown IllegalStateException");
-        } catch (final IllegalStateException e) {
-            assertThat(e.getMessage(), containsString("factory is already set"));
-        }
+        var e = assertThrows(IllegalStateException.class, () -> holder.setFactory(mock(InternalLoggerFactory.class)));
+        assertThat(e).hasMessageContaining("factory is already set");
 
-        try {
-            final InternalLoggerFactory.InternalLoggerFactoryHolder implicit =
-                    new InternalLoggerFactory.InternalLoggerFactoryHolder();
-            implicit.getFactory(); // force initialization
-            implicit.setFactory(createMock(InternalLoggerFactory.class));
-            fail("should have thrown IllegalStateException");
-        } catch (final IllegalStateException e) {
-            assertThat(e.getMessage(), containsString("factory is already set"));
-        }
+        final InternalLoggerFactory.InternalLoggerFactoryHolder implicit =
+                new InternalLoggerFactory.InternalLoggerFactoryHolder();
+        implicit.getFactory(); // force initialization
+        e = assertThrows(IllegalStateException.class, () -> implicit.setFactory(mock(InternalLoggerFactory.class)));
+        assertThat(e).hasMessageContaining("factory is already set");
     }
 
     @Test
-    public void raceGetAndGet() throws BrokenBarrierException, InterruptedException {
+    public void raceGetAndGet() throws Exception {
         final CyclicBarrier barrier = new CyclicBarrier(3);
         final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
                 new InternalLoggerFactory.InternalLoggerFactoryHolder();
-        final AtomicReference<InternalLoggerFactory> firstReference = new AtomicReference<InternalLoggerFactory>();
-        final AtomicReference<InternalLoggerFactory> secondReference = new AtomicReference<InternalLoggerFactory>();
+        final AtomicReference<InternalLoggerFactory> firstReference = new AtomicReference<>();
+        final AtomicReference<InternalLoggerFactory> secondReference = new AtomicReference<>();
 
         final Thread firstGet = getThread(firstReference, holder, barrier);
         final Thread secondGet = getThread(secondReference, holder, barrier);
@@ -228,12 +229,12 @@ public class InternalLoggerFactoryTest {
     }
 
     @Test
-    public void raceGetAndSet() throws BrokenBarrierException, InterruptedException {
+    public void raceGetAndSet() throws Exception {
         final CyclicBarrier barrier = new CyclicBarrier(3);
         final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
                 new InternalLoggerFactory.InternalLoggerFactoryHolder();
-        final InternalLoggerFactory internalLoggerFactory = createMock(InternalLoggerFactory.class);
-        final AtomicReference<InternalLoggerFactory> reference = new AtomicReference<InternalLoggerFactory>();
+        final InternalLoggerFactory internalLoggerFactory = mock(InternalLoggerFactory.class);
+        final AtomicReference<InternalLoggerFactory> reference = new AtomicReference<>();
 
         final Thread get = getThread(reference, holder, barrier);
 
@@ -259,12 +260,12 @@ public class InternalLoggerFactoryTest {
     }
 
     @Test
-    public void raceSetAndSet() throws BrokenBarrierException, InterruptedException {
+    public void raceSetAndSet() throws Exception {
         final CyclicBarrier barrier = new CyclicBarrier(3);
         final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
                 new InternalLoggerFactory.InternalLoggerFactoryHolder();
-        final InternalLoggerFactory first = createMock(InternalLoggerFactory.class);
-        final InternalLoggerFactory second = createMock(InternalLoggerFactory.class);
+        final InternalLoggerFactory first = mock(InternalLoggerFactory.class);
+        final InternalLoggerFactory second = mock(InternalLoggerFactory.class);
 
         final AtomicBoolean firstSetSuccess = new AtomicBoolean();
         final Thread firstSet = setThread(first, holder, firstSetSuccess, barrier);
@@ -318,7 +319,6 @@ public class InternalLoggerFactoryTest {
                     holder.setFactory(internalLoggerFactory);
                 } catch (final IllegalStateException e) {
                     success = false;
-                    assertThat(e.getMessage(), containsString("factory is already set"));
                 } finally {
                     setSuccess.set(success);
                     awaitUnchecked(barrier);
@@ -330,11 +330,8 @@ public class InternalLoggerFactoryTest {
     private static void awaitUnchecked(final CyclicBarrier barrier) {
         try {
             barrier.await();
-        } catch (final InterruptedException exception) {
-            throw new IllegalStateException(exception);
-        } catch (final BrokenBarrierException exception) {
+        } catch (Exception exception) {
             throw new IllegalStateException(exception);
         }
     }
-
 }

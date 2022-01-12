@@ -13,54 +13,54 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util.internal.logging;
 
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static java.util.Objects.requireNonNull;
 
 /**
  * Creates {@link InternalLogger}s. This factory allows you to choose what logging framework Netty should use. The
- * default factory is {@link Slf4JLoggerFactory}. If SLF4J is not available, {@link Log4JLoggerFactory} is used. If
+ * default factory is {@link Slf4JLoggerFactory}. If SLF4J is not available, {@link Log4J2LoggerFactory} is used. If
  * Log4J is not available, {@link JdkLoggerFactory} is used. You can change it to your preferred logging framework
  * before other Netty classes are loaded via {@link #setDefaultFactory(InternalLoggerFactory)}. If you want to change
  * the logger factory, {@link #setDefaultFactory(InternalLoggerFactory)} must be invoked before any other Netty classes
  * are loaded. Note that {@link #setDefaultFactory(InternalLoggerFactory)}} can not be invoked more than once.
  */
 public abstract class InternalLoggerFactory {
-
-    private static final InternalLoggerFactoryHolder HOLDER = new InternalLoggerFactoryHolder();
-
     /**
      * This class holds a reference to the {@link InternalLoggerFactory}. The raison d'être for this class is primarily
      * to aid in testing.
      */
     static final class InternalLoggerFactoryHolder {
-        private final AtomicReference<InternalLoggerFactory> reference;
+        private static final AtomicReferenceFieldUpdater<InternalLoggerFactoryHolder, InternalLoggerFactory> UPDATER =
+                AtomicReferenceFieldUpdater.newUpdater(
+                        InternalLoggerFactoryHolder.class, InternalLoggerFactory.class, "reference");
+        static final InternalLoggerFactoryHolder HOLDER = new InternalLoggerFactoryHolder();
+
+        private volatile InternalLoggerFactory reference;
 
         InternalLoggerFactoryHolder() {
-            this(null);
         }
 
-        InternalLoggerFactoryHolder(final InternalLoggerFactory holder) {
-            this.reference = new AtomicReference<InternalLoggerFactory>(holder);
+        InternalLoggerFactoryHolder(final InternalLoggerFactory delegate) {
+            reference = delegate;
         }
 
         InternalLoggerFactory getFactory() {
-            if (reference.get() == null) {
-                reference.compareAndSet(null, newDefaultFactory(InternalLoggerFactory.class.getName()));
+            if (reference == null) {
+                UPDATER.compareAndSet(this, null, newDefaultFactory(InternalLoggerFactory.class.getName()));
             }
-            return reference.get();
+            return reference;
         }
 
         void setFactory(final InternalLoggerFactory factory) {
             if (factory == null) {
                 throw new NullPointerException("factory");
             }
-            if (!reference.compareAndSet(null, factory)) {
+            if (!UPDATER.compareAndSet(this, null, factory)) {
                 throw new IllegalStateException(
-                        "factory is already set to [" + reference.get() + "], rejecting [" + factory + "]");
+                        "factory is already set to [" + reference + "], rejecting [" + factory + ']');
             }
         }
 
@@ -75,53 +75,46 @@ public abstract class InternalLoggerFactory {
         InternalLogger newInstance(String name) {
             return getFactory().newInstance(name);
         }
-    }
 
-    @SuppressWarnings("UnusedCatchParameter")
-    private static InternalLoggerFactory newDefaultFactory(String name) {
-        InternalLoggerFactory f = useSlf4JLoggerFactory(name);
-        if (f != null) {
-            return f;
+        private static InternalLoggerFactory newDefaultFactory(String name) {
+            InternalLoggerFactory f = useSlf4JLoggerFactory(name);
+            if (f != null) {
+                return f;
+            }
+
+            f = useLog4J2LoggerFactory(name);
+            if (f != null) {
+                return f;
+            }
+
+            return useJdkLoggerFactory(name);
         }
 
-        f = useLog4J2LoggerFactory(name);
-        if (f != null) {
-            return f;
+        private static InternalLoggerFactory useSlf4JLoggerFactory(String name) {
+            try {
+                InternalLoggerFactory f = Slf4JLoggerFactory.getInstanceWithNopCheck();
+                f.newInstance(name).debug("Using SLF4J as the default logging framework");
+                return f;
+            } catch (LinkageError | Exception ignore) {
+                return null;
+            }
         }
 
-        return useJdkLoggerFactory(name);
-    }
-
-    private static InternalLoggerFactory useSlf4JLoggerFactory(String name) {
-        try {
-            InternalLoggerFactory f = Slf4JLoggerFactory.getInstanceWithNopCheck();
-            f.newInstance(name).debug("Using SLF4J as the default logging framework");
-            return f;
-        } catch (LinkageError ignore) {
-            return null;
-        } catch (Exception ignore) {
-            // We catch Exception and not ReflectiveOperationException as we still support java 6
-            return null;
+        private static InternalLoggerFactory useLog4J2LoggerFactory(String name) {
+            try {
+                InternalLoggerFactory f = Log4J2LoggerFactory.INSTANCE;
+                f.newInstance(name).debug("Using Log4J2 as the default logging framework");
+                return f;
+            } catch (LinkageError | Exception ignore) {
+                return null;
+            }
         }
-    }
 
-    private static InternalLoggerFactory useLog4J2LoggerFactory(String name) {
-        try {
-            InternalLoggerFactory f = Log4J2LoggerFactory.INSTANCE;
-            f.newInstance(name).debug("Using Log4J2 as the default logging framework");
+        private static InternalLoggerFactory useJdkLoggerFactory(String name) {
+            InternalLoggerFactory f = JdkLoggerFactory.INSTANCE;
+            f.newInstance(name).debug("Using java.util.logging as the default logging framework");
             return f;
-        } catch (LinkageError ignore) {
-            return null;
-        } catch (Exception ignore) {
-            // We catch Exception and not ReflectiveOperationException as we still support java 6
-            return null;
         }
-    }
-
-    private static InternalLoggerFactory useJdkLoggerFactory(String name) {
-        InternalLoggerFactory f = JdkLoggerFactory.INSTANCE;
-        f.newInstance(name).debug("Using java.util.logging as the default logging framework");
-        return f;
     }
 
     /**
@@ -129,7 +122,7 @@ public abstract class InternalLoggerFactory {
      * classpath, or set explicitly via {@link #setDefaultFactory(InternalLoggerFactory)}.
      */
     public static InternalLoggerFactory getDefaultFactory() {
-        return HOLDER.getFactory();
+        return InternalLoggerFactoryHolder.HOLDER.getFactory();
     }
 
     /**
@@ -140,26 +133,25 @@ public abstract class InternalLoggerFactory {
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
         requireNonNull(defaultFactory, "defaultFactory");
-        HOLDER.setFactory(defaultFactory);
+        InternalLoggerFactoryHolder.HOLDER.setFactory(defaultFactory);
     }
 
     /**
      * Creates a new logger instance with the name of the specified class.
      */
     public static InternalLogger getInstance(Class<?> clazz) {
-        return HOLDER.getInstance(clazz);
+        return InternalLoggerFactoryHolder.HOLDER.getInstance(clazz);
     }
 
     /**
      * Creates a new logger instance with the specified name.
      */
     public static InternalLogger getInstance(String name) {
-        return HOLDER.getInstance(name);
+        return InternalLoggerFactoryHolder.HOLDER.getInstance(name);
     }
 
     /**
      * Creates a new logger instance with the specified name.
      */
     protected abstract InternalLogger newInstance(String name);
-
 }
