@@ -14,10 +14,10 @@
  * under the License.
  */
 
-package io.netty.util.internal;
+package io.netty.util.concurrent;
 
-import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.TypeParameterMatcher;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 

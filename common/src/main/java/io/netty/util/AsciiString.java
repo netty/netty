@@ -16,7 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;

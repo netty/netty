@@ -15,7 +15,7 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;

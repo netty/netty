@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;

@@ -16,6 +16,8 @@
 
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.InternalThreadLocalMap;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;

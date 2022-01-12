@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 
 import java.util.BitSet;
 

@@ -16,7 +16,7 @@
 
 package io.netty.channel;
 
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 
 import java.lang.reflect.AnnotatedType;
 import java.util.Map;

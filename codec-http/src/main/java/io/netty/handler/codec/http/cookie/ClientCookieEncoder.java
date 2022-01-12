@@ -23,7 +23,7 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparat
 import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.InternalThreadLocalMap;
 
 import java.util.Arrays;
 import java.util.Collection;

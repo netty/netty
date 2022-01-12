@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.InternalThreadLocalMap;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
