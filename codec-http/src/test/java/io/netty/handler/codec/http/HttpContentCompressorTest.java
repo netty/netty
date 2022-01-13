@@ -495,7 +495,7 @@ public class HttpContentCompressorTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
 
         res = (FullHttpResponse) o;
-        assertSame(continueResponse, res);
+        assertEquals(continueResponse, res);
         res.close();
 
         o = ch.readOutbound();
@@ -709,6 +709,12 @@ public class HttpContentCompressorTest {
             this.payload = payload;
         }
 
+        AssembledHttpResponse(
+                HttpVersion version, HttpResponseStatus status, HttpHeaders headers, Buffer payload) {
+            super(version, status, headers);
+            this.payload = payload;
+        }
+
         @Override
         public Buffer payload() {
             return payload;
@@ -717,7 +723,7 @@ public class HttpContentCompressorTest {
         @Override
         public Send<AssembledHttpResponse> send() {
             return payload.send().map(AssembledHttpResponse.class,
-                    p -> new AssembledHttpResponse(protocolVersion(), status(), p));
+                    p -> new AssembledHttpResponse(protocolVersion(), status(), headers(), p));
         }
 
         @Override

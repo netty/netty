@@ -85,6 +85,13 @@ public interface ReadableComponent {
     ByteBuffer readableBuffer();
 
     /**
+     * Get the number of readable bytes from this component.
+     *
+     * @return The number of bytes that can be read from this readable component.
+     */
+    int readableBytes();
+
+    /**
      * Open a cursor to iterate the readable bytes of this component.
      * Any offsets internal to the component are not modified by the cursor.
      * <p>

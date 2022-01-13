@@ -15,6 +15,7 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.api.Resource;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -717,8 +718,14 @@ public class EmbeddedChannel extends AbstractChannel {
                 break;
             }
 
-            ReferenceCountUtil.retain(msg);
-            handleOutboundMessage(msg);
+            if (msg instanceof Resource<?>) {
+                // Exfiltrate message for later inspection in tests.
+                // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
+                // here allows the close() in remove() to become a no-op.
+                handleOutboundMessage(((Resource<?>) msg).send().receive());
+            } else {
+                handleOutboundMessage(ReferenceCountUtil.retain(msg));
+            }
             in.remove();
         }
     }

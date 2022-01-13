@@ -17,6 +17,11 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.CompositeBuffer;
+import io.netty.buffer.api.Send;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Promise;
@@ -25,13 +30,14 @@ import org.junit.jupiter.api.Test;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -54,7 +60,28 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
-    public void testNioBuffersSingleBacked() {
+    public void flushingEmptyBuffers() throws Exception {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(0);
+        buffer.addMessage(buf, 0, channel.newPromise());
+        buffer.addFlush();
+        AtomicInteger messageCounter = new AtomicInteger();
+        MessageProcessor messageProcessor = msg -> {
+            assertNotNull(msg);
+            messageCounter.incrementAndGet();
+            return true;
+        };
+        buffer.forEachFlushedMessage(messageProcessor);
+        assertThat(messageCounter.get()).isOne();
+        buffer.removeBytes(0); // This must remove the empty buffer.
+        messageCounter.set(0);
+        buffer.forEachFlushedMessage(messageProcessor);
+        assertThat(messageCounter.get()).isZero();
+    }
+
+    @Test
+    public void testNioBuffersSingleBackedByteBuf() {
         TestChannel channel = new TestChannel();
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
@@ -70,7 +97,7 @@ public class ChannelOutboundBufferTest {
         assertEquals(1, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             if (i == 0) {
-                assertEquals(buffers[i], nioBuf);
+                assertEquals(buffers[0], nioBuf);
             } else {
                 assertNull(buffers[i]);
             }
@@ -79,7 +106,36 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
-    public void testNioBuffersExpand() {
+    public void testNioBuffersSingleBacked() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        assertEquals(0, buffer.nioBufferCount());
+
+        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        buffer.addMessage(buf, buf.readableBytes(), channel.newPromise());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
+        buffer.addFlush();
+        ByteBuffer[] buffers = buffer.nioBuffers();
+        assertNotNull(buffers);
+        assertEquals(1, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
+        for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+            if (i == 0) {
+                assertEquals(1, buf.countReadableComponents());
+                buf.forEachReadable(0, (index, component) -> {
+                    assertEquals(0, index, "Expected buffer to only have a single component.");
+                    assertEquals(buffers[0], component.readableBuffer());
+                    return true;
+                });
+            } else {
+                assertNull(buffers[i]);
+            }
+        }
+        release(buffer);
+    }
+
+    @Test
+    public void testNioBuffersExpandByteBuf() {
         TestChannel channel = new TestChannel();
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
@@ -100,7 +156,35 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
-    public void testNioBuffersExpand2() {
+    public void testNioBuffersExpand() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        for (int i = 0; i < 64; i++) {
+            buffer.addMessage(buf.copy(), buf.readableBytes(), channel.newPromise());
+        }
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
+        buffer.addFlush();
+        ByteBuffer[] buffers = buffer.nioBuffers();
+        assertEquals(64, buffer.nioBufferCount());
+        assertEquals(1, buf.countReadableComponents());
+        buf.forEachReadable(0, (index, component) -> {
+            assertEquals(0, index);
+            ByteBuffer expected = component.readableBuffer();
+            for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+                assertEquals(expected, buffers[i]);
+            }
+            return true;
+        });
+
+        release(buffer);
+        buf.close();
+    }
+
+    @Test
+    public void testNioBuffersExpand2ByteBuf() {
         TestChannel channel = new TestChannel();
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
@@ -128,7 +212,42 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
-    public void testNioBuffersMaxCount() {
+    public void testNioBuffersExpand2() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        var sends = Stream.generate(() -> buf.copy().send()).limit(65).toArray(Send[]::new);
+        @SuppressWarnings("unchecked")
+        CompositeBuffer comp = CompositeBuffer.compose(BufferAllocator.offHeapUnpooled(), sends);
+
+        buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());
+
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
+        buffer.addFlush();
+        ByteBuffer[] buffers = buffer.nioBuffers();
+        assertEquals(65, buffer.nioBufferCount());
+        assertEquals(1, buf.countReadableComponents());
+        buf.forEachReadable(0, (index, component) -> {
+            assertEquals(0, index);
+            ByteBuffer expected = component.readableBuffer();
+            for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+                if (i < 65) {
+                    assertEquals(expected, buffers[i]);
+                } else {
+                    assertNull(buffers[i]);
+                }
+            }
+            return true;
+        });
+
+        release(buffer);
+        buf.close();
+    }
+
+    @Test
+    public void testNioBuffersMaxCountByteBuf() {
         TestChannel channel = new TestChannel();
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
@@ -150,6 +269,73 @@ public class ChannelOutboundBufferTest {
         }
         release(buffer);
         buf.release();
+    }
+
+    @Test
+    public void testNioBuffersMaxCount() {
+        TestChannel channel = new TestChannel();
+
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        assertEquals(4, buf.readableBytes());
+        var sends = Stream.generate(() -> buf.copy().send()).limit(65).toArray(Send[]::new);
+        @SuppressWarnings("unchecked")
+        CompositeBuffer comp = CompositeBuffer.compose(BufferAllocator.offHeapUnpooled(), sends);
+
+        assertEquals(65, comp.countComponents());
+        buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());
+        assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
+        buffer.addFlush();
+        final int maxCount = 10;    // less than comp.nioBufferCount()
+        ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
+        assertTrue(buffer.nioBufferCount() <= maxCount, "Should not be greater than maxCount");
+        buf.forEachReadable(0, (index, component) -> {
+            assertEquals(0, index);
+            ByteBuffer expected = component.readableBuffer();
+            for (int i = 0;  i < buffer.nioBufferCount(); i++) {
+                assertEquals(expected, buffers[i]);
+            }
+            return true;
+        });
+        release(buffer);
+        buf.close();
+    }
+
+    @Test
+    public void removeBytesByteBuf() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
+        int size = buf.readableBytes();
+        buffer.addMessage(buf, size, channel.newPromise());
+        buffer.addFlush();
+        assertEquals(0, buffer.currentProgress());
+        buffer.removeBytes(size / 2);
+        assertEquals(size / 2, buffer.currentProgress());
+        assertThat(buffer.current()).isNotNull();
+        buffer.removeBytes(size);
+        assertNull(buffer.current());
+        assertTrue(buffer.isEmpty());
+        assertEquals(0, buffer.currentProgress());
+    }
+
+    @Test
+    public void removeBytes() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        int size = buf.readableBytes();
+        buffer.addMessage(buf, size, channel.newPromise());
+        buffer.addFlush();
+        assertEquals(0, buffer.currentProgress());
+        buffer.removeBytes(size / 2);
+        assertEquals(size / 2, buffer.currentProgress());
+        assertThat(buffer.current()).isNotNull();
+        buffer.removeBytes(size);
+        assertNull(buffer.current());
+        assertTrue(buffer.isEmpty());
+        assertEquals(0, buffer.currentProgress());
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
@@ -284,20 +470,20 @@ public class ChannelOutboundBufferTest {
         ch.write(buffer().writeZero(128));
         // Ensure exceeding the low watermark does not make channel unwritable.
         ch.write(buffer().writeZero(2));
-        assertThat(buf.toString(), is(""));
+        assertThat(buf.toString()).isEmpty();
 
         ch.unsafe().outboundBuffer().addFlush();
 
         // Ensure exceeding the high watermark makes channel unwritable.
         ch.write(buffer().writeZero(127));
-        assertThat(buf.toString(), is("false "));
+        assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
-        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(),
-                is(127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD));
-        assertThat(buf.toString(), is("false true "));
+        assertTrue(ch.unsafe().outboundBuffer().remove());
+        assertTrue(ch.unsafe().outboundBuffer().remove());
+        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes()).isEqualTo(
+                127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
+        assertThat(buf.toString()).isEqualTo("false true ");
 
         safeClose(ch);
     }
@@ -320,18 +506,18 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that the default value of a user-defined writability flag is true.
         for (int i = 1; i <= 30; i ++) {
-            assertThat(cob.getUserDefinedWritability(i), is(true));
+            assertTrue(cob.getUserDefinedWritability(i));
         }
 
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable();
         cob.setUserDefinedWritability(1, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure that setting a user-defined writability flag to true affects channel.isWritable();
         cob.setUserDefinedWritability(1, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false true "));
+        assertThat(buf.toString()).isEqualTo("false true ");
 
         safeClose(ch);
     }
@@ -355,23 +541,23 @@ public class ChannelOutboundBufferTest {
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable()
         cob.setUserDefinedWritability(1, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure that setting another user-defined writability flag to false does not trigger
         // channelWritabilityChanged.
         cob.setUserDefinedWritability(2, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure that setting only one user-defined writability flag to true does not affect channel.isWritable()
         cob.setUserDefinedWritability(1, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure that setting all user-defined writability flags to true affects channel.isWritable()
         cob.setUserDefinedWritability(2, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false true "));
+        assertThat(buf.toString()).isEqualTo("false true ");
 
         safeClose(ch);
     }
@@ -395,23 +581,23 @@ public class ChannelOutboundBufferTest {
         ch.executor().execute(() -> {
             // Trigger channelWritabilityChanged() by writing a lot.
             ch.write(buffer().writeZero(257));
-            assertThat(buf.toString(), is("false "));
+            assertThat(buf.toString()).isEqualTo("false ");
 
             // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
             cob.setUserDefinedWritability(1, false);
             ch.runPendingTasks();
-            assertThat(buf.toString(), is("false "));
+            assertThat(buf.toString()).isEqualTo("false ");
 
             // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
             // because of the user-defined writability flag.
             ch.flush();
-            assertThat(cob.totalPendingWriteBytes(), is(0L));
-            assertThat(buf.toString(), is("false "));
+            assertThat(cob.totalPendingWriteBytes()).isEqualTo(0L);
+            assertThat(buf.toString()).isEqualTo("false ");
 
             // Ensure that setting the user-defined writability flag to true triggers channelWritabilityChanged()
             cob.setUserDefinedWritability(1, true);
             ch.runPendingTasks();
-            assertThat(buf.toString(), is("false true "));
+            assertThat(buf.toString()).isEqualTo("false true ");
         });
 
         safeClose(ch);
@@ -419,12 +605,15 @@ public class ChannelOutboundBufferTest {
 
     private static void safeClose(EmbeddedChannel ch) {
         ch.finish();
-        for (;;) {
-            ByteBuf m = ch.readOutbound();
-            if (m == null) {
-                break;
+        Object m;
+        do {
+            m = ch.readOutbound();
+            if (m instanceof ByteBuf) {
+                ((ByteBuf) m).release();
             }
-            m.release();
-        }
+            if (m instanceof Buffer) {
+                ((Buffer) m).close();
+            }
+        } while (m != null);
     }
 }

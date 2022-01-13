@@ -317,4 +317,20 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(toByteArray(buffer)).containsExactly(1, 3, 4);
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void readBytesWithOffsetMustWriteAllBytesIntoByteArray(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeLong(0x0102030405060708L);
+            byte[] array = new byte[4];
+            assertThat(buffer.readByte()).isEqualTo((byte) 1);
+            assertThat(buffer.readByte()).isEqualTo((byte) 2);
+            buffer.readBytes(array, 1, 2);
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isEqualTo(4);
+            assertThat(array).containsExactly(0, 0x03, 0x04, 0);
+        }
+    }
 }

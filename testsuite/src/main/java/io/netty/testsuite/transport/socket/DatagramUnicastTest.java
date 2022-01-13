@@ -252,14 +252,17 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 if (cause != null) {
                     throw cause;
                 }
-                fail();
+                fail("timed out waiting for latch(" +
+                     "initial count: " + count + ", current count: " + latch.getCount() + "), wrap type: " + wrapType);
             }
             if (!clientLatch.await(10, TimeUnit.SECONDS)) {
                 Throwable cause = clientErrorRef.get();
                 if (cause != null) {
                     throw cause;
                 }
-                fail();
+                fail("timed out waiting for clientLatch(" +
+                     "initial count: " + count + ", current count: " + clientLatch.getCount() +
+                     "), wrap type: " + wrapType);
             }
             assertTrue(isConnected(cc));
 

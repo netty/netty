@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -328,7 +330,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testCloseInWritePromiseCompletePreservesOrder() throws Exception {
+    public void testCloseInWritePromiseCompletePreservesOrderByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -386,7 +388,61 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testCloseAfterWriteInSameEventLoopPreservesOrder() throws Exception {
+    public void testCloseInWritePromiseCompletePreservesOrder() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch messageLatch = new CountDownLatch(2);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+
+        cb.group(group1)
+          .channel(LocalChannel.class)
+          .handler(new TestHandler());
+
+        sb.group(group2)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelHandler() {
+              @Override
+              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                  if (msg instanceof Buffer && msg.equals(data)) {
+                      ((Buffer) msg).close();
+                      messageLatch.countDown();
+                  } else {
+                      ctx.fireChannelRead(msg);
+                  }
+              }
+              @Override
+              public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                  messageLatch.countDown();
+                  ctx.fireChannelInactive();
+              }
+          });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+
+            final Channel ccCpy = cc;
+            // Make sure a write operation is executed in the eventloop
+            cc.pipeline().lastContext().executor().execute(() -> {
+                ccCpy.writeAndFlush(data)
+                     .addListener(future -> ccCpy.pipeline().lastContext().close());
+            });
+
+            assertTrue(messageLatch.await(5, SECONDS));
+            assertFalse(cc.isOpen());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testCloseAfterWriteInSameEventLoopPreservesOrderByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(3);
@@ -453,7 +509,70 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testWriteInWritePromiseCompletePreservesOrder() throws Exception {
+    public void testCloseAfterWriteInSameEventLoopPreservesOrder() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch messageLatch = new CountDownLatch(3);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+
+        cb.group(sharedGroup)
+          .channel(LocalChannel.class)
+          .handler(new ChannelHandler() {
+              @Override
+              public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                  ctx.writeAndFlush(data);
+              }
+
+              @Override
+              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                  if (msg instanceof Buffer && data.equals(msg)) {
+                      ((Buffer) msg).close();
+                      messageLatch.countDown();
+                  } else {
+                      ctx.fireChannelRead(msg);
+                  }
+              }
+          });
+
+        sb.group(sharedGroup)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelHandler() {
+              @Override
+              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                  if (data.equals(msg)) {
+                      messageLatch.countDown();
+                      ctx.writeAndFlush(data);
+                      ctx.close();
+                  } else {
+                      ctx.fireChannelRead(msg);
+                  }
+              }
+
+              @Override
+              public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                  messageLatch.countDown();
+                  ctx.fireChannelInactive();
+              }
+          });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+            assertTrue(messageLatch.await(5, SECONDS));
+            assertFalse(cc.isOpen());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testWriteInWritePromiseCompletePreservesOrderByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -508,7 +627,57 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder() throws Exception {
+    public void testWriteInWritePromiseCompletePreservesOrder() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch messageLatch = new CountDownLatch(2);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+        final Buffer data2 = BufferAllocator.onHeapUnpooled().allocate(512);
+
+        cb.group(group1)
+          .channel(LocalChannel.class)
+          .handler(new TestHandler());
+
+        sb.group(group2)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelHandler() {
+              @Override
+              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                  final long count = messageLatch.getCount();
+                  if (msg instanceof Buffer && data.equals(msg) && count == 2 || data2.equals(msg) && count == 1) {
+                      ((Buffer) msg).close();
+                      messageLatch.countDown();
+                  } else {
+                      ctx.fireChannelRead(msg);
+                  }
+              }
+          });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+
+            final Channel ccCpy = cc;
+            // Make sure a write operation is executed in the eventloop
+            cc.pipeline().lastContext().executor().execute(() -> {
+                ccCpy.writeAndFlush(data).addListener(future ->
+                                                              ccCpy.writeAndFlush(data2));
+            });
+
+            assertTrue(messageLatch.await(5, SECONDS));
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrderByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -581,7 +750,78 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder() throws Exception {
+    public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch messageLatch = new CountDownLatch(2);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+        final Buffer data2 = BufferAllocator.onHeapUnpooled().allocate(512);
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelHandler() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        if (msg instanceof Buffer && data2.equals(msg)) {
+                            ((Buffer) msg).close();
+                            messageLatch.countDown();
+                        } else {
+                            ctx.fireChannelRead(msg);
+                        }
+                    }
+                });
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelHandler() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                if (msg instanceof Buffer && data.equals(msg)) {
+                                    ((Buffer) msg).close();
+                                    messageLatch.countDown();
+                                } else {
+                                    ctx.fireChannelRead(msg);
+                                }
+                            }
+                        });
+                        serverChannelRef.set(ch);
+                        serverChannelLatch.countDown();
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+            assertTrue(serverChannelLatch.await(5, SECONDS));
+
+            final Channel ccCpy = cc;
+            // Make sure a write operation is executed in the eventloop
+            cc.pipeline().lastContext().executor().execute(() -> {
+                ccCpy.writeAndFlush(data).addListener(future -> {
+                    Channel serverChannelCpy = serverChannelRef.get();
+                    serverChannelCpy.writeAndFlush(data2);
+                });
+            });
+
+            assertTrue(messageLatch.await(5, SECONDS));
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrderByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -658,7 +898,78 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromise() throws Exception {
+    public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch messageLatch = new CountDownLatch(2);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+        final Buffer data2 = BufferAllocator.onHeapUnpooled().allocate(512);
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+
+        cb.group(sharedGroup)
+          .channel(LocalChannel.class)
+          .handler(new ChannelHandler() {
+              @Override
+              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                  if (msg instanceof Buffer && data2.equals(msg) && messageLatch.getCount() == 1) {
+                      ((Buffer) msg).close();
+                      messageLatch.countDown();
+                  } else {
+                      ctx.fireChannelRead(msg);
+                  }
+              }
+          });
+
+        sb.group(sharedGroup)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new ChannelHandler() {
+                      @Override
+                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                          if (msg instanceof Buffer && data.equals(msg) && messageLatch.getCount() == 2) {
+                              ((Buffer) msg).close();
+                              messageLatch.countDown();
+                          } else {
+                              ctx.fireChannelRead(msg);
+                          }
+                      }
+                  });
+                  serverChannelRef.set(ch);
+                  serverChannelLatch.countDown();
+              }
+          });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+            assertTrue(serverChannelLatch.await(5, SECONDS));
+
+            final Channel ccCpy = cc;
+            // Make sure a write operation is executed in the eventloop
+            cc.pipeline().lastContext().executor().execute(() -> {
+                ccCpy.writeAndFlush(data).addListener(future -> {
+                    Channel serverChannelCpy = serverChannelRef.get();
+                    serverChannelCpy.writeAndFlush(data2);
+                });
+            });
+
+            assertTrue(messageLatch.await(5, SECONDS));
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromiseByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch serverMessageLatch = new CountDownLatch(1);
@@ -753,6 +1064,99 @@ public class LocalChannelTest {
         } finally {
             data.release();
             data2.release();
+        }
+    }
+
+    @Test
+    public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromise() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final CountDownLatch serverMessageLatch = new CountDownLatch(1);
+        final LatchChannelFutureListener serverChannelCloseLatch = new LatchChannelFutureListener(1);
+        final LatchChannelFutureListener clientChannelCloseLatch = new LatchChannelFutureListener(1);
+        final CountDownLatch writeFailLatch = new CountDownLatch(1);
+        final Buffer data = BufferAllocator.onHeapUnpooled().allocate(1024);
+        final Buffer data2 = BufferAllocator.onHeapUnpooled().allocate(512);
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+
+        cb.group(group1)
+          .channel(LocalChannel.class)
+          .handler(new TestHandler());
+
+        sb.group(group2)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new ChannelHandler() {
+                      @Override
+                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                          if (msg instanceof Buffer && data.equals(msg)) {
+                              ((Buffer) msg).close();
+                              serverMessageLatch.countDown();
+                          } else {
+                              ctx.fireChannelRead(msg);
+                          }
+                      }
+                  });
+                  serverChannelRef.set(ch);
+                  serverChannelLatch.countDown();
+              }
+          });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).get();
+            assertTrue(serverChannelLatch.await(5, SECONDS));
+
+            final Channel ccCpy = cc;
+            final Channel serverChannelCpy = serverChannelRef.get();
+            serverChannelCpy.closeFuture().addListener(serverChannelCloseLatch);
+            ccCpy.closeFuture().addListener(clientChannelCloseLatch);
+
+            // Make sure a write operation is executed in the eventloop
+            cc.pipeline().lastContext().executor().execute(() -> ccCpy.writeAndFlush(data).addListener(
+                    future -> {
+                        serverChannelCpy.executor().execute(() -> {
+                            // The point of this test is to write while the peer is closed, so we should
+                            // ensure the peer is actually closed before we write.
+                            int waitCount = 0;
+                            while (ccCpy.isOpen()) {
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException ignored) {
+                                    // ignored
+                                }
+                                if (++waitCount > 5) {
+                                    fail();
+                                }
+                            }
+                            serverChannelCpy.writeAndFlush(data2).addListener(
+                                    future1 -> {
+                                        if (!future1.isSuccess() &&
+                                            future1.cause() instanceof ClosedChannelException) {
+                                            writeFailLatch.countDown();
+                                        }
+                                    });
+                        });
+                        ccCpy.close();
+                    }));
+
+            assertTrue(serverMessageLatch.await(5, SECONDS));
+            assertTrue(writeFailLatch.await(5, SECONDS));
+            assertTrue(serverChannelCloseLatch.await(5, SECONDS));
+            assertTrue(clientChannelCloseLatch.await(5, SECONDS));
+            assertFalse(ccCpy.isOpen());
+            assertFalse(serverChannelCpy.isOpen());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
         }
     }
 
@@ -856,7 +1260,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testNotLeakBuffersWhenCloseByRemotePeer() throws Exception {
+    public void testNotLeakBuffersWhenCloseByRemotePeerByteBuf() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -887,6 +1291,68 @@ public class LocalChannelTest {
                                     // Fill the ChannelOutboundBuffer with multiple buffers
                                     ctx.write(buffer.readRetainedSlice(1));
                                 }
+                                // Flush and so transfer the written buffers to the inboundBuffer of the remote peer.
+                                // After this point the remote peer is responsible to release all the buffers.
+                                ctx.flush();
+                                // This close call will trigger the remote peer close as well.
+                                ctx.close();
+                            }
+                        });
+                    }
+                });
+
+        Channel sc = null;
+        LocalChannel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).get();
+
+            // Connect to the server
+            cc = (LocalChannel) cb.connect(sc.localAddress()).get();
+
+            // Close the channel
+            closeChannel(cc);
+            assertTrue(cc.inboundBuffer.isEmpty());
+            closeChannel(sc);
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testNotLeakBuffersWhenCloseByRemotePeer() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(sharedGroup)
+                .channel(LocalChannel.class)
+                .handler(new SimpleChannelInboundHandler<Buffer>() {
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                        ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[100]));
+                    }
+
+                    @Override
+                    public void messageReceived(ChannelHandlerContext ctx, Buffer buffer) throws Exception {
+                        // Just drop the buffer
+                    }
+                });
+
+        sb.group(sharedGroup)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new SimpleChannelInboundHandler<Buffer>() {
+
+                            @Override
+                            public void messageReceived(ChannelHandlerContext ctx, Buffer buffer) throws Exception {
+                                while (buffer.readableBytes() > 0) {
+                                    // Fill the ChannelOutboundBuffer with multiple buffers
+                                    ctx.write(buffer.readSplit(1));
+                                }
+                                buffer.close();
                                 // Flush and so transfer the written buffers to the inboundBuffer of the remote peer.
                                 // After this point the remote peer is responsible to release all the buffers.
                                 ctx.flush();

@@ -16,19 +16,20 @@
 
 package io.netty.channel;
 
+import io.netty.buffer.BufferInputStream;
+import io.netty.buffer.BufferOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
@@ -49,18 +50,18 @@ public class DefaultChannelIdTest {
     public void testIdempotentMachineId() {
         String a = DefaultChannelId.newInstance().asLongText().substring(0, 16);
         String b = DefaultChannelId.newInstance().asLongText().substring(0, 16);
-        assertThat(a, is(b));
+        assertThat(a).isEqualTo(b);
     }
 
     @Test
     public void testIdempotentProcessId() {
         String a = DefaultChannelId.newInstance().asLongText().substring(17, 21);
         String b = DefaultChannelId.newInstance().asLongText().substring(17, 21);
-        assertThat(a, is(b));
+        assertThat(a).isEqualTo(b);
     }
 
     @Test
-    public void testSerialization() throws Exception {
+    public void testSerializationByteBuf() throws Exception {
         ChannelId a = DefaultChannelId.newInstance();
         ChannelId b;
 
@@ -80,8 +81,28 @@ public class DefaultChannelIdTest {
             in.close();
         }
 
-        assertThat(a, is(b));
-        assertThat(a, is(not(sameInstance(b))));
-        assertThat(a.asLongText(), is(b.asLongText()));
+        assertThat(a).isEqualTo(b);
+        assertThat(a).isNotSameAs(b);
+        assertThat(a.asLongText()).isEqualTo(b.asLongText());
+    }
+
+    @Test
+    public void testSerialization() throws Exception {
+        ChannelId a = DefaultChannelId.newInstance();
+        ChannelId b;
+
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(256);
+        try (ObjectOutputStream out = new ObjectOutputStream(new BufferOutputStream(buf))) {
+            out.writeObject(a);
+            out.flush();
+        }
+
+        try (ObjectInputStream in = new ObjectInputStream(new BufferInputStream(buf.send()))) {
+            b = (ChannelId) in.readObject();
+        }
+
+        assertThat(a).isEqualTo(b);
+        assertThat(a).isNotSameAs(b);
+        assertThat(a.asLongText()).isEqualTo(b.asLongText());
     }
 }

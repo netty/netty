@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
@@ -64,6 +66,12 @@ class BaseChannelTest {
         return buf;
     }
 
+    static Buffer createTestBuffer(int len) {
+        Buffer buf = BufferAllocator.onHeapUnpooled().allocate(len);
+        buf.writerOffset(len);
+        return buf;
+    }
+
     void assertLog(String firstExpected, String... otherExpected) {
         String actual = loggingHandler.getLog();
         if (firstExpected.equals(actual)) {
@@ -77,10 +85,6 @@ class BaseChannelTest {
 
         // Let the comparison fail with the first expectation.
         assertEquals(firstExpected, actual);
-    }
-
-    void clearLog() {
-        loggingHandler.clear();
     }
 
     void setInterest(LoggingHandler.Event... events) {

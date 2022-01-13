@@ -180,16 +180,12 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Returns the number of readable bytes which is equal to {@code (writerOffset() - readerOffset())}.
      */
-    default int readableBytes() {
-        return writerOffset() - readerOffset();
-    }
+    int readableBytes();
 
     /**
      * Returns the number of writable bytes which is equal to {@code (capacity() - writerOffset())}.
      */
-    default int writableBytes() {
-        return capacity() - writerOffset();
-    }
+    int writableBytes();
 
     /**
      * Fills the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link
@@ -339,8 +335,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
-     * Writes into this buffer, all the bytes from the given byte array.
-     * This updates the {@linkplain #writerOffset() write offset} of this buffer by the length of the array.
+     * Writes into this buffer, the given number of bytes from the byte array.
+     * This updates the {@linkplain #writerOffset() write offset} of this buffer by the length argument.
      *
      * @param source The byte array to read from.
      * @param srcPos Position in the {@code source} from where bytes should be written to this buffer.
@@ -353,6 +349,22 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
         }
+        return this;
+    }
+
+    /**
+     * Read from this buffer, into the destination array, the given number of bytes.
+     * This updates the {@linkplain #readerOffset() read offset} of this buffer by the length argument.
+     *
+     * @param destination The byte array to write into.
+     * @param destPos Position in the {@code destination} to where bytes should be written from this buffer.
+     * @param length The number of bytes to copy.
+     * @return This buffer.
+     */
+    default Buffer readBytes(byte[] destination, int destPos, int length) {
+        int roff = readerOffset();
+        copyInto(roff, destination, destPos, length);
+        readerOffset(roff + length);
         return this;
     }
 
