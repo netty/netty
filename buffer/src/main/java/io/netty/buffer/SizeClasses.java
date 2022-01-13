@@ -147,19 +147,23 @@ abstract class SizeClasses implements SizeClassesMetric {
         int index = 0;
         int size = 0;
 
-        int log2Group = LOG2_QUANTUM;
-        int log2Delta = LOG2_QUANTUM;
-        int ndeltaLimit = 1 << LOG2_SIZE_CLASS_GROUP;
+        int log2Group = LOG2_QUANTUM; //4
+        int log2Delta = LOG2_QUANTUM; //4
+        //ndeltaLimit 每个group组内有多少种size
+        int ndeltaLimit = 1 << LOG2_SIZE_CLASS_GROUP; // 4
 
         //First small group, nDelta start at 0.
+        //第一个small group nDelta的值从0开始
         //first size class is 1 << LOG2_QUANTUM
+        //第一个size大小是 1 << 4 = 16
         int nDelta = 0;
         while (nDelta < ndeltaLimit) {
             size = sizeClass(index++, log2Group, log2Delta, nDelta++);
         }
-        log2Group += LOG2_SIZE_CLASS_GROUP;
+        log2Group += LOG2_SIZE_CLASS_GROUP; //6
 
         //All remaining groups, nDelta start at 1.
+        //其余的group, nDelta从1开始
         while (size < chunkSize) {
             nDelta = 1;
 
@@ -182,10 +186,15 @@ abstract class SizeClasses implements SizeClassesMetric {
     //calculate size class
     private int sizeClass(int index, int log2Group, int log2Delta, int nDelta) {
         short isMultiPageSize;
+        //log2Delta >= 13的size均为pagesize的倍数，故设置isMultiPageSize=1
         if (log2Delta >= pageShifts) {
             isMultiPageSize = yes;
         } else {
+            //2^11=2048, 2^12=4096, 2^11=8192
+            //1 << 11  , 1 << 12  , 1 << 13
+            //default: pageShifts = 13
             int pageSize = 1 << pageShifts;
+            //size = 1 << log2Group + nDelta * (1 << log2Delta)
             int size = (1 << log2Group) + (1 << log2Delta) * nDelta;
 
             isMultiPageSize = size == size / pageSize * pageSize? yes : no;

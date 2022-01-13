@@ -26,7 +26,7 @@ import io.netty.handler.logging.LoggingHandler;
 public final class HexDumpProxy {
 
     static final int LOCAL_PORT = Integer.parseInt(System.getProperty("localPort", "8443"));
-    static final String REMOTE_HOST = System.getProperty("remoteHost", "www.google.com");
+    static final String REMOTE_HOST = System.getProperty("remoteHost", "www.baidu.com");
     static final int REMOTE_PORT = Integer.parseInt(System.getProperty("remotePort", "443"));
 
     public static void main(String[] args) throws Exception {

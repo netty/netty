@@ -72,8 +72,9 @@ public final class EchoServer {
 
             // Start the server.
             ChannelFuture f = b.bind(PORT).sync();
-
+            ChannelFuture future = b.bind(8008).sync();
             // Wait until the server socket is closed.
+            future.channel().closeFuture().sync();
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.

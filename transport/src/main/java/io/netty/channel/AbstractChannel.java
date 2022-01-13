@@ -468,6 +468,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 register0(promise);
             } else {
                 try {
+                    // 线程默认lazy，未启动 第一次执行启动线程并提交任务
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
@@ -505,6 +506,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
+                // 如果频道从未注册过，则仅触发 channelActive 。
+                // 如果通道被取消注册和重新注册，这可以防止触发多个通道活动。
                 if (isActive()) {
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
@@ -841,6 +844,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
+                // 设置读标识位，监听读事件
                 doBeginRead();
             } catch (final Exception e) {
                 invokeLater(new Runnable() {

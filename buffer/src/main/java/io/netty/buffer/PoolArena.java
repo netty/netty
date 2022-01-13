@@ -124,6 +124,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     abstract boolean isDirect();
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
+        // 从对象池获取PooledByteBuf对象
         PooledByteBuf<T> buf = newByteBuf(maxCapacity);
         allocate(cache, buf, reqCapacity);
         return buf;
@@ -131,10 +132,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
         final int sizeIdx = size2SizeIdx(reqCapacity);
-
+        //[0,8K)
         if (sizeIdx <= smallMaxSizeIdx) {
             tcacheAllocateSmall(cache, buf, reqCapacity, sizeIdx);
         } else if (sizeIdx < nSizes) {
+            //[8k, 16M]
             tcacheAllocateNormal(cache, buf, reqCapacity, sizeIdx);
         } else {
             int normCapacity = directMemoryCacheAlignment > 0
@@ -161,6 +163,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         synchronized (head) {
             final PoolSubpage<T> s = head.next;
             needsNormalAllocation = s == head;
+            // 不需要正常分配， smallSubpagePools中已有可用内存
             if (!needsNormalAllocation) {
                 assert s.doNotDestroy && s.elemSize == sizeIdx2size(sizeIdx);
                 long handle = s.allocate();
@@ -168,13 +171,13 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                 s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
             }
         }
-
+        // 走正常分配流程
         if (needsNormalAllocation) {
             synchronized (this) {
                 allocateNormal(buf, reqCapacity, sizeIdx, cache);
             }
         }
-
+        // SmallAllocation计数器
         incSmallAllocation();
     }
 

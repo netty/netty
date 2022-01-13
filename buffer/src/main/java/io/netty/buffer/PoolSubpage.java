@@ -59,12 +59,14 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
+        //用long数组表示subpage分配情况，最小单位为16B，long可表示64位，所以只需要8KB/16B/64=8个long字段即可
         bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
         if (elemSize != 0) {
             maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
+            //无符号右移6（即除64），然后使用与63求&（即判断是不是64的整数），等价于求maxNumElems/64向上取整。
             bitmapLength = maxNumElems >>> 6;
             if ((maxNumElems & 63) != 0) {
                 bitmapLength ++;
@@ -86,7 +88,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         }
 
         final int bitmapIdx = getNextAvail();
+        //确定数组下标
         int q = bitmapIdx >>> 6;
+        //确定当前已用位
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;

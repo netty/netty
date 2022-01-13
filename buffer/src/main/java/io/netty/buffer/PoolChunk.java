@@ -317,7 +317,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private long allocateRun(int runSize) {
+        //这个runSize包含多少个标准pageSize: pages = runSize/pageSize
         int pages = runSize >> pageShifts;
+        //获取包含指定数量page的pageIdx
         int pageIdx = arena.pages2pageIdx(pages);
 
         synchronized (runsAvail) {
@@ -610,14 +612,16 @@ final class PoolChunk<T> implements PoolChunkMetric {
         arena.destroyChunk(this);
     }
 
+    //page offset
     static int runOffset(long handle) {
         return (int) (handle >> RUN_OFFSET_SHIFT);
     }
 
+    //handle的可用size
     static int runSize(int pageShifts, long handle) {
         return runPages(handle) << pageShifts;
     }
-
+    //handle包含了多少page
     static int runPages(long handle) {
         return (int) (handle >> SIZE_SHIFT & 0x7fff);
     }

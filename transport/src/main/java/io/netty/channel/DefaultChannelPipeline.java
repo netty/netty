@@ -1001,6 +1001,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline read() {
+        // todo 此处未看明白
         tail.read();
         return this;
     }
@@ -1126,6 +1127,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             pendingHandlerCallbackHead = task;
         } else {
             // Find the tail of the linked-list.
+            // todo 不是很明白，pending丢弃了？还是在其他地方执行过了
             while (pending.next != null) {
                 pending = pending.next;
             }

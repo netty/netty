@@ -17,6 +17,8 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +33,46 @@ public class PoolArenaTest {
     private static final int PAGE_SHIFTS = 11;
     //chunkSize = pageSize * (2 ^ pageShifts)
     private static final int CHUNK_SIZE = 16777216;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolArenaTest.class);
+
+    @Test
+    public void binaryLongTest(){
+        int pages = 16777216 >> 13;
+        logger.info("pages: {}", pages);
+        logger.info("{}", Long.toBinaryString(2048l));
+        long initHandle = (long) pages << 34;
+        logger.info("{}, lenth: {}", Long.toBinaryString(initHandle), Long.toBinaryString(initHandle).length());
+
+        PooledByteBufAllocator aDefault = PooledByteBufAllocator.DEFAULT;
+        ByteBuf byteBuf = aDefault.newDirectBuffer(4 * 8196, 4 * 8196);
+        ByteBuf byteBuf1 = aDefault.newDirectBuffer(8 * 8196, 8 * 8196);
+        ByteBuf byteBuf2 = aDefault.newDirectBuffer(16 * 8196, 16 * 8196);
+        ByteBuf byteBuf3 = aDefault.newDirectBuffer(2345, 3450);
+        ByteBuf byteBuf4 = aDefault.newDirectBuffer(2345, 3450);
+        byteBuf.release();
+        byteBuf1.release();
+        byteBuf2.release();
+        byteBuf3.release();
+        byteBuf4.release();
+        /*
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PooledByteBuf<ByteBuffer> allocate = arena.allocate(null, 4 * 8196, 4 * 8196);
+        PooledByteBuf<ByteBuffer> allocate1 = arena.allocate(null, 8 * 8196, 8 * 8196);
+        PooledByteBuf<ByteBuffer> allocate2 = arena.allocate(null, 16 * 8196, 16 * 8196);
+         */
+    }
+
+    @Test
+    public void testMine(){
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        logger.info("   pageSize: {}, page_shifts: {}, chunk_size: {}", arena.pageSize, arena.pageShifts, arena.chunkSize);
+        logger.info("   nPSizes: {}, nSubpages: {}", arena.nPSizes, arena.nSubpages);
+        logger.info("   smallMaxSizeIdx: {}", arena.smallMaxSizeIdx);
+        logger.info("   nSizes: {}", arena.nSizes);
+        for (int i = 0; i < arena.nSizes; i++) {
+            logger.info("   sizeId: {}, size: {}b", i, arena.sizeIdx2size(i));
+        }
+    }
 
     @Test
     public void testNormalizeCapacity() {
@@ -38,7 +80,12 @@ public class PoolArenaTest {
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {16, 16, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
-            Assert.assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
+            int size2SizeIdx = arena.size2SizeIdx(reqCapacities[i]);
+            int sizeIdx2size = arena.sizeIdx2size(size2SizeIdx);
+            System.out.println(String.format("reqCapacities: %d, size2SizeIdx: %d, sizeIdx2size: %d",
+                                            reqCapacities[i], size2SizeIdx, sizeIdx2size));
+            //Assert.assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
+            Assert.assertEquals(expectedResult[i], sizeIdx2size);
         }
     }
 
@@ -55,7 +102,6 @@ public class PoolArenaTest {
     @Test
     public void testSize2SizeIdx() {
         PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
-
         for (int sz = 0; sz <= CHUNK_SIZE; sz++) {
             int sizeIdx = arena.size2SizeIdx(sz);
             Assert.assertTrue(sz <= arena.sizeIdx2size(sizeIdx));

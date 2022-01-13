@@ -451,6 +451,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         if (curDeadlineNanos == -1L) {
                             curDeadlineNanos = NONE; // nothing on the calendar
                         }
+                        // todo nextWakeupNanos 让其他准备调用当前eventLoop绑定的select等待固定时间
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
                             if (!hasTasks()) {
