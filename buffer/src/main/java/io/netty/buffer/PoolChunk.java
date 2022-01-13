@@ -15,11 +15,13 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.LongCounter;
+import io.netty.util.internal.PlatformDependent;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.PriorityQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
@@ -164,7 +166,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * Accounting of pinned memory – memory that is currently in use by ByteBuf instances.
      */
-    private final AtomicInteger pinnedBytes;
+    private final LongCounter pinnedBytes = PlatformDependent.newLongCounter();
 
     private final int pageSize;
     private final int pageShifts;
@@ -207,7 +209,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
         insertAvailRun(0, pages, initHandle);
 
         cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
-        pinnedBytes = new AtomicInteger();
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -223,7 +224,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
         subpages = null;
         chunkSize = size;
         cachedNioBuffers = null;
-        pinnedBytes = new AtomicInteger();
     }
 
     private static LongPriorityQueue[] newRunsAvailqueueArray(int size) {
@@ -585,14 +585,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     void incrementPinnedMemory(int delta) {
         assert delta > 0;
-        int result = pinnedBytes.addAndGet(delta);
-        assert result > 0;
+        pinnedBytes.add(delta);
     }
 
     void decrementPinnedMemory(int delta) {
         assert delta > 0;
-        int result = pinnedBytes.addAndGet(-delta);
-        assert result >= 0;
+        pinnedBytes.add(-delta);
     }
 
     @Override
@@ -608,7 +606,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     public int pinnedBytes() {
-        return pinnedBytes.get();
+        return (int) pinnedBytes.value();
     }
 
     @Override
