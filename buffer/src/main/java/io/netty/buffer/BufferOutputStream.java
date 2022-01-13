@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @see BufferInputStream
  */
-public class BufferOutputStream extends OutputStream implements DataOutput {
+public final class BufferOutputStream extends OutputStream implements DataOutput {
     private final Buffer buffer;
     private final int startIndex;
     private DataOutputStream utf8out; // lazily-instantiated

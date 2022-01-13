@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @see BufferOutputStream
  */
-public class BufferInputStream extends InputStream implements DataInput {
+public final class BufferInputStream extends InputStream implements DataInput {
     private final Buffer buffer;
     private final int startIndex;
     private final int endIndex;
@@ -132,11 +132,7 @@ public class BufferInputStream extends InputStream implements DataInput {
 
     @Override
     public long skip(long n) throws IOException {
-        if (n > Integer.MAX_VALUE) {
-            return skipBytes(Integer.MAX_VALUE);
-        } else {
-            return skipBytes((int) n);
-        }
+        return skipBytes((int) Math.min(Integer.MAX_VALUE, n));
     }
 
     @Override
