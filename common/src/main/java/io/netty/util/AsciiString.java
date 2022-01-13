@@ -15,14 +15,15 @@
  */
 package io.netty.util;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -48,6 +49,15 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     private static final char MAX_CHAR_VALUE = 255;
 
     public static final int INDEX_NOT_FOUND = -1;
+
+    private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
+
+    private static final FastThreadLocal<List<AsciiString>> ARRAYLISTS = new FastThreadLocal<>() {
+        @Override
+        protected List<AsciiString> initialValue() {
+            return new ArrayList<>(DEFAULT_ARRAY_LIST_INITIAL_CAPACITY);
+        }
+    };
 
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
@@ -1078,10 +1088,11 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Splits the specified {@link String} with the specified delimiter..
+     * Splits the specified {@link String} with the specified delimiter.
      */
     public AsciiString[] split(char delim) {
-        final List<AsciiString> res = InternalThreadLocalMap.get().arrayList();
+        final List<AsciiString> res = ARRAYLISTS.get();
+        res.clear();
 
         int start = 0;
         final int length = length();

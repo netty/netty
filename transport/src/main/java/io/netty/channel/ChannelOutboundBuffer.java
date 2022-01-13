@@ -24,7 +24,6 @@ import io.netty.buffer.api.Resource;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -66,9 +65,9 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    private static final FastThreadLocal<BufferCache> NIO_BUFFERS = new FastThreadLocal<BufferCache>() {
+    private static final FastThreadLocal<BufferCache> NIO_BUFFERS = new FastThreadLocal<>() {
         @Override
-        protected BufferCache initialValue() throws Exception {
+        protected BufferCache initialValue() {
             BufferCache cache = new BufferCache();
             cache.buffers = new ByteBuffer[1024];
             return cache;
@@ -427,11 +426,11 @@ public final class ChannelOutboundBuffer {
         assert maxBytes > 0;
         long nioBufferSize = 0;
         int nioBufferCount = 0;
-        final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
-        BufferCache cache = NIO_BUFFERS.get(threadLocalMap);
+        BufferCache cache = NIO_BUFFERS.get();
         cache.dataSize = 0;
         cache.bufferCount = 0;
         ByteBuffer[] nioBuffers = cache.buffers;
+
         Entry entry = flushedEntry;
         while (isFlushedEntry(entry) && (entry.msg instanceof ByteBufConvertible || entry.msg instanceof Buffer)) {
             if (!entry.cancelled) {

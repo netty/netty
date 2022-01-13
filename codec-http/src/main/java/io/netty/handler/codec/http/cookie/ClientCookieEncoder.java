@@ -17,14 +17,14 @@ package io.netty.handler.codec.http.cookie;
 
 import static io.netty.handler.codec.http.cookie.CookieUtil.add;
 import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -83,7 +83,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value
      */
     public String encode(Cookie cookie) {
-        StringBuilder buf = stringBuilder();
+        StringBuilder buf = StringUtil.threadLocalStringBuilder();
         encode(buf, requireNonNull(cookie, "cookie"));
         return stripTrailingSeparator(buf);
     }
@@ -121,7 +121,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
             return null;
         }
 
-        StringBuilder buf = stringBuilder();
+        StringBuilder buf = StringUtil.threadLocalStringBuilder();
         if (strict) {
             if (cookies.length == 1) {
                 encode(buf, cookies[0]);
@@ -152,7 +152,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
             return null;
         }
 
-        StringBuilder buf = stringBuilder();
+        StringBuilder buf = StringUtil.threadLocalStringBuilder();
         if (strict) {
             if (cookies.size() == 1) {
                 encode(buf, cookies.iterator().next());
@@ -183,18 +183,28 @@ public final class ClientCookieEncoder extends CookieEncoder {
             return null;
         }
 
-        StringBuilder buf = stringBuilder();
+        StringBuilder buf = StringUtil.threadLocalStringBuilder();
         if (strict) {
             Cookie firstCookie = cookiesIt.next();
             if (!cookiesIt.hasNext()) {
                 encode(buf, firstCookie);
             } else {
-                List<Cookie> cookiesList = InternalThreadLocalMap.get().arrayList();
-                cookiesList.add(firstCookie);
-                while (cookiesIt.hasNext()) {
-                    cookiesList.add(cookiesIt.next());
+                final Cookie[] cookiesSorted;
+                if (cookies instanceof Collection) {
+                    cookiesSorted = new Cookie[((Collection) cookies).size()];
+                    cookiesSorted[0] = firstCookie;
+                    for (int i = 1; cookiesIt.hasNext(); i++) {
+                        cookiesSorted[i] = cookiesIt.next();
+                    }
+                } else {
+                    List<Cookie> cookiesList = new ArrayList<>();
+                    cookiesList.add(firstCookie);
+                    while (cookiesIt.hasNext()) {
+                        cookiesList.add(cookiesIt.next());
+                    }
+                    cookiesSorted = cookiesList.toArray(new Cookie[0]);
                 }
-                Cookie[] cookiesSorted = cookiesList.toArray(new Cookie[0]);
+
                 Arrays.sort(cookiesSorted, COOKIE_COMPARATOR);
                 for (Cookie c : cookiesSorted) {
                     encode(buf, c);

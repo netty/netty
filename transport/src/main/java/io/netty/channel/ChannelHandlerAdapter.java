@@ -16,15 +16,25 @@
 
 package io.netty.channel;
 
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.FastThreadLocal;
 
 import java.lang.reflect.AnnotatedType;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Skeleton implementation of a {@link ChannelHandler}.
  */
 public abstract class ChannelHandlerAdapter implements ChannelHandler {
+
+    private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
+    private static final FastThreadLocal<Map<Class<?>, Boolean>> CACHE = new FastThreadLocal<>() {
+        @Override
+        protected Map<Class<?>, Boolean> initialValue() {
+            // Start with small capacity to keep memory overhead as low as possible.
+            return new WeakHashMap<>(HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY);
+        }
+    };
 
     // Not using volatile because it's used only for a sanity check.
     boolean added;
@@ -52,7 +62,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
          * See <a href="https://github.com/netty/netty/issues/2289">#2289</a>.
          */
         Class<?> clazz = getClass();
-        Map<Class<?>, Boolean> cache = InternalThreadLocalMap.get().handlerSharableCache();
+        Map<Class<?>, Boolean> cache = CACHE.get();
         Boolean sharable = cache.get(clazz);
         if (sharable == null) {
             sharable = clazz.isAnnotationPresent(Sharable.class);

@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
+import io.netty.util.internal.StringUtil;
 
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeValue;
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static java.util.Objects.requireNonNull;
@@ -217,7 +217,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public String toString() {
-        StringBuilder buf = stringBuilder()
+        StringBuilder buf = StringUtil.threadLocalStringBuilder()
             .append(name())
             .append('=')
             .append(value());

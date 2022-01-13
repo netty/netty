@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
@@ -674,7 +674,7 @@ public final class HttpConversionUtil {
                         // combine the cookie values into 1 header entry.
                         // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
                         if (cookies == null) {
-                            cookies = InternalThreadLocalMap.get().stringBuilder();
+                            cookies = StringUtil.threadLocalStringBuilder();
                         } else if (cookies.length() > 0) {
                             cookies.append("; ");
                         }

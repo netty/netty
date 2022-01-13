@@ -15,6 +15,10 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
@@ -50,6 +54,10 @@ public final class StringUtil {
     private static final int CSV_NUMBER_ESCAPE_CHARACTERS = 2 + 5;
     private static final char PACKAGE_SEPARATOR_CHAR = '.';
 
+    private static final int STRING_BUILDER_INITIAL_SIZE;
+    private static final int STRING_BUILDER_MAX_SIZE;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StringUtil.class);
+
     static {
         // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
         for (int i = 0; i < BYTE2HEX_PAD.length; i++) {
@@ -84,10 +92,34 @@ public final class StringUtil {
         HEX2B['d'] = 13;
         HEX2B['e'] = 14;
         HEX2B['f'] = 15;
+
+        STRING_BUILDER_INITIAL_SIZE =
+                SystemPropertyUtil.getInt("io.netty.stringUtil.stringBuilder.initialSize", 1024);
+        logger.debug("-Dio.netty.stringUtil.stringBuilder.initialSize: {}", STRING_BUILDER_INITIAL_SIZE);
+
+        STRING_BUILDER_MAX_SIZE = SystemPropertyUtil.getInt("io.netty.stringUtil.stringBuilder.maxSize", 1024 * 4);
+        logger.debug("-Dio.netty.stringUtil.stringBuilder.maxSize: {}", STRING_BUILDER_MAX_SIZE);
     }
+
+    private static final FastThreadLocal<StringBuilder> STRING_BUILDERS = new FastThreadLocal<>() {
+        @Override
+        protected StringBuilder initialValue() {
+            return new StringBuilder(STRING_BUILDER_INITIAL_SIZE);
+        }
+    };
 
     private StringUtil() {
         // Unused.
+    }
+
+    public static StringBuilder threadLocalStringBuilder() {
+        StringBuilder sb = STRING_BUILDERS.get();
+        if (sb.capacity() > STRING_BUILDER_MAX_SIZE) {
+            sb.setLength(STRING_BUILDER_INITIAL_SIZE);
+            sb.trimToSize();
+        }
+        sb.setLength(0);
+        return sb;
     }
 
     /**
@@ -431,7 +463,7 @@ public final class StringUtil {
             validateCsvFormat(value);
             return value;
         }
-        StringBuilder unescaped = InternalThreadLocalMap.get().stringBuilder();
+        StringBuilder unescaped = threadLocalStringBuilder();
         for (int i = 1; i < last; i++) {
             char current = value.charAt(i);
             if (current == DOUBLE_QUOTE) {
@@ -459,7 +491,7 @@ public final class StringUtil {
      */
     public static List<CharSequence> unescapeCsvFields(CharSequence value) {
         List<CharSequence> unescaped = new ArrayList<>(2);
-        StringBuilder current = InternalThreadLocalMap.get().stringBuilder();
+        StringBuilder current = threadLocalStringBuilder();
         boolean quoted = false;
         int last = value.length() - 1;
         for (int i = 0; i <= last; i++) {
@@ -690,5 +722,4 @@ public final class StringUtil {
     private static boolean isOws(char c) {
         return c == SPACE || c == TAB;
     }
-
 }

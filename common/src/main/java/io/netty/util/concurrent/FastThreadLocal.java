@@ -157,20 +157,6 @@ public class FastThreadLocal<V> {
         return null;
     }
 
-    /**
-     * Returns the current value for the specified thread local map.
-     * The specified thread local map must be for the current thread.
-     */
-    @SuppressWarnings("unchecked")
-    public final V get(InternalThreadLocalMap threadLocalMap) {
-        Object v = threadLocalMap.indexedVariable(index);
-        if (v != InternalThreadLocalMap.UNSET) {
-            return (V) v;
-        }
-
-        return initialize(threadLocalMap);
-    }
-
     private V initialize(InternalThreadLocalMap threadLocalMap) {
         V v = null;
         try {

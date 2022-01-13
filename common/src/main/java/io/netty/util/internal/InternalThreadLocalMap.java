@@ -18,19 +18,9 @@ package io.netty.util.internal;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -40,18 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class InternalThreadLocalMap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(InternalThreadLocalMap.class);
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<>();
     private static final AtomicInteger nextIndex = new AtomicInteger();
 
-    private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
     // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
     private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
-    private static final int STRING_BUILDER_INITIAL_SIZE;
-    private static final int STRING_BUILDER_MAX_SIZE;
-    private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
     private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
     public static final Object UNSET = new Object();
@@ -59,32 +44,7 @@ public final class InternalThreadLocalMap {
     /** Used by {@link FastThreadLocal} */
     private Object[] indexedVariables;
 
-    // Core thread-locals
-    private int futureListenerStackDepth;
-    private int localChannelReaderStackDepth;
-    private Map<Class<?>, Boolean> handlerSharableCache;
-    private ThreadLocalRandom random;
-    private Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
-    private Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
-
-    // String-related thread-locals
-    private StringBuilder stringBuilder;
-    private Map<Charset, CharsetEncoder> charsetEncoderCache;
-    private Map<Charset, CharsetDecoder> charsetDecoderCache;
-
-    // ArrayList-related thread-locals
-    private ArrayList<Object> arrayList;
-
     private BitSet cleanerFlags;
-
-    static {
-        STRING_BUILDER_INITIAL_SIZE =
-                SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.initialSize", 1024);
-        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.initialSize: {}", STRING_BUILDER_INITIAL_SIZE);
-
-        STRING_BUILDER_MAX_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.maxSize", 1024 * 4);
-        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.maxSize: {}", STRING_BUILDER_MAX_SIZE);
-    }
 
     public static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
@@ -158,38 +118,6 @@ public final class InternalThreadLocalMap {
 
     public int size() {
         int count = 0;
-
-        if (futureListenerStackDepth != 0) {
-            count ++;
-        }
-        if (localChannelReaderStackDepth != 0) {
-            count ++;
-        }
-        if (handlerSharableCache != null) {
-            count ++;
-        }
-        if (random != null) {
-            count ++;
-        }
-        if (typeParameterMatcherGetCache != null) {
-            count ++;
-        }
-        if (typeParameterMatcherFindCache != null) {
-            count ++;
-        }
-        if (stringBuilder != null) {
-            count ++;
-        }
-        if (charsetEncoderCache != null) {
-            count ++;
-        }
-        if (charsetDecoderCache != null) {
-            count ++;
-        }
-        if (arrayList != null) {
-            count ++;
-        }
-
         for (Object o: indexedVariables) {
             if (o != UNSET) {
                 count ++;
@@ -199,100 +127,6 @@ public final class InternalThreadLocalMap {
         // We should subtract 1 from the count because the first element in 'indexedVariables' is reserved
         // by 'FastThreadLocal' to keep the list of 'FastThreadLocal's to remove on 'FastThreadLocal.removeAll()'.
         return count - 1;
-    }
-
-    public StringBuilder stringBuilder() {
-        StringBuilder sb = stringBuilder;
-        if (sb == null) {
-            return stringBuilder = new StringBuilder(STRING_BUILDER_INITIAL_SIZE);
-        }
-        if (sb.capacity() > STRING_BUILDER_MAX_SIZE) {
-            sb.setLength(STRING_BUILDER_INITIAL_SIZE);
-            sb.trimToSize();
-        }
-        sb.setLength(0);
-        return sb;
-    }
-
-    public Map<Charset, CharsetEncoder> charsetEncoderCache() {
-        Map<Charset, CharsetEncoder> cache = charsetEncoderCache;
-        if (cache == null) {
-            charsetEncoderCache = cache = new IdentityHashMap<>();
-        }
-        return cache;
-    }
-
-    public Map<Charset, CharsetDecoder> charsetDecoderCache() {
-        Map<Charset, CharsetDecoder> cache = charsetDecoderCache;
-        if (cache == null) {
-            charsetDecoderCache = cache = new IdentityHashMap<>();
-        }
-        return cache;
-    }
-
-    public <E> ArrayList<E> arrayList() {
-        return arrayList(DEFAULT_ARRAY_LIST_INITIAL_CAPACITY);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <E> ArrayList<E> arrayList(int minCapacity) {
-        ArrayList<E> list = (ArrayList<E>) arrayList;
-        if (list == null) {
-            arrayList = new ArrayList<>(minCapacity);
-            return (ArrayList<E>) arrayList;
-        }
-        list.clear();
-        list.ensureCapacity(minCapacity);
-        return list;
-    }
-
-    public int futureListenerStackDepth() {
-        return futureListenerStackDepth;
-    }
-
-    public void setFutureListenerStackDepth(int futureListenerStackDepth) {
-        this.futureListenerStackDepth = futureListenerStackDepth;
-    }
-
-    public ThreadLocalRandom random() {
-        ThreadLocalRandom r = random;
-        if (r == null) {
-            random = r = ThreadLocalRandom.current();
-        }
-        return r;
-    }
-
-    public Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache() {
-        Map<Class<?>, TypeParameterMatcher> cache = typeParameterMatcherGetCache;
-        if (cache == null) {
-            typeParameterMatcherGetCache = cache = new IdentityHashMap<>();
-        }
-        return cache;
-    }
-
-    public Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache() {
-        Map<Class<?>, Map<String, TypeParameterMatcher>> cache = typeParameterMatcherFindCache;
-        if (cache == null) {
-            typeParameterMatcherFindCache = cache = new IdentityHashMap<>();
-        }
-        return cache;
-    }
-
-    public Map<Class<?>, Boolean> handlerSharableCache() {
-        Map<Class<?>, Boolean> cache = handlerSharableCache;
-        if (cache == null) {
-            // Start with small capacity to keep memory overhead as low as possible.
-            handlerSharableCache = cache = new WeakHashMap<>(HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY);
-        }
-        return cache;
-    }
-
-    public int localChannelReaderStackDepth() {
-        return localChannelReaderStackDepth;
-    }
-
-    public void setLocalChannelReaderStackDepth(int localChannelReaderStackDepth) {
-        this.localChannelReaderStackDepth = localChannelReaderStackDepth;
     }
 
     public Object indexedVariable(int index) {

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.util.BitSet;
 
@@ -74,10 +73,6 @@ final class CookieUtil {
         }
         bits.set(';', false);
         return bits;
-    }
-
-    static StringBuilder stringBuilder() {
-        return InternalThreadLocalMap.get().stringBuilder();
     }
 
     /**
