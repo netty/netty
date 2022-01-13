@@ -113,11 +113,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         int q = bitmapIdx >>> 6;
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) != 0;
+        //逆向操作，清除对应位
         bitmap[q] ^= 1L << r;
-
+        //该位置可用于下次分配
         setNextAvail(bitmapIdx);
 
         if (numAvail ++ == 0) {
+            //已分配过，可加入arena双向链表
             addToPool(head);
             /* When maxNumElems == 1, the maximum numAvail is also 1.
              * Each of these PoolSubpages will go in here when they do free operation.
@@ -166,6 +168,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     private int getNextAvail() {
         int nextAvail = this.nextAvail;
+        //如果nextAvail大于0表示有可用的，直接返回
         if (nextAvail >= 0) {
             this.nextAvail = -1;
             return nextAvail;
@@ -178,6 +181,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         final int bitmapLength = this.bitmapLength;
         for (int i = 0; i < bitmapLength; i ++) {
             long bits = bitmap[i];
+            //取非不为0，表示还有可用的
             if (~bits != 0) {
                 return findNextAvail0(i, bits);
             }
@@ -188,7 +192,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private int findNextAvail0(int i, long bits) {
         final int maxNumElems = this.maxNumElems;
         final int baseVal = i << 6;
-
+        //从低位开始遍历，对应的值表示这位已分配
         for (int j = 0; j < 64; j ++) {
             if ((bits & 1) == 0) {
                 int val = baseVal | j;
