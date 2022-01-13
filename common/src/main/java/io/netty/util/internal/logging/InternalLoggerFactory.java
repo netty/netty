@@ -15,9 +15,7 @@
  */
 package io.netty.util.internal.logging;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static java.util.Objects.requireNonNull;
 
@@ -49,10 +47,14 @@ public abstract class InternalLoggerFactory {
         }
 
         InternalLoggerFactory getFactory() {
-            if (reference == null) {
-                reference.compareAndSet(null, newDefaultFactory(InternalLoggerFactory.class.getName()));
+            InternalLoggerFactory factory = reference.get();
+            if (factory == null) {
+                factory = newDefaultFactory(InternalLoggerFactory.class.getName());
+                if (!reference.compareAndSet(null, factory)) {
+                    factory = reference.get();
+                }
             }
-            return reference.get();
+            return factory;
         }
 
         void setFactory(final InternalLoggerFactory factory) {
