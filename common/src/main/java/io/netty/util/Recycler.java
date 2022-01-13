@@ -102,7 +102,9 @@ public abstract class Recycler<T> {
         @Override
         protected void onRemoval(LocalPool<T> value) throws Exception {
             super.onRemoval(value);
-            value.pooledHandles.clear();
+            MessagePassingQueue<DefaultHandle<T>> handles = value.pooledHandles;
+            value.pooledHandles = null;
+            handles.clear();
         }
     };
 
@@ -254,7 +256,7 @@ public abstract class Recycler<T> {
 
     private static final class LocalPool<T> {
         private final int ratioInterval;
-        private final MessagePassingQueue<DefaultHandle<T>> pooledHandles;
+        private volatile MessagePassingQueue<DefaultHandle<T>> pooledHandles;
         private int ratioCounter;
 
         @SuppressWarnings("unchecked")
@@ -269,16 +271,23 @@ public abstract class Recycler<T> {
         }
 
         DefaultHandle<T> claim() {
+            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
+            if (handles == null) {
+                return null;
+            }
             DefaultHandle<T> handle;
             do {
-                handle = pooledHandles.relaxedPoll();
+                handle = handles.relaxedPoll();
             } while (handle != null && !handle.availableToClaim());
             return handle;
         }
 
         void release(DefaultHandle<T> handle) {
+            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
             handle.toAvailable();
-            pooledHandles.relaxedOffer(handle);
+            if (handles != null) {
+                handles.relaxedOffer(handle);
+            }
         }
 
         DefaultHandle<T> newHandle() {
