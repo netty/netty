@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal.logging;
 
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static java.util.Objects.requireNonNull;
@@ -25,7 +27,8 @@ import static java.util.Objects.requireNonNull;
  * Log4J is not available, {@link JdkLoggerFactory} is used. You can change it to your preferred logging framework
  * before other Netty classes are loaded via {@link #setDefaultFactory(InternalLoggerFactory)}. If you want to change
  * the logger factory, {@link #setDefaultFactory(InternalLoggerFactory)} must be invoked before any other Netty classes
- * are loaded. Note that {@link #setDefaultFactory(InternalLoggerFactory)}} can not be invoked more than once.
+ * are loaded.
+ * <strong>Note that {@link #setDefaultFactory(InternalLoggerFactory)}} can not be invoked more than once.</strong>
  */
 public abstract class InternalLoggerFactory {
     /**
@@ -33,32 +36,28 @@ public abstract class InternalLoggerFactory {
      * to aid in testing.
      */
     static final class InternalLoggerFactoryHolder {
-        private static final AtomicReferenceFieldUpdater<InternalLoggerFactoryHolder, InternalLoggerFactory> UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(
-                        InternalLoggerFactoryHolder.class, InternalLoggerFactory.class, "reference");
         static final InternalLoggerFactoryHolder HOLDER = new InternalLoggerFactoryHolder();
 
-        private volatile InternalLoggerFactory reference;
+        private final AtomicReference<InternalLoggerFactory> reference;
 
         InternalLoggerFactoryHolder() {
+            reference = new AtomicReference<>();
         }
 
         InternalLoggerFactoryHolder(final InternalLoggerFactory delegate) {
-            reference = delegate;
+            reference = new AtomicReference<>(delegate);
         }
 
         InternalLoggerFactory getFactory() {
             if (reference == null) {
-                UPDATER.compareAndSet(this, null, newDefaultFactory(InternalLoggerFactory.class.getName()));
+                reference.compareAndSet(null, newDefaultFactory(InternalLoggerFactory.class.getName()));
             }
-            return reference;
+            return reference.get();
         }
 
         void setFactory(final InternalLoggerFactory factory) {
-            if (factory == null) {
-                throw new NullPointerException("factory");
-            }
-            if (!UPDATER.compareAndSet(this, null, factory)) {
+            requireNonNull(factory, "factory");
+            if (!reference.compareAndSet(null, factory)) {
                 throw new IllegalStateException(
                         "factory is already set to [" + reference + "], rejecting [" + factory + ']');
             }
