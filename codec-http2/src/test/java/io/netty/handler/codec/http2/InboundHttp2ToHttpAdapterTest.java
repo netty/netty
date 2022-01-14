@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -254,6 +255,45 @@ public class InboundHttp2ToHttpAdapterTest {
         });
         awaitResponses();
         assertTrue(isStreamError(clientException));
+    }
+
+    @Test
+    public void clientRequestPayloadExceedsMaxContentLengthShouldGet413() throws Exception {
+        boostrapEnv(1, 1, 1);
+        final byte[] bigArray = new byte[maxContentLength + 2];
+        final ByteBuf content = Unpooled.copiedBuffer(bigArray);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                                                                   "/some/path/resource2", content, true);
+        final FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, true);
+        try {
+            HttpHeaders httpHeaders = request.headers();
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, bigArray.length);
+            httpHeaders.setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), (short) 16);
+            httpHeaders = response.headers();
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+            httpHeaders.setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), (short) 16);
+            final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("POST")).path(
+                    new AsciiString("/some/path/resource2"));
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true,
+                                                      newPromiseClient());
+                    clientChannel.flush();
+                }
+            });
+            awaitResponses();
+            ArgumentCaptor<FullHttpMessage> responseCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
+            verify(clientListener).messageReceived(responseCaptor.capture());
+            capturedResponses = responseCaptor.getAllValues();
+            assertEquals(response, capturedResponses.get(0));
+        } finally {
+            request.release();
+        }
     }
 
     @Test

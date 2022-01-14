@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
+import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
@@ -461,6 +462,51 @@ public class Http2ConnectionHandlerTest {
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
                 any(Http2Headers.class), eq(padding), eq(true), eq(promise));
         verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+    }
+
+    @Test
+    public void serverShouldSend413OnPayloadTooLargeError() throws Exception {
+        int padding = 0;
+        handler = newHandler();
+        Http2Exception e = new Http2Exception.PayloadTooLargeException(STREAM_ID, ENHANCE_YOUR_CALM,
+                                                                      "Exceeded max content length");
+
+        when(stream.id()).thenReturn(STREAM_ID);
+        when(connection.isServer()).thenReturn(true);
+        when(stream.isHeadersSent()).thenReturn(true);
+        when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
+        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+                                        eq(ENHANCE_YOUR_CALM.code()), eq(promise))).thenReturn(future);
+
+        handler.exceptionCaught(ctx, e);
+
+        ArgumentCaptor<Http2Headers> captor = ArgumentCaptor.forClass(Http2Headers.class);
+        verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
+                                     captor.capture(), eq(padding), eq(true), eq(promise));
+        Http2Headers headers = captor.getValue();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE.codeAsText(), headers.status());
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, ENHANCE_YOUR_CALM.code(), promise);
+    }
+
+    @Test
+    public void clientShouldNeverSend413OnPayloadTooLargeError() throws Exception {
+        int padding = 0;
+        handler = newHandler();
+        Http2Exception e = new Http2Exception.PayloadTooLargeException(STREAM_ID, ENHANCE_YOUR_CALM,
+                                                                       "Exceeded max content length");
+
+        when(stream.id()).thenReturn(STREAM_ID);
+        when(connection.isServer()).thenReturn(false);
+        when(stream.isHeadersSent()).thenReturn(true);
+        when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
+        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+                                        eq(ENHANCE_YOUR_CALM.code()), eq(promise))).thenReturn(future);
+
+        handler.exceptionCaught(ctx, e);
+
+        verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
+                                              any(Http2Headers.class), eq(padding), eq(true), eq(promise));
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, ENHANCE_YOUR_CALM.code(), promise);
     }
 
     @Test

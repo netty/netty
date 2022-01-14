@@ -25,10 +25,11 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http2.Http2Exception.payloadTooLargeError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
@@ -235,7 +236,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         ByteBuf content = msg.content();
         final int dataReadableBytes = data.readableBytes();
         if (content.readableBytes() > maxContentLength - dataReadableBytes) {
-            throw connectionError(INTERNAL_ERROR,
+            throw payloadTooLargeError(streamId, ENHANCE_YOUR_CALM,
                     "Content length exceeded max of %d for stream id %d", maxContentLength, streamId);
         }
 

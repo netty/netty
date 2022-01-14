@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
+import io.netty.handler.codec.http2.Http2Exception.PayloadTooLargeException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
@@ -70,6 +71,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = ReadOnlyHttp2Headers.serverHeaders(false,
             HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());
+    private static final Http2Headers PAYLOAD_TOO_LARGE_HEADERS = ReadOnlyHttp2Headers.serverHeaders(false,
+            HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE.codeAsText());
     private static final ByteBuf HTTP_1_X_BUF = Unpooled.unreleasableBuffer(
         Unpooled.wrappedBuffer(new byte[] {'H', 'T', 'T', 'P', '/', '1', '.'})).asReadOnly();
 
@@ -719,6 +722,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     onError(ctx, outbound, connectionError(INTERNAL_ERROR, cause2, "Error DecodeSizeError"));
                 }
             }
+        } else if (http2Ex instanceof PayloadTooLargeException && connection().isServer()) {
+            if (stream != null) {
+                try {
+                    handleServerPayloadTooLargeError(ctx, stream);
+                } catch (Throwable cause2) {
+                    onError(ctx, outbound, connectionError(INTERNAL_ERROR, cause2, "Error PayloadTooLargeError"));
+                }
+            }
         }
 
         if (stream == null) {
@@ -739,6 +750,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream) {
         encoder().writeHeaders(ctx, stream.id(), HEADERS_TOO_LARGE_HEADERS, 0, true, ctx.newPromise());
+    }
+
+    /**
+     * Notifies client that this server has received a payload that exceeds its defined max content length. Note that
+     * this is separate from a FRAME_SIZE_ERROR.
+     *
+     * @param ctx the channel context
+     * @param stream the Http2Stream on which the header was received
+     */
+    protected void handleServerPayloadTooLargeError(ChannelHandlerContext ctx, Http2Stream stream) {
+        encoder().writeHeaders(ctx, stream.id(), PAYLOAD_TOO_LARGE_HEADERS, 0, true, ctx.newPromise());
     }
 
     protected Http2FrameWriter frameWriter() {

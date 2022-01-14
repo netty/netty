@@ -195,6 +195,27 @@ public class Http2Exception extends Exception {
     }
 
     /**
+     * A specific stream error resulting from receiving a payload too large,
+     * typically by exceeding max content length of an aggregate of data frames.
+     * If the {@code id} is not {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a
+     * {@link StreamException} will be returned. Otherwise the error is considered a
+     * connection error and a {@link Http2Exception} is returned.
+     * @param id The stream id for which the error is isolated to.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link PayloadTooLargeException}
+     * will be returned. Otherwise the error is considered a connection error and a {@link Http2Exception} is
+     * returned.
+     */
+    public static Http2Exception payloadTooLargeError(int id, Http2Error error, String fmt, Object... args) {
+        return CONNECTION_STREAM_ID == id ?
+                connectionError(error, fmt, args) :
+                new PayloadTooLargeException(id, error, String.format(fmt, args));
+    }
+
+    /**
      * Check if an exception is isolated to a single stream or the entire connection.
      * @param e The exception to check.
      * @return {@code true} if {@code e} is an instance of {@link StreamException}.
@@ -286,6 +307,14 @@ public class Http2Exception extends Exception {
 
         public boolean duringDecode() {
             return decode;
+        }
+    }
+
+    public static final class PayloadTooLargeException extends StreamException {
+        private static final long serialVersionUID = -2192855782930830401L;
+
+        public PayloadTooLargeException(int streamId, Http2Error error, String message) {
+            super(streamId, error, message);
         }
     }
 
