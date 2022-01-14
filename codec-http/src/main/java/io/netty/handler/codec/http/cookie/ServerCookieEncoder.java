@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.cookie;
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,7 +31,6 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.cookie.CookieUtil.add;
 import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
 import static java.util.Objects.requireNonNull;
 
@@ -93,7 +93,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
 
         validateCookie(name, value);
 
-        StringBuilder buf = stringBuilder();
+        StringBuilder buf = StringUtil.threadLocalStringBuilder();
 
         if (cookie.wrap()) {
             addQuoted(buf, name, value);

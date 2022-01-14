@@ -15,7 +15,6 @@
 */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -70,7 +69,7 @@ public class FastThreadLocalThread extends Thread {
      * Returns the internal data structure that keeps the thread-local variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
-    public final InternalThreadLocalMap threadLocalMap() {
+    final InternalThreadLocalMap threadLocalMap() {
         return threadLocalMap;
     }
 
@@ -78,7 +77,7 @@ public class FastThreadLocalThread extends Thread {
      * Sets the internal data structure that keeps the thread-local variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
-    public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
+    final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
         this.threadLocalMap = threadLocalMap;
     }
 

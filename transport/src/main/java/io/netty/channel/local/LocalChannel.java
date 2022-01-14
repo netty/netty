@@ -26,9 +26,9 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -246,6 +246,29 @@ public class LocalChannel extends AbstractChannel {
         readIfIsAutoRead();
     }
 
+    private static final class ReaderStackDepth {
+        private int stackDepth;
+
+        boolean incrementIfPossible() {
+            if (stackDepth == MAX_READER_STACK_DEPTH) {
+                return false;
+            }
+            stackDepth++;
+            return true;
+        }
+
+        void decrement() {
+            stackDepth--;
+        }
+    }
+
+    private static final FastThreadLocal<ReaderStackDepth> STACK_DEPTH = new FastThreadLocal<>() {
+        @Override
+        protected ReaderStackDepth initialValue() throws Exception {
+            return new ReaderStackDepth();
+        }
+    };
+
     @Override
     protected void doBeginRead() throws Exception {
         if (readInProgress) {
@@ -258,14 +281,12 @@ public class LocalChannel extends AbstractChannel {
             return;
         }
 
-        final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
-        final int stackDepth = threadLocals.localChannelReaderStackDepth();
-        if (stackDepth < MAX_READER_STACK_DEPTH) {
-            threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
+        final ReaderStackDepth readerStackDepth = STACK_DEPTH.get();
+        if (readerStackDepth.incrementIfPossible()) {
             try {
                 readInbound();
             } finally {
-                threadLocals.setLocalChannelReaderStackDepth(stackDepth);
+                readerStackDepth.decrement();
             }
         } else {
             try {

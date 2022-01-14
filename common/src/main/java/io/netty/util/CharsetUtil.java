@@ -15,7 +15,7 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.concurrent.FastThreadLocal;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -23,6 +23,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
@@ -30,6 +31,20 @@ import java.util.Map;
  * related with {@link Charset} and its relevant classes.
  */
 public final class CharsetUtil {
+
+    private static final FastThreadLocal<Map<Charset, CharsetEncoder>> ENCODER_CACHE = new FastThreadLocal<>() {
+        @Override
+        protected Map<Charset, CharsetEncoder> initialValue() {
+            return new IdentityHashMap<>();
+        }
+    };
+
+    private static final FastThreadLocal<Map<Charset, CharsetDecoder>> DECODER_CACHE = new FastThreadLocal<>() {
+        @Override
+        protected Map<Charset, CharsetDecoder> initialValue() {
+            return new IdentityHashMap<>();
+        }
+    };
 
     /**
      * 16-bit UTF (UCS Transformation Format) whose byte order is identified by
@@ -107,7 +122,7 @@ public final class CharsetUtil {
     public static CharsetEncoder encoder(Charset charset) {
         requireNonNull(charset, "charset");
 
-        Map<Charset, CharsetEncoder> map = InternalThreadLocalMap.get().charsetEncoderCache();
+        Map<Charset, CharsetEncoder> map = ENCODER_CACHE.get();
         CharsetEncoder e = map.get(charset);
         if (e != null) {
             e.reset().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
@@ -163,7 +178,7 @@ public final class CharsetUtil {
     public static CharsetDecoder decoder(Charset charset) {
         requireNonNull(charset, "charset");
 
-        Map<Charset, CharsetDecoder> map = InternalThreadLocalMap.get().charsetDecoderCache();
+        Map<Charset, CharsetDecoder> map = DECODER_CACHE.get();
         CharsetDecoder d = map.get(charset);
         if (d != null) {
             d.reset().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);
