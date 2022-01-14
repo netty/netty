@@ -16,7 +16,6 @@
 
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectCleaner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;

@@ -14,10 +14,7 @@
  * under the License.
  */
 
-package io.netty.util.internal;
-
-import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.FastThreadLocalThread;
+package io.netty.util.concurrent;
 
 import java.util.Arrays;
 import java.util.BitSet;
@@ -28,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Note that this class is for internal use only and is subject to change at any time.  Use {@link FastThreadLocal}
  * unless you know what you are doing.
  */
-public final class InternalThreadLocalMap {
+final class InternalThreadLocalMap {
 
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<>();
@@ -39,14 +36,14 @@ public final class InternalThreadLocalMap {
     private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
     private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
-    public static final Object UNSET = new Object();
+    static final Object UNSET = new Object();
 
     /** Used by {@link FastThreadLocal} */
     private Object[] indexedVariables;
 
     private BitSet cleanerFlags;
 
-    public static InternalThreadLocalMap getIfSet() {
+    static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {
             return ((FastThreadLocalThread) thread).threadLocalMap();
@@ -54,7 +51,7 @@ public final class InternalThreadLocalMap {
         return slowThreadLocalMap.get();
     }
 
-    public static InternalThreadLocalMap get() {
+    static InternalThreadLocalMap get() {
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {
             return fastGet((FastThreadLocalThread) thread);
@@ -80,7 +77,7 @@ public final class InternalThreadLocalMap {
         return ret;
     }
 
-    public static void remove() {
+    static void remove() {
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {
             ((FastThreadLocalThread) thread).setThreadLocalMap(null);
@@ -89,11 +86,11 @@ public final class InternalThreadLocalMap {
         }
     }
 
-    public static void destroy() {
+    static void destroy() {
         slowThreadLocalMap.remove();
     }
 
-    public static int nextVariableIndex() {
+    static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
         if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
             nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
@@ -102,7 +99,7 @@ public final class InternalThreadLocalMap {
         return index;
     }
 
-    public static int lastVariableIndex() {
+    static int lastVariableIndex() {
         return nextIndex.get() - 1;
     }
 
@@ -116,7 +113,7 @@ public final class InternalThreadLocalMap {
         return array;
     }
 
-    public int size() {
+    int size() {
         int count = 0;
         for (Object o: indexedVariables) {
             if (o != UNSET) {
@@ -129,7 +126,7 @@ public final class InternalThreadLocalMap {
         return count - 1;
     }
 
-    public Object indexedVariable(int index) {
+    Object indexedVariable(int index) {
         Object[] lookup = indexedVariables;
         return index < lookup.length? lookup[index] : UNSET;
     }
@@ -137,7 +134,7 @@ public final class InternalThreadLocalMap {
     /**
      * @return {@code true} if and only if a new thread-local variable has been created
      */
-    public boolean setIndexedVariable(int index, Object value) {
+    boolean setIndexedVariable(int index, Object value) {
         Object[] lookup = indexedVariables;
         if (index < lookup.length) {
             Object oldValue = lookup[index];
@@ -171,7 +168,7 @@ public final class InternalThreadLocalMap {
         indexedVariables = newArray;
     }
 
-    public Object removeIndexedVariable(int index) {
+    Object removeIndexedVariable(int index) {
         Object[] lookup = indexedVariables;
         if (index < lookup.length) {
             Object v = lookup[index];
@@ -182,16 +179,16 @@ public final class InternalThreadLocalMap {
         }
     }
 
-    public boolean isIndexedVariableSet(int index) {
+    boolean isIndexedVariableSet(int index) {
         Object[] lookup = indexedVariables;
         return index < lookup.length && lookup[index] != UNSET;
     }
 
-    public boolean isCleanerFlagSet(int index) {
+    boolean isCleanerFlagSet(int index) {
         return cleanerFlags != null && cleanerFlags.get(index);
     }
 
-    public void setCleanerFlag(int index) {
+    void setCleanerFlag(int index) {
         if (cleanerFlags == null) {
             cleanerFlags = new BitSet();
         }
