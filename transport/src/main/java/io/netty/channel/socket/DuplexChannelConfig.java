@@ -20,7 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 /**
@@ -67,7 +67,7 @@ public interface DuplexChannelConfig extends ChannelConfig {
     DuplexChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    DuplexChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    DuplexChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     @Override
     DuplexChannelConfig setAutoRead(boolean autoRead);

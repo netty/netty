@@ -491,7 +491,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         }
 
         @Override
-        void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
+        void readReady(final KQueueRecvBufferAllocatorHandle allocHandle) {
             final ChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadFilter0();
@@ -558,7 +558,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                                         KQueueRecvByteAllocatorHandle allocHandle) {
+                                         KQueueRecvBufferAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;

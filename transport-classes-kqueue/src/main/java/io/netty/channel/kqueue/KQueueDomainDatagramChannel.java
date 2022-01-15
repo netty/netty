@@ -240,7 +240,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
     final class KQueueDomainDatagramChannelUnsafe extends AbstractKQueueUnsafe {
 
         @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
             assert executor().inEventLoop();
             final DomainDatagramChannelConfig config = config();
             if (shouldBreakReadReady(config)) {

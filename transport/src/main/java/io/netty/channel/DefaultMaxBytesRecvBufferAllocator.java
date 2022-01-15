@@ -25,10 +25,10 @@ import java.util.Map.Entry;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
- * The {@link RecvByteBufAllocator} that yields a buffer size prediction based upon decrementing the value from
+ * The {@link RecvBufferAllocator} that yields a buffer size prediction based upon decrementing the value from
  * the max bytes per read.
  */
-public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufAllocator {
+public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAllocator {
     private volatile int maxBytesPerRead;
     private volatile int maxBytesPerIndividualRead;
 
@@ -103,11 +103,11 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
         }
     }
 
-    public DefaultMaxBytesRecvByteBufAllocator() {
+    public DefaultMaxBytesRecvBufferAllocator() {
         this(64 * 1024, 64 * 1024);
     }
 
-    public DefaultMaxBytesRecvByteBufAllocator(int maxBytesPerRead, int maxBytesPerIndividualRead) {
+    public DefaultMaxBytesRecvBufferAllocator(int maxBytesPerRead, int maxBytesPerIndividualRead) {
         checkMaxBytesPerReadPair(maxBytesPerRead, maxBytesPerIndividualRead);
         this.maxBytesPerRead = maxBytesPerRead;
         this.maxBytesPerIndividualRead = maxBytesPerIndividualRead;
@@ -124,7 +124,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
     }
 
     @Override
-    public DefaultMaxBytesRecvByteBufAllocator maxBytesPerRead(int maxBytesPerRead) {
+    public DefaultMaxBytesRecvBufferAllocator maxBytesPerRead(int maxBytesPerRead) {
         checkPositive(maxBytesPerRead, "maxBytesPerRead");
         // There is a dependency between this.maxBytesPerRead and this.maxBytesPerIndividualRead (a < b).
         // Write operations must be synchronized, but independent read operations can just be volatile.
@@ -147,7 +147,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
     }
 
     @Override
-    public DefaultMaxBytesRecvByteBufAllocator maxBytesPerIndividualRead(int maxBytesPerIndividualRead) {
+    public DefaultMaxBytesRecvBufferAllocator maxBytesPerIndividualRead(int maxBytesPerIndividualRead) {
         checkPositive(maxBytesPerIndividualRead, "maxBytesPerIndividualRead");
         // There is a dependency between this.maxBytesPerRead and this.maxBytesPerIndividualRead (a < b).
         // Write operations must be synchronized, but independent read operations can just be volatile.
@@ -180,8 +180,8 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
     }
 
     @Override
-    public DefaultMaxBytesRecvByteBufAllocator maxBytesPerReadPair(int maxBytesPerRead,
-            int maxBytesPerIndividualRead) {
+    public DefaultMaxBytesRecvBufferAllocator maxBytesPerReadPair(int maxBytesPerRead,
+                                                                  int maxBytesPerIndividualRead) {
         checkMaxBytesPerReadPair(maxBytesPerRead, maxBytesPerIndividualRead);
         // There is a dependency between this.maxBytesPerRead and this.maxBytesPerIndividualRead (a < b).
         // Write operations must be synchronized, but independent read operations can just be volatile.

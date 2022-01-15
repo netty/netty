@@ -347,7 +347,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     final class KQueueDatagramChannelUnsafe extends AbstractKQueueUnsafe {
 
         @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
             assert executor().inEventLoop();
             final DatagramChannelConfig config = config();
             if (shouldBreakReadReady(config)) {

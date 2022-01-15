@@ -23,7 +23,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
- * The {@link RecvByteBufAllocator} that automatically increases and
+ * The {@link RecvBufferAllocator} that automatically increases and
  * decreases the predicted buffer size on feed back.
  * <p>
  * It gradually increases the expected number of readable bytes if the previous
@@ -32,7 +32,7 @@ import static java.lang.Math.min;
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
  */
-public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
+public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
 
     static final int DEFAULT_MINIMUM = 64;
     // Use an initial value that is bigger than the common MTU of 1500
@@ -65,7 +65,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * @deprecated There is state for {@link #maxMessagesPerRead()} which is typically based upon channel type.
      */
     @Deprecated
-    public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
+    public static final AdaptiveRecvBufferAllocator DEFAULT = new AdaptiveRecvBufferAllocator();
 
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
@@ -154,7 +154,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * parameters, the expected buffer size starts from {@code 1024}, does not
      * go down below {@code 64}, and does not go up above {@code 65536}.
      */
-    public AdaptiveRecvByteBufAllocator() {
+    public AdaptiveRecvBufferAllocator() {
         this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
     }
 
@@ -165,7 +165,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * @param initial  the initial buffer size when no feedback was received
      * @param maximum  the inclusive upper bound of the expected buffer size
      */
-    public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {
+    public AdaptiveRecvBufferAllocator(int minimum, int initial, int maximum) {
         checkPositive(minimum, "minimum");
         if (initial < minimum) {
             throw new IllegalArgumentException("initial: " + initial);
@@ -197,7 +197,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     }
 
     @Override
-    public AdaptiveRecvByteBufAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
+    public AdaptiveRecvBufferAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
         super.respectMaybeMoreData(respectMaybeMoreData);
         return this;
     }

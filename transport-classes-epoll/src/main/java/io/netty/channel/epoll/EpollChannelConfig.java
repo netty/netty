@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
@@ -31,8 +31,8 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         super(channel);
     }
 
-    EpollChannelConfig(AbstractEpollChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
-        super(channel, recvByteBufAllocator);
+    EpollChannelConfig(AbstractEpollChannel channel, RecvBufferAllocator recvBufferAllocator) {
+        super(channel, recvBufferAllocator);
     }
 
     @Override
@@ -67,8 +67,8 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    public EpollChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public EpollChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

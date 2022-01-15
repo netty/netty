@@ -20,8 +20,8 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
+import io.netty.channel.ServerChannelRecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
@@ -42,7 +42,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     private volatile boolean enableTcpFastOpen;
 
     KQueueServerChannelConfig(AbstractKQueueChannel channel) {
-        super(channel, new ServerChannelRecvByteBufAllocator());
+        super(channel, new ServerChannelRecvBufferAllocator());
     }
 
     @Override
@@ -202,8 +202,8 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     }
 
     @Override
-    public KQueueServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public KQueueServerChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

@@ -101,7 +101,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 clearEpollIn0();
                 return;
             }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -113,7 +113,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 try {
                     do {
                         // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                        // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
+                        // EpollRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
                         // enabled.
                         allocHandle.lastBytesRead(socket.accept(acceptedAddress));
                         if (allocHandle.lastBytesRead() == -1) {

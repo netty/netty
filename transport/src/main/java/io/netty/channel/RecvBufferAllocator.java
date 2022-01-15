@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
  * Allocates a new receive buffer whose capacity is probably large enough to read all inbound data and small enough
  * not to waste its space.
  */
-public interface RecvByteBufAllocator {
+public interface RecvBufferAllocator {
     /**
      * Creates a new handle.  The handle provides the actual operations and keeps the internal information which is
      * required for predicting an optimal buffer capacity.

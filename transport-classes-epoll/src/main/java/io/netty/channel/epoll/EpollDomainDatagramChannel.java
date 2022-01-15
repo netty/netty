@@ -298,7 +298,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                 clearEpollIn0();
                 return;
             }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();

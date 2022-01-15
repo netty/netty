@@ -23,7 +23,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,16 +43,16 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
             handler = null;
         }
         if (maxReads != null) {
-            channel.config().setRecvByteBufAllocator(new TestNumReadsRecvByteBufAllocator(maxReads));
+            channel.config().setRecvBufferAllocator(new TestNumReadsRecvBufferAllocator(maxReads));
         }
     }
 
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
+    static final class TestNumReadsRecvBufferAllocator implements RecvBufferAllocator {
         private final AtomicInteger numReads;
-        private TestNumReadsRecvByteBufAllocator(AtomicInteger numReads) {
+        private TestNumReadsRecvBufferAllocator(AtomicInteger numReads) {
             this.numReads = numReads;
         }
 

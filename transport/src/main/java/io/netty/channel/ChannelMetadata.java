@@ -44,8 +44,8 @@ public final class ChannelMetadata {
      * @param hasDisconnect     {@code true} if and only if the channel has the {@code disconnect()} operation
      *                          that allows a user to disconnect and then call {@link Channel#connect(SocketAddress)}
      *                          again, such as UDP/IP.
-     * @param defaultMaxMessagesPerRead If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this value will be
-     * set for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
+     * @param defaultMaxMessagesPerRead If a {@link MaxMessagesRecvBufferAllocator} is in use, then this value will be
+     * set for {@link MaxMessagesRecvBufferAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
      */
     public ChannelMetadata(boolean hasDisconnect, int defaultMaxMessagesPerRead) {
         checkPositive(defaultMaxMessagesPerRead, "defaultMaxMessagesPerRead");
@@ -63,8 +63,8 @@ public final class ChannelMetadata {
     }
 
     /**
-     * If a {@link MaxMessagesRecvByteBufAllocator} is in use, then this is the default value for
-     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
+     * If a {@link MaxMessagesRecvBufferAllocator} is in use, then this is the default value for
+     * {@link MaxMessagesRecvBufferAllocator#maxMessagesPerRead()}.
      */
     public int defaultMaxMessagesPerRead() {
         return defaultMaxMessagesPerRead;

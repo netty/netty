@@ -22,9 +22,9 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.PreferHeapByteBufAllocator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.channel.ServerChannelRecvBufferAllocator;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -37,7 +37,7 @@ import java.util.Queue;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config =
-            new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
+            new DefaultChannelConfig(this, new ServerChannelRecvBufferAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<>();
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -122,7 +122,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle handle = unsafe().recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {

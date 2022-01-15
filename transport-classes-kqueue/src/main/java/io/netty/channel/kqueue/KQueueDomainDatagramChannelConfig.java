@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.FixedRecvBufferAllocator;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
 import io.netty.util.internal.UnstableApi;
@@ -36,13 +36,13 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 public final class KQueueDomainDatagramChannelConfig
         extends KQueueChannelConfig implements DomainDatagramChannelConfig {
 
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
+    private static final RecvBufferAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvBufferAllocator(2048);
 
     private boolean activeOnOpen;
 
     KQueueDomainDatagramChannelConfig(KQueueDomainDatagramChannel channel) {
         super(channel);
-        setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
+        this.setRecvBufferAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
     @Override
@@ -147,8 +147,8 @@ public final class KQueueDomainDatagramChannelConfig
     }
 
     @Override
-    public KQueueDomainDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public KQueueDomainDatagramChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

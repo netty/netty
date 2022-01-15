@@ -302,7 +302,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract class AbstractUnsafe implements Unsafe {
 
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
-        private RecvByteBufAllocator.Handle recvHandle;
+        private RecvBufferAllocator.Handle recvHandle;
         private MessageSizeEstimator.Handle estimatorHandler;
 
         private boolean inFlush0;
@@ -314,9 +314,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+        public RecvBufferAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
-                recvHandle = config().getRecvByteBufAllocator().newHandle();
+                recvHandle = config().getRecvBufferAllocator().newHandle();
             }
             return recvHandle;
         }

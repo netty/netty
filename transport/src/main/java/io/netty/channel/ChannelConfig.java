@@ -122,8 +122,8 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
-     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
+     * @deprecated Use {@link MaxMessagesRecvBufferAllocator} and
+     * {@link MaxMessagesRecvBufferAllocator#maxMessagesPerRead()}.
      * <p>
      * Returns the maximum number of messages to read per read loop.
      * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
@@ -133,8 +133,8 @@ public interface ChannelConfig {
     int getMaxMessagesPerRead();
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
-     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead(int)}.
+     * @deprecated Use {@link MaxMessagesRecvBufferAllocator} and
+     * {@link MaxMessagesRecvBufferAllocator#maxMessagesPerRead(int)}.
      * <p>
      * Sets the maximum number of messages to read per read loop.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
@@ -192,14 +192,14 @@ public interface ChannelConfig {
     ChannelConfig setBufferAllocator(BufferAllocator allocator);
 
     /**
-     * Returns {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
+     * Returns {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
      */
-    <T extends RecvByteBufAllocator> T getRecvByteBufAllocator();
+    <T extends RecvBufferAllocator> T getRecvBufferAllocator();
 
     /**
-     * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
+     * Set the {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
      */
-    ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     /**
      * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DuplexChannelConfig;
 
@@ -86,8 +86,8 @@ public class KQueueDuplexChannelConfig extends KQueueChannelConfig implements Du
     }
 
     @Override
-    public KQueueDuplexChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public KQueueDuplexChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

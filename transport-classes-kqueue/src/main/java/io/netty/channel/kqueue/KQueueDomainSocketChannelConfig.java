@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
@@ -105,8 +105,8 @@ public final class KQueueDomainSocketChannelConfig extends KQueueDuplexChannelCo
     }
 
     @Override
-    public KQueueDomainSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public KQueueDomainSocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

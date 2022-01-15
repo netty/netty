@@ -18,15 +18,15 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.RecvByteBufAllocator.DelegatingHandle;
-import io.netty.channel.RecvByteBufAllocator.Handle;
+import io.netty.channel.RecvBufferAllocator.DelegatingHandle;
+import io.netty.channel.RecvBufferAllocator.Handle;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-final class KQueueRecvByteAllocatorHandle extends DelegatingHandle {
+final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
 
@@ -35,7 +35,7 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle {
     private boolean readEOF;
     private long numberBytesPending;
 
-    KQueueRecvByteAllocatorHandle(Handle handle) {
+    KQueueRecvBufferAllocatorHandle(Handle handle) {
         super(handle);
     }
 

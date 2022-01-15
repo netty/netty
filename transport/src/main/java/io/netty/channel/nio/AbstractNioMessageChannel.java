@@ -20,7 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.ServerChannel;
 
 import java.io.IOException;
@@ -56,7 +56,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super.doBeginRead();
     }
 
-    protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
+    protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {
         return allocHandle.continueReading();
     }
 
@@ -69,7 +69,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert executor().inEventLoop();
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
-            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+            final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
             allocHandle.reset(config);
 
             boolean closed = false;

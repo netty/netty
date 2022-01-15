@@ -26,7 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .childOption(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
                     // test the auto read feature being turned off when data is first read.
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
                     .childHandler(serverInitializer);
 
             serverChannel = sb.bind().get();
@@ -70,16 +70,16 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             cb.option(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
                     // test the auto read feature being turned off when data is first read.
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
                     .handler(clientInitializer);
 
             clientChannel = cb.connect(serverChannel.localAddress()).get();
 
-            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
+            // 3 bytes means 3 independent reads for TestRecvBufferAllocator
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
             serverInitializer.autoReadHandler.assertSingleRead();
 
-            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
+            // 3 bytes means 3 independent reads for TestRecvBufferAllocator
             serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
             clientInitializer.autoReadHandler.assertSingleRead();
 
@@ -160,7 +160,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
     /**
      * Designed to keep reading as long as autoread is enabled.
      */
-    private static final class TestRecvByteBufAllocator implements RecvByteBufAllocator {
+    private static final class TestRecvBufferAllocator implements RecvBufferAllocator {
         @Override
         public Handle newHandle() {
             return new Handle() {

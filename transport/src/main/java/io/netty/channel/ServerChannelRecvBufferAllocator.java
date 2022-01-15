@@ -16,10 +16,10 @@
 package io.netty.channel;
 
 /**
- * {@link MaxMessagesRecvByteBufAllocator} implementation which should be used for {@link ServerChannel}s.
+ * {@link MaxMessagesRecvBufferAllocator} implementation which should be used for {@link ServerChannel}s.
  */
-public final class ServerChannelRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
-    public ServerChannelRecvByteBufAllocator() {
+public final class ServerChannelRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
+    public ServerChannelRecvBufferAllocator() {
         super(1, true);
     }
 
