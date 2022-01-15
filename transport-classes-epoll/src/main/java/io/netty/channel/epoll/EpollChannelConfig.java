@@ -16,9 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
-
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -70,10 +68,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
 
     @Override
     public EpollChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        if (!(allocator.newHandle() instanceof RecvByteBufAllocator.ExtendedHandle)) {
-            throw new IllegalArgumentException("allocator.newHandle() must return an object of type: " +
-                    RecvByteBufAllocator.ExtendedHandle.class);
-        }
         super.setRecvByteBufAllocator(allocator);
         return this;
     }

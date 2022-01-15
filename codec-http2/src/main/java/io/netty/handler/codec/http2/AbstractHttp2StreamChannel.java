@@ -433,7 +433,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     private final class Http2ChannelUnsafe implements Unsafe {
-        @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean writeDoneAndNoFlush;
         private boolean closeInitiated;
@@ -732,7 +731,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        @SuppressWarnings("deprecation")
         void doRead0(Http2Frame frame, RecvByteBufAllocator.Handle allocHandle) {
             final int bytes;
             if (frame instanceof Http2DataFrame) {
@@ -916,16 +914,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         @Override
         public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
             throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            if (!(allocator.newHandle() instanceof RecvByteBufAllocator.ExtendedHandle)) {
-                throw new IllegalArgumentException("allocator.newHandle() must return an object of type: " +
-                        RecvByteBufAllocator.ExtendedHandle.class);
-            }
-            super.setRecvByteBufAllocator(allocator);
-            return this;
         }
     }
 

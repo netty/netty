@@ -17,7 +17,6 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
@@ -45,7 +44,6 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(), RCV_ALLOC_TRANSPORT_PROVIDES_GUESS);
     }
@@ -122,10 +120,6 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
 
     @Override
     public KQueueChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        if (!(allocator.newHandle() instanceof RecvByteBufAllocator.ExtendedHandle)) {
-            throw new IllegalArgumentException("allocator.newHandle() must return an object of type: " +
-                    RecvByteBufAllocator.ExtendedHandle.class);
-        }
         super.setRecvByteBufAllocator(allocator);
         return this;
     }

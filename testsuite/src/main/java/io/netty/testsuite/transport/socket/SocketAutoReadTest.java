@@ -162,8 +162,8 @@ public class SocketAutoReadTest extends AbstractSocketTest {
      */
     private static final class TestRecvByteBufAllocator implements RecvByteBufAllocator {
         @Override
-        public ExtendedHandle newHandle() {
-            return new ExtendedHandle() {
+        public Handle newHandle() {
+            return new Handle() {
                 private ChannelConfig config;
                 private int attemptedBytesRead;
                 private int lastBytesRead;

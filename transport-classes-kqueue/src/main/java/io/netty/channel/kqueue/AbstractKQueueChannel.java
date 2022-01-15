@@ -27,7 +27,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -488,8 +487,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         @Override
         public KQueueRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
-                allocHandle = new KQueueRecvByteAllocatorHandle(
-                        (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
+                allocHandle = new KQueueRecvByteAllocatorHandle(super.recvBufAllocHandle());
             }
             return allocHandle;
         }

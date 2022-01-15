@@ -28,7 +28,7 @@ import static java.lang.Math.min;
  * <p>
  * It gradually increases the expected number of readable bytes if the previous
  * read fully filled the allocated buffer.  It gradually decreases the expected
- * number of readable bytes if the read operation was not able to fill a certain
+ * number of readable bytes if the read operation was unable to fill a certain
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
  */
@@ -50,7 +50,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             sizeTable.add(i);
         }
 
-        // Suppress a warning since i becomes negative when an integer overflow happens
+        // Suppress a warning since `i` becomes negative when an integer overflow happens
         for (int i = 512; i > 0; i <<= 1) { // lgtm[java/constant-comparison]
             sizeTable.add(i);
         }
@@ -162,7 +162,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * Creates a new predictor with the specified parameters.
      *
      * @param minimum  the inclusive lower bound of the expected buffer size
-     * @param initial  the initial buffer size when no feed back was received
+     * @param initial  the initial buffer size when no feedback was received
      * @param maximum  the inclusive upper bound of the expected buffer size
      */
     public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {
@@ -191,7 +191,6 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         this.initial = initial;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public Handle newHandle() {
         return new HandleImpl(minIndex, maxIndex, initial);

@@ -30,11 +30,11 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     private volatile int maxMessagesPerRead;
     private volatile boolean respectMaybeMoreData = true;
 
-    public DefaultMaxMessagesRecvByteBufAllocator() {
+    protected DefaultMaxMessagesRecvByteBufAllocator() {
         this(1);
     }
 
-    public DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead) {
+    protected DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead) {
         this(maxMessagesPerRead, false);
     }
 
@@ -90,7 +90,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     /**
      * Focuses on enforcing the maximum messages per read condition for {@link #continueReading()}.
      */
-    public abstract class MaxMessageHandle implements ExtendedHandle {
+    public abstract class MaxMessageHandle implements Handle {
         private ChannelConfig config;
         private int maxMessagePerRead;
         private int totalMessages;

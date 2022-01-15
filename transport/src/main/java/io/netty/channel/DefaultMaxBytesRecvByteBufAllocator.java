@@ -15,14 +15,14 @@
  */
 package io.netty.channel;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 import java.util.AbstractMap;
 import java.util.Map.Entry;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * The {@link RecvByteBufAllocator} that yields a buffer size prediction based upon decrementing the value from
@@ -32,7 +32,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
     private volatile int maxBytesPerRead;
     private volatile int maxBytesPerIndividualRead;
 
-    private final class HandleImpl implements ExtendedHandle {
+    private final class HandleImpl implements Handle {
         private int individualReadMax;
         private int bytesToRead;
         private int lastBytesRead;
@@ -113,7 +113,6 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
         this.maxBytesPerIndividualRead = maxBytesPerIndividualRead;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public Handle newHandle() {
         return new HandleImpl();
