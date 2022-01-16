@@ -561,12 +561,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
                  PoolThreadCache threadCache) {
-        if (isRun(handle)) {
+        if (isSubpage(handle)) {
+            initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+        } else {
             int maxLength = runSize(pageShifts, handle);
             buf.init(this, nioBuffer, handle, runOffset(handle) << pageShifts,
-                     reqCapacity, maxLength, arena.parent.threadCache());
-        } else {
-            initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+                    reqCapacity, maxLength, arena.parent.threadCache());
         }
     }
 
