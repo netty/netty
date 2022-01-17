@@ -80,12 +80,9 @@ public final class NioDatagramChannel
 
     private static DatagramChannel newSocket(SelectorProvider provider) {
         try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each DatagramChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
+             // Use the SelectorProvider to open SocketChannel and so remove condition in
+             // SelectorProvider#provider() which is called by each DatagramChannel.open() otherwise.
+             // See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
             return provider.openDatagramChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
@@ -583,12 +580,8 @@ public final class NioDatagramChannel
 
     @Override
     protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
-        if (allocHandle instanceof RecvByteBufAllocator.ExtendedHandle) {
-            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-            // as we read anything).
-            return ((RecvByteBufAllocator.ExtendedHandle) allocHandle)
-                    .continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER);
-        }
-        return allocHandle.continueReading();
+        // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+        // as we read anything).
+        return allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER);
     }
 }

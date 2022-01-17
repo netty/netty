@@ -33,10 +33,7 @@ public interface RecvByteBufAllocator {
      */
     Handle newHandle();
 
-    /**
-     * @deprecated Use {@link ExtendedHandle}.
-     */
-    @Deprecated
+    @UnstableApi
     interface Handle {
         /**
          * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
@@ -102,19 +99,15 @@ public interface RecvByteBufAllocator {
         boolean continueReading();
 
         /**
-         * The read has completed.
-         */
-        void readComplete();
-    }
-
-    @SuppressWarnings("deprecation")
-    @UnstableApi
-    interface ExtendedHandle extends Handle {
-        /**
          * Same as {@link Handle#continueReading()} except "more data" is determined by the supplier parameter.
          * @param maybeMoreDataSupplier A supplier that determines if there maybe more data to read.
          */
         boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier);
+
+        /**
+         * The read has completed.
+         */
+        void readComplete();
     }
 
     /**
@@ -168,6 +161,11 @@ public interface RecvByteBufAllocator {
         @Override
         public boolean continueReading() {
             return delegate.continueReading();
+        }
+
+        @Override
+        public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
+            return delegate.continueReading(maybeMoreDataSupplier);
         }
 
         @Override

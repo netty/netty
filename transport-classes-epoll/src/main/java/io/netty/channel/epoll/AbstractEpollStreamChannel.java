@@ -15,9 +15,9 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -26,7 +26,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator.Handle;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
@@ -537,7 +537,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        EpollRecvByteAllocatorHandle newEpollHandle(Handle handle) {
             return new EpollRecvByteAllocatorStreamingHandle(handle);
         }
 

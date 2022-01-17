@@ -613,11 +613,12 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        public ExtendedHandle newHandle() {
-            return new ExtendedHandle() {
+        public Handle newHandle() {
+            return new Handle() {
                 private int attemptedBytesRead;
                 private int lastBytesRead;
                 private int numMessagesRead;
+
                 @Override
                 public ByteBuf allocate(ByteBufAllocator alloc) {
                     return alloc.ioBuffer(guess(), guess());

@@ -27,7 +27,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator.Handle;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -528,7 +528,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         @Override
         public EpollRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
-                allocHandle = newEpollHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
+                allocHandle = newEpollHandle(super.recvBufAllocHandle());
             }
             return allocHandle;
         }
@@ -537,7 +537,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Create a new {@link EpollRecvByteAllocatorHandle} instance.
          * @param handle The handle to wrap with EPOLL specific logic.
          */
-        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        EpollRecvByteAllocatorHandle newEpollHandle(Handle handle) {
             return new EpollRecvByteAllocatorHandle(handle);
         }
 

@@ -19,14 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator.DelegatingHandle;
-import io.netty.channel.RecvByteBufAllocator.ExtendedHandle;
+import io.netty.channel.RecvByteBufAllocator.Handle;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedHandle {
+final class KQueueRecvByteAllocatorHandle extends DelegatingHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
 
@@ -35,7 +35,7 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
     private boolean readEOF;
     private long numberBytesPending;
 
-    KQueueRecvByteAllocatorHandle(ExtendedHandle handle) {
+    KQueueRecvByteAllocatorHandle(Handle handle) {
         super(handle);
     }
 
@@ -65,11 +65,6 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
     }
 
     @Override
-    public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
-    }
-
-    @Override
     public boolean continueReading() {
         // We must override the supplier which determines if there maybe more data to read.
         return continueReading(defaultMaybeMoreDataSupplier);
@@ -87,17 +82,16 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
         this.numberBytesPending = numberBytesPending;
     }
 
+    /**
+     * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes (see kqueue man:
+     * https://www.freebsd.org/cgi/man.cgi?kqueue). However, in order to respect auto read we support reading to stop if
+     * auto read is off. If auto read is on we force reading to continue to avoid a {@link StackOverflowError} between
+     * channelReadComplete and reading from the channel. It is expected that the {@link KQueueSocketChannel}
+     * implementations will track if all data was not read, and will force a EVFILT_READ ready event.
+     * <p>
+     * It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
+     */
     boolean maybeMoreDataToRead() {
-        /*
-          kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
-          (see kqueue man: https://www.freebsd.org/cgi/man.cgi?kqueue). However, in order to
-          respect auto read we support reading to stop if auto read is off. If auto read is on we force reading to
-          continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
-          channel. It is expected that the {@link #KQueueSocketChannel} implementations will track if all data was not
-          read, and will force a EVFILT_READ ready event.
-
-          It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
-         */
         return numberBytesPending != 0;
     }
 

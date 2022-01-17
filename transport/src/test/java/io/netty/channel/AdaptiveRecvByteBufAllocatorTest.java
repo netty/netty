@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -30,14 +31,14 @@ public class AdaptiveRecvByteBufAllocatorTest {
     @Mock
     private ChannelConfig config;
     private final ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
-    private RecvByteBufAllocator.ExtendedHandle handle;
+    private Handle handle;
 
     @BeforeEach
     public void setup() {
         config = mock(ChannelConfig.class);
         when(config.isAutoRead()).thenReturn(true);
         AdaptiveRecvByteBufAllocator recvByteBufAllocator = new AdaptiveRecvByteBufAllocator(64, 512, 1024 * 1024 * 10);
-        handle = (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
+        handle = recvByteBufAllocator.newHandle();
         handle.reset(config);
     }
 
@@ -77,7 +78,7 @@ public class AdaptiveRecvByteBufAllocatorTest {
     @Test
     public void lastPartialReadDoesNotRampDown() {
         allocReadExpected(handle, alloc, 512);
-        // Simulate there is just 1 byte remaining which is unread. However the total bytes in the current read cycle
+        // Simulate there is just 1 byte remaining which is unread. However, the total bytes in the current read cycle
         // means that we should stay at the current step for the next ready cycle.
         allocRead(handle, alloc, 8192, 1);
         handle.readComplete();
@@ -98,16 +99,11 @@ public class AdaptiveRecvByteBufAllocatorTest {
         allocReadExpected(handle, alloc, 131072);
     }
 
-    private static void allocReadExpected(RecvByteBufAllocator.ExtendedHandle handle,
-                                          ByteBufAllocator alloc,
-                                          int expectedSize) {
+    private static void allocReadExpected(Handle handle, ByteBufAllocator alloc, int expectedSize) {
         allocRead(handle, alloc, expectedSize, expectedSize);
     }
 
-    private static void allocRead(RecvByteBufAllocator.ExtendedHandle handle,
-                                  ByteBufAllocator alloc,
-                                  int expectedBufferSize,
-                                  int lastRead) {
+    private static void allocRead(Handle handle, ByteBufAllocator alloc, int expectedBufferSize, int lastRead) {
         ByteBuf buf = handle.allocate(alloc);
         assertEquals(expectedBufferSize, buf.capacity());
         handle.attemptedBytesRead(expectedBufferSize);
