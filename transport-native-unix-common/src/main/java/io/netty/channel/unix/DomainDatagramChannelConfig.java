@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 /**
@@ -60,7 +60,7 @@ public interface DomainDatagramChannelConfig extends ChannelConfig {
     DomainDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 
     @Override
-    DomainDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    DomainDatagramChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     /**
      * Sets the {@link java.net.StandardSocketOptions#SO_SNDBUF} option.

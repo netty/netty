@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.RecvByteBufAllocator.Handle;
+import io.netty.channel.RecvBufferAllocator.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class AdaptiveRecvByteBufAllocatorTest {
+public class AdaptiveRecvBufferAllocatorTest {
     @Mock
     private ChannelConfig config;
     private final ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
@@ -37,8 +37,8 @@ public class AdaptiveRecvByteBufAllocatorTest {
     public void setup() {
         config = mock(ChannelConfig.class);
         when(config.isAutoRead()).thenReturn(true);
-        AdaptiveRecvByteBufAllocator recvByteBufAllocator = new AdaptiveRecvByteBufAllocator(64, 512, 1024 * 1024 * 10);
-        handle = recvByteBufAllocator.newHandle();
+        AdaptiveRecvBufferAllocator recvBufferAllocator = new AdaptiveRecvBufferAllocator(64, 512, 1024 * 1024 * 10);
+        handle = recvBufferAllocator.newHandle();
         handle.reset(config);
     }
 

@@ -26,7 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -215,7 +215,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
               .option(ChannelOption.AUTO_READ, autoRead)
-              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
+              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(numReadsPerReadLoop));
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
@@ -514,7 +514,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, allowHalfClosed)
                     .option(ChannelOption.AUTO_READ, autoRead)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(numReadsPerReadLoop));
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
@@ -606,9 +606,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    private static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
+    private static final class TestNumReadsRecvBufferAllocator implements RecvBufferAllocator {
         private final int numReads;
-        TestNumReadsRecvByteBufAllocator(int numReads) {
+        TestNumReadsRecvBufferAllocator(int numReads) {
             this.numReads = numReads;
         }
 

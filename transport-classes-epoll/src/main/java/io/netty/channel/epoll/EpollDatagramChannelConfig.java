@@ -20,9 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.FixedRecvBufferAllocator;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.util.internal.ObjectUtil;
@@ -33,13 +33,13 @@ import java.net.NetworkInterface;
 import java.util.Map;
 
 public final class EpollDatagramChannelConfig extends EpollChannelConfig implements DatagramChannelConfig {
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
+    private static final RecvBufferAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvBufferAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
 
     EpollDatagramChannelConfig(EpollDatagramChannel channel) {
         super(channel);
-        setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
+        this.setRecvBufferAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
     @Override
@@ -204,8 +204,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     @Override
-    public EpollDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public EpollDatagramChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 
@@ -519,7 +519,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * {@code recvmmsg} should be used when reading from the underlying socket. When {@code recvmmsg} is used
      * we may be able to read multiple {@link io.netty.channel.socket.DatagramPacket}s with one syscall and so
      * greatly improve the performance. This number will be used to slice {@link ByteBuf}s returned by the used
-     * {@link RecvByteBufAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
+     * {@link RecvBufferAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
      * will enable it.
      */
     public EpollDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {

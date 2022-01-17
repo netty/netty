@@ -287,10 +287,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     interface Unsafe {
 
         /**
-         * Return the assigned {@link RecvByteBufAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
+         * Return the assigned {@link RecvBufferAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
          * receiving data.
          */
-        RecvByteBufAllocator.Handle recvBufAllocHandle();
+        RecvBufferAllocator.Handle recvBufAllocHandle();
 
         /**
          * Return the {@link SocketAddress} to which is bound local or

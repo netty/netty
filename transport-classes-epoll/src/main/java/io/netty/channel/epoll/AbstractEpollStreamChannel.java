@@ -26,7 +26,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.RecvByteBufAllocator.Handle;
+import io.netty.channel.RecvBufferAllocator.Handle;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
@@ -514,7 +514,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                EpollRecvByteAllocatorHandle allocHandle) {
+                EpollRecvBufferAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
@@ -537,8 +537,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        EpollRecvByteAllocatorHandle newEpollHandle(Handle handle) {
-            return new EpollRecvByteAllocatorStreamingHandle(handle);
+        EpollRecvBufferAllocatorHandle newEpollHandle(Handle handle) {
+            return new EpollRecvBufferAllocatorStreamingHandle(handle);
         }
 
         @Override
@@ -548,7 +548,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 clearEpollIn0();
                 return;
             }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();

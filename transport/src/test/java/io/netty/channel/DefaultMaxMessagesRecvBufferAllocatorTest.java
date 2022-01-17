@@ -21,10 +21,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class DefaultMaxMessagesRecvByteBufAllocatorTest {
+public class DefaultMaxMessagesRecvBufferAllocatorTest {
 
-    private DefaultMaxMessagesRecvByteBufAllocator newAllocator(boolean ignoreReadBytes) {
-        return new DefaultMaxMessagesRecvByteBufAllocator(2, ignoreReadBytes) {
+    private DefaultMaxMessagesRecvBufferAllocator newAllocator(boolean ignoreReadBytes) {
+        return new DefaultMaxMessagesRecvBufferAllocator(2, ignoreReadBytes) {
             @Override
             public Handle newHandle() {
                 return new MaxMessageHandle() {
@@ -39,8 +39,8 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
 
     @Test
     public void testRespectReadBytes() {
-        DefaultMaxMessagesRecvByteBufAllocator allocator = newAllocator(false);
-        RecvByteBufAllocator.Handle handle = allocator.newHandle();
+        DefaultMaxMessagesRecvBufferAllocator allocator = newAllocator(false);
+        RecvBufferAllocator.Handle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
         handle.reset(channel.config());
@@ -57,8 +57,8 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
 
     @Test
     public void testIgnoreReadBytes() {
-        DefaultMaxMessagesRecvByteBufAllocator allocator = newAllocator(true);
-        RecvByteBufAllocator.Handle handle = allocator.newHandle();
+        DefaultMaxMessagesRecvBufferAllocator allocator = newAllocator(true);
+        RecvBufferAllocator.Handle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
         handle.reset(channel.config());

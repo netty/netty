@@ -152,7 +152,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 return;
             }
             final ChannelConfig config = config();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -161,7 +161,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             try {
                 readLoop: do {
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                    // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
+                    // EpollRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
                     // enabled.
                     allocHandle.lastBytesRead(socket.recvFd());
                     switch(allocHandle.lastBytesRead()) {

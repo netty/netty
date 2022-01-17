@@ -18,7 +18,7 @@ package io.netty.channel.unix;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DuplexChannelConfig;
 
@@ -43,7 +43,7 @@ public interface DomainSocketChannelConfig extends DuplexChannelConfig {
     DomainSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    DomainSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    DomainSocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     @Override
     DomainSocketChannelConfig setAutoRead(boolean autoRead);

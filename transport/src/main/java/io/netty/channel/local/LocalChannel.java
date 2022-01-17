@@ -24,7 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
@@ -231,7 +231,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle handle = unsafe().recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {

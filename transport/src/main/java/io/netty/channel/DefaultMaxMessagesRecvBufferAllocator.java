@@ -22,23 +22,23 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 /**
- * Default implementation of {@link MaxMessagesRecvByteBufAllocator} which respects {@link ChannelConfig#isAutoRead()}
+ * Default implementation of {@link MaxMessagesRecvBufferAllocator} which respects {@link ChannelConfig#isAutoRead()}
  * and also prevents overflow.
  */
-public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessagesRecvByteBufAllocator {
+public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessagesRecvBufferAllocator {
     private final boolean ignoreBytesRead;
     private volatile int maxMessagesPerRead;
     private volatile boolean respectMaybeMoreData = true;
 
-    protected DefaultMaxMessagesRecvByteBufAllocator() {
+    protected DefaultMaxMessagesRecvBufferAllocator() {
         this(1);
     }
 
-    protected DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead) {
+    protected DefaultMaxMessagesRecvBufferAllocator(int maxMessagesPerRead) {
         this(maxMessagesPerRead, false);
     }
 
-    DefaultMaxMessagesRecvByteBufAllocator(int maxMessagesPerRead, boolean ignoreBytesRead) {
+    DefaultMaxMessagesRecvBufferAllocator(int maxMessagesPerRead, boolean ignoreBytesRead) {
         this.ignoreBytesRead = ignoreBytesRead;
         maxMessagesPerRead(maxMessagesPerRead);
     }
@@ -49,7 +49,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     }
 
     @Override
-    public MaxMessagesRecvByteBufAllocator maxMessagesPerRead(int maxMessagesPerRead) {
+    public MaxMessagesRecvBufferAllocator maxMessagesPerRead(int maxMessagesPerRead) {
         checkPositive(maxMessagesPerRead, "maxMessagesPerRead");
         this.maxMessagesPerRead = maxMessagesPerRead;
         return this;
@@ -67,7 +67,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
      * </ul>
      * @return {@code this}.
      */
-    public DefaultMaxMessagesRecvByteBufAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
+    public DefaultMaxMessagesRecvBufferAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
         this.respectMaybeMoreData = respectMaybeMoreData;
         return this;
     }
@@ -97,7 +97,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         private int totalBytesRead;
         private int attemptedBytesRead;
         private int lastBytesRead;
-        private final boolean respectMaybeMoreData = DefaultMaxMessagesRecvByteBufAllocator.this.respectMaybeMoreData;
+        private final boolean respectMaybeMoreData = DefaultMaxMessagesRecvBufferAllocator.this.respectMaybeMoreData;
         private final UncheckedBooleanSupplier defaultMaybeMoreSupplier = new UncheckedBooleanSupplier() {
             @Override
             public boolean get() {

@@ -25,7 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -232,7 +232,7 @@ public final class NioDatagramChannel
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         DatagramChannelConfig config = config();
-        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         allocHandle.attemptedBytesRead(data.writableBytes());
@@ -579,7 +579,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
+    protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {
         // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
         // as we read anything).
         return allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER);

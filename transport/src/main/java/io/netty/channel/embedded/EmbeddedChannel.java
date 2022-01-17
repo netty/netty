@@ -29,7 +29,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -752,7 +752,7 @@ public class EmbeddedChannel extends AbstractChannel {
         // that may change the state of the Channel and may schedule tasks for later execution.
         final Unsafe wrapped = new Unsafe() {
             @Override
-            public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+            public RecvBufferAllocator.Handle recvBufAllocHandle() {
                 return EmbeddedUnsafe.this.recvBufAllocHandle();
             }
 

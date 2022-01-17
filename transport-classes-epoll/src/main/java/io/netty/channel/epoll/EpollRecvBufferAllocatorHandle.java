@@ -17,18 +17,18 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.RecvByteBufAllocator.DelegatingHandle;
-import io.netty.channel.RecvByteBufAllocator.Handle;
+import io.netty.channel.RecvBufferAllocator.DelegatingHandle;
+import io.netty.channel.RecvBufferAllocator.Handle;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
-class EpollRecvByteAllocatorHandle extends DelegatingHandle {
+class EpollRecvBufferAllocatorHandle extends DelegatingHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean receivedRdHup;
 
-    EpollRecvByteAllocatorHandle(Handle handle) {
+    EpollRecvBufferAllocatorHandle(Handle handle) {
         super(handle);
     }
 

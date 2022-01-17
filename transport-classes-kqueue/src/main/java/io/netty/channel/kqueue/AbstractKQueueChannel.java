@@ -363,7 +363,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     public abstract class AbstractKQueueUnsafe extends AbstractUnsafe {
         boolean readPending;
         boolean maybeMoreDataToRead;
-        private KQueueRecvByteAllocatorHandle allocHandle;
+        private KQueueRecvBufferAllocatorHandle allocHandle;
         private final Runnable readReadyRunnable = new Runnable() {
             @Override
             public void run() {
@@ -373,12 +373,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         };
 
         final void readReady(long numberBytesPending) {
-            KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.numberBytesPending(numberBytesPending);
             readReady(allocHandle);
         }
 
-        abstract void readReady(KQueueRecvByteAllocatorHandle allocHandle);
+        abstract void readReady(KQueueRecvBufferAllocatorHandle allocHandle);
 
         final void readReadyBefore() {
             maybeMoreDataToRead = false;
@@ -470,7 +470,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         final void readEOF() {
             // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
-            final KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.readEOF();
 
             if (isActive()) {
@@ -485,9 +485,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
 
         @Override
-        public KQueueRecvByteAllocatorHandle recvBufAllocHandle() {
+        public KQueueRecvBufferAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
-                allocHandle = new KQueueRecvByteAllocatorHandle(super.recvBufAllocHandle());
+                allocHandle = new KQueueRecvBufferAllocatorHandle(super.recvBufAllocHandle());
             }
             return allocHandle;
         }

@@ -20,7 +20,7 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.internal.UnstableApi;
 
@@ -39,8 +39,8 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         super(channel);
     }
 
-    KQueueChannelConfig(AbstractKQueueChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
-        super(channel, recvByteBufAllocator);
+    KQueueChannelConfig(AbstractKQueueChannel channel, RecvBufferAllocator recvBufferAllocator) {
+        super(channel, recvBufferAllocator);
     }
 
     @Override
@@ -71,7 +71,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
+     * If this is {@code true} then the {@link RecvBufferAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
      */
     public KQueueChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
@@ -80,7 +80,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
+     * If this is {@code true} then the {@link RecvBufferAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
      */
     public boolean getRcvAllocTransportProvidesGuess() {
@@ -119,8 +119,8 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    public KQueueChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public KQueueChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

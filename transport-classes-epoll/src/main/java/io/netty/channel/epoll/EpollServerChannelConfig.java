@@ -20,8 +20,8 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
+import io.netty.channel.ServerChannelRecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
@@ -40,7 +40,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
     private volatile int pendingFastOpenRequestsThreshold;
 
     EpollServerChannelConfig(AbstractEpollChannel channel) {
-        super(channel, new ServerChannelRecvByteBufAllocator());
+        super(channel, new ServerChannelRecvBufferAllocator());
     }
 
     @Override
@@ -196,8 +196,8 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
     }
 
     @Override
-    public EpollServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+    public EpollServerChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        super.setRecvBufferAllocator(allocator);
         return this;
     }
 

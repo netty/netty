@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 import java.net.Socket;
@@ -156,7 +156,7 @@ public interface SocketChannelConfig extends DuplexChannelConfig {
     SocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    SocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     @Override
     SocketChannelConfig setAutoRead(boolean autoRead);

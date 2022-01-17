@@ -126,7 +126,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
 
     private final class KQueueDomainUnsafe extends KQueueStreamUnsafe {
         @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
             switch (config().getReadMode()) {
                 case BYTES:
                     super.readReady(allocHandle);
@@ -145,7 +145,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                 return;
             }
             final ChannelConfig config = config();
-            final KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -154,7 +154,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
             try {
                 readLoop: do {
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                    // KQueueRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
+                    // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
                     // enabled.
                     int recvFd = socket.recvFd();
                     switch(recvFd) {

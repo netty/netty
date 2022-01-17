@@ -26,7 +26,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.FixedRecvBufferAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -464,7 +464,7 @@ public class DnsNameResolver extends InetNameResolver {
                 });
             }
         });
-        b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(maxPayloadSize));
+        b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(maxPayloadSize));
 
         channelFuture = responseHandler.channelActivePromise.asFuture();
         try {

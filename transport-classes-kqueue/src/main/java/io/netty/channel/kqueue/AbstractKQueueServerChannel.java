@@ -88,7 +88,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
         private final byte[] acceptedAddress = new byte[26];
 
         @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
             assert executor().inEventLoop();
             final ChannelConfig config = config();
             if (shouldBreakReadReady(config)) {

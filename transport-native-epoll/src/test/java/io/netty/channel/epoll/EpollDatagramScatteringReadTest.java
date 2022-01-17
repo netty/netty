@@ -16,7 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.AdaptiveRecvBufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -96,7 +96,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
         int packetSize = 512;
         int numPackets = 4;
 
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(
+        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(
                 packetSize, packetSize * (partial ? numPackets / 2 : numPackets), 64 * 1024));
         sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, packetSize);
 
@@ -207,7 +207,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     private void testScatteringReadWithSmallBuffer0(Bootstrap sb, Bootstrap cb, boolean connected) throws Throwable {
         int packetSize = 16;
 
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(1400, 1400, 64 * 1024));
+        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(1400, 1400, 64 * 1024));
         sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, 1400);
 
         Channel sc = null;

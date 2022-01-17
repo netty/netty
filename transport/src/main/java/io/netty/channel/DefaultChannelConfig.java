@@ -61,7 +61,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
     private volatile BufferAllocator bufferAllocator = DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
-    private volatile RecvByteBufAllocator rcvBufAllocator;
+    private volatile RecvBufferAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
@@ -75,11 +75,11 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile boolean pinEventExecutor = true;
 
     public DefaultChannelConfig(Channel channel) {
-        this(channel, new AdaptiveRecvByteBufAllocator());
+        this(channel, new AdaptiveRecvBufferAllocator());
     }
 
-    protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
-        setRecvByteBufAllocator(allocator, channel.metadata());
+    protected DefaultChannelConfig(Channel channel, RecvBufferAllocator allocator) {
+        setRecvBufferAllocator(allocator, channel.metadata());
         this.channel = channel;
     }
 
@@ -140,7 +140,7 @@ public class DefaultChannelConfig implements ChannelConfig {
             return (T) getBufferAllocator();
         }
         if (option == RCVBUF_ALLOCATOR) {
-            return (T) getRecvByteBufAllocator();
+            return (T) getRecvBufferAllocator();
         }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
@@ -182,7 +182,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
-            setRecvByteBufAllocator((RecvByteBufAllocator) value);
+            setRecvBufferAllocator((RecvBufferAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
@@ -224,37 +224,37 @@ public class DefaultChannelConfig implements ChannelConfig {
     /**
      * {@inheritDoc}
      * <p>
-     * @throws IllegalStateException if {@link #getRecvByteBufAllocator()} does not return an object of type
-     * {@link MaxMessagesRecvByteBufAllocator}.
+     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
+     * {@link MaxMessagesRecvBufferAllocator}.
      */
     @Override
     @Deprecated
     public int getMaxMessagesPerRead() {
         try {
-            MaxMessagesRecvByteBufAllocator allocator = getRecvByteBufAllocator();
+            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
             return allocator.maxMessagesPerRead();
         } catch (ClassCastException e) {
-            throw new IllegalStateException("getRecvByteBufAllocator() must return an object of type " +
-                    "MaxMessagesRecvByteBufAllocator", e);
+            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
+                    "MaxMessagesRecvBufferAllocator", e);
         }
     }
 
     /**
      * {@inheritDoc}
      * <p>
-     * @throws IllegalStateException if {@link #getRecvByteBufAllocator()} does not return an object of type
-     * {@link MaxMessagesRecvByteBufAllocator}.
+     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
+     * {@link MaxMessagesRecvBufferAllocator}.
      */
     @Override
     @Deprecated
     public ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         try {
-            MaxMessagesRecvByteBufAllocator allocator = getRecvByteBufAllocator();
+            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
             allocator.maxMessagesPerRead(maxMessagesPerRead);
             return this;
         } catch (ClassCastException e) {
-            throw new IllegalStateException("getRecvByteBufAllocator() must return an object of type " +
-                    "MaxMessagesRecvByteBufAllocator", e);
+            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
+                    "MaxMessagesRecvBufferAllocator", e);
         }
     }
 
@@ -320,29 +320,29 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends RecvByteBufAllocator> T getRecvByteBufAllocator() {
+    public <T extends RecvBufferAllocator> T getRecvBufferAllocator() {
         return (T) rcvBufAllocator;
     }
 
     @Override
-    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
         rcvBufAllocator = requireNonNull(allocator, "allocator");
         return this;
     }
 
     /**
-     * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
+     * Set the {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
      * @param allocator the allocator to set.
      * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
-     * is of type {@link MaxMessagesRecvByteBufAllocator}.
+     * is of type {@link MaxMessagesRecvBufferAllocator}.
      */
-    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+    private void setRecvBufferAllocator(RecvBufferAllocator allocator, ChannelMetadata metadata) {
         requireNonNull(allocator, "allocator");
         requireNonNull(metadata, "metadata");
-        if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
-            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+        if (allocator instanceof MaxMessagesRecvBufferAllocator) {
+            ((MaxMessagesRecvBufferAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
         }
-        setRecvByteBufAllocator(allocator);
+        setRecvBufferAllocator(allocator);
     }
 
     @Override

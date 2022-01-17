@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 import java.net.InetAddress;
@@ -171,7 +171,7 @@ public interface DatagramChannelConfig extends ChannelConfig {
     DatagramChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    DatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+    DatagramChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     @Override
     DatagramChannelConfig setAutoRead(boolean autoRead);

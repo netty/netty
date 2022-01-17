@@ -27,7 +27,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.util.DefaultAttributeMap;
@@ -150,7 +150,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
-     * Note that depending upon the {@link RecvByteBufAllocator} behavior a read may extend beyond the
+     * Note that depending upon the {@link RecvBufferAllocator} behavior a read may extend beyond the
      * {@link Http2ChannelUnsafe#beginRead()} method scope. The {@link Http2ChannelUnsafe#beginRead()} loop may
      * drain all pending data, and then if the parent channel is reading this channel may still accept frames.
      */
@@ -407,7 +407,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // If a read is in progress or has been requested, there cannot be anything in the queue,
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
-            final RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
+            final RecvBufferAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
             unsafe.doRead0(frame, allocHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
@@ -433,7 +433,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     private final class Http2ChannelUnsafe implements Unsafe {
-        private RecvByteBufAllocator.Handle recvHandle;
+        private RecvBufferAllocator.Handle recvHandle;
         private boolean writeDoneAndNoFlush;
         private boolean closeInitiated;
         private boolean readEOS;
@@ -448,9 +448,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+        public RecvBufferAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
-                recvHandle = config().getRecvByteBufAllocator().newHandle();
+                recvHandle = config().getRecvBufferAllocator().newHandle();
                 recvHandle.reset(config());
             }
             return recvHandle;
@@ -657,7 +657,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     flush();
                     break;
                 }
-                final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+                final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
                 allocHandle.reset(config());
                 boolean continueReading = false;
                 do {
@@ -703,7 +703,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete) {
+        void notifyReadComplete(RecvBufferAllocator.Handle allocHandle, boolean forceReadComplete) {
             if (!readCompletePending && !forceReadComplete) {
                 return;
             }
@@ -731,7 +731,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        void doRead0(Http2Frame frame, RecvByteBufAllocator.Handle allocHandle) {
+        void doRead0(Http2Frame frame, RecvBufferAllocator.Handle allocHandle) {
             final int bytes;
             if (frame instanceof Http2DataFrame) {
                 bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();

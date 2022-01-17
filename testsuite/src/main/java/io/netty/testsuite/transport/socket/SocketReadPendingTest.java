@@ -26,7 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvBufferAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import org.junit.jupiter.api.Test;
@@ -58,21 +58,21 @@ public class SocketReadPendingTest extends AbstractSocketTest {
               .option(ChannelOption.AUTO_READ, true)
               .childOption(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
+              .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
               .childHandler(serverInitializer);
 
             serverChannel = sb.bind().get();
 
             cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
+              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
               .handler(clientInitializer);
             clientChannel = cb.connect(serverChannel.localAddress()).get();
 
-            // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
+            // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
 
-            // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
+            // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
             assertTrue(serverInitializer.channelInitLatch.await(5, TimeUnit.SECONDS));
             serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
 
@@ -135,9 +135,9 @@ public class SocketReadPendingTest extends AbstractSocketTest {
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    private static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
+    private static final class TestNumReadsRecvBufferAllocator implements RecvBufferAllocator {
         private final int numReads;
-        TestNumReadsRecvByteBufAllocator(int numReads) {
+        TestNumReadsRecvBufferAllocator(int numReads) {
             this.numReads = numReads;
         }
 

@@ -15,10 +15,10 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.RecvByteBufAllocator.Handle;
+import io.netty.channel.RecvBufferAllocator.Handle;
 
-final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocatorHandle {
-    EpollRecvByteAllocatorStreamingHandle(Handle handle) {
+final class EpollRecvBufferAllocatorStreamingHandle extends EpollRecvBufferAllocatorHandle {
+    EpollRecvBufferAllocatorStreamingHandle(Handle handle) {
         super(handle);
     }
 
