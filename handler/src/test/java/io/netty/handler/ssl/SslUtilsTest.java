@@ -103,6 +103,11 @@ public class SslUtilsTest {
 
     @Test
     public void testValidHostNameForSni() {
-        assertFalse(SslUtils.isValidHostNameForSNI("/test.de"));
+        assertFalse(SslUtils.isValidHostNameForSNI("/test.de"), "SNI domain can't start with /");
+        assertFalse(SslUtils.isValidHostNameForSNI("test.de."), "SNI domain can't end with a dot/");
+        assertTrue(SslUtils.isValidHostNameForSNI("test.de"));
+        // see https://datatracker.ietf.org/doc/html/rfc6066#section-3
+        // it has to be test.local to qualify as SNI
+        assertFalse(SslUtils.isValidHostNameForSNI("test"), "SNI has to be FQDN");
     }
 }
