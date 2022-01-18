@@ -478,7 +478,13 @@ final class SslUtils {
      * Validate that the given hostname can be used in SNI extension.
      */
     static boolean isValidHostNameForSNI(String hostname) {
+        /*
+         * These checks are based on sun.security.ssl.Utilities#rawToSNIHostName implementation
+         * [1] https://datatracker.ietf.org/doc/html/rfc6066#section-3
+         */
         return hostname != null &&
+               // SNI HostName has to be a FQDN according to TLS SNI Extension spec (see [1]),
+               // which means that is has to have at least a host name and a domain part.
                hostname.indexOf('.') > 0 &&
                !hostname.endsWith(".") && !hostname.startsWith("/") &&
                !NetUtil.isValidIpV4Address(hostname) &&
