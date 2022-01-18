@@ -431,9 +431,14 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         ampersandpos = currentpos - 1;
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
-                        currentAttribute = factory.createAttribute(request, key);
-                        currentAttribute.setValue(""); // empty
-                        addHttpData(currentAttribute);
+                        // Some wired request body starts with a '&' char, eg: &name=J&age=17.
+                        // In that case, key would be "", will get exception: java.lang.IllegalArgumentException: Param 'name' must not be empty;
+                        // Just check and skip empty key.
+                        if (key.length() > 0) {
+                            currentAttribute = factory.createAttribute(request, key);
+                            currentAttribute.setValue(""); // empty
+                            addHttpData(currentAttribute);
+                        }
                         currentAttribute = null;
                         firstpos = currentpos;
                         contRead = true;
@@ -551,9 +556,14 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         ampersandpos = currentpos - 1;
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
-                        currentAttribute = factory.createAttribute(request, key);
-                        currentAttribute.setValue(""); // empty
-                        addHttpData(currentAttribute);
+                        // Some wired request body starts with a '&' char, eg: &name=J&age=17.
+                        // In that case, key would be "", will get exception: java.lang.IllegalArgumentException: Param 'name' must not be empty;
+                        // Just check and skip empty key.
+                        if (key.length() > 0) {
+                            currentAttribute = factory.createAttribute(request, key);
+                            currentAttribute.setValue(""); // empty
+                            addHttpData(currentAttribute);
+                        }
                         currentAttribute = null;
                         firstpos = currentpos;
                         contRead = true;
