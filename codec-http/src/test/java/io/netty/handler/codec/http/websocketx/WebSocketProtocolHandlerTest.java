@@ -120,7 +120,7 @@ public class WebSocketProtocolHandlerTest {
     public void testPongFrameDropFrameFalse() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(false) { });
 
-        PongWebSocketFrame pingResponse = new PongWebSocketFrame(channel.bufferAllocator());
+        PongWebSocketFrame pingResponse = new PongWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         assertTrue(channel.writeInbound(pingResponse));
 
         assertPropagatedInbound(pingResponse, channel);
@@ -133,7 +133,7 @@ public class WebSocketProtocolHandlerTest {
     public void testPongFrameDropFrameTrue() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(true) { });
 
-        PongWebSocketFrame pingResponse = new PongWebSocketFrame(channel.bufferAllocator());
+        PongWebSocketFrame pingResponse = new PongWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         assertFalse(channel.writeInbound(pingResponse)); // message was not propagated inbound
     }
 
@@ -141,7 +141,7 @@ public class WebSocketProtocolHandlerTest {
     public void testTextFrame() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
-        TextWebSocketFrame textFrame = new TextWebSocketFrame(channel.bufferAllocator());
+        TextWebSocketFrame textFrame = new TextWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         assertTrue(channel.writeInbound(textFrame));
 
         assertPropagatedInbound(textFrame, channel);
@@ -165,7 +165,8 @@ public class WebSocketProtocolHandlerTest {
             }
         }, handler);
 
-        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame(channel.bufferAllocator()));
+        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame(
+                true, 0, channel.bufferAllocator().allocate(0)));
         ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
         handler.close(ctx);
 

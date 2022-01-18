@@ -16,22 +16,11 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferAllocator;
 
 /**
  * Web Socket frame containing binary data.
  */
 public class PingWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty ping frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public PingWebSocketFrame(BufferAllocator allocator) {
-        super(true, 0, allocator.allocate(0));
-    }
-
     /**
      * Creates a new ping frame with the specified binary data.
      *

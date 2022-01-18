@@ -121,11 +121,11 @@ public class WebSocketFrameAggregator
         payload.extendWith(content.binaryData().send());
     }
 
-    private boolean isStartMessage(Object msg) {
+    private static boolean isStartMessage(Object msg) {
         return msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame;
     }
 
-    private boolean isContentMessage(Object msg) {
+    private static boolean isContentMessage(Object msg) {
         return msg instanceof ContinuationWebSocketFrame;
     }
 }

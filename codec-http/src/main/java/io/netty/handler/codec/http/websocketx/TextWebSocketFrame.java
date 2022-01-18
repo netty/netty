@@ -23,16 +23,6 @@ import io.netty.util.CharsetUtil;
  * Web Socket text frame.
  */
 public class TextWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty text frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public TextWebSocketFrame(BufferAllocator allocator) {
-        super(allocator.allocate(0));
-    }
-
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
      *

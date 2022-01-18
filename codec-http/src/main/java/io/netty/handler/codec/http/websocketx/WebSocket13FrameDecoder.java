@@ -157,7 +157,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
 
         switch (state) {
         case READING_FIRST: {
-            if (in.readableBytes() <= 0) {
+            if (in.readableBytes() == 0) {
                 return;
             }
 
@@ -176,7 +176,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
             state = State.READING_SECOND;
         }
         case READING_SECOND: {
-            if (in.readableBytes() <= 0) {
+            if (in.readableBytes() == 0) {
                 return;
             }
             // MASK, PAYLOAD LEN 1

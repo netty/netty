@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -26,16 +27,6 @@ import java.nio.charset.StandardCharsets;
  * Web Socket Frame for closing the connection.
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty close frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public CloseWebSocketFrame(BufferAllocator allocator) {
-        super(allocator.allocate(0));
-    }
-
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
@@ -104,7 +95,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonText = StringUtil.EMPTY_STRING;
         }
 
-        Buffer binaryData;
+        final Buffer binaryData;
         if (!reasonText.isEmpty()) {
             byte[] reasonTextBytes = reasonText.getBytes(StandardCharsets.UTF_8);
             binaryData = allocator.allocate(2 + reasonTextBytes.length);

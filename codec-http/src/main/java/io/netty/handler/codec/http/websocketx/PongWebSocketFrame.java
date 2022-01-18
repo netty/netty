@@ -16,23 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Send;
 
 /**
  * Web Socket frame containing binary data.
  */
 public class PongWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty pong frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public PongWebSocketFrame(BufferAllocator allocator) {
-        super(allocator.allocate(0));
-    }
-
     /**
      * Creates a new pong frame with the specified binary data.
      *

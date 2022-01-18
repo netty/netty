@@ -240,7 +240,8 @@ public class WebSocketHandshakeHandOverTest {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
-                    handshaker.close(ctx.channel(), new CloseWebSocketFrame(ctx.bufferAllocator()));
+                    handshaker.close(ctx.channel(), new CloseWebSocketFrame(
+                            true, 0, ctx.bufferAllocator().allocate(0)));
                 }
             }
 

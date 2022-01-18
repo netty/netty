@@ -24,16 +24,6 @@ import io.netty.util.CharsetUtil;
  * fragmented messages where the contents of a messages is contained more than 1 frame.
  */
 public class ContinuationWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty continuation frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public ContinuationWebSocketFrame(BufferAllocator allocator) {
-        this(allocator.allocate(0));
-    }
-
     /**
      * Creates a new continuation frame with the specified binary data. The final fragment flag is
      * set to true.

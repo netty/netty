@@ -128,7 +128,7 @@ public final class WebSocketClient {
                 if (msg == null) {
                     break;
                 } else if ("bye".equalsIgnoreCase(msg)) {
-                    ch.writeAndFlush(new CloseWebSocketFrame(ch.bufferAllocator()));
+                    ch.writeAndFlush(new CloseWebSocketFrame(true, 0, ch.bufferAllocator().allocate(0)));
                     ch.closeFuture().sync();
                     break;
                 } else if ("ping".equalsIgnoreCase(msg)) {

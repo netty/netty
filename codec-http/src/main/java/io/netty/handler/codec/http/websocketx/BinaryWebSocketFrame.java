@@ -16,22 +16,11 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.BufferAllocator;
 
 /**
  * Web Socket frame containing binary data.
  */
 public class BinaryWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty binary frame.
-     *
-     * @param allocator {@link BufferAllocator} to use for allocating data.
-     */
-    public BinaryWebSocketFrame(BufferAllocator allocator) {
-        super(allocator.allocate(0));
-    }
-
     /**
      * Creates a new binary frame with the specified binary data. The final fragment flag is set to true.
      *
