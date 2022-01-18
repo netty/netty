@@ -15,55 +15,123 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import io.netty.internal.tcnative.CertificateCompressionAlgo;
-import io.netty.internal.tcnative.SSL;
-import io.netty.internal.tcnative.SSLContext;
+/**
+ * Configuration for TLS1.3 certificate compression extension.
+ */
+public final class OpenSslCertificateCompressionConfig implements
+        Iterable<OpenSslCertificateCompressionConfig.AlgorithmConfig> {
+    private final List<AlgorithmConfig> pairList;
 
-public class OpenSslCertificateCompressionConfig implements
-        Iterable<OpenSslCertificateCompressionConfig.AlgorithmDirectionPair> {
-
-    private List<AlgorithmDirectionPair> algorithmList = new ArrayList<AlgorithmDirectionPair>();
-
-    /**
-     * Adds a certificate compression algorithm to the given {@link SSLContext}.
-     * For servers, algorithm preference order is dictated by the order of algorithm registration.
-     * Most preferred algorithm should be registered first.
-     *
-     * This method is currently only supported when {@code BoringSSL} is used.
-     *
-     * @param algorithm implementation of the compression and or decompression algorithm as a
-     * {@link CertificateCompressionAlgo}
-     * @param direction indicates whether decompression support should be advertized, compression should be applied for
-     *                  peers which support it, or both. This allows the caller to support one way compression only.
-     * <PRE>
-     * {@link SSL#SSL_CERT_COMPRESSION_DIRECTION_COMPRESS}
-     * {@link SSL#SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS}
-     * {@link SSL#SSL_CERT_COMPRESSION_DIRECTION_BOTH}
-     * </PRE>
-     * @return {@code OpenSslCertificateCompressionConfig} for a fluent API.
-     */
-    public OpenSslCertificateCompressionConfig addAlgorithm(CertificateCompressionAlgo algorithm, int direction) {
-        algorithmList.add(new AlgorithmDirectionPair(algorithm, direction));
-        return this;
+    private OpenSslCertificateCompressionConfig(AlgorithmConfig... pairs) {
+        pairList = Collections.unmodifiableList(Arrays.asList(pairs));
     }
 
     @Override
-    public Iterator<AlgorithmDirectionPair> iterator() {
-        return algorithmList.iterator();
+    public Iterator<AlgorithmConfig> iterator() {
+        return pairList.iterator();
     }
 
-    public static class AlgorithmDirectionPair {
+    /**
+     * Creates a new {@link Builder} for a config.
+     *
+     * @return a bulder
+     */
+    public static Builder newBuilder() {
+        return new Builder();
+    }
 
-        public CertificateCompressionAlgo algorithm;
-        public int direction;
+    /**
+     * Builder for an {@link OpenSslCompressionAlgorithm}.
+     */
+    public static final class Builder {
+        private final List<AlgorithmConfig> algorithmList = new ArrayList<AlgorithmConfig>();
 
-        public AlgorithmDirectionPair(CertificateCompressionAlgo algorithm, int direction) {
-            this.algorithm = algorithm;
-            this.direction = direction;
+        private Builder() { }
+
+        /**
+         * Adds a certificate compression algorithm.
+         * For servers, algorithm preference order is dictated by the order of algorithm registration.
+         * Most preferred algorithm should be registered first.
+         *
+         * @param algorithm implementation of the compression and or decompression algorithm as a
+         * {@link OpenSslCompressionAlgorithm}
+         * @param mode indicates whether decompression support should be advertized, compression should be applied
+         *                  for peers which support it, or both. This allows the caller to support one way compression
+         *                  only.
+         * @return self.
+         */
+        public Builder addAlgorithm(OpenSslCompressionAlgorithm algorithm, AlgorithmMode mode) {
+            algorithmList.add(new AlgorithmConfig(algorithm, mode));
+            return this;
         }
+
+        /**
+         * Build a new {@link OpenSslCertificateCompressionConfig} based on the previous
+         * added {@link OpenSslCompressionAlgorithm}s.
+         *
+         * @return a new config.
+         */
+        public OpenSslCertificateCompressionConfig build() {
+            return new OpenSslCertificateCompressionConfig(algorithmList.toArray(new AlgorithmConfig[0]));
+        }
+    }
+
+
+    /**
+     * The configuration for
+     */
+    public static final class AlgorithmConfig {
+        private final OpenSslCompressionAlgorithm algorithm;
+        private final AlgorithmMode mode;
+
+        private AlgorithmConfig(OpenSslCompressionAlgorithm algorithm, AlgorithmMode mode) {
+            this.algorithm = ObjectUtil.checkNotNull(algorithm, "algorithm");
+            this.mode = ObjectUtil.checkNotNull(mode, "mode");
+        }
+
+        /**
+         * The {@link AlgorithmMode}
+         * @return
+         */
+        public AlgorithmMode mode() {
+            return mode;
+        }
+
+        /**
+         * The configured {@link OpenSslCompressionAlgorithm}.
+         *
+         * @return the algorithm
+         */
+        public OpenSslCompressionAlgorithm algorithm() {
+            return algorithm;
+        }
+    }
+
+    /**
+     * The usage mode of the {@link OpenSslCompressionAlgorithm}.
+     */
+    public enum AlgorithmMode {
+        /**
+         * Compression supported and should be advertized.
+         */
+        Compress,
+
+        /**
+         * Decompression supported and should be advertized.
+         */
+        Decompress,
+
+        /**
+         * Compression and Decompression are supported and both should be advertized.
+         */
+        Both
     }
 }

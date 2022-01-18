@@ -30,7 +30,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
-import io.netty.internal.tcnative.SSL;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.util.concurrent.TimeUnit;
@@ -77,12 +77,14 @@ public class OpenSslCertificateCompressionTest {
     public void testSimple() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         runCertCompressionTest(clientSslContext, serverSslContext);
@@ -96,14 +98,16 @@ public class OpenSslCertificateCompressionTest {
     public void testServerPriority() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
-                        .addAlgorithm(testZlibAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testZLibAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
-                        .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testZLibAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         runCertCompressionTest(clientSslContext, serverSslContext);
@@ -118,14 +122,16 @@ public class OpenSslCertificateCompressionTest {
     public void testServerPriorityReverse() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
-                        .addAlgorithm(testZlibAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
-                        .addAlgorithm(testZLibAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .addAlgorithm(testZLibAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         runCertCompressionTest(clientSslContext, serverSslContext);
@@ -140,13 +146,15 @@ public class OpenSslCertificateCompressionTest {
     public void testFailedNegotiation() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
-                        .addAlgorithm(testZlibAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testZstdAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testZstdAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         runCertCompressionTest(clientSslContext, serverSslContext);
@@ -161,17 +169,19 @@ public class OpenSslCertificateCompressionTest {
         TestCertCompressionAlgo badZlibAlgoClient =
                 new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZLIB) {
             @Override
-            public byte[] decompress(long ctx, int uncompressed_len, byte[] input) {
+            public byte[] decompress(SSLEngine engine, int uncompressed_len, byte[] input) {
                 return input;
             }
         };
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(badZlibAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(badZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testZLibAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testZLibAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
@@ -189,17 +199,19 @@ public class OpenSslCertificateCompressionTest {
         TestCertCompressionAlgo badZlibAlgoClient =
                 new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZLIB) {
                     @Override
-                    public byte[] decompress(long ctx, int uncompressed_len, byte[] input) {
+                    public byte[] decompress(SSLEngine engine, int uncompressed_len, byte[] input) {
                         throw new RuntimeException("broken");
                     }
                 };
         final SslContext clientSslContext = buildClientContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(badZlibAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(badZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build()
         );
         final SslContext serverSslContext = buildServerContext(
-                new OpenSslCertificateCompressionConfig()
-                        .addAlgorithm(testZLibAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testZLibAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build()
         );
 
         Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
@@ -219,15 +231,19 @@ public class OpenSslCertificateCompressionTest {
              .protocols(SslProtocols.TLS_v1_2)
              .trustManager(InsecureTrustManagerFactory.INSTANCE)
              .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
-                     new OpenSslCertificateCompressionConfig()
-                             .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS))
+                     OpenSslCertificateCompressionConfig.newBuilder()
+                             .addAlgorithm(testBrotliAlgoClient,
+                                     OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                             .build())
              .build();
         final SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
                .sslProvider(SslProvider.OPENSSL)
                .protocols(SslProtocols.TLS_v1_2)
                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
-                       new OpenSslCertificateCompressionConfig()
-                               .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS))
+                       OpenSslCertificateCompressionConfig.newBuilder()
+                               .addAlgorithm(testBrotliAlgoServer,
+                                       OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                               .build())
                .build();
 
         runCertCompressionTest(clientSslContext, serverSslContext);
@@ -245,9 +261,12 @@ public class OpenSslCertificateCompressionTest {
             @Override
             public void execute() throws Throwable {
                 buildClientContext(
-                        new OpenSslCertificateCompressionConfig()
-                                .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
-                                .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                        OpenSslCertificateCompressionConfig.newBuilder()
+                                .addAlgorithm(testBrotliAlgoClient,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                                .addAlgorithm(testBrotliAlgoClient,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                                .build()
                 );
             }
         });
@@ -256,9 +275,11 @@ public class OpenSslCertificateCompressionTest {
             @Override
             public void execute() throws Throwable {
                 buildServerContext(
-                        new OpenSslCertificateCompressionConfig()
-                                .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
-                                .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_BOTH)
+                        OpenSslCertificateCompressionConfig.newBuilder()
+                                .addAlgorithm(testBrotliAlgoServer,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                                .addAlgorithm(testBrotliAlgoServer,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Both).build()
                 );
             }
         });
@@ -272,8 +293,10 @@ public class OpenSslCertificateCompressionTest {
             @Override
             public void execute() throws Throwable {
                 buildClientContext(
-                        new OpenSslCertificateCompressionConfig()
-                                .addAlgorithm(testBrotliAlgoClient, SSL.SSL_CERT_COMPRESSION_DIRECTION_DECOMPRESS)
+                        OpenSslCertificateCompressionConfig.newBuilder()
+                                .addAlgorithm(testBrotliAlgoClient,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                                .build()
                 );
             }
         });
@@ -282,8 +305,10 @@ public class OpenSslCertificateCompressionTest {
             @Override
             public void execute() throws Throwable {
                 buildServerContext(
-                        new OpenSslCertificateCompressionConfig()
-                                .addAlgorithm(testBrotliAlgoServer, SSL.SSL_CERT_COMPRESSION_DIRECTION_COMPRESS)
+                        OpenSslCertificateCompressionConfig.newBuilder()
+                                .addAlgorithm(testBrotliAlgoServer,
+                                        OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                                .build()
                 );
             }
         });
@@ -386,7 +411,7 @@ public class OpenSslCertificateCompressionTest {
         }
     }
 
-    private static class TestCertCompressionAlgo implements CertificateCompressionAlgo {
+    private static class TestCertCompressionAlgo implements OpenSslCompressionAlgorithm {
 
         private static final int BASE_PADDING_SIZE = 10;
         public boolean compressCalled;
@@ -398,7 +423,7 @@ public class OpenSslCertificateCompressionTest {
         }
 
         @Override
-        public byte[] compress(long ctx, byte[] input) throws Exception {
+        public byte[] compress(SSLEngine engine, byte[] input) throws Exception {
             compressCalled = true;
             byte[] output = new byte[input.length + BASE_PADDING_SIZE + algorithmId];
             System.arraycopy(input, 0, output, BASE_PADDING_SIZE + algorithmId, input.length);
@@ -406,7 +431,7 @@ public class OpenSslCertificateCompressionTest {
         }
 
         @Override
-        public byte[] decompress(long ctx, int uncompressed_len, byte[] input) {
+        public byte[] decompress(SSLEngine engine, int uncompressed_len, byte[] input) {
             decompressCalled = true;
             byte[] output = new byte[input.length - (BASE_PADDING_SIZE + algorithmId)];
             System.arraycopy(input, BASE_PADDING_SIZE + algorithmId, output, 0, output.length);
