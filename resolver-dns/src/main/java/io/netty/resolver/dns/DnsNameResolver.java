@@ -943,10 +943,10 @@ public class DnsNameResolver extends InetNameResolver {
             promise.setSuccess(loopbackAddress());
             return;
         }
-        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
-        if (bytes != null) {
+        final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
+        if (address != null) {
             // The inetHost is actually an ipaddress.
-            promise.setSuccess(InetAddress.getByAddress(bytes));
+            promise.setSuccess(address);
             return;
         }
 
@@ -1048,10 +1048,10 @@ public class DnsNameResolver extends InetNameResolver {
             promise.setSuccess(Collections.singletonList(loopbackAddress()));
             return;
         }
-        final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
-        if (bytes != null) {
+        final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
+        if (address != null) {
             // The unresolvedAddress was created via a String that contains an ipaddress.
-            promise.setSuccess(Collections.singletonList(InetAddress.getByAddress(bytes)));
+            promise.setSuccess(Collections.singletonList(address));
             return;
         }
 
