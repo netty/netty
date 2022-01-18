@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -110,7 +110,7 @@ public class HttpServerCodecTest {
 
         // Send the actual response.
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16));
+                                                           preferredAllocator().allocate(16));
         res.payload().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
         ch.writeOutbound(res);
@@ -141,7 +141,7 @@ public class HttpServerCodecTest {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpUtil.setTransferEncodingChunked(response, true);
         assertTrue(ch.writeOutbound(response));
-        assertTrue(ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+        assertTrue(ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
         assertTrue(ch.finish());
 
         Buffer buf = ch.readOutbound();
@@ -170,7 +170,7 @@ public class HttpServerCodecTest {
         content.close();
 
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                                preferredAllocator().allocate(0));
         HttpUtil.setTransferEncodingChunked(response, true);
         assertTrue(ch.writeOutbound(response));
         assertTrue(ch.finish());

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -34,7 +33,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
-
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -44,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -459,8 +458,7 @@ public class WebSocketServerProtocolHandlerTest {
                             fullHttpRequest.method(), fullHttpRequest.uri(), fullHttpRequest.headers().copy());
                     ch.writeInbound(req);
                     ch.writeInbound(new DefaultHttpContent(fullHttpRequest.payload().copy()));
-                    ch.writeInbound(new EmptyLastHttpContent(
-                            DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+                    ch.writeInbound(new EmptyLastHttpContent(preferredAllocator()));
                 }
             } else {
                 ch.writeInbound(request);

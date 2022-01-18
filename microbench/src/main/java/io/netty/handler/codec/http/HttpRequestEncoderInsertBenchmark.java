@@ -25,7 +25,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.handler.codec.http.HttpConstants.SP;
@@ -42,7 +42,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Buffer oldEncoder() {
-        try (Buffer buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(100)) {
+        try (Buffer buffer = preferredAllocator().allocate(100)) {
             encoderOld.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, uri));
             return buffer;
@@ -51,7 +51,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Buffer newEncoder() throws Exception {
-        try (Buffer buffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(100)) {
+        try (Buffer buffer = preferredAllocator().allocate(100)) {
             encoderNew.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                     HttpMethod.GET, uri));
             return buffer;

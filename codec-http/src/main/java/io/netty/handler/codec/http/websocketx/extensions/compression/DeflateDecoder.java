@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.CompositeBuffer;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
@@ -33,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilte
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 
@@ -47,7 +47,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
     static final int FRAME_TAIL_LENGTH;
     static {
         byte[] frameTail = { 0x00, 0x00, (byte) 0xff, (byte) 0xff };
-        FRAME_TAIL = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.constBufferSupplier(frameTail);
+        FRAME_TAIL = DefaultBufferAllocators.preferredAllocator().constBufferSupplier(frameTail);
         FRAME_TAIL_LENGTH = frameTail.length;
     }
 

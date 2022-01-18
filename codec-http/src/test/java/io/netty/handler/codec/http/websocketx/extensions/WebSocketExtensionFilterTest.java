@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,33 +33,33 @@ public class WebSocketExtensionFilterTest {
     public void testNeverSkip() {
         WebSocketExtensionFilter neverSkip = WebSocketExtensionFilter.NEVER_SKIP;
 
-        BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(binaryFrame));
         assertTrue(binaryFrame.isAccessible());
         binaryFrame.close();
 
-        TextWebSocketFrame textFrame = new TextWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        TextWebSocketFrame textFrame = new TextWebSocketFrame(preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(textFrame));
         assertTrue(textFrame.isAccessible());
         textFrame.close();
 
-        PingWebSocketFrame pingFrame = new PingWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        PingWebSocketFrame pingFrame = new PingWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(pingFrame));
         assertTrue(pingFrame.isAccessible());
         pingFrame.close();
 
-        PongWebSocketFrame pongFrame = new PongWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        PongWebSocketFrame pongFrame = new PongWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(pongFrame));
         assertTrue(pongFrame.isAccessible());
         pongFrame.close();
 
-        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(closeFrame));
         assertTrue(closeFrame.isAccessible());
         closeFrame.close();
 
         ContinuationWebSocketFrame continuationFrame = new ContinuationWebSocketFrame(
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                preferredAllocator().allocate(0));
         assertFalse(neverSkip.mustSkip(continuationFrame));
         assertTrue(continuationFrame.isAccessible());
         continuationFrame.close();
@@ -69,33 +69,33 @@ public class WebSocketExtensionFilterTest {
     public void testAlwaysSkip() {
         WebSocketExtensionFilter neverSkip = WebSocketExtensionFilter.ALWAYS_SKIP;
 
-        BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(binaryFrame));
         assertTrue(binaryFrame.isAccessible());
         binaryFrame.close();
 
-        TextWebSocketFrame textFrame = new TextWebSocketFrame(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        TextWebSocketFrame textFrame = new TextWebSocketFrame(preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(textFrame));
         assertTrue(textFrame.isAccessible());
         textFrame.close();
 
-        PingWebSocketFrame pingFrame = new PingWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        PingWebSocketFrame pingFrame = new PingWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(pingFrame));
         assertTrue(pingFrame.isAccessible());
         pingFrame.close();
 
-        PongWebSocketFrame pongFrame = new PongWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        PongWebSocketFrame pongFrame = new PongWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(pongFrame));
         assertTrue(pongFrame.isAccessible());
         pongFrame.close();
 
-        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, 0, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, 0, preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(closeFrame));
         assertTrue(closeFrame.isAccessible());
         closeFrame.close();
 
         ContinuationWebSocketFrame continuationFrame = new ContinuationWebSocketFrame(
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                preferredAllocator().allocate(0));
         assertTrue(neverSkip.mustSkip(continuationFrame));
         assertTrue(continuationFrame.isAccessible());
         continuationFrame.close();

@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -57,8 +57,8 @@ public class Http2ClientUpgradeCodecTest {
 
     private static void testUpgrade(Http2ConnectionHandler handler, Http2MultiplexHandler multiplexer)
             throws Exception {
-        FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.OPTIONS, "*",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0));
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() { });
         ChannelHandlerContext ctx = channel.pipeline().firstContext();

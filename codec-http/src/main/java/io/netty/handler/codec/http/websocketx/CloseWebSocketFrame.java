@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 

@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.DefaultGlobalBufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
@@ -60,7 +60,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-    private volatile BufferAllocator bufferAllocator = DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+    private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile RecvBufferAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 

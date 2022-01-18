@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpHeaderValues.MULTIPART_MIXED;
@@ -81,10 +81,10 @@ public class HttpServerKeepAliveHandlerTest {
                                String sendKeepAlive, int setSelfDefinedMessageLength,
                                AsciiString setResponseConnection) {
         FullHttpRequest request = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                             preferredAllocator().allocate(0));
         setKeepAlive(request, REQUEST_KEEP_ALIVE.equals(sendKeepAlive));
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                            preferredAllocator().allocate(0));
         if (setResponseConnection != null) {
             response.headers().set(HttpHeaderNames.CONNECTION, setResponseConnection);
         }
@@ -122,7 +122,7 @@ public class HttpServerKeepAliveHandlerTest {
     public void testConnectionCloseHeaderHandledCorrectly(
             HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength) {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                            preferredAllocator().allocate(0));
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);
 
@@ -140,21 +140,21 @@ public class HttpServerKeepAliveHandlerTest {
                                        HttpResponseStatus responseStatus,
                                        String sendKeepAlive, int setSelfDefinedMessageLength,
                                        AsciiString setResponseConnection) throws Exception {
-        FullHttpRequest firstRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest firstRequest = new DefaultFullHttpRequest(
+                httpVersion, HttpMethod.GET, "/v1/foo/bar", preferredAllocator().allocate(0));
         setKeepAlive(firstRequest, true);
-        FullHttpRequest secondRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest secondRequest = new DefaultFullHttpRequest(
+                httpVersion, HttpMethod.GET, "/v1/foo/bar", preferredAllocator().allocate(0));
         setKeepAlive(secondRequest, REQUEST_KEEP_ALIVE.equals(sendKeepAlive));
-        FullHttpRequest finalRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest finalRequest = new DefaultFullHttpRequest(
+                httpVersion, HttpMethod.GET, "/v1/foo/bar", preferredAllocator().allocate(0));
         setKeepAlive(finalRequest, false);
-        FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                httpVersion, responseStatus, preferredAllocator().allocate(0));
         setKeepAlive(response, true);
         setContentLength(response, 0);
-        FullHttpResponse informationalResp = new DefaultFullHttpResponse(httpVersion, HttpResponseStatus.PROCESSING,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse informationalResp = new DefaultFullHttpResponse(
+                httpVersion, HttpResponseStatus.PROCESSING, preferredAllocator().allocate(0));
         setKeepAlive(informationalResp, true);
 
         assertTrue(channel.writeInbound(firstRequest, secondRequest, finalRequest));

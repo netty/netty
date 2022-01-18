@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -453,8 +453,7 @@ public class HttpResponseDecoderTest {
 
         try (LastHttpContent<?> lastContent = ch.readInbound()) {
             assertEquals(5, lastContent.payload().readableBytes());
-            assertEquals(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(5)
-                            .writeBytes(data, 5, 5), lastContent.payload());
+            assertEquals(preferredAllocator().allocate(5).writeBytes(data, 5, 5), lastContent.payload());
         }
 
         assertThat(ch.finish(), is(false));
@@ -497,14 +496,12 @@ public class HttpResponseDecoderTest {
 
         try (HttpContent<?> firstContent = ch.readInbound()) {
             assertThat(firstContent.payload().readableBytes(), is(5));
-            assertEquals(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(5)
-                    .writeBytes(data, 0, 5), firstContent.payload());
+            assertEquals(preferredAllocator().allocate(5).writeBytes(data, 0, 5), firstContent.payload());
         }
 
         try (LastHttpContent<?> lastContent = ch.readInbound()) {
             assertEquals(5, lastContent.payload().readableBytes());
-            assertEquals(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(5)
-                    .writeBytes(data, 5, 5), lastContent.payload());
+            assertEquals(preferredAllocator().allocate(5).writeBytes(data, 5, 5), lastContent.payload());
         }
 
         assertThat(ch.finish(), is(false));
@@ -751,7 +748,7 @@ public class HttpResponseDecoderTest {
     }
 
     private void testHeaderNameStartsWithControlChar(int controlChar) {
-        Buffer responseBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(256);
+        Buffer responseBuffer = preferredAllocator().allocate(256);
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
         responseBuffer.writeByte((byte) controlChar);
@@ -785,7 +782,7 @@ public class HttpResponseDecoderTest {
     }
 
     private void testHeaderNameEndsWithControlChar(int controlChar) {
-        Buffer responseBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(256);
+        Buffer responseBuffer = preferredAllocator().allocate(256);
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
         responseBuffer.writeCharSequence("Transfer-Encoding", CharsetUtil.US_ASCII);

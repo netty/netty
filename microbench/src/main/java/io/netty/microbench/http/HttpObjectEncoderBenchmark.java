@@ -47,7 +47,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 
 @State(Scope.Benchmark)
 @Fork(1)
@@ -69,7 +69,7 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     @Setup(Level.Trial)
     public void setup() {
         byte[] bytes = new byte[256];
-        content = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(bytes.length);
+        content = preferredAllocator().allocate(bytes.length);
         content.writeBytes(bytes);
         Buffer testContent = content.copy().makeReadOnly();
         HttpHeaders headersWithChunked = new DefaultHttpHeaders(false);

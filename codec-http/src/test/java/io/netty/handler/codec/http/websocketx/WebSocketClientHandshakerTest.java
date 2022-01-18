@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.CompositeBuffer;
@@ -43,8 +42,7 @@ import org.junit.jupiter.api.Timeout;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
-import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -176,7 +174,7 @@ public abstract class WebSocketClientHandshakerTest {
         HttpHeaders customHeaders = new DefaultHttpHeaders().set(getOriginHeaderName(), "http://example.com");
         WebSocketClientHandshaker handshaker = newHandshaker(URI.create("ws://server.example.com/chat"), null,
                                                              customHeaders, false);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("http://example.com", request.headers().get(getOriginHeaderName()));
         }
     }
@@ -191,7 +189,7 @@ public abstract class WebSocketClientHandshakerTest {
 
     protected void testHeaderDefaultHttp(String uri, CharSequence header, String expectedValue) {
         WebSocketClientHandshaker handshaker = newHandshaker(URI.create(uri));
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals(expectedValue, request.headers().get(header));
         }
     }
@@ -200,7 +198,7 @@ public abstract class WebSocketClientHandshakerTest {
     public void testUpgradeUrl() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("/path%20with%20ws", request.uri());
         }
     }
@@ -209,7 +207,7 @@ public abstract class WebSocketClientHandshakerTest {
     public void testUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("/path%20with%20ws?a=b%20c", request.uri());
         }
     }
@@ -218,7 +216,7 @@ public abstract class WebSocketClientHandshakerTest {
     public void testUpgradeUrlWithoutPath() {
         URI uri = URI.create("ws://localhost:9999");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("/", request.uri());
         }
     }
@@ -227,7 +225,7 @@ public abstract class WebSocketClientHandshakerTest {
     public void testUpgradeUrlWithoutPathWithQuery() {
         URI uri = URI.create("ws://localhost:9999?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("/?a=b%20c", request.uri());
         }
     }
@@ -236,7 +234,7 @@ public abstract class WebSocketClientHandshakerTest {
     public void testAbsoluteUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)) {
+        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("ws://localhost:9999/path%20with%20ws?a=b%20c", request.uri());
         }
     }
@@ -286,7 +284,7 @@ public abstract class WebSocketClientHandshakerTest {
         // Create a EmbeddedChannel which we will use to encode a BinaryWebsocketFrame to bytes and so use these
         // to test the actual handshaker.
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(url, null, false);
-        FullHttpRequest request = shaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        FullHttpRequest request = shaker.newHandshakeRequest(preferredAllocator());
         WebSocketServerHandshaker socketServerHandshaker = factory.newHandshaker(request);
         request.close();
         EmbeddedChannel websocketChannel = new EmbeddedChannel(socketServerHandshaker.newWebSocketEncoder(),
@@ -359,7 +357,7 @@ public abstract class WebSocketClientHandshakerTest {
 
         String realSubProtocol = "realSubProtocol";
         WebSocketClientHandshaker handshaker = newHandshaker(uri, realSubProtocol, inputHeaders, false);
-        FullHttpRequest request = handshaker.newHandshakeRequest(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator());
         HttpHeaders outputHeaders = request.headers();
 
         // the header values passed in originally have been replaced with values generated by the Handshaker
@@ -379,8 +377,8 @@ public abstract class WebSocketClientHandshakerTest {
     public void testWebSocketClientHandshakeException() {
         URI uri = URI.create("ws://localhost:9999/exception");
         WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false);
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED, preferredAllocator().allocate(0));
 
         try (response) {
             response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "realm = access token required");

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -29,7 +28,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -89,7 +88,7 @@ public class RtspEncoderTest {
         FullHttpRequest request = new DefaultFullHttpRequest(
                 RtspVersions.RTSP_1_0,
                 RtspMethods.GET_PARAMETER,
-                "rtsp://172.10.20.30:554", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(content.length));
+                "rtsp://172.10.20.30:554", preferredAllocator().allocate(content.length));
         request.headers().add(RtspHeaderNames.SESSION, "2547019973447939919");
         request.headers().add(RtspHeaderNames.CSEQ, "3");
         request.headers().add(RtspHeaderNames.CONTENT_LENGTH,
@@ -152,10 +151,8 @@ public class RtspEncoderTest {
                         + "stream_state: playing\r\n"
                         + "scale: 1.00\r\n").getBytes(CharsetUtil.UTF_8);
 
-        FullHttpResponse response =
-                new DefaultFullHttpResponse(RtspVersions.RTSP_1_0,
-                                            RtspResponseStatuses.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR
-                        .allocate(content.length));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                RtspVersions.RTSP_1_0, RtspResponseStatuses.OK, preferredAllocator().allocate(content.length));
         response.headers().add(RtspHeaderNames.SERVER, "Testserver");
         response.headers().add(RtspHeaderNames.SESSION, "2547019973447939919");
         response.headers().add(RtspHeaderNames.CONTENT_TYPE,

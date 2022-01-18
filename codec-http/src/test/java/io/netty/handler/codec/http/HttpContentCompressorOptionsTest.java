@@ -19,7 +19,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -115,7 +115,7 @@ class HttpContentCompressorOptionsTest {
 
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                         preferredAllocator().allocate(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, gzip, deflate");
         return req;
     }

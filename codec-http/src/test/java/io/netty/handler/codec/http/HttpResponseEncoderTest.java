@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.channels.WritableByteChannel;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -57,7 +57,7 @@ public class HttpResponseEncoderTest {
         assertEquals("\r\n", buffer.toString(CharsetUtil.US_ASCII));
         buffer.close();
 
-        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
         buffer = channel.readOutbound();
         assertEquals("0\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
         buffer.close();
@@ -166,8 +166,7 @@ public class HttpResponseEncoderTest {
 
     private static void testEmptyContent(boolean chunked) {
         String content = "netty rocks";
-        Buffer contentBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence(content, CharsetUtil.US_ASCII);
+        Buffer contentBuffer = preferredAllocator().allocate(16).writeCharSequence(content, CharsetUtil.US_ASCII);
         int length = contentBuffer.readableBytes();
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
@@ -176,7 +175,7 @@ public class HttpResponseEncoderTest {
             HttpUtil.setContentLength(response, length);
         }
         assertTrue(channel.writeOutbound(response));
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(0))));
         assertTrue(channel.writeOutbound(new DefaultLastHttpContent(contentBuffer)));
 
         Buffer buffer = channel.readOutbound();
@@ -282,7 +281,7 @@ public class HttpResponseEncoderTest {
         }
 
         assertTrue(channel.writeOutbound(response));
-        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
 
         Buffer buffer = channel.readOutbound();
         StringBuilder responseText = new StringBuilder();
@@ -336,9 +335,9 @@ public class HttpResponseEncoderTest {
         }
         assertTrue(channel.writeOutbound(request));
 
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(0))));
 
-        LastHttpContent<?> last = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        LastHttpContent<?> last = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         if (trailers) {
             last.trailingHeaders().set("X-Netty-Test", "true");
         }
@@ -361,13 +360,13 @@ public class HttpResponseEncoderTest {
     @Test
     public void testStatusResetContentTransferContentLength() {
         testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8).writeLong(8));
+                                                     preferredAllocator().allocate(8).writeLong(8));
     }
 
     @Test
     public void testStatusResetContentTransferEncoding() {
         testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8).writeLong(8));
+                                                     preferredAllocator().allocate(8).writeLong(8));
     }
 
     private static void testStatusResetContentTransferContentLength0(CharSequence headerName, Buffer content) {
@@ -382,7 +381,7 @@ public class HttpResponseEncoderTest {
 
         assertTrue(channel.writeOutbound(response));
         assertTrue(channel.writeOutbound(new DefaultHttpContent(content)));
-        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
 
         String responseText = String.valueOf(HttpVersion.HTTP_1_1) + ' ' +
                 HttpResponseStatus.RESET_CONTENT + "\r\n" +

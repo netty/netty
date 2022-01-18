@@ -40,7 +40,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
@@ -130,9 +129,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testHeadersOnlyRequest() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
-                "http://my-user_name@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
@@ -153,9 +151,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testHttpScheme() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
-                "http://my-user_name@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
@@ -176,9 +173,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testMultipleCookieEntriesAreCombined() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
-                "http://my-user_name@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
@@ -197,8 +193,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testOriginFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/where?q=now&f=then#section1",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/where?q=now&f=then#section1", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -215,7 +211,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/where%2B0?q=now%2B0&f=then%2B0#section1%2B0",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -230,8 +226,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testAbsoluteFormRequestTargetHandledFromHeaders() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/pub/WWW/TheProject.html",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/pub/WWW/TheProject.html", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "foouser@www.example.org:5555");
@@ -248,9 +244,9 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testAbsoluteFormRequestTargetHandledFromRequestTargetUri() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
-                "http://foouser@www.example.org:5555/pub/WWW/TheProject.html",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "http://foouser@www.example.org:5555/pub/WWW/TheProject.html",
+                preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         final Http2Headers http2Headers =
@@ -264,8 +260,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testAuthorityFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, CONNECT, "http://www.example.com:80",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, CONNECT, "http://www.example.com:80", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         final Http2Headers http2Headers =
@@ -278,8 +274,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testAsterikFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "*",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, OPTIONS, "*", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.com:80");
@@ -296,8 +292,8 @@ public class HttpToHttp2ConnectionHandlerTest {
         // Valid according to
         // https://tools.ietf.org/html/rfc7230#section-2.7.1 -> https://tools.ietf.org/html/rfc3986#section-3.2.2
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "[::1]:80");
@@ -312,8 +308,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testHostFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "localhost:80");
@@ -328,8 +324,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testHostIPv4FormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "1.2.3.4:80");
@@ -344,8 +340,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testNoSchemeRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "localhost");
@@ -360,8 +356,8 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testInvalidStreamId() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/foo",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf("foobar".getBytes(UTF_8)));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, POST, "/foo", preferredAllocator().copyOf("foobar".getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -386,9 +382,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST,
-                "http://your_user-name123@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
+                preferredAllocator().copyOf(text.getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example-origin.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -424,9 +420,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST,
-                "http://your_user-name123@www.example.org:5555/example",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
+        final FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
+                preferredAllocator().copyOf(text.getBytes(UTF_8)));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -485,11 +481,10 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .add(new AsciiString("foo"), new AsciiString("goo2"))
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
-        final DefaultHttpContent httpContent =
-                new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text.getBytes(UTF_8)));
-        final LastHttpContent<?> lastHttpContent =
-                new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.copyOf(text2
-                        .getBytes(StandardCharsets.UTF_8)));
+        final DefaultHttpContent httpContent = new DefaultHttpContent(
+                preferredAllocator().copyOf(text.getBytes(UTF_8)));
+        final LastHttpContent<?> lastHttpContent = new DefaultLastHttpContent(
+                preferredAllocator().copyOf(text2.getBytes(StandardCharsets.UTF_8)));
 
         lastHttpContent.trailingHeaders().add(of("trailing"), of("bar"));
 
@@ -580,6 +575,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(WAIT_TIME_SECONDS, SECONDS));
     }
+
     private void verifyHeadersOnly(Http2Headers expected, Future<Void> writeFuture)
             throws Exception {
         assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
@@ -597,13 +593,5 @@ public class HttpToHttp2ConnectionHandlerTest {
             assertTrue(trailersLatch.await(WAIT_TIME_SECONDS, SECONDS));
         }
         assertTrue(serverSettingsAckLatch.await(WAIT_TIME_SECONDS, SECONDS));
-    }
-
-    private ChannelHandlerContext ctx() {
-        return clientChannel.pipeline().firstContext();
-    }
-
-    private Promise<Void> newPromise() {
-        return ctx().newPromise();
     }
 }
