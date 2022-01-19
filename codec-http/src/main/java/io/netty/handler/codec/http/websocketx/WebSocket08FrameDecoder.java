@@ -463,30 +463,23 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         if (buffer == null || !buffer.isReadable()) {
             return;
         }
-        if (buffer.readableBytes() == 1) {
+        if (buffer.readableBytes() < 2) {
             protocolViolation(ctx, buffer, WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "Invalid close frame body");
         }
 
-        // Save reader index
-        int idx = buffer.readerIndex();
-        buffer.readerIndex(0);
-
         // Must have 2 byte integer within the valid range
-        int statusCode = buffer.readShort();
+        int statusCode = buffer.getShort(buffer.readerIndex());
         if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
             protocolViolation(ctx, buffer, "Invalid close frame getStatus code: " + statusCode);
         }
 
         // May have UTF-8 message
-        if (buffer.isReadable()) {
+        if (buffer.readableBytes() > 2) {
             try {
-                new Utf8Validator().check(buffer);
+                new Utf8Validator().check(buffer, buffer.readerIndex() + 2, buffer.readableBytes() - 2);
             } catch (CorruptedWebSocketFrameException ex) {
                 protocolViolation(ctx, buffer, ex);
             }
         }
-
-        // Restore reader index
-        buffer.readerIndex(idx);
     }
 }

@@ -12,6 +12,9 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
@@ -66,6 +69,15 @@ class CloseWebSocketFrameTest {
         doTestValidCode(new CloseWebSocketFrame(1000, "valid code"), 1000, "valid code");
 
         doTestValidCode(new CloseWebSocketFrame(true, 0, 1000, "valid code"), 1000, "valid code");
+    }
+
+    @Test
+    void testNonZeroReaderIndex() {
+        ByteBuf buffer = Unpooled.buffer().writeZero(1);
+        buffer.writeShort(WebSocketCloseStatus.NORMAL_CLOSURE.code())
+                .writeCharSequence(WebSocketCloseStatus.NORMAL_CLOSURE.reasonText(), CharsetUtil.US_ASCII);
+        doTestValidCode(new CloseWebSocketFrame(true, 0, buffer.skipBytes(1)),
+                WebSocketCloseStatus.NORMAL_CLOSURE.code(), WebSocketCloseStatus.NORMAL_CLOSURE.reasonText());
     }
 
     private static void doTestInvalidCode(ThrowableAssert.ThrowingCallable callable) {

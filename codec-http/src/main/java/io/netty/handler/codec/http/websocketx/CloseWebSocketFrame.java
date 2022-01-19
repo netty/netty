@@ -108,8 +108,6 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         if (!reasonText.isEmpty()) {
             binaryData.writeCharSequence(reasonText, CharsetUtil.UTF_8);
         }
-
-        binaryData.readerIndex(0);
         return binaryData;
     }
 
@@ -133,12 +131,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public int statusCode() {
         ByteBuf binaryData = content();
-        if (binaryData == null || binaryData.capacity() == 0) {
+        if (binaryData == null || binaryData.readableBytes() < 2) {
             return -1;
         }
 
-        binaryData.readerIndex(0);
-        return binaryData.getShort(0);
+        return binaryData.getShort(binaryData.readerIndex());
     }
 
     /**
@@ -147,15 +144,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public String reasonText() {
         ByteBuf binaryData = content();
-        if (binaryData == null || binaryData.capacity() <= 2) {
+        if (binaryData == null || binaryData.readableBytes() <= 2) {
             return "";
         }
 
-        binaryData.readerIndex(2);
-        String reasonText = binaryData.toString(CharsetUtil.UTF_8);
-        binaryData.readerIndex(0);
-
-        return reasonText;
+        return binaryData.toString(binaryData.readerIndex() + 2, binaryData.readableBytes() - 2, CharsetUtil.UTF_8);
     }
 
     @Override
