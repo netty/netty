@@ -31,7 +31,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.buffer.api.CompositeBuffer.isComposite;
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -55,12 +55,10 @@ public class HttpObjectAggregatorTest {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         message.headers().set(of("X-Test"), true);
         final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test.length)
-                .writeBytes(test));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
-        HttpContent<?> chunk3 = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk3 = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -97,13 +95,11 @@ public class HttpObjectAggregatorTest {
         message.headers().set(of("X-Test"), true);
         HttpUtil.setTransferEncodingChunked(message, true);
         final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test.length)
-                .writeBytes(test));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
-        LastHttpContent<?> trailer = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        LastHttpContent<?> trailer = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         trailer.trailingHeaders().set(of("X-Trailer"), true);
 
         assertFalse(embedder.writeInbound(message));
@@ -128,12 +124,10 @@ public class HttpObjectAggregatorTest {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(4));
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test.length)
-                .writeBytes(test));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
-        final HttpContent<?> chunk3 = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        final HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -234,15 +228,13 @@ public class HttpObjectAggregatorTest {
             assertFalse(embedder.isOpen());
 
             assertThrows(ClosedChannelException.class,
-                    () -> embedder.writeInbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+                    () -> embedder.writeInbound(new DefaultHttpContent(preferredAllocator().allocate(0))));
 
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());
-            assertFalse(embedder.writeInbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8)
-                    .writeBytes(new byte[8]))));
-            assertFalse(embedder.writeInbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(8)
-                    .writeBytes(new byte[8]))));
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(preferredAllocator().copyOf(new byte[8]))));
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(preferredAllocator().copyOf(new byte[8]))));
 
             // Now start a new message and ensure we will not reject it again.
             HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
@@ -250,11 +242,10 @@ public class HttpObjectAggregatorTest {
 
             assertFalse(embedder.writeInbound(message2));
             assertNull(embedder.readOutbound());
-            assertFalse(embedder.writeInbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1)
-                    .writeBytes(new byte[] { 1 }))));
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(preferredAllocator().copyOf(new byte[] { 1 }))));
             assertNull(embedder.readOutbound());
-            assertTrue(embedder.writeInbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1)
-                    .writeBytes(new byte[] { 2 }))));
+            assertTrue(embedder.writeInbound(new DefaultLastHttpContent(
+                    preferredAllocator().copyOf(new byte[] { 2 }))));
             assertNull(embedder.readOutbound());
 
             FullHttpRequest request = embedder.readInbound();
@@ -292,11 +283,9 @@ public class HttpObjectAggregatorTest {
                 new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(4));
         HttpResponse message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test.length)
-                .writeBytes(test));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -321,13 +310,11 @@ public class HttpObjectAggregatorTest {
         message.headers().set(of("X-Test"), true);
         message.headers().set(of("Transfer-Encoding"), of("Chunked"));
         final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test.length)
-                .writeBytes(test));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
-        HttpContent<?> chunk3 = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
@@ -378,12 +365,10 @@ public class HttpObjectAggregatorTest {
         HttpUtil.setContentLength(message, 16);
 
         final byte[] some = "some".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(some.length)
-                .writeBytes(some));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(some));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
-        HttpContent<?> chunk3 = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         // Send a request with 100-continue + large Content-Length header value.
         assertFalse(embedder.writeInbound(message));
@@ -544,12 +529,10 @@ public class HttpObjectAggregatorTest {
         HttpUtil.setContentLength(message, 16);
 
         final byte[] some = "some".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(some.length)
-                .writeBytes(some));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(some));
         final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(test2.length)
-                .writeBytes(test2));
-        HttpContent<?> chunk3 = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         // Send a request with 100-continue + large Content-Length header value.
         assertFalse(embedder.writeInbound(message));
@@ -607,12 +590,11 @@ public class HttpObjectAggregatorTest {
             // Aggregate: POST
             HttpRequest request1 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
             final byte[] data = "Hello, World!".getBytes(StandardCharsets.UTF_8);
-            HttpContent<?> content1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(data.length)
-                    .writeBytes(data));
+            HttpContent<?> content1 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             request1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
             assertTrue(channel.writeInbound(request1, content1,
-                    new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+                    new EmptyLastHttpContent(preferredAllocator())));
 
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
@@ -624,18 +606,17 @@ public class HttpObjectAggregatorTest {
 
             // Don't aggregate: non-POST
             HttpRequest request2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/");
-            HttpContent<?> content2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(data.length)
-                    .writeBytes(data));
+            HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             request2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
             try {
                 assertTrue(channel.writeInbound(request2, content2,
-                        new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+                        new EmptyLastHttpContent(preferredAllocator())));
 
                 // Getting the same response objects out
                 assertSame(request2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
-                assertEquals(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR), channel.readInbound());
+                assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
             } finally {
               ReferenceCountUtil.release(request2);
               ReferenceCountUtil.release(content2);
@@ -672,12 +653,11 @@ public class HttpObjectAggregatorTest {
             // Aggregate: text/plain
             HttpResponse response1 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             final byte[] data = "Hello, World!".getBytes(StandardCharsets.UTF_8);
-            HttpContent<?> content1 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(data.length)
-                    .writeBytes(data));
+            HttpContent<?> content1 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             response1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
             assertTrue(channel.writeInbound(response1, content1,
-                    new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+                    new EmptyLastHttpContent(preferredAllocator())));
 
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
@@ -690,18 +670,17 @@ public class HttpObjectAggregatorTest {
             // Don't aggregate: application/json
             HttpResponse response2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             final byte[] data2 = "{key: 'value'}".getBytes(StandardCharsets.UTF_8);
-            HttpContent<?> content2 = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(data2.length)
-                    .writeBytes(data2));
+            HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(data2));
             response2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 
             try {
                 assertTrue(channel.writeInbound(response2, content2,
-                        new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+                        new EmptyLastHttpContent(preferredAllocator())));
 
                 // Getting the same response objects out
                 assertSame(response2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
-                assertEquals(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR), channel.readInbound());
+                assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
             } finally {
                 ReferenceCountUtil.release(response2);
                 ReferenceCountUtil.release(content2);

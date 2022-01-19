@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeaderNames.HOST;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -90,9 +90,9 @@ public class HttpRequestDecoderTest {
         LastHttpContent<?> c = channel.readInbound();
         final Buffer payload = c.payload();
         assertEquals(CONTENT_LENGTH, payload.readableBytes());
-        assertEquals(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(CONTENT_LENGTH)
-                        .writeBytes(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
-                payload.copy(payload.readerOffset(), CONTENT_LENGTH));
+        assertEquals(preferredAllocator().allocate(CONTENT_LENGTH)
+                                         .writeBytes(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
+                     payload.copy(payload.readerOffset(), CONTENT_LENGTH));
         c.close();
 
         assertFalse(channel.finish());
@@ -387,7 +387,7 @@ public class HttpRequestDecoderTest {
     }
 
     private void testHeaderNameStartsWithControlChar(int controlChar) {
-        Buffer requestBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(256);
+        Buffer requestBuffer = preferredAllocator().allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
         requestBuffer.writeByte((byte) controlChar);
@@ -421,7 +421,7 @@ public class HttpRequestDecoderTest {
     }
 
     private void testHeaderNameEndsWithControlChar(int controlChar) {
-        Buffer requestBuffer = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(256);
+        Buffer requestBuffer = preferredAllocator().allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
         requestBuffer.writeCharSequence("Transfer-Encoding", CharsetUtil.US_ASCII);
@@ -572,8 +572,8 @@ public class HttpRequestDecoderTest {
     }
 
     private static void testInvalidHeaders0(String requestStr) {
-        testInvalidHeaders0(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(requestStr.length())
-                .writeCharSequence(requestStr, CharsetUtil.US_ASCII));
+        byte[] request = requestStr.getBytes(US_ASCII);
+        testInvalidHeaders0(preferredAllocator().copyOf(request));
     }
 
     private static void testInvalidHeaders0(Buffer requestBuffer) {

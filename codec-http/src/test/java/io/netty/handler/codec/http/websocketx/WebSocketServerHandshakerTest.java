@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -44,8 +44,8 @@ public abstract class WebSocketServerHandshakerTest {
     public void testDuplicateHandshakeResponseHeaders() {
         WebSocketServerHandshaker serverHandshaker = newHandshaker("ws://example.com/chat",
                                                                    "chat", WebSocketDecoderConfig.DEFAULT);
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat", preferredAllocator().allocate(0));
         request.headers()
                .set(HttpHeaderNames.HOST, "example.com")
                .set(HttpHeaderNames.ORIGIN, "example.com")
@@ -69,8 +69,7 @@ public abstract class WebSocketServerHandshakerTest {
 
         FullHttpResponse response = null;
         try {
-            response = serverHandshaker.newHandshakeResponse(DEFAULT_GLOBAL_BUFFER_ALLOCATOR, request,
-                    customResponseHeaders);
+            response = serverHandshaker.newHandshakeResponse(preferredAllocator(), request, customResponseHeaders);
             HttpHeaders responseHeaders = response.headers();
 
             assertEquals(1, responseHeaders.getAll(HttpHeaderNames.CONNECTION).size());
@@ -93,9 +92,8 @@ public abstract class WebSocketServerHandshakerTest {
         WebSocketServerHandshaker serverHandshaker = newHandshaker("ws://example.com/chat",
                                                                    "chat", WebSocketDecoderConfig.DEFAULT);
 
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                                                             "ws://example.com/chat",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "ws://example.com/chat", preferredAllocator().allocate(0));
         request.headers().set("x-client-header", "value");
         try {
             serverHandshaker.handshake(new EmbeddedChannel(), request, null);

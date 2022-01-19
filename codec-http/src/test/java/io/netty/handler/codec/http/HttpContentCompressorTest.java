@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Send;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -40,7 +41,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -89,12 +89,10 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("Hell", US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII)));
+        BufferAllocator allocator = preferredAllocator();
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(allocator.allocate(16).writeCharSequence("orld", US_ASCII)));
 
         assertEncodedResponse(ch);
 
@@ -135,12 +133,10 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("Hell", US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII)));
+        BufferAllocator allocator = preferredAllocator();
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(allocator.allocate(16).writeCharSequence("orld", US_ASCII)));
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
@@ -177,18 +173,16 @@ public class HttpContentCompressorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
-        HttpResponse res = new AssembledHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence("Hell", US_ASCII));
+        BufferAllocator allocator = preferredAllocator();
+        HttpResponse res = new AssembledHttpResponse(
+                HTTP_1_1, HttpResponseStatus.OK, allocator.allocate(16).writeCharSequence("Hell", US_ASCII));
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
         assertAssembledEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(allocator.allocate(16).writeCharSequence("orld", US_ASCII)));
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
@@ -219,19 +213,16 @@ public class HttpContentCompressorTest {
     @Test
     public void testChunkedContentWithAssembledResponseIdentityEncoding() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        BufferAllocator allocator = preferredAllocator();
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/", allocator.allocate(0)));
 
         HttpResponse res = new AssembledHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence("Hell", US_ASCII));
+                                                     allocator.allocate(16).writeCharSequence("Hell", US_ASCII));
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(allocator.allocate(16).writeCharSequence("orld", US_ASCII)));
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
@@ -253,17 +244,15 @@ public class HttpContentCompressorTest {
     @Test
     public void testContentWithAssembledResponseIdentityEncodingHttp10() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
-        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        BufferAllocator allocator = preferredAllocator();
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/", allocator.allocate(0)));
 
         HttpResponse res = new AssembledHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16).writeCharSequence("Hell", US_ASCII));
+                                                     allocator.allocate(16).writeCharSequence("Hell", US_ASCII));
         ch.writeOutbound(res);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        ch.writeOutbound(new DefaultLastHttpContent(allocator.allocate(16).writeCharSequence("orld", US_ASCII)));
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
@@ -293,12 +282,11 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("Hell", US_ASCII)));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("o, w", US_ASCII)));
-        LastHttpContent<?> content = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("orld", US_ASCII));
+        BufferAllocator allocator = preferredAllocator();
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("Hell", US_ASCII)));
+        ch.writeOutbound(new DefaultHttpContent(allocator.allocate(16).writeCharSequence("o, w", US_ASCII)));
+        LastHttpContent<?> content = new DefaultLastHttpContent(
+                allocator.allocate(16).writeCharSequence("orld", US_ASCII));
         content.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(content);
 
@@ -337,8 +325,7 @@ public class HttpContentCompressorTest {
 
         FullHttpResponse fullRes = new DefaultFullHttpResponse(
                 HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence("Hello, World", US_ASCII));
+                preferredAllocator().allocate(16).writeCharSequence("Hello, World", US_ASCII));
         fullRes.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullRes.payload().readableBytes());
         ch.writeOutbound(fullRes);
 
@@ -375,8 +362,8 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-            HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("Hello, World", US_ASCII));
+                HTTP_1_1, HttpResponseStatus.OK,
+                preferredAllocator().allocate(16).writeCharSequence("Hello, World", US_ASCII));
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -407,7 +394,7 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
         HttpContent<?> chunk = ch.readOutbound();
         assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b080000000000000003000000000000000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
@@ -430,7 +417,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -454,7 +441,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -482,12 +469,12 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         FullHttpResponse continueResponse = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.CONTINUE, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                HTTP_1_1, HttpResponseStatus.CONTINUE, preferredAllocator().allocate(0));
 
         ch.writeOutbound(continueResponse);
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -520,11 +507,11 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         ch.writeOutbound(new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0)));
 
         try {
             ch.writeOutbound(new DefaultFullHttpResponse(
-                    HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+                    HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0)));
             fail();
         } catch (EncoderException e) {
             assertTrue(e.getCause() instanceof IllegalStateException);
@@ -552,8 +539,8 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("Hello, World", US_ASCII));
+                HTTP_1_1, HttpResponseStatus.OK,
+                preferredAllocator().allocate(16).writeCharSequence("Hello, World", US_ASCII));
         int len = res.payload().readableBytes();
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, len);
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.IDENTITY);
@@ -574,8 +561,8 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence("Hello, World", US_ASCII));
+                HTTP_1_1, HttpResponseStatus.OK,
+                preferredAllocator().allocate(16).writeCharSequence("Hello, World", US_ASCII));
         int len = res.payload().readableBytes();
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, len);
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, "ascii");
@@ -597,8 +584,7 @@ public class HttpContentCompressorTest {
 
         FullHttpResponse res1023 = new DefaultFullHttpResponse(
                 HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1023)
-                        .writeBytes(new byte[1023]));
+                preferredAllocator().copyOf(new byte[1023]));
         assertTrue(ch.writeOutbound(res1023));
         DefaultHttpResponse response1023 = ch.readOutbound();
         assertThat(response1023.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -606,8 +592,7 @@ public class HttpContentCompressorTest {
 
         assertTrue(ch.writeInbound(newRequest()));
         FullHttpResponse res1024 = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1024)
-                        .writeBytes(new byte[1024]));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().copyOf(new byte[1024]));
         assertTrue(ch.writeOutbound(res1024));
         DefaultHttpResponse response1024 = ch.readOutbound();
         assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -620,8 +605,7 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res1023 = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1023)
-                        .writeBytes(new byte[1023]));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().copyOf(new byte[1023]));
         assertTrue(ch.writeOutbound(res1023));
         DefaultHttpResponse response1023 = ch.readOutbound();
         assertFalse(response1023.headers().contains(HttpHeaderNames.CONTENT_ENCODING));
@@ -629,8 +613,7 @@ public class HttpContentCompressorTest {
 
         assertTrue(ch.writeInbound(newRequest()));
         FullHttpResponse res1024 = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1024)
-                        .writeBytes(new byte[1024]));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().copyOf(new byte[1024]));
         assertTrue(ch.writeOutbound(res1024));
         DefaultHttpResponse response1024 = ch.readOutbound();
         assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
@@ -649,8 +632,8 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeInbound(request));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                        .writeCharSequence("Gzip Win", US_ASCII));
+                HTTP_1_1, HttpResponseStatus.OK,
+                preferredAllocator().allocate(16).writeCharSequence("Gzip Win", US_ASCII));
         assertTrue(ch.writeOutbound(res));
 
         assertEncodedResponse(ch);
@@ -672,7 +655,7 @@ public class HttpContentCompressorTest {
 
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                         preferredAllocator().allocate(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return req;
     }

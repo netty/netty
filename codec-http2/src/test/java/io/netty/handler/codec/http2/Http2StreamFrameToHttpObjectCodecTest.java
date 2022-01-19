@@ -49,12 +49,11 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -69,8 +68,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0))));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("200"));
@@ -85,7 +84,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+                preferredAllocator().allocate(0))));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("100"));
@@ -106,8 +105,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeNonEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello)));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
@@ -129,8 +127,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeEmptyFullResponseWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         HttpHeaders trailers = response.trailingHeaders();
         trailers.set("key", "value");
         assertTrue(ch.writeOutbound(response));
@@ -150,8 +148,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeNonEmptyFullResponseWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello);
         HttpHeaders trailers = response.trailingHeaders();
         trailers.set("key", "value");
@@ -194,8 +191,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeChunk() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         HttpContent<?> content = new DefaultHttpContent(hello);
         assertTrue(ch.writeOutbound(content));
 
@@ -214,7 +210,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeEmptyEnd() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        LastHttpContent<?> end = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        LastHttpContent<?> end = new EmptyLastHttpContent(preferredAllocator());
         assertTrue(ch.writeOutbound(end));
 
         Http2DataFrame emptyFrame = ch.readOutbound();
@@ -232,8 +228,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeDataEnd() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
         assertTrue(ch.writeOutbound(end));
 
@@ -252,7 +247,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        LastHttpContent<?> trailers = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0), true);
+        LastHttpContent<?> trailers = new DefaultLastHttpContent(preferredAllocator().allocate(0), true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -268,8 +263,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeDataEndWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         LastHttpContent<?> trailers = new DefaultLastHttpContent(hello, true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
@@ -426,8 +420,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeEmptyFullRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world", preferredAllocator().allocate(0))));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
@@ -460,7 +454,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         try {
             FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world",
-                    DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                             preferredAllocator().allocate(0));
             assertTrue(ch.writeOutbound(req));
 
             ch.finishAndReleaseAll();
@@ -481,8 +475,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeNonEmptyFullRequest() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.PUT, "/hello/world", hello)));
 
@@ -511,7 +504,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         FullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.PUT, "/hello/world",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                preferredAllocator().allocate(0));
 
         HttpHeaders trailers = request.trailingHeaders();
         trailers.set("key", "value");
@@ -536,8 +529,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeNonEmptyFullRequestWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         FullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.PUT, "/hello/world", hello);
 
@@ -590,8 +582,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeChunkAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         HttpContent<?> content = new DefaultHttpContent(hello);
         assertTrue(ch.writeOutbound(content));
 
@@ -610,7 +601,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeEmptyEndAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        LastHttpContent<?> end = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        LastHttpContent<?> end = new EmptyLastHttpContent(preferredAllocator());
         assertTrue(ch.writeOutbound(end));
 
         Http2DataFrame emptyFrame = ch.readOutbound();
@@ -628,8 +619,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeDataEndAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
         assertTrue(ch.writeOutbound(end));
 
@@ -648,8 +638,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        LastHttpContent<?> trailers = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0),
-                true);
+        LastHttpContent<?> trailers = new DefaultLastHttpContent(
+                preferredAllocator().allocate(0), true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -665,8 +655,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeDataEndWithTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Buffer hello = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("hello world", CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", CharsetUtil.UTF_8);
         LastHttpContent<?> trailers = new DefaultLastHttpContent(hello, true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
@@ -893,8 +882,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             }, sharedHandler);
 
         FullHttpRequest req = new DefaultFullHttpRequest(
-            HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world",
+                preferredAllocator().allocate(0));
         assertTrue(tlsCh.writeOutbound(req));
         assertTrue(tlsCh.finishAndReleaseAll());
 
@@ -909,7 +898,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         // Run the plaintext channel
         req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                         preferredAllocator().allocate(0));
         assertFalse(plaintextCh.writeOutbound(req));
         assertFalse(plaintextCh.finishAndReleaseAll());
 

@@ -23,11 +23,10 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -43,8 +42,8 @@ public class HttpRequestEncoderTest {
 
     private static Buffer[] getBuffers() {
         return new Buffer[]{
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(128),
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(128).writerOffset(0),
+                preferredAllocator().allocate(128),
+                preferredAllocator().allocate(128).writerOffset(0),
         };
     }
 
@@ -183,9 +182,9 @@ public class HttpRequestEncoderTest {
         }
         assertTrue(channel.writeOutbound(request));
 
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(0))));
 
-        LastHttpContent<?> last = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        LastHttpContent<?> last = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         if (trailers) {
             last.trailingHeaders().set("X-Netty-Test", "true");
         }
@@ -213,9 +212,9 @@ public class HttpRequestEncoderTest {
     public void testForChunkedRequestNpe() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
         assertTrue(channel.writeOutbound(new CustomHttpRequest()));
-        assertTrue(channel.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(16)
-                .writeCharSequence("test", CharsetUtil.US_ASCII))));
-        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR)));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(
+                preferredAllocator().allocate(16).writeCharSequence("test", CharsetUtil.US_ASCII))));
+        assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
         assertTrue(channel.finishAndReleaseAll());
     }
 

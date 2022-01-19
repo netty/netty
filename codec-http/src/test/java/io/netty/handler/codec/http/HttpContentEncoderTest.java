@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -45,7 +45,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -91,15 +90,12 @@ public class HttpContentEncoderTest {
     @Test
     public void testSplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
         ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(3)
-                .writeBytes(new byte[3])));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(2)
-                .writeBytes(new byte[2])));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1)
-                .writeBytes(new byte[1])));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(3).writeBytes(new byte[3])));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(2).writeBytes(new byte[2])));
+        ch.writeOutbound(new DefaultLastHttpContent(preferredAllocator().copyOf(new byte[1])));
 
         assertEncodedResponse(ch);
 
@@ -127,7 +123,7 @@ public class HttpContentEncoderTest {
     @Test
     public void testChunkedContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -135,12 +131,9 @@ public class HttpContentEncoderTest {
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(3)
-                .writeBytes(new byte[3])));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(2)
-                .writeBytes(new byte[2])));
-        ch.writeOutbound(new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1)
-                .writeBytes(new byte[1])));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(3).writeBytes(new byte[3])));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(2).writeBytes(new byte[2])));
+        ch.writeOutbound(new DefaultLastHttpContent(preferredAllocator().copyOf(new byte[1])));
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
@@ -167,7 +160,7 @@ public class HttpContentEncoderTest {
     @Test
     public void testChunkedContentWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -175,12 +168,9 @@ public class HttpContentEncoderTest {
 
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(3)
-                .writeBytes(new byte[3])));
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(2)
-                .writeBytes(new byte[2])));
-        LastHttpContent<?> content = new DefaultLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(1)
-                .writeBytes(new byte[1]));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(3).writeBytes(new byte[3])));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().allocate(2).writeBytes(new byte[2])));
+        LastHttpContent<?> content = new DefaultLastHttpContent(preferredAllocator().copyOf(new byte[1]));
         content.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(content);
 
@@ -211,11 +201,10 @@ public class HttpContentEncoderTest {
     @Test
     public void testFullContentWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
         FullHttpResponse fullRes = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(42)
-                .fill((byte) 0).skipWritable(42));
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().copyOf(new byte[42]));
         fullRes.headers().set(HttpHeaderNames.CONTENT_LENGTH, 42);
         ch.writeOutbound(fullRes);
 
@@ -240,11 +229,10 @@ public class HttpContentEncoderTest {
     @Test
     public void testFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(42).writeBytes(new byte[42]));
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().copyOf(new byte[42]));
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
@@ -267,13 +255,12 @@ public class HttpContentEncoderTest {
     @Test
     public void testEmptySplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
         ch.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK));
         assertEncodedResponse(ch);
 
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
         HttpContent<?> chunk = ch.readOutbound();
         assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
@@ -293,11 +280,10 @@ public class HttpContentEncoderTest {
     @Test
     public void testEmptyFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -318,11 +304,10 @@ public class HttpContentEncoderTest {
     @Test
     public void testEmptyFullContentWithTrailer() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0)));
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -344,14 +329,13 @@ public class HttpContentEncoderTest {
     @Test
     public void testEmptyHeadResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.HEAD, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.HEAD, "/", preferredAllocator().allocate(0));
         ch.writeInbound(req);
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
 
         assertEmptyResponse(ch);
     }
@@ -359,15 +343,14 @@ public class HttpContentEncoderTest {
     @Test
     public void testHttp304Response() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
         ch.writeInbound(req);
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
 
         assertEmptyResponse(ch);
     }
@@ -376,13 +359,13 @@ public class HttpContentEncoderTest {
     public void testConnect200Response() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.CONNECT, "google.com:80",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                     preferredAllocator().allocate(0));
         ch.writeInbound(req);
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
 
         assertEmptyResponse(ch);
     }
@@ -393,16 +376,15 @@ public class HttpContentEncoderTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         HttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.CONNECT, "google.com:80",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                     preferredAllocator().allocate(0));
         ch.writeInbound(req);
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
         final byte[] contentBytes = content.getBytes(CharsetUtil.UTF_8);
-        ch.writeOutbound(new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(contentBytes.length)
-                .writeBytes(contentBytes)));
-        ch.writeOutbound(new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().copyOf(contentBytes)));
+        ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
 
         assertEncodedResponse(ch);
         Object o = ch.readOutbound();
@@ -425,14 +407,14 @@ public class HttpContentEncoderTest {
     @Test
     public void testHttp1_0() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        FullHttpRequest req = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_0, GET, "/", preferredAllocator().allocate(0));
         assertTrue(ch.writeInbound(req));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK);
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         assertTrue(ch.writeOutbound(res));
-        final EmptyLastHttpContent lastContent = new EmptyLastHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR);
+        final EmptyLastHttpContent lastContent = new EmptyLastHttpContent(preferredAllocator());
         assertTrue(ch.writeOutbound(lastContent));
         assertTrue(ch.finish());
 
@@ -498,11 +480,10 @@ public class HttpContentEncoderTest {
                 ctx.fireChannelInactive();
             }
         });
-        assertTrue(channel.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))));
+        assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
+                HTTP_1_1, GET, "/", preferredAllocator().allocate(0))));
         assertTrue(channel.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK)));
-        HttpContent<?> content = new DefaultHttpContent(DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(10)
-                .fill((byte) 0).skipWritable(10));
+        HttpContent<?> content = new DefaultHttpContent(preferredAllocator().copyOf(new byte[10]));
         assertTrue(channel.writeOutbound(content));
         assertTrue(content.isAccessible());
         assertThrows(CodecException.class, channel::finishAndReleaseAll);

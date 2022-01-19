@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,8 +115,8 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
     }
 
     private static void testUpgrade0(EmbeddedChannel ch, WebSocketServerHandshaker13 handshaker) {
-        try (FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0))) {
+        try (FullHttpRequest req = new DefaultFullHttpRequest(
+                HTTP_1_1, HttpMethod.GET, "/chat", preferredAllocator().allocate(0))) {
             req.headers().set(HttpHeaderNames.HOST, "server.example.com");
             req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
             req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");

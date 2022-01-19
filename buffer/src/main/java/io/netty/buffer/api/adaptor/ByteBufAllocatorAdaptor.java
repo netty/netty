@@ -20,35 +20,22 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.DefaultGlobalBufferAllocator;
-import io.netty.buffer.api.StandardAllocationTypes;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.buffer.api.internal.AdaptableBuffer;
-import io.netty.buffer.api.internal.UncloseableBufferAllocator;
 import io.netty.util.internal.PlatformDependent;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable {
     private static final int DEFAULT_MAX_CAPACITY = Integer.MAX_VALUE;
-    private static final BufferAllocator GLOBAL_INSTANCE_COUNTERPART = initializeGlobalCounterpart();
     public static final ByteBufAllocatorAdaptor DEFAULT_INSTANCE = new ByteBufAllocatorAdaptor(
-            DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR, GLOBAL_INSTANCE_COUNTERPART);
+            DefaultBufferAllocators.onHeapAllocator(), DefaultBufferAllocators.offHeapAllocator());
 
     private final BufferAllocator onHeap;
     private final BufferAllocator offHeap;
     private boolean closed;
-
-    private static BufferAllocator initializeGlobalCounterpart() {
-        BufferAllocator global = DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
-        final BufferAllocator counterpart;
-        if (global.getAllocationType() == StandardAllocationTypes.ON_HEAP) {
-            counterpart = global.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
-        } else {
-            counterpart = global.isPooling() ? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled();
-        }
-        return new GlobalCounterpartBufferAllocator(counterpart);
-    }
 
     public ByteBufAllocatorAdaptor(BufferAllocator onHeap, BufferAllocator offHeap) {
         this.onHeap = Objects.requireNonNull(onHeap, "The on-heap allocator cannot be null.");
@@ -185,12 +172,6 @@ public class ByteBufAllocatorAdaptor implements ByteBufAllocator, AutoCloseable 
             try (offHeap) {
                 closed = true;
             }
-        }
-    }
-
-    private static final class GlobalCounterpartBufferAllocator extends UncloseableBufferAllocator {
-        GlobalCounterpartBufferAllocator(BufferAllocator delegate) {
-            super(delegate, "Global buffer counter-part allocator cannot be closed explicitly.");
         }
     }
 }

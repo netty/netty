@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.FRAME_TAIL_LENGTH;
@@ -48,7 +48,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     static final int EMPTY_DEFLATE_BLOCK_LENGTH;
     static {
         byte[] emptyDeflate = { 0x00 };
-        EMPTY_DEFLATE_BLOCK = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.constBufferSupplier(emptyDeflate);
+        EMPTY_DEFLATE_BLOCK = preferredAllocator().constBufferSupplier(emptyDeflate);
         EMPTY_DEFLATE_BLOCK_LENGTH = emptyDeflate.length;
     }
 

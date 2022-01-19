@@ -34,7 +34,7 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 import java.util.function.Supplier;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.CharsetUtil.US_ASCII;
@@ -46,7 +46,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 public final class HelloWorldHttp2Handler extends Http2ConnectionHandler implements Http2FrameListener {
 
     static final Supplier<Buffer> RESPONSE_BYTES_SUPPLIER =
-            DEFAULT_GLOBAL_BUFFER_ALLOCATOR.constBufferSupplier("Hello World".getBytes(UTF_8));
+            preferredAllocator().constBufferSupplier("Hello World".getBytes(UTF_8));
 
     HelloWorldHttp2Handler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                            Http2Settings initialSettings) {

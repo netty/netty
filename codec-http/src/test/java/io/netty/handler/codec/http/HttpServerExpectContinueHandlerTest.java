@@ -20,7 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,7 +40,7 @@ public class HttpServerExpectContinueHandlerTest {
             }
         });
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                         preferredAllocator().allocate(0));
         HttpUtil.set100ContinueExpected(request, true);
 
         channel.writeInbound(request);
@@ -74,7 +74,7 @@ public class HttpServerExpectContinueHandlerTest {
         );
 
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+                                                         preferredAllocator().allocate(0));
         HttpUtil.set100ContinueExpected(request, true);
 
         channel.writeInbound(request);

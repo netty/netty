@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
@@ -876,7 +876,7 @@ public class Http2FrameCodecTest {
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                        DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0)));
+                                                     preferredAllocator().allocate(0)));
         assertTrue(upgradeEvent.isAccessible());
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
         assertFalse(upgradeEvent.isAccessible());
@@ -912,9 +912,9 @@ public class Http2FrameCodecTest {
         Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         byte[] longString = new String(new char[70000]).replace("\0", "*").getBytes(UTF_8);
-        DefaultFullHttpRequest request =
-            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                    DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(longString.length).writeBytes(longString));
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
+                preferredAllocator().copyOf(longString));
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
             "HTTP/2", request);

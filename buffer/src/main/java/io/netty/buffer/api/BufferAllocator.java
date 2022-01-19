@@ -33,6 +33,10 @@ public interface BufferAllocator extends SafeCloseable {
      * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
+     * <p>
+     * <strong>Note:</strong> This method always creates a new allocator instance.
+     * To get a shared and cached allocator instance, use the {@link DefaultBufferAllocators#onHeapAllocator()}
+     * method instead.
      *
      * @return A non-pooling allocator of on-heap buffers
      */
@@ -47,6 +51,10 @@ public interface BufferAllocator extends SafeCloseable {
      * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
+     * <p>
+     * <strong>Note:</strong> This method always creates a new allocator instance.
+     * To get a shared and cached allocator instance, use the {@link DefaultBufferAllocators#offHeapAllocator()}
+     * method instead.
      *
      * @return A non-pooling allocator of on-heap buffers
      */
@@ -61,6 +69,10 @@ public interface BufferAllocator extends SafeCloseable {
      * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
+     * <p>
+     * <strong>Note:</strong> This method always creates a new allocator instance.
+     * To get a shared and cached allocator instance, use the {@link DefaultBufferAllocators#onHeapAllocator()}
+     * method instead.
      *
      * @return A pooling allocator of on-heap buffers
      */
@@ -75,6 +87,10 @@ public interface BufferAllocator extends SafeCloseable {
      * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
+     * <p>
+     * <strong>Note:</strong> This method always creates a new allocator instance.
+     * To get a shared and cached allocator instance, use the {@link DefaultBufferAllocators#offHeapAllocator()}
+     * method instead.
      *
      * @return A pooling allocator of on-heap buffers
      */

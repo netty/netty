@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;
@@ -557,14 +557,14 @@ public class CorsHandlerTest {
     }
 
     private static FullHttpRequest createHttpRequest(HttpMethod method) {
-        return new DefaultFullHttpRequest(HTTP_1_1, method, "/info", DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
+        return new DefaultFullHttpRequest(HTTP_1_1, method, "/info", preferredAllocator().allocate(0));
     }
 
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0),
-                    true, true));
+            ctx.writeAndFlush(new DefaultFullHttpResponse(
+                    HTTP_1_1, OK, preferredAllocator().allocate(0), true, true));
         }
     }
 
