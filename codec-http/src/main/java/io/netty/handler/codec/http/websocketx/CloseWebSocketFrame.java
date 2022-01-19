@@ -129,12 +129,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public int statusCode() {
         Buffer binaryData = binaryData();
-        if (binaryData == null || binaryData.capacity() == 0) {
+        if (binaryData == null || binaryData.readableBytes() < 2) {
             return -1;
         }
 
-        binaryData.readerOffset(0);
-        return binaryData.getShort(0);
+        return binaryData.getShort(binaryData.readerOffset());
     }
 
     /**
@@ -143,15 +142,17 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public String reasonText() {
         Buffer binaryData = binaryData();
-        if (binaryData == null || binaryData.capacity() <= 2) {
+        if (binaryData == null || binaryData.readableBytes() <= 2) {
             return "";
         }
 
-        binaryData.readerOffset(2);
-        String reasonText = binaryData.toString(CharsetUtil.UTF_8);
-        binaryData.readerOffset(0);
-
-        return reasonText;
+        int base = binaryData.readerOffset();
+        try {
+            binaryData.skipReadable(2);
+            return binaryData.toString(CharsetUtil.UTF_8);
+        } finally {
+            binaryData.readerOffset(base);
+        }
     }
 
     @Override
@@ -163,8 +164,8 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         if (WebSocketCloseStatus.isValidStatusCode(statusCode)) {
             return (short) statusCode;
         } else {
-            throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " +
-                    statusCode);
+            throw new IllegalArgumentException(
+                    "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
     }
 }

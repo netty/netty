@@ -293,8 +293,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
                 if (maskingKey == null) {
                     maskingKey = new byte[4];
                 }
-                in.copyInto(in.readerOffset(), maskingKey, 0, maskingKey.length);
-                in.skipReadable(maskingKey.length);
+                in.readBytes(maskingKey, 0, maskingKey.length);
             }
             state = State.PAYLOAD;
         }
@@ -305,7 +304,6 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
 
             Buffer payloadBuffer = null;
             try {
-                in.readSplit(0).close(); // Truncate off the frame header, so payload start at offset 0.
                 payloadBuffer = in.readSplit(toFrameLength(framePayloadLength));
 
                 // Now we have all the data, the next checkpoint must be the next
@@ -391,8 +389,9 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
     }
 
     private void unmask(Buffer frame) {
-        int i = frame.readerOffset();
-        int end = frame.writerOffset();
+        int base = frame.readerOffset();
+        int len = frame.readableBytes();
+        int index = 0;
 
         // Remark: & 0xFF is necessary because Java will do signed expansion from
         // byte to int which we don't want.
@@ -401,12 +400,13 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
                       | (maskingKey[2] & 0xFF) << 8
                       | maskingKey[3] & 0xFF;
 
-        for (; i + 3 < end; i += 4) {
-            int unmasked = frame.getInt(i) ^ intMask;
-            frame.setInt(i, unmasked);
+        for (; index + 3 < len; index += Integer.BYTES) {
+            int off = base + index;
+            frame.setInt(off, frame.getInt(off) ^ intMask);
         }
-        for (; i < end; i++) {
-            frame.setByte(i, (byte) (frame.getByte(i) ^ maskingKey[i % 4]));
+        for (; index < len; index++) {
+            int off = base + index;
+            frame.setByte(off, (byte) (frame.getByte(off) ^ maskingKey[index % 4]));
         }
     }
 
@@ -452,27 +452,27 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
             protocolViolation(ctx, buffer, WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "Invalid close frame body");
         }
 
-        // Save reader index
+        // Save reader offset.
         int offset = buffer.readerOffset();
-        buffer.readerOffset(0);
-
-        // Must have 2 byte integer within the valid range
-        int statusCode = buffer.readShort();
-        if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
-            protocolViolation(ctx, buffer, "Invalid close frame getStatus code: " + statusCode);
-        }
-
-        // May have UTF-8 message
-        if (buffer.readableBytes() > 0) {
-            try {
-                new Utf8Validator().check(buffer);
-            } catch (CorruptedWebSocketFrameException ex) {
-                protocolViolation(ctx, buffer, ex);
+        try {
+            // Must have 2 byte integer within the valid range.
+            int statusCode = buffer.readShort();
+            if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+                protocolViolation(ctx, buffer, "Invalid close frame getStatus code: " + statusCode);
             }
-        }
 
-        // Restore reader offset
-        buffer.readerOffset(offset);
+            // May have UTF-8 message.
+            if (buffer.readableBytes() > 0) {
+                try {
+                    new Utf8Validator().check(buffer);
+                } catch (CorruptedWebSocketFrameException ex) {
+                    protocolViolation(ctx, buffer, ex);
+                }
+            }
+        } finally {
+            // Restore reader offset.
+            buffer.readerOffset(offset);
+        }
     }
 
     enum State {
