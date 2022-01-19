@@ -73,7 +73,7 @@ final class Utf8Validator implements ByteProcessor {
         buffer.forEachByte(this);
     }
 
-    public  void check(ByteBuf buffer, int index, int length) {
+    void check(ByteBuf buffer, int index, int length) {
         checking = true;
         buffer.forEachByte(index, length, this);
     }
