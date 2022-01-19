@@ -76,6 +76,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -3468,6 +3469,98 @@ public class DnsNameResolverTest {
         assertFalse(records.isEmpty());
         for (DnsRecord record : records) {
             ReferenceCountUtil.release(record);
+        }
+    }
+
+    @Test
+    public void testResolveIpv6WithScopeId() throws Exception {
+        testResolveIpv6WithScopeId0(false);
+    }
+
+    @Test
+    public void testResolveAllIpv6WithScopeId() throws Exception {
+        testResolveIpv6WithScopeId0(true);
+    }
+
+    private void testResolveIpv6WithScopeId0(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String address = "fe80:0:0:0:1c31:d1d1:4824:72a9";
+        int scopeId = 15;
+        String addressString = address + '%' + scopeId;
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(address);
+        Inet6Address inet6Address = Inet6Address.getByAddress(null, bytes, scopeId);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inet6Address, addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveIpv6WithoutScopeId() throws Exception {
+        testResolveIpv6WithoutScopeId0(false);
+    }
+
+    @Test
+    public void testResolveAllIpv6WithoutScopeId() throws Exception {
+        testResolveIpv6WithoutScopeId0(true);
+    }
+
+    private void testResolveIpv6WithoutScopeId0(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String addressString = "fe80:0:0:0:1c31:d1d1:4824:72a9";
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        Inet6Address inet6Address = (Inet6Address) InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inet6Address, addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveIp4() throws Exception {
+        testResolveIp4(false);
+    }
+
+    @Test
+    public void testResolveAllIp4() throws Exception {
+        testResolveIp4(true);
+    }
+
+    private void testResolveIp4(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String addressString = "10.0.0.1";
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
         }
     }
 }

@@ -277,6 +277,59 @@ public final class NetUtil {
         return null;
     }
 
+    /**
+     * Creates an {@link InetAddress} based on an ipAddressString or might return null if it can't be parsed.
+     * No error handling is performed here.
+     */
+    public static InetAddress createInetAddressFromIpAddressString(String ipAddressString) {
+        if (isValidIpV4Address(ipAddressString)) {
+            byte[] bytes = validIpV4ToBytes(ipAddressString);
+            try {
+                return InetAddress.getByAddress(bytes);
+            } catch (UnknownHostException e) {
+                // Should never happen!
+                throw new IllegalStateException(e);
+            }
+        }
+
+        if (isValidIpV6Address(ipAddressString)) {
+            if (ipAddressString.charAt(0) == '[') {
+                ipAddressString = ipAddressString.substring(1, ipAddressString.length() - 1);
+            }
+
+            int percentPos = ipAddressString.indexOf('%');
+            if (percentPos >= 0) {
+                try {
+                    int scopeId = Integer.parseInt(ipAddressString.substring(percentPos + 1));
+                    ipAddressString = ipAddressString.substring(0, percentPos);
+                    byte[] bytes = getIPv6ByName(ipAddressString, true);
+                    if (bytes == null) {
+                        return null;
+                    }
+                    try {
+                        return Inet6Address.getByAddress(null, bytes, scopeId);
+                    } catch (UnknownHostException e) {
+                        // Should never happen!
+                        throw new IllegalStateException(e);
+                    }
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            byte[] bytes = getIPv6ByName(ipAddressString, true);
+            if (bytes == null) {
+                return null;
+            }
+            try {
+                return InetAddress.getByAddress(bytes);
+            } catch (UnknownHostException e) {
+                // Should never happen!
+                throw new IllegalStateException(e);
+            }
+        }
+        return null;
+    }
+
     private static int decimalDigit(String str, int pos) {
         return str.charAt(pos) - '0';
     }
