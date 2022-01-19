@@ -15,27 +15,29 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
-import static io.netty.handler.codec.http.websocketx.extensions.compression.
-        PerMessageDeflateServerExtensionHandshaker.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.CLIENT_MAX_WINDOW;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.CLIENT_NO_CONTEXT;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.PERMESSAGE_DEFLATE_EXTENSION;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.SERVER_MAX_WINDOW;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.SERVER_NO_CONTEXT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PerMessageDeflateClientExtensionHandshakerTest {
 
@@ -217,29 +219,29 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertNotNull(extension);
 
         EmbeddedChannel decoderChannel = new EmbeddedChannel(extension.newExtensionDecoder());
-        assertTrue(
-                decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(firstPayload))));
+        assertTrue(decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1,
+                        decoderChannel.bufferAllocator().copyOf(firstPayload))));
         TextWebSocketFrame firstFrameDecompressed = decoderChannel.readInbound();
-        assertTrue(
-                decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(secondPayload))));
+        assertTrue(decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1,
+                decoderChannel.bufferAllocator().copyOf(secondPayload))));
         TextWebSocketFrame secondFrameDecompressed = decoderChannel.readInbound();
 
         assertNotNull(firstFrameDecompressed);
-        assertNotNull(firstFrameDecompressed.content());
-        assertTrue(firstFrameDecompressed instanceof TextWebSocketFrame);
+        assertNotNull(firstFrameDecompressed.binaryData());
         assertEquals(firstFrameDecompressed.text(),
                      "{\"info\":\"Welcome to the BitMEX Realtime API.\",\"version\"" +
                      ":\"2018-10-02T22:53:23.000Z\",\"timestamp\":\"2018-10-15T06:43:40.437Z\"," +
                      "\"docs\":\"https://www.bitmex.com/app/wsAPI\",\"limit\":{\"remaining\":39}}");
-        assertTrue(firstFrameDecompressed.release());
+        assertTrue(firstFrameDecompressed.isAccessible());
+        firstFrameDecompressed.close();
 
         assertNotNull(secondFrameDecompressed);
-        assertNotNull(secondFrameDecompressed.content());
-        assertTrue(secondFrameDecompressed instanceof TextWebSocketFrame);
+        assertNotNull(secondFrameDecompressed.binaryData());
         assertEquals(secondFrameDecompressed.text(),
                      "{\"success\":true,\"subscribe\":\"orderBookL2:XBTUSD\"," +
                      "\"request\":{\"op\":\"subscribe\",\"args\":[\"orderBookL2:XBTUSD\"]}}");
-        assertTrue(secondFrameDecompressed.release());
+        assertTrue(secondFrameDecompressed.isAccessible());
+        secondFrameDecompressed.close();
 
         assertFalse(decoderChannel.finish());
     }

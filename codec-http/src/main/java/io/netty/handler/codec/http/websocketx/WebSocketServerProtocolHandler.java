@@ -57,15 +57,6 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
      */
     public enum ServerHandshakeStateEvent {
         /**
-         * The Handshake was completed successfully and the channel was upgraded to websockets.
-         *
-         * @deprecated in favor of {@link HandshakeComplete} class,
-         * it provides extra information about the handshake
-         */
-        @Deprecated
-        HANDSHAKE_COMPLETE,
-
-        /**
          * The Handshake was timed out
          */
         HANDSHAKE_TIMEOUT
@@ -236,11 +227,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (serverConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
-                frame.retain();
                 Promise<Void> promise = ctx.newPromise();
                 closeSent(promise);
                 handshaker.close(ctx, (CloseWebSocketFrame) frame).cascadeTo(promise);
             } else {
+                frame.close();
                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx, ChannelFutureListeners.CLOSE);
             }
             return;

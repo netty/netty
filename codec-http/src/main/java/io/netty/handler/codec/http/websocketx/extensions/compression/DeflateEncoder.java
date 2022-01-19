@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
@@ -31,14 +32,25 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilte
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
-import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder.*;
+import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
+import static io.netty.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.FRAME_TAIL_LENGTH;
 
 /**
  * Deflate implementation of a payload compressor for
  * <tt>io.netty.handler.codec.http.websocketx.WebSocketFrame</tt>.
  */
 abstract class DeflateEncoder extends WebSocketExtensionEncoder {
+    static final Supplier<Buffer> EMPTY_DEFLATE_BLOCK;
+    static final int EMPTY_DEFLATE_BLOCK_LENGTH;
+    static {
+        byte[] emptyDeflate = { 0x00 };
+        EMPTY_DEFLATE_BLOCK = DEFAULT_GLOBAL_BUFFER_ALLOCATOR.constBufferSupplier(emptyDeflate);
+        EMPTY_DEFLATE_BLOCK_LENGTH = emptyDeflate.length;
+    }
 
     private final int compressionLevel;
     private final int windowSize;
@@ -84,24 +96,29 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final ByteBuf compressedContent;
-        if (msg.content().isReadable()) {
+        if (msg.binaryData().readableBytes() > 0) {
             compressedContent = compressContent(ctx, msg);
         } else if (msg.isFinalFragment()) {
             // Set empty DEFLATE block manually for unknown buffer size
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
-            compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
+            compressedContent = intoByteBuf(EMPTY_DEFLATE_BLOCK.get());
         } else {
+            msg.close();
             throw new CodecException("cannot compress content buffer");
         }
 
         final WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
-            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg),
+                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
         } else if (msg instanceof BinaryWebSocketFrame) {
-            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg),
+                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
         } else if (msg instanceof ContinuationWebSocketFrame) {
-            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg),
+                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
         } else {
+            compressedContent.release();
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
 
@@ -120,7 +137,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                     ZlibWrapper.NONE, compressionLevel, windowSize, 8));
         }
 
-        encoder.writeOutbound(msg.content().retain());
+        encoder.writeOutbound(intoByteBuf(msg.binaryData()));
 
         CompositeByteBuf fullCompressedContent = ctx.alloc().compositeBuffer();
         for (;;) {
@@ -146,7 +163,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         ByteBuf compressedContent;
         if (removeFrameTail(msg)) {
-            int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL.readableBytes();
+            int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL_LENGTH;
             compressedContent = fullCompressedContent.slice(0, realLength);
         } else {
             compressedContent = fullCompressedContent;

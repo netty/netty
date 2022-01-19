@@ -16,7 +16,6 @@
 package io.netty.example.http.websocketx.client;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -25,6 +24,7 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -113,7 +113,7 @@ public final class WebSocketClient {
                      }
                      p.addLast(
                              new HttpClientCodec(),
-                             new HttpObjectAggregator(8192),
+                             new HttpObjectAggregator<DefaultHttpContent>(8192),
                              WebSocketClientCompressionHandler.INSTANCE,
                              handler);
                  }
@@ -128,14 +128,15 @@ public final class WebSocketClient {
                 if (msg == null) {
                     break;
                 } else if ("bye".equalsIgnoreCase(msg)) {
-                    ch.writeAndFlush(new CloseWebSocketFrame());
+                    ch.writeAndFlush(new CloseWebSocketFrame(true, 0, ch.bufferAllocator().allocate(0)));
                     ch.closeFuture().sync();
                     break;
                 } else if ("ping".equalsIgnoreCase(msg)) {
-                    WebSocketFrame frame = new PingWebSocketFrame(Unpooled.wrappedBuffer(new byte[] { 8, 1, 8, 1 }));
+                    WebSocketFrame frame =
+                            new PingWebSocketFrame(ch.bufferAllocator().copyOf(new byte[] { 8, 1, 8, 1 }));
                     ch.writeAndFlush(frame);
                 } else {
-                    WebSocketFrame frame = new TextWebSocketFrame(msg);
+                    WebSocketFrame frame = new TextWebSocketFrame(ch.bufferAllocator(), msg);
                     ch.writeAndFlush(frame);
                 }
             }

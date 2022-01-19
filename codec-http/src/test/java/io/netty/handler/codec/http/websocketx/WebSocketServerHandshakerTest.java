@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -24,7 +25,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.api.DefaultGlobalBufferAllocator.DEFAULT_GLOBAL_BUFFER_ALLOCATOR;
@@ -88,7 +88,6 @@ public abstract class WebSocketServerHandshakerTest {
         }
     }
 
-    @Disabled("buffer migration")
     @Test
     public void testWebSocketServerHandshakeException() {
         WebSocketServerHandshaker serverHandshaker = newHandshaker("ws://example.com/chat",
@@ -99,7 +98,7 @@ public abstract class WebSocketServerHandshakerTest {
                 DEFAULT_GLOBAL_BUFFER_ALLOCATOR.allocate(0));
         request.headers().set("x-client-header", "value");
         try {
-            serverHandshaker.handshake(null, request, null);
+            serverHandshaker.handshake(new EmbeddedChannel(), request, null);
         } catch (WebSocketServerHandshakeException exception) {
             assertNotNull(exception.getMessage());
             assertEquals(request.headers(), exception.request().headers());

@@ -15,116 +15,112 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultGlobalBufferAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Web Socket Frame for closing the connection.
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty close frame.
-     */
-    public CloseWebSocketFrame() {
-        super(Unpooled.buffer(0));
-    }
-
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
-     * @param status
-     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param status Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      */
-    public CloseWebSocketFrame(WebSocketCloseStatus status) {
-        this(requireValidStatusCode(status.code()), status.reasonText());
+    public CloseWebSocketFrame(BufferAllocator allocator, WebSocketCloseStatus status) {
+        this(allocator, requireValidStatusCode(status.code()), status.reasonText());
     }
 
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
-     * @param status
-     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param status Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
      * @param reasonText
      *            Reason text. Set to null if no text.
      */
-    public CloseWebSocketFrame(WebSocketCloseStatus status, String reasonText) {
-        this(requireValidStatusCode(status.code()), reasonText);
+    public CloseWebSocketFrame(BufferAllocator allocator, WebSocketCloseStatus status, String reasonText) {
+        this(allocator, requireValidStatusCode(status.code()), reasonText);
     }
 
     /**
      * Creates a new empty close frame with closing status code and reason text
      *
-     * @param statusCode
-     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
-     *            example, <tt>1000</tt> indicates normal closure.
-     * @param reasonText
-     *            Reason text. Set to null if no text.
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param statusCode Integer status code as per <a href=
+     * "https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For example, <tt>1000</tt> indicates normal
+     * closure.
+     * @param reasonText Reason text. Set to null if no text.
      */
-    public CloseWebSocketFrame(int statusCode, String reasonText) {
-        this(true, 0, requireValidStatusCode(statusCode), reasonText);
+    public CloseWebSocketFrame(BufferAllocator allocator, int statusCode, String reasonText) {
+        this(allocator, true, 0, requireValidStatusCode(statusCode), reasonText);
     }
 
     /**
      * Creates a new close frame with no losing status code and no reason text
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions.
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions.
      */
-    public CloseWebSocketFrame(boolean finalFragment, int rsv) {
-        this(finalFragment, rsv, Unpooled.buffer(0));
+    public CloseWebSocketFrame(BufferAllocator allocator, boolean finalFragment, int rsv) {
+        this(finalFragment, rsv, allocator.allocate(0));
     }
 
     /**
      * Creates a new close frame with closing status code and reason text
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param statusCode
-     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
-     *            example, <tt>1000</tt> indicates normal closure.
-     * @param reasonText
-     *            Reason text. Set to null if no text.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions
+     * @param statusCode Integer status code as per <a href=
+     * "https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For example, <tt>1000</tt> indicates normal
+     * closure.
+     * @param reasonText Reason text. Set to null if no text.
      */
-    public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        super(finalFragment, rsv, newBinaryData(requireValidStatusCode(statusCode), reasonText));
+    public CloseWebSocketFrame(BufferAllocator allocator, boolean finalFragment, int rsv, int statusCode,
+                               String reasonText) {
+        super(finalFragment, rsv, newBinaryData(allocator, requireValidStatusCode(statusCode), reasonText));
     }
 
-    private static ByteBuf newBinaryData(int statusCode, String reasonText) {
+    private static Buffer newBinaryData(BufferAllocator allocator, short statusCode, String reasonText) {
         if (reasonText == null) {
             reasonText = StringUtil.EMPTY_STRING;
         }
 
-        ByteBuf binaryData = Unpooled.buffer(2 + reasonText.length());
-        binaryData.writeShort(statusCode);
+        final Buffer binaryData;
         if (!reasonText.isEmpty()) {
-            binaryData.writeCharSequence(reasonText, CharsetUtil.UTF_8);
+            byte[] reasonTextBytes = reasonText.getBytes(StandardCharsets.UTF_8);
+            binaryData = allocator.allocate(2 + reasonTextBytes.length);
+            binaryData.writeShort(statusCode);
+            binaryData.writeBytes(reasonTextBytes);
+        } else {
+            binaryData = allocator.allocate(2).writeShort(statusCode);
         }
 
-        binaryData.readerIndex(0);
         return binaryData;
     }
 
     /**
      * Creates a new close frame
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param binaryData
-     *            the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions
+     * @param binaryData the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
      */
-    public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
+    public CloseWebSocketFrame(boolean finalFragment, int rsv, Buffer binaryData) {
         super(finalFragment, rsv, binaryData);
+    }
+
+    private CloseWebSocketFrame(CloseWebSocketFrame copyFrom, Buffer data) {
+        super(copyFrom, data);
     }
 
     /**
@@ -132,13 +128,12 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * a status code is set, -1 is returned.
      */
     public int statusCode() {
-        ByteBuf binaryData = content();
-        if (binaryData == null || binaryData.capacity() == 0) {
+        Buffer binaryData = binaryData();
+        if (binaryData == null || binaryData.readableBytes() < 2) {
             return -1;
         }
 
-        binaryData.readerIndex(0);
-        return binaryData.getShort(0);
+        return binaryData.getShort(binaryData.readerOffset());
     }
 
     /**
@@ -146,68 +141,31 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String reasonText() {
-        ByteBuf binaryData = content();
-        if (binaryData == null || binaryData.capacity() <= 2) {
+        Buffer binaryData = binaryData();
+        if (binaryData == null || binaryData.readableBytes() <= 2) {
             return "";
         }
 
-        binaryData.readerIndex(2);
-        String reasonText = binaryData.toString(CharsetUtil.UTF_8);
-        binaryData.readerIndex(0);
-
-        return reasonText;
+        int base = binaryData.readerOffset();
+        try {
+            binaryData.skipReadable(2);
+            return binaryData.toString(CharsetUtil.UTF_8);
+        } finally {
+            binaryData.readerOffset(base);
+        }
     }
 
     @Override
-    public CloseWebSocketFrame copy() {
-        return (CloseWebSocketFrame) super.copy();
+    protected WebSocketFrame receive(Buffer buf) {
+        return new CloseWebSocketFrame(this, buf);
     }
 
-    @Override
-    public CloseWebSocketFrame duplicate() {
-        return (CloseWebSocketFrame) super.duplicate();
-    }
-
-    @Override
-    public CloseWebSocketFrame retainedDuplicate() {
-        return (CloseWebSocketFrame) super.retainedDuplicate();
-    }
-
-    @Override
-    public CloseWebSocketFrame replace(ByteBuf content) {
-        return new CloseWebSocketFrame(isFinalFragment(), rsv(), content);
-    }
-
-    @Override
-    public CloseWebSocketFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public CloseWebSocketFrame retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public CloseWebSocketFrame touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public CloseWebSocketFrame touch(Object hint) {
-        super.touch(hint);
-        return this;
-    }
-
-    static int requireValidStatusCode(int statusCode) {
+    static short requireValidStatusCode(int statusCode) {
         if (WebSocketCloseStatus.isValidStatusCode(statusCode)) {
-            return statusCode;
+            return (short) statusCode;
         } else {
-            throw new IllegalArgumentException("WebSocket close status code does NOT comply with RFC-6455: " +
-                    statusCode);
+            throw new IllegalArgumentException(
+                    "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
     }
 }

@@ -153,4 +153,31 @@ public abstract class BufferHolder<T extends BufferHolder<T>> implements Resourc
         buf.touch(hint);
         return (T) this;
     }
+
+    /**
+     * This implementation of the {@code equals} operation is restricted to work only with instances of the same class.
+     * The reason for that is that Netty library already has a number of classes that extend {@link BufferHolder} and
+     * override {@code equals} method with an additional comparison logic, and we need the symmetric property of the
+     * {@code equals} operation to be preserved.
+     *
+     * @param other The reference object with which to compare.
+     * @return {@code true} if this object is the same as the obj argument; {@code false} otherwise.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (other != null && getClass() == other.getClass()) {
+            return buf.equals(((BufferHolder<?>) other).buf);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getClass().hashCode();
+        result *= 31 + buf.hashCode();
+        return result;
+    }
 }

@@ -15,9 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
@@ -26,15 +25,18 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
-import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
-import static io.netty.util.CharsetUtil.*;
+import static io.netty.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
+import static io.netty.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateEncoder.EMPTY_DEFLATE_BLOCK;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -48,20 +50,21 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testCompressedFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
         byte[] payload = new byte[300];
         random.nextBytes(payload);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
-        ByteBuf compressedPayload = encoderChannel.readOutbound();
-
-        BinaryWebSocketFrame compressedFrame = new BinaryWebSocketFrame(true,
-                WebSocketExtension.RSV1 | WebSocketExtension.RSV3,
-                compressedPayload.slice(0, compressedPayload.readableBytes() - 4));
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(payload)));
+        BinaryWebSocketFrame compressedFrame;
+        try (Buffer compressedPayload = encoderChannel.readOutbound()) {
+            Buffer binaryData = compressedPayload.readSplit(compressedPayload.readableBytes() - 4);
+            compressedFrame = new BinaryWebSocketFrame(true, RSV1 | RSV3, binaryData);
+        }
 
         // execute
         assertTrue(decoderChannel.writeInbound(compressedFrame));
@@ -69,14 +72,14 @@ public class PerMessageDeflateDecoderTest {
 
         // test
         assertNotNull(uncompressedFrame);
-        assertNotNull(uncompressedFrame.content());
-        assertEquals(WebSocketExtension.RSV3, uncompressedFrame.rsv());
-        assertEquals(300, uncompressedFrame.content().readableBytes());
+        assertNotNull(uncompressedFrame.binaryData());
+        assertEquals(RSV3, uncompressedFrame.rsv());
+        assertEquals(300, uncompressedFrame.binaryData().readableBytes());
 
         byte[] finalPayload = new byte[300];
-        uncompressedFrame.content().readBytes(finalPayload);
+        uncompressedFrame.binaryData().readBytes(finalPayload, 0, finalPayload.length);
         assertArrayEquals(finalPayload, payload);
-        uncompressedFrame.release();
+        uncompressedFrame.close();
     }
 
     @Test
@@ -88,7 +91,7 @@ public class PerMessageDeflateDecoderTest {
         random.nextBytes(payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
-                WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload));
+                RSV3, decoderChannel.bufferAllocator().copyOf(payload));
 
         // execute
         assertTrue(decoderChannel.writeInbound(frame));
@@ -96,43 +99,42 @@ public class PerMessageDeflateDecoderTest {
 
         // test
         assertNotNull(newFrame);
-        assertNotNull(newFrame.content());
-        assertEquals(WebSocketExtension.RSV3, newFrame.rsv());
-        assertEquals(300, newFrame.content().readableBytes());
+        assertNotNull(newFrame.binaryData());
+        assertEquals(RSV3, newFrame.rsv());
+        assertEquals(300, newFrame.binaryData().readableBytes());
 
         byte[] finalPayload = new byte[300];
-        newFrame.content().readBytes(finalPayload);
+        newFrame.binaryData().readBytes(finalPayload, 0, finalPayload.length);
         assertArrayEquals(finalPayload, payload);
-        newFrame.release();
+        newFrame.close();
     }
 
     @Test
     public void testFragmentedFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
         byte[] payload = new byte[300];
         random.nextBytes(payload);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
-        ByteBuf compressedPayload = encoderChannel.readOutbound();
-        compressedPayload = compressedPayload.slice(0, compressedPayload.readableBytes() - 4);
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(payload)));
+        Buffer compressedPayload = encoderChannel.readOutbound();
+        BinaryWebSocketFrame compressedFrame1;
+        ContinuationWebSocketFrame compressedFrame2;
+        ContinuationWebSocketFrame compressedFrame3;
+        compressedPayload.skipWritable(-4);
 
         int oneThird = compressedPayload.readableBytes() / 3;
-        BinaryWebSocketFrame compressedFrame1 = new BinaryWebSocketFrame(false,
-                WebSocketExtension.RSV1 | WebSocketExtension.RSV3,
-                compressedPayload.slice(0, oneThird));
-        ContinuationWebSocketFrame compressedFrame2 = new ContinuationWebSocketFrame(false,
-                WebSocketExtension.RSV3, compressedPayload.slice(oneThird, oneThird));
-        ContinuationWebSocketFrame compressedFrame3 = new ContinuationWebSocketFrame(true,
-                WebSocketExtension.RSV3, compressedPayload.slice(oneThird * 2,
-                        compressedPayload.readableBytes() - oneThird * 2));
+        compressedFrame1 = new BinaryWebSocketFrame(false, RSV1 | RSV3, compressedPayload.readSplit(oneThird));
+        compressedFrame2 = new ContinuationWebSocketFrame(false, RSV3, compressedPayload.readSplit(oneThird));
+        compressedFrame3 = new ContinuationWebSocketFrame(true, RSV3, compressedPayload);
 
         // execute
-        assertTrue(decoderChannel.writeInbound(compressedFrame1.retain()));
-        assertTrue(decoderChannel.writeInbound(compressedFrame2.retain()));
+        assertTrue(decoderChannel.writeInbound(compressedFrame1));
+        assertTrue(decoderChannel.writeInbound(compressedFrame2));
         assertTrue(decoderChannel.writeInbound(compressedFrame3));
         BinaryWebSocketFrame uncompressedFrame1 = decoderChannel.readInbound();
         ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
@@ -142,24 +144,31 @@ public class PerMessageDeflateDecoderTest {
         assertNotNull(uncompressedFrame1);
         assertNotNull(uncompressedFrame2);
         assertNotNull(uncompressedFrame3);
-        assertEquals(WebSocketExtension.RSV3, uncompressedFrame1.rsv());
-        assertEquals(WebSocketExtension.RSV3, uncompressedFrame2.rsv());
-        assertEquals(WebSocketExtension.RSV3, uncompressedFrame3.rsv());
+        assertEquals(RSV3, uncompressedFrame1.rsv());
+        assertEquals(RSV3, uncompressedFrame2.rsv());
+        assertEquals(RSV3, uncompressedFrame3.rsv());
 
-        ByteBuf finalPayloadWrapped = Unpooled.wrappedBuffer(uncompressedFrame1.content(),
-                uncompressedFrame2.content(), uncompressedFrame3.content());
+        Buffer finalPayloadWrapped = encoderChannel.bufferAllocator()
+                .allocate(uncompressedFrame1.binaryData().readableBytes() +
+                        uncompressedFrame2.binaryData().readableBytes() +
+                        uncompressedFrame3.binaryData().readableBytes());
+        finalPayloadWrapped.writeBytes(uncompressedFrame1.binaryData());
+        finalPayloadWrapped.writeBytes(uncompressedFrame2.binaryData());
+        finalPayloadWrapped.writeBytes(uncompressedFrame3.binaryData());
+
         assertEquals(300, finalPayloadWrapped.readableBytes());
 
         byte[] finalPayload = new byte[300];
-        finalPayloadWrapped.readBytes(finalPayload);
+        finalPayloadWrapped.readBytes(finalPayload, 0, finalPayload.length);
         assertArrayEquals(finalPayload, payload);
-        finalPayloadWrapped.release();
+        finalPayloadWrapped.close();
     }
 
     @Test
     public void testMultiCompressedPayloadWithinFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
@@ -168,16 +177,18 @@ public class PerMessageDeflateDecoderTest {
         byte[] payload2 = new byte[100];
         random.nextBytes(payload2);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload1)));
-        ByteBuf compressedPayload1 = encoderChannel.readOutbound();
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload2)));
-        ByteBuf compressedPayload2 = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(payload1)));
+        Buffer compressedPayload1 = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(payload2)));
+        Buffer compressedPayload2 = encoderChannel.readOutbound();
 
-        BinaryWebSocketFrame compressedFrame = new BinaryWebSocketFrame(true,
-                WebSocketExtension.RSV1 | WebSocketExtension.RSV3,
-                Unpooled.wrappedBuffer(
-                        compressedPayload1,
-                        compressedPayload2.slice(0, compressedPayload2.readableBytes() - 4)));
+        Buffer compressedFrameData = encoderChannel.bufferAllocator()
+                .allocate(compressedPayload1.readableBytes() + compressedPayload2.readableBytes() - 4);
+        compressedFrameData.writeBytes(compressedPayload1);
+        compressedFrameData.writeBytes(compressedPayload2.skipWritable(-4));
+        BinaryWebSocketFrame compressedFrame = new BinaryWebSocketFrame(true, RSV1 | RSV3, compressedFrameData);
+        compressedPayload1.close();
+        compressedPayload2.close();
 
         // execute
         assertTrue(decoderChannel.writeInbound(compressedFrame));
@@ -185,17 +196,17 @@ public class PerMessageDeflateDecoderTest {
 
         // test
         assertNotNull(uncompressedFrame);
-        assertNotNull(uncompressedFrame.content());
-        assertEquals(WebSocketExtension.RSV3, uncompressedFrame.rsv());
-        assertEquals(200, uncompressedFrame.content().readableBytes());
+        assertNotNull(uncompressedFrame.binaryData());
+        assertEquals(RSV3, uncompressedFrame.rsv());
+        assertEquals(200, uncompressedFrame.binaryData().readableBytes());
 
         byte[] finalPayload1 = new byte[100];
-        uncompressedFrame.content().readBytes(finalPayload1);
+        uncompressedFrame.binaryData().readBytes(finalPayload1, 0, finalPayload1.length);
         assertArrayEquals(finalPayload1, payload1);
         byte[] finalPayload2 = new byte[100];
-        uncompressedFrame.content().readBytes(finalPayload2);
+        uncompressedFrame.binaryData().readBytes(finalPayload2, 0, finalPayload2.length);
         assertArrayEquals(finalPayload2, payload2);
-        uncompressedFrame.release();
+        uncompressedFrame.close();
     }
 
     @Test
@@ -207,18 +218,18 @@ public class PerMessageDeflateDecoderTest {
         byte[] payload = new byte[300];
         random.nextBytes(payload);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
-        ByteBuf compressedPayload = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(payload)));
+        Buffer compressedPayload = encoderChannel.readOutbound();
 
-        BinaryWebSocketFrame compressedBinaryFrame = new BinaryWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                              compressedPayload);
+        BinaryWebSocketFrame compressedBinaryFrame = new BinaryWebSocketFrame(true, RSV1, compressedPayload);
         assertTrue(decoderChannel.writeInbound(compressedBinaryFrame));
 
         WebSocketFrame inboundFrame = decoderChannel.readInbound();
 
-        assertEquals(WebSocketExtension.RSV1, inboundFrame.rsv());
-        assertEquals(compressedPayload, inboundFrame.content());
-        assertTrue(inboundFrame.release());
+        assertEquals(RSV1, inboundFrame.rsv());
+        assertEquals(compressedPayload, inboundFrame.binaryData());
+        assertTrue(inboundFrame.isAccessible());
+        inboundFrame.close();
 
         assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
@@ -227,9 +238,10 @@ public class PerMessageDeflateDecoderTest {
     @Test
     public void testSelectivityDecompressionSkip() {
         WebSocketExtensionFilter selectivityDecompressionFilter =
-                frame -> frame instanceof TextWebSocketFrame && frame.content().readableBytes() < 100;
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                frame -> frame instanceof TextWebSocketFrame && frame.binaryData().readableBytes() < 100;
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
 
@@ -237,15 +249,13 @@ public class PerMessageDeflateDecoderTest {
         byte[] binaryPayload = new byte[300];
         random.nextBytes(binaryPayload);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(textPayload.getBytes(UTF_8))));
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(binaryPayload)));
-        ByteBuf compressedTextPayload = encoderChannel.readOutbound();
-        ByteBuf compressedBinaryPayload = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(textPayload.getBytes(UTF_8))));
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(binaryPayload)));
+        Buffer compressedTextPayload = encoderChannel.readOutbound();
+        Buffer compressedBinaryPayload = encoderChannel.readOutbound();
 
-        TextWebSocketFrame compressedTextFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                        compressedTextPayload);
-        BinaryWebSocketFrame compressedBinaryFrame = new BinaryWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                              compressedBinaryPayload);
+        TextWebSocketFrame compressedTextFrame = new TextWebSocketFrame(true, RSV1, compressedTextPayload);
+        BinaryWebSocketFrame compressedBinaryFrame = new BinaryWebSocketFrame(true, RSV1, compressedBinaryPayload);
 
         assertTrue(decoderChannel.writeInbound(compressedTextFrame));
         assertTrue(decoderChannel.writeInbound(compressedBinaryFrame));
@@ -253,13 +263,15 @@ public class PerMessageDeflateDecoderTest {
         TextWebSocketFrame inboundTextFrame = decoderChannel.readInbound();
         BinaryWebSocketFrame inboundBinaryFrame = decoderChannel.readInbound();
 
-        assertEquals(WebSocketExtension.RSV1, inboundTextFrame.rsv());
-        assertEquals(compressedTextPayload, inboundTextFrame.content());
-        assertTrue(inboundTextFrame.release());
+        assertEquals(RSV1, inboundTextFrame.rsv());
+        assertEquals(compressedTextPayload, inboundTextFrame.binaryData());
+        assertTrue(inboundTextFrame.isAccessible());
+        inboundTextFrame.close();
 
         assertEquals(0, inboundBinaryFrame.rsv());
-        assertArrayEquals(binaryPayload, ByteBufUtil.getBytes(inboundBinaryFrame.content()));
-        assertTrue(inboundBinaryFrame.release());
+        assertArrayEquals(binaryPayload, readIntoByteArray(inboundBinaryFrame));
+        assertTrue(inboundBinaryFrame.isAccessible());
+        inboundBinaryFrame.close();
 
         assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
@@ -267,10 +279,11 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testIllegalStateWhenDecompressionInProgress() {
-        WebSocketExtensionFilter selectivityDecompressionFilter = frame -> frame.content().readableBytes() < 100;
+        WebSocketExtensionFilter selectivityDecompressionFilter = frame -> frame.binaryData().readableBytes() < 100;
 
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
 
@@ -280,29 +293,29 @@ public class PerMessageDeflateDecoderTest {
         byte[] finalPayload = new byte[50];
         random.nextBytes(finalPayload);
 
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(firstPayload)));
-        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(finalPayload)));
-        ByteBuf compressedFirstPayload = encoderChannel.readOutbound();
-        ByteBuf compressedFinalPayload = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(firstPayload)));
+        assertTrue(encoderChannel.writeOutbound(encoderChannel.bufferAllocator().copyOf(finalPayload)));
+        Buffer compressedFirstPayload = encoderChannel.readOutbound();
+        Buffer compressedFinalPayload = encoderChannel.readOutbound();
         assertTrue(encoderChannel.finishAndReleaseAll());
 
-        BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, WebSocketExtension.RSV1,
-                                                                  compressedFirstPayload);
-        ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                              compressedFinalPayload);
+        BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, RSV1, compressedFirstPayload);
+        ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, RSV1, compressedFinalPayload);
         assertTrue(decoderChannel.writeInbound(firstPart));
 
         BinaryWebSocketFrame outboundFirstPart = decoderChannel.readInbound();
         //first part is decompressed
         assertEquals(0, outboundFirstPart.rsv());
-        assertArrayEquals(firstPayload, ByteBufUtil.getBytes(outboundFirstPart.content()));
-        assertTrue(outboundFirstPart.release());
+        assertArrayEquals(firstPayload, readIntoByteArray(outboundFirstPart));
+        assertTrue(outboundFirstPart.isAccessible());
+        outboundFirstPart.close();
 
         //final part throwing exception
         try {
             assertThrows(DecoderException.class, () -> decoderChannel.writeInbound(finalPart));
         } finally {
-            assertTrue(finalPart.release());
+            assertTrue(finalPart.isAccessible());
+            finalPart.close();
             assertFalse(encoderChannel.finishAndReleaseAll());
         }
     }
@@ -311,16 +324,16 @@ public class PerMessageDeflateDecoderTest {
     public void testEmptyFrameDecompression() {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
-        TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                           EMPTY_DEFLATE_BLOCK);
+        TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, RSV1, EMPTY_DEFLATE_BLOCK.get());
 
         assertTrue(decoderChannel.writeInbound(emptyDeflateBlockFrame));
         TextWebSocketFrame emptyBufferFrame = decoderChannel.readInbound();
 
-        assertFalse(emptyBufferFrame.content().isReadable());
+        assertFalse(emptyBufferFrame.binaryData().readableBytes() > 0);
 
         // Composite empty buffer
-        assertTrue(emptyBufferFrame.release());
+        assertTrue(emptyBufferFrame.isAccessible());
+        emptyBufferFrame.close();
         assertFalse(decoderChannel.finish());
     }
 
@@ -332,37 +345,35 @@ public class PerMessageDeflateDecoderTest {
                          "f6f736e73746575637a6d727a7175707a6e74627578687871767771697a71766c64626d78726d6d7675756877" +
                          "62667963626b687a726d676e646263776e67797264706d6c6863626577616967706a78636a72697464756e627" +
                          "977616f79736475676f76736f7178746a7a7479626c64636b6b6778637768746c62";
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
+                BUFFER_TO_BYTEBUF_HANDLER);
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
-        ByteBuf originPayload = Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(hexDump));
-        assertTrue(encoderChannel.writeOutbound(originPayload.duplicate().retain()));
+        Buffer originPayload = encoderChannel.bufferAllocator().copyOf(ByteBufUtil.decodeHexDump(hexDump));
+        assertTrue(encoderChannel.writeOutbound(originPayload.copy()));
 
-        ByteBuf compressedPayload = encoderChannel.readOutbound();
-        compressedPayload = compressedPayload.slice(0, compressedPayload.readableBytes() - 4);
+        Buffer compressedPayload = encoderChannel.readOutbound();
+        TextWebSocketFrame compressedFrame1;
+        ContinuationWebSocketFrame compressedFrame2;
+        ContinuationWebSocketFrame compressedFrame3;
+        ContinuationWebSocketFrame compressedFrameWithExtraData;
 
+        compressedPayload.skipWritable(-4);
         int oneThird = compressedPayload.readableBytes() / 3;
-
-        TextWebSocketFrame compressedFrame1 = new TextWebSocketFrame(
-                false, WebSocketExtension.RSV1, compressedPayload.slice(0, oneThird));
-        ContinuationWebSocketFrame compressedFrame2 = new ContinuationWebSocketFrame(
-                false, WebSocketExtension.RSV3, compressedPayload.slice(oneThird, oneThird));
-        ContinuationWebSocketFrame compressedFrame3 = new ContinuationWebSocketFrame(
-                false, WebSocketExtension.RSV3, compressedPayload.slice(oneThird * 2, oneThird));
-        int offset = oneThird * 3;
-        ContinuationWebSocketFrame compressedFrameWithExtraData = new ContinuationWebSocketFrame(
-                true, WebSocketExtension.RSV3, compressedPayload.slice(offset,
-                     compressedPayload.readableBytes() - offset));
+        compressedFrame1 = new TextWebSocketFrame(false, RSV1, compressedPayload.readSplit(oneThird));
+        compressedFrame2 = new ContinuationWebSocketFrame(false, RSV3, compressedPayload.readSplit(oneThird));
+        compressedFrame3 = new ContinuationWebSocketFrame(false, RSV3, compressedPayload.readSplit(oneThird));
+        compressedFrameWithExtraData = new ContinuationWebSocketFrame(true, RSV3, compressedPayload);
 
         // check that last fragment contains only one extra byte
-        assertEquals(1, compressedFrameWithExtraData.content().readableBytes());
-        assertEquals(1, compressedFrameWithExtraData.content().getByte(0));
+        assertEquals(1, compressedFrameWithExtraData.binaryData().readableBytes());
+        assertEquals(1, compressedFrameWithExtraData.binaryData().getByte(0));
 
         // write compressed frames
-        assertTrue(decoderChannel.writeInbound(compressedFrame1.retain()));
-        assertTrue(decoderChannel.writeInbound(compressedFrame2.retain()));
-        assertTrue(decoderChannel.writeInbound(compressedFrame3.retain()));
+        assertTrue(decoderChannel.writeInbound(compressedFrame1));
+        assertTrue(decoderChannel.writeInbound(compressedFrame2));
+        assertTrue(decoderChannel.writeInbound(compressedFrame3));
         assertTrue(decoderChannel.writeInbound(compressedFrameWithExtraData));
 
         // read uncompressed frames
@@ -370,16 +381,34 @@ public class PerMessageDeflateDecoderTest {
         ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
         ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound();
         ContinuationWebSocketFrame uncompressedExtraData = decoderChannel.readInbound();
-        assertFalse(uncompressedExtraData.content().isReadable());
+        assertFalse(uncompressedExtraData.binaryData().readableBytes() > 0);
 
-        ByteBuf uncompressedPayload = Unpooled.wrappedBuffer(uncompressedFrame1.content(), uncompressedFrame2.content(),
-                                      uncompressedFrame3.content(), uncompressedExtraData.content());
+        Buffer uncompressedPayload = encoderChannel.bufferAllocator()
+                .allocate(uncompressedFrame1.binaryData().readableBytes() +
+                        uncompressedFrame2.binaryData().readableBytes() +
+                        uncompressedFrame3.binaryData().readableBytes());
+        uncompressedPayload.writeBytes(uncompressedFrame1.binaryData());
+        uncompressedPayload.writeBytes(uncompressedFrame2.binaryData());
+        uncompressedPayload.writeBytes(uncompressedFrame3.binaryData());
         assertEquals(originPayload, uncompressedPayload);
 
-        assertTrue(originPayload.release());
-        assertTrue(uncompressedPayload.release());
+        assertTrue(originPayload.isAccessible());
+        originPayload.close();
+        assertTrue(uncompressedPayload.isAccessible());
+        uncompressedPayload.close();
 
         assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
+    }
+
+    private static byte[] readIntoByteArray(WebSocketFrame frame) {
+        return readIntoByteArray(frame, frame.binaryData().readableBytes());
+    }
+
+    private static byte[] readIntoByteArray(WebSocketFrame outboundFrame, int length) {
+        Buffer frameBuffer = outboundFrame.binaryData();
+        byte[] frameBytes = new byte[length];
+        frameBuffer.readBytes(frameBytes, 0, frameBytes.length);
+        return frameBytes;
     }
 }

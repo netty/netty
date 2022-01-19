@@ -90,5 +90,4 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
             compressing = true;
         }
     }
-
 }

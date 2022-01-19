@@ -15,61 +15,54 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.CharsetUtil;
 
 /**
  * Web Socket text frame.
  */
 public class TextWebSocketFrame extends WebSocketFrame {
-
-    /**
-     * Creates a new empty text frame.
-     */
-    public TextWebSocketFrame() {
-        super(Unpooled.buffer(0));
-    }
-
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
      *
-     * @param text
-     *            String to put in the frame.
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param text String to put in the frame.
      */
-    public TextWebSocketFrame(String text) {
-        super(fromText(text));
+    public TextWebSocketFrame(BufferAllocator allocator, String text) {
+        super(fromText(allocator, text));
     }
 
     /**
      * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
      *
-     * @param binaryData
-     *            the content of the frame.
+     * @param binaryData the content of the frame.
      */
-    public TextWebSocketFrame(ByteBuf binaryData) {
+    public TextWebSocketFrame(Buffer binaryData) {
         super(binaryData);
     }
 
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
      *
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param text
-     *            String to put in the frame.
+     * @param allocator {@link BufferAllocator} to use for allocating data.
+     * @param finalFragment flag indicating if this frame is the final fragment
+     * @param rsv reserved bits used for protocol extensions
+     * @param text String to put in the frame.
      */
-    public TextWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        super(finalFragment, rsv, fromText(text));
+    public TextWebSocketFrame(BufferAllocator allocator, boolean finalFragment, int rsv, String text) {
+        super(finalFragment, rsv, fromText(allocator, text));
     }
 
-    private static ByteBuf fromText(String text) {
+    private TextWebSocketFrame(TextWebSocketFrame copyFrom, Buffer data) {
+        super(copyFrom, data);
+    }
+
+    private static Buffer fromText(BufferAllocator allocator, String text) {
         if (text == null || text.isEmpty()) {
-            return Unpooled.EMPTY_BUFFER;
+            return allocator.allocate(0);
         } else {
-            return Unpooled.copiedBuffer(text, CharsetUtil.UTF_8);
+            return allocator.copyOf(text.getBytes(CharsetUtil.UTF_8));
         }
     }
 
@@ -83,7 +76,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public TextWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
+    public TextWebSocketFrame(boolean finalFragment, int rsv, Buffer binaryData) {
         super(finalFragment, rsv, binaryData);
     }
 
@@ -91,50 +84,11 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Returns the text data in this frame.
      */
     public String text() {
-        return content().toString(CharsetUtil.UTF_8);
+        return binaryData().toString(CharsetUtil.UTF_8);
     }
 
     @Override
-    public TextWebSocketFrame copy() {
-        return (TextWebSocketFrame) super.copy();
-    }
-
-    @Override
-    public TextWebSocketFrame duplicate() {
-        return (TextWebSocketFrame) super.duplicate();
-    }
-
-    @Override
-    public TextWebSocketFrame retainedDuplicate() {
-        return (TextWebSocketFrame) super.retainedDuplicate();
-    }
-
-    @Override
-    public TextWebSocketFrame replace(ByteBuf content) {
-        return new TextWebSocketFrame(isFinalFragment(), rsv(), content);
-    }
-
-    @Override
-    public TextWebSocketFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public TextWebSocketFrame retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public TextWebSocketFrame touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public TextWebSocketFrame touch(Object hint) {
-        super.touch(hint);
-        return this;
+    protected WebSocketFrame receive(Buffer buf) {
+        return new TextWebSocketFrame(this, buf);
     }
 }

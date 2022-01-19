@@ -104,13 +104,13 @@ public class AutobahnServerHandler implements ChannelHandler {
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx, (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
+            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.binaryData()));
         } else if (frame instanceof TextWebSocketFrame ||
                 frame instanceof BinaryWebSocketFrame ||
                 frame instanceof ContinuationWebSocketFrame) {
             ctx.write(frame);
         } else if (frame instanceof PongWebSocketFrame) {
-            frame.release();
+            frame.close();
             // Ignore
         } else {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
