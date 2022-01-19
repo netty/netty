@@ -302,7 +302,7 @@ final class PoolThreadCache {
 
     private static final class Cache {
         final PoolArena arena;
-        // Hold the caches for the different size classes, which are tiny, small and normal.
+        // Hold the caches for the different size classes, which are small and normal.
         final MemoryRegionCache[] smallSubPageCaches;
         final MemoryRegionCache[] normalCaches;
 
