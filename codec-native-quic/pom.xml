@@ -29,6 +29,7 @@
 
   <properties>
     <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
+    <fragmentHost>io.netty.incubator.netty-incubator-codec-classes-quic</fragmentHost>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
@@ -981,6 +982,7 @@
                 </manifest>
                 <manifestEntries>
                   <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Fragment-Host>${fragmentHost}</Fragment-Host>
                   <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
                 <index>true</index>
