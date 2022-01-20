@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
@@ -51,8 +52,7 @@ public class ByteEchoPeerBase {
 
     public void run() throws Exception {
         final ThreadFactory connectFactory = new DefaultThreadFactory("rendezvous");
-        final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.BYTE_PROVIDER);
+        final NioEventLoopGroup connectGroup = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(connectFactory).setSelectorProvider(NioUdtProvider.BYTE_PROVIDER).createNioEventLoopGroup();
         try {
             final Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(connectGroup)

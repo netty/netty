@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -86,7 +87,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         run(info, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                NioEventLoopGroup group = new NioEventLoopGroup(1);
+                NioEventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
                 ServerBootstrap sb = new ServerBootstrap().group(group);
                 Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                     @Override

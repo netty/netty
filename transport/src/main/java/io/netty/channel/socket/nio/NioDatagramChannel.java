@@ -66,6 +66,10 @@ public final class NioDatagramChannel
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
+
+    private static final String NETWORK_INTERFACE = "networkInterface";
+    private static final String MULTICAST_ADDRESSSTR = "multicastAddress";
+
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -408,8 +412,8 @@ public final class NioDatagramChannel
 
         checkJavaVersion();
 
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        ObjectUtil.checkNotNull(multicastAddress, MULTICAST_ADDRESSSTR);
+        ObjectUtil.checkNotNull(networkInterface, NETWORK_INTERFACE);
 
         try {
             MembershipKey key;
@@ -483,8 +487,8 @@ public final class NioDatagramChannel
             ChannelPromise promise) {
         checkJavaVersion();
 
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        ObjectUtil.checkNotNull(multicastAddress, MULTICAST_ADDRESSSTR);
+        ObjectUtil.checkNotNull(networkInterface, NETWORK_INTERFACE);
 
         synchronized (this) {
             if (memberships != null) {
@@ -533,9 +537,9 @@ public final class NioDatagramChannel
             InetAddress sourceToBlock, ChannelPromise promise) {
         checkJavaVersion();
 
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
+        ObjectUtil.checkNotNull(multicastAddress, MULTICAST_ADDRESSSTR);
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        ObjectUtil.checkNotNull(networkInterface, NETWORK_INTERFACE);
 
         synchronized (this) {
             if (memberships != null) {

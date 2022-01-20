@@ -62,7 +62,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
+        return new NioEventLoopGroupBuilder().createNioEventLoopGroup();
     }
 
     @Override
@@ -72,7 +72,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testRebuildSelector() {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
             Channel channel = new NioServerSocketChannel();
@@ -103,7 +103,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
 
         final EventLoop el = group.next();
         Future<?> future = el.schedule(new Runnable() {
@@ -120,7 +120,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testInterruptEventLoopThread() throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
             Selector selector = loop.unwrappedSelector();
@@ -164,7 +164,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        NioEventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
         NioEventLoop loop = (NioEventLoop) group.next();
 
         try {
@@ -210,7 +210,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         };
         // Just run often enough to trigger it normally.
         for (int i = 0; i < 1000; i++) {
-            NioEventLoopGroup group = new NioEventLoopGroup(1);
+            NioEventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
             final NioEventLoop loop = (NioEventLoop) group.next();
 
             Thread t = new Thread(new Runnable() {
@@ -255,8 +255,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             }
         };
 
-        EventLoopGroup group = new NioEventLoopGroup(1, new DefaultThreadFactory("ioPool"),
-                                                     SelectorProvider.provider(), selectStrategyFactory);
+        EventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(new DefaultThreadFactory("ioPool")).setSelectorProvider(SelectorProvider.provider()).setSelectStrategyFactory(selectStrategyFactory).createNioEventLoopGroup();
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
             Channel channel = new NioServerSocketChannel();
@@ -278,7 +277,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testChannelsRegistered() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        NioEventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
         final NioEventLoop loop = (NioEventLoop) group.next();
 
         try {
@@ -318,17 +317,13 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Test
     public void testCustomQueue()  {
         final AtomicBoolean called = new AtomicBoolean();
-        NioEventLoopGroup group = new NioEventLoopGroup(1,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory(NioEventLoopGroup.class)),
-                DefaultEventExecutorChooserFactory.INSTANCE, SelectorProvider.provider(),
-                DefaultSelectStrategyFactory.INSTANCE, RejectedExecutionHandlers.reject(),
-                new EventLoopTaskQueueFactory() {
-                    @Override
-                    public Queue<Runnable> newTaskQueue(int maxCapacity) {
-                        called.set(true);
-                        return new LinkedBlockingQueue<Runnable>(maxCapacity);
-                    }
-        });
+        NioEventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(1).setExecutor(new ThreadPerTaskExecutor(new DefaultThreadFactory(NioEventLoopGroup.class))).setChooserFactory(DefaultEventExecutorChooserFactory.INSTANCE).setSelectorProvider(SelectorProvider.provider()).setSelectStrategyFactory(DefaultSelectStrategyFactory.INSTANCE).setRejectedExecutionHandler(RejectedExecutionHandlers.reject()).setTaskQueueFactory(new EventLoopTaskQueueFactory() {
+			@Override
+			public Queue<Runnable> newTaskQueue(int maxCapacity) {
+				called.set(true);
+				return new LinkedBlockingQueue<Runnable>(maxCapacity);
+			}
+		}).createNioEventLoopGroup();
 
         final NioEventLoop loop = (NioEventLoop) group.next();
 

@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -61,9 +61,9 @@ public class SocketTestPermutation {
     protected static final int OIO_SO_TIMEOUT = 10;  // Use short timeout for faster runs.
 
     protected final EventLoopGroup nioBossGroup =
-            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true));
+			new NioEventLoopGroupBuilder().setnThreads(BOSSES).setThreadFactory(new DefaultThreadFactory("testsuite-nio-boss", true)).createNioEventLoopGroup();
     protected final EventLoopGroup nioWorkerGroup =
-            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true));
+			new NioEventLoopGroupBuilder().setnThreads(WORKERS).setThreadFactory(new DefaultThreadFactory("testsuite-nio-worker", true)).createNioEventLoopGroup();
     protected final EventLoopGroup oioBossGroup =
             new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-boss", true));
     protected final EventLoopGroup oioWorkerGroup =

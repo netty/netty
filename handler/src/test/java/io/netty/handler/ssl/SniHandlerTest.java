@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.util.concurrent.Future;
 
 import io.netty.bootstrap.Bootstrap;
@@ -47,7 +48,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DecoderException;
@@ -409,7 +409,7 @@ public class SniHandlerTest {
                     .add("*.netty.io", nettyContext)
                     .add("sni.fake.site", sniContext).build();
             final SniHandler handler = new SniHandler(mapping);
-            EventLoopGroup group = new NioEventLoopGroup(2);
+            EventLoopGroup group = new NioEventLoopGroupBuilder().setnThreads(2).createNioEventLoopGroup();
             Channel serverChannel = null;
             Channel clientChannel = null;
             try {

@@ -23,7 +23,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -69,7 +69,7 @@ public final class TcpDnsClient {
     }
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroupBuilder().createNioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

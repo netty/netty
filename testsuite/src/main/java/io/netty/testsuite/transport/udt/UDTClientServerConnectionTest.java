@@ -25,6 +25,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
@@ -72,8 +73,7 @@ public class UDTClientServerConnectionTest {
         public void run() {
             final Bootstrap boot = new Bootstrap();
             final ThreadFactory clientFactory = new DefaultThreadFactory("client");
-            final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                    clientFactory, NioUdtProvider.BYTE_PROVIDER);
+            final NioEventLoopGroup connectGroup = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(clientFactory).setSelectorProvider(NioUdtProvider.BYTE_PROVIDER).createNioEventLoopGroup();
             try {
                 boot.group(connectGroup)
                         .channelFactory(NioUdtProvider.BYTE_CONNECTOR)
@@ -198,10 +198,8 @@ public class UDTClientServerConnectionTest {
             final ServerBootstrap boot = new ServerBootstrap();
             final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
             final ThreadFactory serverFactory = new DefaultThreadFactory("server");
-            final NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1,
-                    acceptFactory, NioUdtProvider.BYTE_PROVIDER);
-            final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                    serverFactory, NioUdtProvider.BYTE_PROVIDER);
+            final NioEventLoopGroup acceptGroup = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(acceptFactory).setSelectorProvider(NioUdtProvider.BYTE_PROVIDER).createNioEventLoopGroup();
+            final NioEventLoopGroup connectGroup = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(serverFactory).setSelectorProvider(NioUdtProvider.BYTE_PROVIDER).createNioEventLoopGroup();
             try {
                 boot.group(acceptGroup, connectGroup)
                         .channelFactory(NioUdtProvider.BYTE_ACCEPTOR)

@@ -17,7 +17,7 @@ package io.netty.example.securechat;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.telnet.TelnetServer;
 import io.netty.handler.logging.LogLevel;
@@ -38,8 +38,8 @@ public final class SecureChatServer {
         SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
             .build();
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroupBuilder().createNioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)

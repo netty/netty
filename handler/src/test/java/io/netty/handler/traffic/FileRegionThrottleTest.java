@@ -26,7 +26,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -85,7 +85,7 @@ public class FileRegionThrottleTest {
 
     @BeforeEach
     public void setUp() {
-        group = new NioEventLoopGroup();
+        group = new NioEventLoopGroupBuilder().createNioEventLoopGroup();
     }
 
     @AfterEach

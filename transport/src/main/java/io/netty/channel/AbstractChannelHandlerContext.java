@@ -962,7 +962,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private boolean invokeHandler() {
         // Store in local variable to reduce volatile reads.
         int handlerState = this.handlerState;
-        return handlerState == ADD_COMPLETE || (!ordered && handlerState == ADD_PENDING);
+        return handlerState == ADD_COMPLETE || !ordered && handlerState == ADD_PENDING;
     }
 
     @Override

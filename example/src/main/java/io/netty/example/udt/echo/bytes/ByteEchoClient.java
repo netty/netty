@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
@@ -44,8 +45,7 @@ public final class ByteEchoClient {
     public static void main(String[] args) throws Exception {
         // Configure the client.
         final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
-        final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.BYTE_PROVIDER);
+        final NioEventLoopGroup connectGroup = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(connectFactory).setSelectorProvider(NioUdtProvider.BYTE_PROVIDER).createNioEventLoopGroup();
         try {
             final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)

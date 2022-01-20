@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.logging.LogLevel;
@@ -41,9 +42,9 @@ public final class MsgEchoServer {
         final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
         final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
         final NioEventLoopGroup acceptGroup =
-                new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.MESSAGE_PROVIDER);
+				new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(acceptFactory).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
         final NioEventLoopGroup connectGroup =
-                new NioEventLoopGroup(1, connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
+				new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(connectFactory).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
 
         // Configure the server.
         try {

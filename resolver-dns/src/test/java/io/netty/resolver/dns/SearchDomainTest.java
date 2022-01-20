@@ -16,7 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +58,7 @@ public class SearchDomainTest {
 
     @BeforeEach
     public void before() {
-        group = new NioEventLoopGroup(1);
+        group = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
     }
 
     @AfterEach

@@ -19,6 +19,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.internal.PlatformDependent;
@@ -205,7 +206,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             executorToShutdown = executor;
             break;
         case nioEventLoop:
-            NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(1);
+            NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroupBuilder().setnThreads(1).createNioEventLoopGroup();
             nioEventLoopGroup.setIoRatio(1);
             executor = nioEventLoopGroup.next();
             executorToShutdown = nioEventLoopGroup;

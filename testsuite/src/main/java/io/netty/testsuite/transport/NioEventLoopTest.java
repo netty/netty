@@ -18,7 +18,7 @@ package io.netty.testsuite.transport;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -26,7 +26,7 @@ public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
+        return new NioEventLoopGroupBuilder().createNioEventLoopGroup();
     }
 
     @Override

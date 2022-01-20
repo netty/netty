@@ -468,11 +468,9 @@ public class LocalChannel extends AbstractChannel {
 
             connectPromise = promise;
 
-            if (state != State.BOUND) {
+            if (state != State.BOUND && localAddress == null) {
                 // Not bound yet and no localAddress specified - get one.
-                if (localAddress == null) {
-                    localAddress = new LocalAddress(LocalChannel.this);
-                }
+                localAddress = new LocalAddress(LocalChannel.this);
             }
 
             if (localAddress != null) {

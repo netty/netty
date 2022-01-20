@@ -23,6 +23,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.test.udt.util.CustomReporter;
 import io.netty.test.udt.util.EchoMessageHandler;
@@ -92,10 +93,8 @@ public final class UdtNetty {
         final ChannelHandler handler1 = new EchoMessageHandler(rate, size);
         final ChannelHandler handler2 = new EchoMessageHandler(null, size);
 
-        final NioEventLoopGroup group1 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup group2 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group1 = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(Executors.defaultThreadFactory()).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
+        final NioEventLoopGroup group2 = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(Executors.defaultThreadFactory()).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
 
         final Bootstrap peerBoot1 = new Bootstrap();
         peerBoot1.group(group1)

@@ -21,6 +21,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.test.udt.util.EchoMessageHandler;
@@ -77,10 +78,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
         final EchoMessageHandler handler1 = new EchoMessageHandler(rate1, messageSize);
         final EchoMessageHandler handler2 = new EchoMessageHandler(rate2, messageSize);
 
-        final NioEventLoopGroup group1 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup group2 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
+        final NioEventLoopGroup group1 = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(Executors.defaultThreadFactory()).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
+        final NioEventLoopGroup group2 = new NioEventLoopGroupBuilder().setnThreads(1).setThreadFactory(Executors.defaultThreadFactory()).setSelectorProvider(NioUdtProvider.MESSAGE_PROVIDER).createNioEventLoopGroup();
 
         final Bootstrap boot1 = new Bootstrap();
         boot1.group(group1)

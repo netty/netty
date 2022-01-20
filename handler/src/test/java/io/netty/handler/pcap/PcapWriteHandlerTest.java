@@ -25,6 +25,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroupBuilder;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.CharsetUtil;
@@ -48,7 +49,7 @@ public class PcapWriteHandlerTest {
         InetSocketAddress srvReqAddr = new InetSocketAddress("127.0.0.1", 0);
         InetSocketAddress cltReqAddr = new InetSocketAddress("127.0.0.1", 0);
 
-        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroupBuilder().setnThreads(2).createNioEventLoopGroup();
 
         // We'll bootstrap a UDP Server to avoid "Network Unreachable errors" when sending UDP Packet.
         Bootstrap server = new Bootstrap()
