@@ -86,7 +86,7 @@ public final class OpenSslCertificateCompressionConfig implements
 
 
     /**
-     * The configuration for
+     * The configuration for algorithm.
      */
     public static final class AlgorithmConfig {
         private final OpenSslCompressionAlgorithm algorithm;
@@ -99,7 +99,8 @@ public final class OpenSslCertificateCompressionConfig implements
 
         /**
          * The {@link AlgorithmMode}
-         * @return
+         *
+         * @return the usage mode.
          */
         public AlgorithmMode mode() {
             return mode;
