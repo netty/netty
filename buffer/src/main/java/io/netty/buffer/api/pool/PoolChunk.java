@@ -542,15 +542,15 @@ final class PoolChunk implements PoolChunkMetric {
 
     UntetheredMemory allocateBuffer(long handle, int size, PoolThreadCache threadCache,
                                     PooledAllocatorControl control) {
-        if (isRun(handle)) {
+        if (isSubpage(handle)) {
+            return allocateBufferWithSubpage(handle, size, threadCache, control);
+        } else {
             int offset = runOffset(handle) << pageShifts;
             int maxLength = runSize(pageShifts, handle);
             PoolThreadCache poolThreadCache = arena.parent.threadCache();
             initAllocatorControl(control, poolThreadCache, handle, maxLength);
             return new UntetheredChunkAllocation(
                     memory, this, poolThreadCache, handle, maxLength, offset, size);
-        } else {
-            return allocateBufferWithSubpage(handle, size, threadCache, control);
         }
     }
 
