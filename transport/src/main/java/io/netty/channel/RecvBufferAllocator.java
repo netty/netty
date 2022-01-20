@@ -17,6 +17,8 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.UnstableApi;
 
@@ -40,6 +42,12 @@ public interface RecvBufferAllocator {
          * enough not to waste its space.
          */
         ByteBuf allocate(ByteBufAllocator alloc);
+
+        /**
+         * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
+         * enough not to waste its space.
+         */
+        Buffer allocate(BufferAllocator alloc);
 
         /**
          * Similar to {@link #allocate(ByteBufAllocator)} except that it does not allocate anything but just tells the
@@ -130,6 +138,11 @@ public interface RecvBufferAllocator {
 
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
+            return delegate.allocate(alloc);
+        }
+
+        @Override
+        public Buffer allocate(BufferAllocator alloc) {
             return delegate.allocate(alloc);
         }
 

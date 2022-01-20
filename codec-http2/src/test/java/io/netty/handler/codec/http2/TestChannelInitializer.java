@@ -18,6 +18,8 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
@@ -66,6 +68,11 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 @Override
                 public ByteBuf allocate(ByteBufAllocator alloc) {
                     return alloc.ioBuffer(guess(), guess());
+                }
+
+                @Override
+                public Buffer allocate(BufferAllocator alloc) {
+                    return alloc.allocate(guess());
                 }
 
                 @Override
