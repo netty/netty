@@ -107,6 +107,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
+                      <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -213,6 +214,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_aarch_64.jnilib; osname=MacOSX; processor=aarch_64</Bundle-NativeCode>
+                      <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
