@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,27 +35,26 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliDecoderTest {
 
-    private static final Random RANDOM;
+    private static Random RANDOM;
     private static final byte[] BYTES_SMALL = new byte[256];
     private static final byte[] BYTES_LARGE = new byte[256 * 1024];
-    private static final byte[] COMPRESSED_BYTES_SMALL;
-    private static final byte[] COMPRESSED_BYTES_LARGE;
+    private static byte[] COMPRESSED_BYTES_SMALL;
+    private static byte[] COMPRESSED_BYTES_LARGE;
 
-    static {
-        try {
-            Brotli.ensureAvailability();
-            RANDOM = new Random();
-            fillArrayWithCompressibleData(BYTES_SMALL);
-            fillArrayWithCompressibleData(BYTES_LARGE);
-            COMPRESSED_BYTES_SMALL = compress(BYTES_SMALL);
-            COMPRESSED_BYTES_LARGE = compress(BYTES_LARGE);
-        } catch (Throwable throwable) {
-            throw new ExceptionInInitializerError(throwable);
-        }
+    @BeforeAll
+    static void setUp() throws IOException {
+        assumeTrue(Brotli.isAvailable());
+
+        RANDOM = new Random();
+        fillArrayWithCompressibleData(BYTES_SMALL);
+        fillArrayWithCompressibleData(BYTES_LARGE);
+        COMPRESSED_BYTES_SMALL = compress(BYTES_SMALL);
+        COMPRESSED_BYTES_LARGE = compress(BYTES_LARGE);
     }
 
     private static final ByteBuf WRAPPED_BYTES_SMALL = Unpooled.unreleasableBuffer(
