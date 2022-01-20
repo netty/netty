@@ -184,9 +184,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             return nSizes;
         }
 
-        if (directMemoryCacheAlignment > 0) {
-            size = alignSize(size);
-        }
+        size = alignSizeIfNeeded(size, directMemoryCacheAlignment);
 
         if (size <= lookupMaxSize) {
             //size-1 / MIN_TINY
@@ -249,12 +247,10 @@ abstract class SizeClasses implements SizeClassesMetric {
     }
 
     // Round size up to the nearest multiple of alignment.
-    private int alignSize(int size) {
-        return alignSize(size, directMemoryCacheAlignment);
-    }
-
-    // Round size up to the nearest multiple of alignment.
-    private static int alignSize(int size, int alignment) {
+    private static int alignSizeIfNeeded(int size, int alignment) {
+        if (alignment <= 0) {
+            return size;
+        }
         int delta = size & alignment - 1;
         return delta == 0? size : size + alignment - delta;
     }
@@ -264,9 +260,7 @@ abstract class SizeClasses implements SizeClassesMetric {
         if (size == 0) {
             return sizeIdx2sizeTab[0];
         }
-        if (directMemoryCacheAlignment > 0) {
-            size = alignSize(size);
-        }
+        size = alignSizeIfNeeded(size, directMemoryCacheAlignment);
 
         if (size <= lookupMaxSize) {
             int ret = sizeIdx2sizeTab[size2idxTab[size - 1 >> LOG2_QUANTUM]];
@@ -334,11 +328,10 @@ abstract class SizeClasses implements SizeClassesMetric {
     private static final class SizeClassValue {
         final SizeClassKey key;
         final int nSizes;
-        int nSubpages;
-        int nPSizes;
-        int smallMaxSizeIdx;
-        int lookupMaxSize;
-        final short[][] sizeClasses;
+        final int nSubpages;
+        final int nPSizes;
+        final int smallMaxSizeIdx;
+        final int lookupMaxSize;
         final int[] pageIdx2sizeTab;
         final int[] sizeIdx2sizeTab;
         final int[] size2idxTab;
@@ -349,22 +342,10 @@ abstract class SizeClasses implements SizeClassesMetric {
 
             //generate size classes
             //[index, log2Group, log2Delta, nDelta, isMultiPageSize, isSubPage, log2DeltaLookup]
-            sizeClasses = new short[group << LOG2_SIZE_CLASS_GROUP][7];
-            nSizes = sizeClasses();
+            short[][] sizeClasses = new short[group << LOG2_SIZE_CLASS_GROUP][7];
 
-            //generate lookup table
-            sizeIdx2sizeTab = new int[nSizes];
-            pageIdx2sizeTab = new int[nPSizes];
-            idx2SizeTab(sizeIdx2sizeTab, pageIdx2sizeTab, directMemoryCacheAlignment);
-
-            size2idxTab = new int[lookupMaxSize >> LOG2_QUANTUM];
-            size2idxTab(size2idxTab);
-        }
-
-        private int sizeClasses() {
             int normalMaxSize = -1;
-
-            int index = 0;
+            int nSizes = 0;
             int size = 0;
 
             int log2Group = LOG2_QUANTUM;
@@ -373,34 +354,57 @@ abstract class SizeClasses implements SizeClassesMetric {
 
             //First small group, nDelta start at 0.
             //first size class is 1 << LOG2_QUANTUM
-            int nDelta = 0;
-            while (nDelta < ndeltaLimit) {
-                size = sizeClass(index++, log2Group, log2Delta, nDelta++);
+            for (int nDelta = 0; nDelta < ndeltaLimit; nDelta++, nSizes++) {
+                short[] sizeClass = newSizeClass(nSizes, log2Group, log2Delta, nDelta, key);
+                sizeClasses[nSizes] = sizeClass;
+                size = sizeOf(sizeClass, directMemoryCacheAlignment);
             }
+
             log2Group += LOG2_SIZE_CLASS_GROUP;
 
             //All remaining groups, nDelta start at 1.
-            while (size < key.chunkSize) {
-                nDelta = 1;
-
-                while (nDelta <= ndeltaLimit && size < key.chunkSize) {
-                    size = sizeClass(index++, log2Group, log2Delta, nDelta++);
-                    normalMaxSize = size;
+            for (; size < key.chunkSize; log2Group++, log2Delta++) {
+                for (int nDelta = 1; nDelta <= ndeltaLimit && size < key.chunkSize; nDelta++, nSizes++) {
+                    short[] sizeClass = newSizeClass(nSizes, log2Group, log2Delta, nDelta, key);
+                    sizeClasses[nSizes] = sizeClass;
+                    size = normalMaxSize = sizeOf(sizeClass, directMemoryCacheAlignment);
                 }
-
-                log2Group++;
-                log2Delta++;
             }
 
             //chunkSize must be normalMaxSize
             assert key.chunkSize == normalMaxSize;
 
-            //return number of size index
-            return index;
+            int smallMaxSizeIdx = 0;
+            int lookupMaxSize = 0;
+            int nPSizes = 0;
+            int nSubpages = 0;
+            for (int idx = 0; idx < nSizes; idx++) {
+                short[] sz = sizeClasses[idx];
+                if (sz[PAGESIZE_IDX] == yes) {
+                    nPSizes++;
+                }
+                if (sz[SUBPAGE_IDX] == yes) {
+                    nSubpages++;
+                    smallMaxSizeIdx = idx;
+                }
+                if (sz[LOG2_DELTA_LOOKUP_IDX] != no) {
+                    lookupMaxSize = sizeOf(sz, directMemoryCacheAlignment);
+                }
+            }
+            this.smallMaxSizeIdx = smallMaxSizeIdx;
+            this.lookupMaxSize = lookupMaxSize;
+            this.nPSizes = nPSizes;
+            this.nSubpages = nSubpages;
+            this.nSizes = nSizes;
+
+            //generate lookup table
+            sizeIdx2sizeTab = newIdx2SizeTab(sizeClasses, nSizes, directMemoryCacheAlignment);
+            pageIdx2sizeTab = newPageIdx2sizeTab(sizeClasses, nSizes, nPSizes, directMemoryCacheAlignment);
+            size2idxTab = newSize2idxTab(lookupMaxSize, sizeClasses);
         }
 
         //calculate size class
-        private int sizeClass(int index, int log2Group, int log2Delta, int nDelta) {
+        private static short[] newSizeClass(int index, int log2Group, int log2Delta, int nDelta, SizeClassKey key) {
             short isMultiPageSize;
             if (log2Delta >= key.pageShifts) {
                 isMultiPageSize = yes;
@@ -426,49 +430,51 @@ abstract class SizeClasses implements SizeClassesMetric {
                     log2Size == LOG2_MAX_LOOKUP_SIZE && remove == no
                     ? log2Delta : no;
 
-            short[] sz = {
+            return new short[] {
                     (short) index, (short) log2Group, (short) log2Delta,
                     (short) nDelta, isMultiPageSize, isSubpage, (short) log2DeltaLookup
             };
-
-            sizeClasses[index] = sz;
-            int size = (1 << log2Group) + (nDelta << log2Delta);
-
-            if (sz[PAGESIZE_IDX] == yes) {
-                nPSizes++;
-            }
-            if (sz[SUBPAGE_IDX] == yes) {
-                nSubpages++;
-                smallMaxSizeIdx = index;
-            }
-            if (sz[LOG2_DELTA_LOOKUP_IDX] != no) {
-                lookupMaxSize = size;
-            }
-            return size;
         }
 
-        private void idx2SizeTab(int[] sizeIdx2sizeTab, int[] pageIdx2sizeTab, int directMemoryCacheAlignment) {
-            int pageIdx = 0;
+        private static int[] newIdx2SizeTab(short[][] sizeClasses, int nSizes, int directMemoryCacheAlignment) {
+            int[] sizeIdx2sizeTab = new int[nSizes];
 
             for (int i = 0; i < nSizes; i++) {
                 short[] sizeClass = sizeClasses[i];
-                int log2Group = sizeClass[LOG2GROUP_IDX];
-                int log2Delta = sizeClass[LOG2DELTA_IDX];
-                int nDelta = sizeClass[NDELTA_IDX];
-
-                int size = (1 << log2Group) + (nDelta << log2Delta);
-                if (directMemoryCacheAlignment > 0) {
-                   size = alignSize(size, directMemoryCacheAlignment);
-                }
-                sizeIdx2sizeTab[i] = size;
-
-                if (sizeClass[PAGESIZE_IDX] == yes) {
-                    pageIdx2sizeTab[pageIdx++] = size;
-                }
+                sizeIdx2sizeTab[i] = sizeOf(sizeClass, directMemoryCacheAlignment);
             }
+            return sizeIdx2sizeTab;
         }
 
-        private void size2idxTab(int[] size2idxTab) {
+        private static int calculateSize(int log2Group, int nDelta, int log2Delta) {
+            return (1 << log2Group) + (nDelta << log2Delta);
+        }
+
+        private static int sizeOf(short[] sizeClass, int directMemoryCacheAlignment) {
+            int log2Group = sizeClass[LOG2GROUP_IDX];
+            int log2Delta = sizeClass[LOG2DELTA_IDX];
+            int nDelta = sizeClass[NDELTA_IDX];
+
+            int size = calculateSize(log2Group, nDelta, log2Delta);
+
+            return alignSizeIfNeeded(size, directMemoryCacheAlignment);
+        }
+
+        private static int[] newPageIdx2sizeTab(short[][] sizeClasses, int nSizes, int nPSizes,
+                                                int directMemoryCacheAlignment) {
+            int[] pageIdx2sizeTab = new int[nPSizes];
+            int pageIdx = 0;
+            for (int i = 0; i < nSizes; i++) {
+                short[] sizeClass = sizeClasses[i];
+                if (sizeClass[PAGESIZE_IDX] == yes) {
+                    pageIdx2sizeTab[pageIdx++] = sizeOf(sizeClass, directMemoryCacheAlignment);
+                }
+            }
+            return pageIdx2sizeTab;
+        }
+
+        private static int[] newSize2idxTab(int lookupMaxSize, short[][] sizeClasses) {
+            int[] size2idxTab = new int[lookupMaxSize >> LOG2_QUANTUM];
             int idx = 0;
             int size = 0;
 
@@ -481,6 +487,7 @@ abstract class SizeClasses implements SizeClassesMetric {
                     size = idx + 1 << LOG2_QUANTUM;
                 }
             }
+            return size2idxTab;
         }
     }
 }
