@@ -6,7 +6,7 @@ services:
     image: netty:centos-6-1.11
     build:
       args:
-        java_version : "20.3.3.r11-grl"
+        java_version : "20.3.4.r11-grl"
 
   build:
     image: netty:centos-6-1.11
