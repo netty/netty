@@ -17,6 +17,8 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
 import java.util.AbstractMap;
@@ -47,6 +49,11 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
             return alloc.ioBuffer(guess());
+        }
+
+        @Override
+        public Buffer allocate(BufferAllocator alloc) {
+            return alloc.allocate(guess());
         }
 
         @Override

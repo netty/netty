@@ -18,6 +18,8 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.RecvBufferAllocator.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +46,7 @@ public class AdaptiveRecvBufferAllocatorTest {
 
     @Test
     public void rampUpBeforeReadCompleteWhenLargeDataPending() {
-        // Simulate that there is always more data when we attempt to read so we should always ramp up.
+        // Simulate that there is always more data when we attempt to read, so we should always ramp up.
         allocReadExpected(handle, alloc, 512);
         allocReadExpected(handle, alloc, 8192);
         allocReadExpected(handle, alloc, 131072);
@@ -53,6 +55,21 @@ public class AdaptiveRecvBufferAllocatorTest {
 
         handle.reset(config);
         allocReadExpected(handle, alloc, 8388608);
+    }
+
+    @Test
+    public void rampUpBeforeReadCompleteWhenLargeDataPendingBuffer() {
+        // Simulate that there is always more data when we attempt to read, so we should always ramp up.
+        try (BufferAllocator alloc = BufferAllocator.onHeapUnpooled()) {
+            allocReadExpected(handle, alloc, 512);
+            allocReadExpected(handle, alloc, 8192);
+            allocReadExpected(handle, alloc, 131072);
+            allocReadExpected(handle, alloc, 2097152);
+            handle.readComplete();
+
+            handle.reset(config);
+            allocReadExpected(handle, alloc, 8388608);
+        }
     }
 
     @Test
@@ -88,6 +105,20 @@ public class AdaptiveRecvBufferAllocatorTest {
     }
 
     @Test
+    public void lastPartialReadDoesNotRampDownBuffer() {
+        try (BufferAllocator alloc = BufferAllocator.onHeapUnpooled()) {
+            allocReadExpected(handle, alloc, 512);
+            // Simulate there is just 1 byte remaining which is unread. However, the total bytes in the current read
+            // cycle means that we should stay at the current step for the next ready cycle.
+            allocRead(handle, alloc, 8192, 1);
+            handle.readComplete();
+
+            handle.reset(config);
+            allocReadExpected(handle, alloc, 8192);
+        }
+    }
+
+    @Test
     public void lastPartialReadCanRampUp() {
         allocReadExpected(handle, alloc, 512);
         // We simulate there is just 1 less byte than we try to read, but because of the adaptive steps the total amount
@@ -97,6 +128,20 @@ public class AdaptiveRecvBufferAllocatorTest {
 
         handle.reset(config);
         allocReadExpected(handle, alloc, 131072);
+    }
+
+    @Test
+    public void lastPartialReadCanRampUpBuffer() {
+        try (BufferAllocator alloc = BufferAllocator.onHeapUnpooled()) {
+            allocReadExpected(handle, alloc, 512);
+            // We simulate there is just 1 less byte than we try to read, but because of the adaptive steps the total
+            // amount of bytes read for this read cycle steps up to prepare for the next read cycle.
+            allocRead(handle, alloc, 8192, 8191);
+            handle.readComplete();
+
+            handle.reset(config);
+            allocReadExpected(handle, alloc, 131072);
+        }
     }
 
     private static void allocReadExpected(Handle handle, ByteBufAllocator alloc, int expectedSize) {
@@ -110,5 +155,18 @@ public class AdaptiveRecvBufferAllocatorTest {
         handle.lastBytesRead(lastRead);
         handle.incMessagesRead(1);
         buf.release();
+    }
+
+    private static void allocReadExpected(Handle handle, BufferAllocator alloc, int expectedSize) {
+        allocRead(handle, alloc, expectedSize, expectedSize);
+    }
+
+    private static void allocRead(Handle handle, BufferAllocator alloc, int expectedBufferSize, int lastRead) {
+        try (Buffer buf = handle.allocate(alloc)) {
+            assertEquals(expectedBufferSize, buf.capacity());
+            handle.attemptedBytesRead(expectedBufferSize);
+            handle.lastBytesRead(lastRead);
+            handle.incMessagesRead(1);
+        }
     }
 }

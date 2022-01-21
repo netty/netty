@@ -17,6 +17,10 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty.channel.RecvBufferAllocator.Handle;
@@ -56,6 +60,18 @@ final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
         preferredDirectByteBufAllocator.updateAllocator(alloc);
         return overrideGuess ? preferredDirectByteBufAllocator.ioBuffer(guess0()) :
                 delegate().allocate(preferredDirectByteBufAllocator);
+    }
+
+    @Override
+    public Buffer allocate(BufferAllocator alloc) {
+        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
+        if (alloc.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            alloc = DefaultBufferAllocators.offHeapAllocator();
+        }
+        if (overrideGuess) {
+            return alloc.allocate(guess0());
+        }
+        return super.allocate(alloc);
     }
 
     @Override
