@@ -18,7 +18,7 @@ WORKDIR $SOURCE_DIR
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io" | bash
 
-ARG java_version="8.0.302-zulu"
+ARG java_version="8.0.322-zulu"
 ENV JAVA_VERSION $java_version
 
 # Installing Java removing some unnecessary SDKMAN files
