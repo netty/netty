@@ -68,7 +68,7 @@
   <properties>
     <javaModuleName>io.netty.incubator.codec.http3</javaModuleName>
     <skipTests>false</skipTests>
-    <netty.version>4.1.72.Final</netty.version>
+    <netty.version>4.1.73.Final</netty.version>
     <netty.build.version>30</netty.build.version>
     <netty.quic.version>0.0.25.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
