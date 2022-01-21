@@ -23,12 +23,14 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.condition.DisabledIf;
 
 @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
-    static {
+    @BeforeAll
+    static void setUp() {
         try {
             Brotli.ensureAvailability();
         } catch (Throwable throwable) {
