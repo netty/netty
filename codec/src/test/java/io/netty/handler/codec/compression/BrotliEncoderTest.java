@@ -26,14 +26,16 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @BeforeAll
     static void setUp() {
-        assumeTrue(Brotli.isAvailable());
+        try {
+            Brotli.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
     }
 
     @Override

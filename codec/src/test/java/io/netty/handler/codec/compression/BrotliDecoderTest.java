@@ -47,14 +47,18 @@ public class BrotliDecoderTest {
     private static byte[] COMPRESSED_BYTES_LARGE;
 
     @BeforeAll
-    static void setUp() throws IOException {
-        assumeTrue(Brotli.isAvailable());
+    static void setUp() {
+        try {
+            Brotli.ensureAvailability();
 
-        RANDOM = new Random();
-        fillArrayWithCompressibleData(BYTES_SMALL);
-        fillArrayWithCompressibleData(BYTES_LARGE);
-        COMPRESSED_BYTES_SMALL = compress(BYTES_SMALL);
-        COMPRESSED_BYTES_LARGE = compress(BYTES_LARGE);
+            RANDOM = new Random();
+            fillArrayWithCompressibleData(BYTES_SMALL);
+            fillArrayWithCompressibleData(BYTES_LARGE);
+            COMPRESSED_BYTES_SMALL = compress(BYTES_SMALL);
+            COMPRESSED_BYTES_LARGE = compress(BYTES_LARGE);
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
     }
 
     private static final ByteBuf WRAPPED_BYTES_SMALL = Unpooled.unreleasableBuffer(
