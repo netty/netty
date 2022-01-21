@@ -692,7 +692,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
             if (!sslClosePromise.isDone()) {
                 if (cause == null) {
-                    cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+                    cause = new SSLHandshakeException("SslHandler removed before SSLEngine was closed");
                 }
                 notifyClosePromise(cause);
             }
