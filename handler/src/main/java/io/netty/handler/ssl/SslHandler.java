@@ -644,9 +644,10 @@ public class SslHandler extends ByteToMessageDecoder {
             }
             pendingUnencryptedWrites = null;
 
-            SSLHandshakeException cause = null;
+            SSLException cause = null;
 
-            // If the handshake is not done yet we should fail the handshake promise and notify the rest of the
+            // If the handshake or SSLEngine closure is not done yet we should fail corresponding promise and
+            // notify the rest of the
             // pipeline.
             if (!handshakePromise.isDone()) {
                 cause = new SSLHandshakeException("SslHandler removed before handshake completed");
@@ -656,7 +657,7 @@ public class SslHandler extends ByteToMessageDecoder {
             }
             if (!sslClosePromise.isDone()) {
                 if (cause == null) {
-                    cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+                    cause = new SSLException("SslHandler removed before SSLEngine was closed");
                 }
                 notifyClosePromise(cause);
             }
