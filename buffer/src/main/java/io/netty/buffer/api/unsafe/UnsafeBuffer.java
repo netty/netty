@@ -529,6 +529,14 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
+    public void addBytesRead(int byteCount) {
+        if (byteCount < 0) {
+            throw new IndexOutOfBoundsException("Cannot mark a negative amount of bytes as read: " + byteCount);
+        }
+        skipReadable(byteCount);
+    }
+
+    @Override
     public ByteBuffer readableBuffer() {
         final ByteBuffer buf;
         if (hasReadableArray()) {
@@ -570,6 +578,14 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     @Override
     public long writableNativeAddress() {
         return nativeAddress();
+    }
+
+    @Override
+    public void addBytesWritten(int byteCount) {
+        if (byteCount < 0) {
+            throw new IndexOutOfBoundsException("Cannot mark a negative amount of bytes as written: " + byteCount);
+        }
+        skipWritable(byteCount);
     }
 
     @Override
