@@ -224,7 +224,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
-    final Future<Channel> channelFuture;
+    final Promise<Channel> channelReadyPromise;
     final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
@@ -482,8 +482,9 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
-        b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-        final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().<Channel>newPromise());
+        this.channelReadyPromise = executor().newPromise();
+        final DnsResponseHandler responseHandler =
+                new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
@@ -491,22 +492,34 @@ public class DnsNameResolver extends InetNameResolver {
             }
         });
 
-        channelFuture = responseHandler.channelActivePromise;
         final ChannelFuture future;
         if (localAddress == null) {
+            b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
             future = b.register();
         } else {
             future = b.bind(localAddress);
         }
-        Throwable cause = future.cause();
-        if (cause != null) {
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
+        if (future.isDone()) {
+            Throwable cause = future.cause();
+            if (cause != null) {
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                }
+                if (cause instanceof Error) {
+                    throw (Error) cause;
+                }
+                throw new IllegalStateException("Unable to create / register Channel", cause);
             }
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
-            throw new IllegalStateException("Unable to create / register Channel", cause);
+        } else {
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) {
+                    Throwable cause = future.cause();
+                    if (cause != null) {
+                        channelReadyPromise.tryFailure(cause);
+                    }
+                }
+            });
         }
         ch = future.channel();
         ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
@@ -1388,7 +1401,7 @@ public class DnsNameResolver extends InetNameResolver {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
-            channelActivePromise.setSuccess(ctx.channel());
+            channelActivePromise.trySuccess(ctx.channel());
         }
 
         @Override

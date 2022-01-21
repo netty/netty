@@ -73,6 +73,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -3632,6 +3633,29 @@ public class DnsNameResolverTest {
             assertEquals(inetAddress, addr);
         } finally {
             resolver.close();
+        }
+    }
+
+    @Test
+    public void testAddressAlreadyInUse() throws Exception {
+        DatagramSocket datagramSocket = new DatagramSocket();
+        try {
+            assertTrue(datagramSocket.isBound());
+            final DnsNameResolver resolver = newResolver()
+                    .localAddress(datagramSocket.getLocalSocketAddress()).build();
+            try {
+                Throwable cause = assertThrows(UnknownHostException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        resolver.resolve("netty.io").sync();
+                    }
+                });
+                assertThat(cause.getCause(), Matchers.<Throwable>instanceOf(BindException.class));
+            } finally {
+                resolver.close();
+            }
+        } finally {
+            datagramSocket.close();
         }
     }
 }
