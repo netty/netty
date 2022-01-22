@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
@@ -261,6 +262,12 @@ public class FastThreadLocalTest {
         }
     }
 
+    @EnabledIfEnvironmentVariable(named = "CI", matches = "true", disabledReason = "" +
+            "This deliberately causes OutOfMemoryErrors, for which heap dumps are automatically generated. " +
+            "To avoid confusion, wasted time investigating heap dumps, and to avoid heap dumps accidentally " +
+            "getting committed to the Git repository, we should only enable this test when running in a CI " +
+            "environment. We make this check by assuming a 'CI' environment variable. " +
+            "This matches what Github Actions is doing for us currently.")
     @Test
     public void testInternalThreadLocalMapExpand() throws Exception {
         final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
