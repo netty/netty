@@ -49,7 +49,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
                 public int compare(DnsResolver r1, DnsResolver r2) {
                     // Note: order is descending (from higher to lower) so entries with lower search order override
                     // entries with higher search order.
-                    return r1.searchOrder() < r2.searchOrder() ? 1 : (r1.searchOrder() == r2.searchOrder() ? 0 : -1);
+                    return r1.searchOrder() < r2.searchOrder() ? 1 : r1.searchOrder() == r2.searchOrder() ? 0 : -1;
                 }
             };
 
@@ -118,10 +118,12 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
 
     public MacOSDnsServerAddressStreamProvider() {
         ensureAvailability();
+        currentMappings = retrieveCurrentMappings();
+        lastRefresh = new AtomicLong(System.nanoTime());
     }
 
-    private volatile Map<String, DnsServerAddresses> currentMappings = retrieveCurrentMappings();
-    private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
+    private volatile Map<String, DnsServerAddresses> currentMappings;
+    private final AtomicLong lastRefresh;
 
     private static Map<String, DnsServerAddresses> retrieveCurrentMappings() {
         DnsResolver[] resolvers = resolvers();
