@@ -432,7 +432,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
                         // Some weird request bodies start with an '&' character, eg: &name=J&age=17.
-                        // In that case, key would be "", will get exception: 
+                        // In that case, key would be "", will get exception:
                         // java.lang.IllegalArgumentException: Param 'name' must not be empty;
                         // Just check and skip empty key.
                         if (key.length() > 0) {
@@ -558,7 +558,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
                         // Some weird request bodies start with an '&' char, eg: &name=J&age=17.
-                        // In that case, key would be "", will get exception: 
+                        // In that case, key would be "", will get exception:
                         // java.lang.IllegalArgumentException: Param 'name' must not be empty;
                         // Just check and skip empty key.
                         if (key.length() > 0) {
