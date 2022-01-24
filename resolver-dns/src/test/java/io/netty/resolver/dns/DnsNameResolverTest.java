@@ -3641,18 +3641,23 @@ public class DnsNameResolverTest {
         DatagramSocket datagramSocket = new DatagramSocket();
         try {
             assertTrue(datagramSocket.isBound());
-            final DnsNameResolver resolver = newResolver()
-                    .localAddress(datagramSocket.getLocalSocketAddress()).build();
             try {
-                Throwable cause = assertThrows(UnknownHostException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        resolver.resolve("netty.io").sync();
-                    }
-                });
+                final DnsNameResolver resolver = newResolver()
+                        .localAddress(datagramSocket.getLocalSocketAddress()).build();
+                try {
+                    Throwable cause = assertThrows(UnknownHostException.class, new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            resolver.resolve("netty.io").sync();
+                        }
+                    });
+                    assertThat(cause.getCause(), Matchers.<Throwable>instanceOf(BindException.class));
+                } finally {
+                    resolver.close();
+                }
+            } catch (IllegalStateException cause) {
+                // We might also throw directly here... in this case let's verify that we use the correct exception.
                 assertThat(cause.getCause(), Matchers.<Throwable>instanceOf(BindException.class));
-            } finally {
-                resolver.close();
             }
         } finally {
             datagramSocket.close();
