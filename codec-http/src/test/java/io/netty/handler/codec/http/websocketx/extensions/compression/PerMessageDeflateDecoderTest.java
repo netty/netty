@@ -185,7 +185,8 @@ public class PerMessageDeflateDecoderTest {
         Buffer compressedFrameData = encoderChannel.bufferAllocator()
                 .allocate(compressedPayload1.readableBytes() + compressedPayload2.readableBytes() - 4);
         compressedFrameData.writeBytes(compressedPayload1);
-        compressedFrameData.writeBytes(compressedPayload2.skipWritable(-4));
+        compressedPayload2.skipWritable(-4);
+        compressedFrameData.writeBytes(compressedPayload2);
         BinaryWebSocketFrame compressedFrame = new BinaryWebSocketFrame(true, RSV1 | RSV3, compressedFrameData);
         compressedPayload1.close();
         compressedPayload2.close();

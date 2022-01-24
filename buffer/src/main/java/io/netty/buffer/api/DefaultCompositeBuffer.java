@@ -320,6 +320,16 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public void skipReadable(int delta) {
+        readerOffset(readerOffset() + delta);
+    }
+
+    @Override
+    public void skipWritable(int delta) {
+        writerOffset(writerOffset() + delta);
+    }
+
+    @Override
     public CompositeBuffer fill(byte value) {
         if (closed) {
             throw bufferIsClosed(this);

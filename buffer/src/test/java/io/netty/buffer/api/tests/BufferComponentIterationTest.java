@@ -395,10 +395,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             int components = buf.forEachReadable(0, (index, component) -> {
                 while (target.writableBytes() > 0 && component.readableBytes() > 0) {
                     target.writeByte(component.readableBuffer().get());
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.addBytesRead(-1));
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.addBytesRead(9));
-                    component.addBytesRead(0);
-                    component.addBytesRead(1);
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipReadable(9));
+                    component.skipReadable(0);
+                    component.skipReadable(1);
                 }
                 return target.writableBytes() > 0;
             });
@@ -421,10 +420,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             int components = buf.forEachWritable(0, (index, component) -> {
                 while (component.writableBytes() > 0) {
                     assertThat(component.writableBuffer().get()).isEqualTo(target.readByte());
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.addBytesWritten(-1));
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.addBytesWritten(9));
-                    component.addBytesWritten(0);
-                    component.addBytesWritten(1);
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipWritable(9));
+                    component.skipWritable(0);
+                    component.skipWritable(1);
                 }
                 return true;
             });
