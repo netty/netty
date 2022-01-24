@@ -48,6 +48,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public void skipReadable(int delta) {
+        readerOffset(readerOffset() + delta);
+    }
+
+    @Override
     public Buffer readerOffset(int offset) {
         return delegate.readerOffset(offset);
     }
@@ -55,6 +60,11 @@ public class BufferStub implements Buffer {
     @Override
     public int writerOffset() {
         return delegate.writerOffset();
+    }
+
+    @Override
+    public void skipWritable(int delta) {
+        writerOffset(writerOffset() + delta);
     }
 
     @Override

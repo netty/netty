@@ -141,7 +141,8 @@ public interface MemoryManager {
         ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
         WrappingAllocation allocationType = new WrappingAllocation(array);
         Buffer buffer = manager.allocateShared(allocator, array.length, manager.drop(), allocationType);
-        return buffer.skipWritable(array.length).makeReadOnly();
+        buffer.skipWritable(array.length);
+        return buffer.makeReadOnly();
     }
 
     /**

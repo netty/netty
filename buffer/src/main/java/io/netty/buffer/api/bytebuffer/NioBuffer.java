@@ -122,6 +122,16 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     @Override
+    public void skipReadable(int delta) {
+        readerOffset(readerOffset() + delta);
+    }
+
+    @Override
+    public void skipWritable(int delta) {
+        writerOffset(writerOffset() + delta);
+    }
+
+    @Override
     public Buffer fill(byte value) {
         int capacity = capacity();
         checkSet(0, capacity);

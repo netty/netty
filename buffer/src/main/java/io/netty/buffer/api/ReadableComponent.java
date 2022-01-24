@@ -97,10 +97,18 @@ public interface ReadableComponent {
      * <p>
      * Care should be taken to ensure that the buffers lifetime extends beyond the cursor and the iteration, and that
      * the internal offsets of the component (such as {@link Buffer#readerOffset()} and {@link Buffer#writerOffset()})
-     * are not modified while the iteration takes place. Otherwise unpredictable behaviour might result.
+     * are not modified while the iteration takes place. Otherwise, unpredictable behaviour might result.
      *
      * @return A {@link ByteCursor} for iterating the readable bytes of this buffer.
      * @see Buffer#openCursor()
      */
     ByteCursor openCursor();
+
+    /**
+     * Move the read-offset to indicate that the given number of bytes were read from this component.
+     *
+     * @param byteCount The number of bytes read from this component.
+     * @see Buffer#skipReadable(int)
+     */
+    void skipReadable(int byteCount);
 }

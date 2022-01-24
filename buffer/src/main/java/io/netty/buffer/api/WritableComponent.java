@@ -78,4 +78,12 @@ public interface WritableComponent {
      * @return A new {@link ByteBuffer}, with its own position and limit, for this memory component.
      */
     ByteBuffer writableBuffer();
+
+    /**
+     * Move the write-offset to indicate that the given number of bytes were written to this component.
+     *
+     * @param byteCount The number of bytes written to this component.
+     * @see Buffer#skipWritable(int)
+     */
+    void skipWritable(int byteCount);
 }

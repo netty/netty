@@ -384,4 +384,53 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             }
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void forEachReadableMustBeAbleToIncrementReaderOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8);
+             Buffer target = allocator.allocate(5)) {
+            buf.writeLong(0x0102030405060708L);
+            int components = buf.forEachReadable(0, (index, component) -> {
+                while (target.writableBytes() > 0 && component.readableBytes() > 0) {
+                    target.writeByte(component.readableBuffer().get());
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipReadable(9));
+                    component.skipReadable(0);
+                    component.skipReadable(1);
+                }
+                return target.writableBytes() > 0;
+            });
+            assertThat(components).isNotEqualTo(0); // May be negative if iteration stops early.
+            assertThat(buf.readerOffset()).isEqualTo(5);
+            assertThat(buf.readableBytes()).isEqualTo(3);
+            assertThat(target.readableBytes()).isEqualTo(5);
+            assertThat(target).isEqualTo(allocator.copyOf(new byte[] {0x01, 0x02, 0x03, 0x04, 0x05}));
+            assertThat(buf).isEqualTo(allocator.copyOf(new byte[] {0x06, 0x07, 0x08}));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void forEachWritableMustBeAbleToIncrementWriterOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L);
+             Buffer target = buf.copy()) {
+            buf.writerOffset(0); // Prime the buffer with data, but leave the write offset at zero.
+            int components = buf.forEachWritable(0, (index, component) -> {
+                while (component.writableBytes() > 0) {
+                    assertThat(component.writableBuffer().get()).isEqualTo(target.readByte());
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipWritable(9));
+                    component.skipWritable(0);
+                    component.skipWritable(1);
+                }
+                return true;
+            });
+            assertThat(components).isGreaterThan(0);
+            assertThat(buf.writerOffset()).isEqualTo(8);
+            assertThat(target.readerOffset()).isEqualTo(8);
+            target.readerOffset(0);
+            assertThat(buf).isEqualTo(target);
+        }
+    }
 }
