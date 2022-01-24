@@ -44,14 +44,14 @@ public class PlatformDependent0Test {
 
     @Test
     public void testNewDirectBufferZeroMemoryAddress() {
-        PlatformDependent0.newDirectBuffer(0, 10);
+        PlatformDependent0.newDirectBuffer(0, 10, null);
     }
 
     private static void testNewDirectBufferMemoryAddress(long address) {
         assumeTrue(PlatformDependent0.hasDirectBufferNoCleanerConstructor());
 
         int capacity = 10;
-        ByteBuffer buffer = PlatformDependent0.newDirectBuffer(address, capacity);
+        ByteBuffer buffer = PlatformDependent0.newDirectBuffer(address, capacity, null);
         assertEquals(address, PlatformDependent0.directBufferAddress(buffer));
         assertEquals(capacity, buffer.capacity());
     }

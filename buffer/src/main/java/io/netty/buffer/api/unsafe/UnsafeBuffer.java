@@ -534,7 +534,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (hasReadableArray()) {
             buf = bbslice(ByteBuffer.wrap(readableArray()), readableArrayOffset(), readableArrayLength());
         } else {
-            buf = PlatformDependent.directBuffer(address + roff, readableBytes());
+            buf = PlatformDependent.directBuffer(address + roff, readableBytes(), memory);
         }
         return buf.asReadOnlyBuffer();
     }
@@ -578,7 +578,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
         if (hasWritableArray()) {
             buf = bbslice(ByteBuffer.wrap(writableArray()), writableArrayOffset(), writableArrayLength());
         } else {
-            buf = PlatformDependent.directBuffer(address + woff, writableBytes());
+            buf = PlatformDependent.directBuffer(address + woff, writableBytes(), memory);
         }
         return buf;
     }

@@ -404,9 +404,9 @@ public final class PlatformDependent {
         return PlatformDependent0.directBufferAddress(buffer);
     }
 
-    public static ByteBuffer directBuffer(long memoryAddress, int size) {
+    public static ByteBuffer directBuffer(long memoryAddress, int size, Object attachment) {
         if (PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
-            return PlatformDependent0.newDirectBuffer(memoryAddress, size);
+            return PlatformDependent0.newDirectBuffer(memoryAddress, size, attachment);
         }
         throw new UnsupportedOperationException(
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");

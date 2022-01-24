@@ -103,5 +103,4 @@ public interface ReadableComponent {
      * @see Buffer#openCursor()
      */
     ByteCursor openCursor();
-    // todo for Unsafe-based impl, DBB.attachment needs to keep underlying memory alive
 }

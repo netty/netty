@@ -225,7 +225,7 @@ final class PlatformDependent0 {
                         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
                             try {
                                 final Constructor<?> constructor =
-                                        direct.getClass().getDeclaredConstructor(long.class, int.class);
+                                        direct.getClass().getDeclaredConstructor(long.class, int.class, Object.class);
                                 Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                 if (cause != null) {
                                     return cause;
@@ -241,7 +241,7 @@ final class PlatformDependent0 {
                     // try to use the constructor now
                     try {
                         directBufferConstructorHandle = (MethodHandle) maybeDirectBufferConstructorHandle;
-                        directBufferConstructorHandle.invoke(address, 1);
+                        directBufferConstructorHandle.invoke(address, 1, null);
                         logger.debug("direct buffer constructor: available");
                     } catch (Throwable ignore) {
                         directBufferConstructorHandle = null;
@@ -447,14 +447,14 @@ final class PlatformDependent0 {
     }
 
     static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
-        return newDirectBuffer(UNSAFE.reallocateMemory(directBufferAddress(buffer), capacity), capacity);
+        return newDirectBuffer(UNSAFE.reallocateMemory(directBufferAddress(buffer), capacity), capacity, null);
     }
 
     static ByteBuffer allocateDirectNoCleaner(int capacity) {
         // Calling malloc with capacity of 0 may return a null ptr or a memory address that can be used.
         // Just use 1 to make it safe to use in all cases:
         // See: https://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
-        return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
+        return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity, null);
     }
 
     static boolean hasAlignSliceMethod() {
@@ -464,9 +464,7 @@ final class PlatformDependent0 {
     static ByteBuffer alignSlice(ByteBuffer buffer, int alignment) {
         try {
             return (ByteBuffer) ALIGN_SLICE.invoke(buffer, alignment);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        } catch (InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new Error(e);
         }
     }
@@ -486,11 +484,11 @@ final class PlatformDependent0 {
         }
     }
 
-    static ByteBuffer newDirectBuffer(long address, int capacity) {
+    static ByteBuffer newDirectBuffer(long address, int capacity, Object attachment) {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invoke(address, capacity);
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invoke(address, capacity, attachment);
         } catch (Throwable cause) {
             // Not expected to ever throw!
             if (cause instanceof Error) {
