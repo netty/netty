@@ -116,10 +116,14 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     }
 
     private void sendQuery(final DnsQuery query, final boolean flush, final Promise<Void> writePromise) {
-        if (parent.channelFuture.isDone()) {
+        if (parent.channelReadyPromise.isSuccess()) {
             writeQuery(query, flush, writePromise);
+        } else if (parent.channelReadyPromise.isFailed()) {
+            Throwable cause = parent.channelReadyPromise.cause();
+            promise.tryFailure(cause);
+            writePromise.setFailure(cause);
         } else {
-            parent.channelFuture.addListener(future -> {
+            parent.channelReadyPromise.asFuture().addListener(future -> {
                 if (future.isSuccess()) {
                     // If the query is done in a late fashion (as the channel was not ready yet) we always flush
                     // to ensure we did not race with a previous flush() that was done when the Channel was not

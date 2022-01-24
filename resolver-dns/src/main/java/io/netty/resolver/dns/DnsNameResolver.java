@@ -203,7 +203,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
-    final Future<Channel> channelFuture;
+    final Promise<Channel> channelReadyPromise;
     final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
@@ -451,8 +451,8 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
-        b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-        final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().newPromise());
+        channelReadyPromise = executor().newPromise();
+        final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
@@ -466,12 +466,25 @@ public class DnsNameResolver extends InetNameResolver {
         });
         b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(maxPayloadSize));
 
-        channelFuture = responseHandler.channelActivePromise.asFuture();
         try {
-            ch = b.createUnregistered();
-            Future<Void> future = localAddress == null ? ch.register() : ch.bind(localAddress);
+            Future<Void> future;
+            if (localAddress == null) {
+                b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+                ch = b.createUnregistered();
+                future = ch.register();
+            } else {
+                ch = b.createUnregistered();
+                future = ch.bind(localAddress);
+            }
             if (future.isFailed()) {
                 throw future.cause();
+            } else if (!future.isSuccess()) {
+                future.addListener(f -> {
+                    Throwable cause = f.cause();
+                    if (cause != null) {
+                        channelReadyPromise.tryFailure(cause);
+                    }
+                });
             }
         } catch (Error | RuntimeException e) {
             throw e;
@@ -1329,9 +1342,9 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();
-            channelActivePromise.setSuccess(ctx.channel());
+            channelActivePromise.trySuccess(ctx.channel());
         }
 
         @Override

@@ -74,6 +74,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -3561,6 +3562,25 @@ public class DnsNameResolverTest {
             assertEquals(inetAddress, addr);
         } finally {
             resolver.close();
+        }
+    }
+
+    @Test
+    public void testAddressAlreadyInUse() throws Exception {
+        try (DatagramSocket datagramSocket = new DatagramSocket()) {
+            assertTrue(datagramSocket.isBound());
+            try {
+                try (DnsNameResolver resolver = newResolver()
+                        .localAddress(datagramSocket.getLocalSocketAddress()).build()) {
+                    Throwable cause = assertThrows(CompletionException.class,
+                            () -> resolver.resolve("netty.io").sync());
+                    assertThat(cause.getCause(), instanceOf(UnknownHostException.class));
+                    assertThat(cause.getCause().getCause(), instanceOf(BindException.class));
+                }
+            } catch (IllegalStateException cause) {
+                // We might also throw directly here... in this case let's verify that we use the correct exception.
+                assertThat(cause.getCause(), instanceOf(BindException.class));
+            }
         }
     }
 }
