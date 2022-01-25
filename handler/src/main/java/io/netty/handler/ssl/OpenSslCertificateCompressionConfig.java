@@ -84,7 +84,6 @@ public final class OpenSslCertificateCompressionConfig implements
         }
     }
 
-
     /**
      * The configuration for algorithm.
      */

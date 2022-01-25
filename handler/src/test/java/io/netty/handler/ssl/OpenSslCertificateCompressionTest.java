@@ -78,7 +78,8 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .build()
         );
         final SslContext serverSslContext = buildServerContext(
@@ -99,7 +100,8 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .build()
         );
@@ -123,13 +125,15 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .build()
         );
         final SslContext serverSslContext = buildServerContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .addAlgorithm(testBrotliAlgoServer,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
                         .addAlgorithm(testZLibAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
                         .build()
         );
@@ -147,7 +151,8 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(testBrotliAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .addAlgorithm(testZlibAlgoClient, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                         .build()
         );
