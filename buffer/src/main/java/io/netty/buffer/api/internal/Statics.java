@@ -21,6 +21,7 @@ import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.PlatformDependent;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -270,7 +271,7 @@ public interface Statics {
     }
 
     static boolean equals(Buffer bufferA, Buffer bufferB) {
-        if ((bufferA == null && bufferB != null) || (bufferB == null && bufferA != null)) {
+        if (bufferA == null && bufferB != null || bufferB == null && bufferA != null) {
             return false;
         }
         if (bufferA == bufferB) {
@@ -338,5 +339,23 @@ public interface Statics {
         }
 
         return hashCode;
+    }
+
+    static long nativeAddressOfDirectByteBuffer(ByteBuffer byteBuffer) {
+        if (!byteBuffer.isDirect()) {
+            return 0;
+        }
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.directBufferAddress(byteBuffer);
+        }
+        if (JniBufferAccess.IS_AVAILABLE) {
+            try {
+                return (long) JniBufferAccess.MEMORY_ADDRESS.invokeExact(byteBuffer);
+            } catch (Throwable e) {
+                throw new LinkageError("JNI bypass native memory address accessor was supposed to be available, " +
+                                       "but threw an exception", e);
+            }
+        }
+        return 0;
     }
 }

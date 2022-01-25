@@ -535,7 +535,11 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public long readableNativeAddress() {
-        return nativeAddress();
+        long address = nativeAddress();
+        if (address == 0) {
+            return 0;
+        }
+        return address + roff;
     }
 
     @Override
@@ -579,7 +583,11 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public long writableNativeAddress() {
-        return nativeAddress();
+        long address = nativeAddress();
+        if (address == 0) {
+            return 0;
+        }
+        return address + woff;
     }
 
     @Override
