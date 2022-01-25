@@ -28,7 +28,6 @@ import io.netty.buffer.api.WritableComponent;
 import io.netty.buffer.api.WritableComponentProcessor;
 import io.netty.buffer.api.internal.AdaptableBuffer;
 import io.netty.buffer.api.internal.Statics;
-import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -39,6 +38,7 @@ import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
+import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
 class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
@@ -145,7 +145,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     private long nativeAddress() {
-        return rmem.isDirect() && PlatformDependent.hasUnsafe()? PlatformDependent.directBufferAddress(rmem) : 0;
+        return Statics.nativeAddressOfDirectByteBuffer(rmem);
     }
 
     @Override
@@ -440,7 +440,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public long readableNativeAddress() {
-        return nativeAddress();
+        return nativeAddressWithOffset(nativeAddress(), roff);
     }
 
     @Override
@@ -470,7 +470,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public long writableNativeAddress() {
-        return nativeAddress();
+        return nativeAddressWithOffset(nativeAddress(), woff);
     }
 
     @Override

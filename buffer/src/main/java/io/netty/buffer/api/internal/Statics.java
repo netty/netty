@@ -21,6 +21,7 @@ import io.netty.buffer.api.BufferReadOnlyException;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.PlatformDependent;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -270,7 +271,7 @@ public interface Statics {
     }
 
     static boolean equals(Buffer bufferA, Buffer bufferB) {
-        if ((bufferA == null && bufferB != null) || (bufferB == null && bufferA != null)) {
+        if (bufferA == null && bufferB != null || bufferB == null && bufferA != null) {
             return false;
         }
         if (bufferA == bufferB) {
@@ -338,5 +339,39 @@ public interface Statics {
         }
 
         return hashCode;
+    }
+
+    /**
+     * Compute an offset into a native address.
+     * Zero is used as a marker for when a native address is not available,
+     * and an offset into a zero address will remain zero.
+     *
+     * @param address The native address, or zero if no native address is available.
+     * @param offset The offset into the native address we wish to compute.
+     * @return An offsetted native address, or zero if no native address was available.
+     */
+    static long nativeAddressWithOffset(long address, int offset) {
+        if (address == 0) {
+            return 0;
+        }
+        return address + offset;
+    }
+
+    static long nativeAddressOfDirectByteBuffer(ByteBuffer byteBuffer) {
+        if (!byteBuffer.isDirect()) {
+            return 0;
+        }
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.directBufferAddress(byteBuffer);
+        }
+        if (JniBufferAccess.IS_AVAILABLE) {
+            try {
+                return (long) JniBufferAccess.MEMORY_ADDRESS.invokeExact(byteBuffer);
+            } catch (Throwable e) {
+                throw new LinkageError("JNI bypass native memory address accessor was supposed to be available, " +
+                                       "but threw an exception", e);
+            }
+        }
+        return 0;
     }
 }

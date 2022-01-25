@@ -39,6 +39,7 @@ import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
+import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
 class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
     private static final int CLOSED_SIZE = -1;
@@ -535,7 +536,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public long readableNativeAddress() {
-        return nativeAddress();
+        return nativeAddressWithOffset(nativeAddress(), roff);
     }
 
     @Override
@@ -579,7 +580,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public long writableNativeAddress() {
-        return nativeAddress();
+        return nativeAddressWithOffset(nativeAddress(), woff);
     }
 
     @Override

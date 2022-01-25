@@ -17,6 +17,7 @@ package io.netty.buffer.api.tests;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -24,6 +25,7 @@ import java.nio.ByteBuffer;
 
 import static io.netty.buffer.api.CompositeBuffer.compose;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
@@ -289,6 +291,48 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 assertThat(component.readableNativeAddress()).isNotZero();
                 return true;
             });
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("directAllocators")
+    public void directBuffersMustAdjustReadableWritableNativeAddress(Fixture fixture) {
+        assumeTrue(PlatformDependent.hasUnsafe());
+
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            assertThat(buf.writableBytes()).isEqualTo(8);
+            assertThat(buf.readableBytes()).isZero();
+
+            buf.forEachWritable(0, (index, component) -> {
+                assertThat(component.writableBytes()).isEqualTo(8);
+                long addr = component.writableNativeAddress();
+                assertThat(addr).isNotZero();
+                component.writableBuffer().putInt(0x01020304);
+                component.skipWritable(4);
+                assertThat(component.writableBytes()).isEqualTo(4);
+                assertThat(component.writableNativeAddress()).isEqualTo(addr + 4);
+                return true;
+            });
+
+            assertThat(buf.writableBytes()).isEqualTo(4);
+            assertThat(buf.readableBytes()).isEqualTo(4);
+
+            buf.forEachReadable(0, (index, component) -> {
+                assertThat(component.readableBytes()).isEqualTo(4);
+                long addr = component.readableNativeAddress();
+                assertThat(addr).isNotZero();
+                assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x01);
+                component.skipReadable(1);
+                assertThat(component.readableBytes()).isEqualTo(3);
+                assertThat(component.readableNativeAddress()).isEqualTo(addr + 1);
+                assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x02);
+                component.skipReadable(1);
+                return true;
+            });
+
+            assertThat(buf.readableBytes()).isEqualTo(2);
+            assertThat(buf.readShort()).isEqualTo((short) 0x0304);
         }
     }
 
