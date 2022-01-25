@@ -103,7 +103,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
      * If the length of the aggregated content exceeds this value,
      * {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
      */
-    public HttpObjectAggregator(int maxContentLength) {
+    public HttpObjectAggregator(long maxContentLength) {
         this(maxContentLength, false);
     }
 
@@ -117,7 +117,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
      * then {@code true} means close the connection. otherwise the connection will remain open and data will be
      * consumed and discarded until the next request is received.
      */
-    public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
+    public HttpObjectAggregator(long maxContentLength, boolean closeOnExpectationFailed) {
         super(maxContentLength);
         this.closeOnExpectationFailed = closeOnExpectationFailed;
     }
@@ -154,7 +154,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     }
 
     @Override
-    protected boolean isContentLengthInvalid(HttpMessage start, int maxContentLength) {
+    protected boolean isContentLengthInvalid(HttpMessage start, long maxContentLength) {
         try {
             return getContentLength(start, -1L) > maxContentLength;
         } catch (final NumberFormatException e) {
@@ -162,7 +162,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
     }
 
-    private static FullHttpResponse continueResponse(HttpMessage start, int maxContentLength,
+    private static FullHttpResponse continueResponse(HttpMessage start, long maxContentLength,
                                                      ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
@@ -181,7 +181,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     }
 
     @Override
-    protected Object newContinueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+    protected Object newContinueResponse(HttpMessage start, long maxContentLength, ChannelPipeline pipeline) {
         FullHttpResponse response = continueResponse(start, maxContentLength, pipeline);
         // we're going to respond based on the request expectation so there's no
         // need to propagate the expectation further.
