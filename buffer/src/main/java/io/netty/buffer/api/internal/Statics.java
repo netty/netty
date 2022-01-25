@@ -341,6 +341,22 @@ public interface Statics {
         return hashCode;
     }
 
+    /**
+     * Compute an offset into a native address.
+     * Zero is used as a marker for when a native address is not available,
+     * and an offset into a zero address will remain zero.
+     *
+     * @param address The native address, or zero if no native address is available.
+     * @param offset The offset into the native address we wish to compute.
+     * @return An offsetted native address, or zero if no native address was available.
+     */
+    static long nativeAddressWithOffset(long address, int offset) {
+        if (address == 0) {
+            return 0;
+        }
+        return address + offset;
+    }
+
     static long nativeAddressOfDirectByteBuffer(ByteBuffer byteBuffer) {
         if (!byteBuffer.isDirect()) {
             return 0;
