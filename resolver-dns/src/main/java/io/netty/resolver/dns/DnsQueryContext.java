@@ -26,6 +26,7 @@ import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -126,8 +127,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
             Throwable cause = parent.channelReadyPromise.cause();
             if (cause != null) {
                 // the promise failed before so we should also fail this query.
-                promise.tryFailure(cause);
-                writePromise.setFailure(cause);
+                failQuery(query, cause, writePromise);
             } else {
                 // The promise is not complete yet, let's delay the query.
                 parent.channelReadyPromise.addListener(new GenericFutureListener<Future<? super Channel>>() {
@@ -140,12 +140,20 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                             writeQuery(query, true, writePromise);
                         } else {
                             Throwable cause = future.cause();
-                            promise.tryFailure(cause);
-                            writePromise.setFailure(cause);
+                            failQuery(query, cause, writePromise);
                         }
                     }
                 });
             }
+        }
+    }
+
+    private void failQuery(DnsQuery query, Throwable cause, ChannelPromise writePromise) {
+        try {
+            promise.tryFailure(cause);
+            writePromise.setFailure(cause);
+        } finally {
+            ReferenceCountUtil.release(query);
         }
     }
 
