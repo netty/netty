@@ -204,7 +204,7 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Configure the address that will be used to bind too. If `null` the default will be used.
+     * Configure the address that will be used to bind too. If {@code null} the default will be used.
      * @param localAddress the bind address
      * @return {@code this}
      */
@@ -572,7 +572,7 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.ndots(ndots);
         copiedBuilder.decodeIdn(decodeIdn);
         copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
-
+        copiedBuilder.localAddress(localAddress);
         return copiedBuilder;
     }
 }
