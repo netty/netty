@@ -134,10 +134,6 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         Arrays.sort(resolvers, RESOLVER_COMPARATOR);
         Map<String, DnsServerAddresses> resolverMap = new HashMap<String, DnsServerAddresses>(resolvers.length);
         for (DnsResolver resolver: resolvers) {
-            // Skip mdns
-            if ("mdns".equalsIgnoreCase(resolver.options())) {
-                continue;
-            }
             InetSocketAddress[] nameservers = resolver.nameservers();
             if (nameservers == null || nameservers.length == 0) {
                 continue;
