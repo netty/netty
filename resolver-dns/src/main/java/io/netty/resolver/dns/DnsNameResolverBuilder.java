@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.intValue;
  * A {@link DnsNameResolver} builder.
  */
 public final class DnsNameResolverBuilder {
-    volatile EventLoop eventLoop;
+    private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
@@ -91,7 +91,8 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
-    protected ChannelFactory<? extends DatagramChannel> channelFactory() {
+    // Package-private for testing only.
+    ChannelFactory<? extends DatagramChannel> channelFactory() {
         return this.channelFactory;
     }
 
@@ -379,7 +380,8 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
-    protected DnsServerAddressStreamProvider nameServerProvider() {
+    // Package-private for testing only.
+    DnsServerAddressStreamProvider nameServerProvider() {
         return this.dnsServerAddressStreamProvider;
     }
 
