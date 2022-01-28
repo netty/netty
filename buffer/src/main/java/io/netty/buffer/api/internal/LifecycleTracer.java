@@ -45,7 +45,7 @@ public abstract class LifecycleTracer {
      * @return A new tracer for a resource.
      */
     public static LifecycleTracer get() {
-        if (lifecycleTracingEnabled && LeakDetection.leakDetectionEnabled == 0) {
+        if (!lifecycleTracingEnabled && LeakDetection.leakDetectionEnabled == 0) {
             return NoOpTracer.INSTANCE;
         }
         StackTracer stackTracer = new StackTracer();
