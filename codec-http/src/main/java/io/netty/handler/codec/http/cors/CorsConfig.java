@@ -100,7 +100,7 @@ public final class CorsConfig {
      * Web browsers may set the 'Origin' request header to 'null' if a resource is loaded
      * from the local file system.
      *
-     * If isNullOriginAllowed is true then the server will response with the wildcard for the
+     * If isNullOriginAllowed is true then the server will response with the wildcard for
      * the CORS response header 'Access-Control-Allow-Origin'.
      *
      * @return {@code true} if a 'null' origin should be supported.

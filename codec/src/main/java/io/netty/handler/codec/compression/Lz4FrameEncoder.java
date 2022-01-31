@@ -36,19 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
-import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_NON_COMPRESSED;
-import static io.netty.handler.codec.compression.Lz4Constants.CHECKSUM_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.COMPRESSED_LENGTH_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.COMPRESSION_LEVEL_BASE;
-import static io.netty.handler.codec.compression.Lz4Constants.DECOMPRESSED_LENGTH_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
-import static io.netty.handler.codec.compression.Lz4Constants.HEADER_LENGTH;
-import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
-import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
+import static io.netty.handler.codec.compression.Lz4Constants.*;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
@@ -383,7 +371,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 public void run() {
                     ctx.close(promise);
                 }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
         }
     }
 

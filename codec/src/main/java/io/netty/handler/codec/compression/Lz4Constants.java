@@ -41,6 +41,9 @@ final class Lz4Constants {
      * Offsets of header's parts.
      */
     static final int TOKEN_OFFSET = 8;
+
+    static final int THREAD_POOL_DELAY_SECONDS = 10;
+
     static final int COMPRESSED_LENGTH_OFFSET = TOKEN_OFFSET + 1;
     static final int DECOMPRESSED_LENGTH_OFFSET = COMPRESSED_LENGTH_OFFSET + 4;
     static final int CHECKSUM_OFFSET = DECOMPRESSED_LENGTH_OFFSET + 4;
