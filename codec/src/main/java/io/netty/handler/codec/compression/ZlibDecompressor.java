@@ -31,7 +31,7 @@ import java.util.zip.Inflater;
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
-public final class JdkZlibDecompressor implements Decompressor {
+public final class ZlibDecompressor implements Decompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -70,8 +70,8 @@ public final class JdkZlibDecompressor implements Decompressor {
 
     private boolean decideZlibOrNone;
 
-    private JdkZlibDecompressor(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated,
-                                int maxAllocation) {
+    private ZlibDecompressor(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated,
+                             int maxAllocation) {
         this.maxAllocation = maxAllocation;
         this.decompressConcatenated = decompressConcatenated;
         switch (wrapper) {
@@ -103,7 +103,7 @@ public final class JdkZlibDecompressor implements Decompressor {
      *
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory() {
+    public static Supplier<ZlibDecompressor> newFactory() {
         return newFactory(ZlibWrapper.ZLIB, null, false, 0);
     }
 
@@ -116,7 +116,7 @@ public final class JdkZlibDecompressor implements Decompressor {
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory(int maxAllocation) {
+    public static Supplier<ZlibDecompressor> newFactory(int maxAllocation) {
         return newFactory(ZlibWrapper.ZLIB, null, false, maxAllocation);
     }
 
@@ -127,7 +127,7 @@ public final class JdkZlibDecompressor implements Decompressor {
      *
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary) {
+    public static Supplier<ZlibDecompressor> newFactory(byte[] dictionary) {
         return newFactory(ZlibWrapper.ZLIB, dictionary, false, 0);
     }
 
@@ -141,7 +141,7 @@ public final class JdkZlibDecompressor implements Decompressor {
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory(byte[] dictionary, int maxAllocation) {
+    public static Supplier<ZlibDecompressor> newFactory(byte[] dictionary, int maxAllocation) {
         return newFactory(ZlibWrapper.ZLIB, dictionary, false, maxAllocation);
     }
 
@@ -152,7 +152,7 @@ public final class JdkZlibDecompressor implements Decompressor {
      *
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper) {
+    public static Supplier<ZlibDecompressor> newFactory(ZlibWrapper wrapper) {
         return newFactory(wrapper, null, false, 0);
     }
 
@@ -166,31 +166,31 @@ public final class JdkZlibDecompressor implements Decompressor {
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      * @return the factory.
      */
-    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, int maxAllocation) {
+    public static Supplier<ZlibDecompressor> newFactory(ZlibWrapper wrapper, int maxAllocation) {
         return newFactory(wrapper, null, false, maxAllocation);
     }
 
-    public static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, boolean decompressConcatenated) {
+    public static Supplier<ZlibDecompressor> newFactory(ZlibWrapper wrapper, boolean decompressConcatenated) {
         return newFactory(wrapper, null, decompressConcatenated, 0);
     }
 
-    public static Supplier<JdkZlibDecompressor> newFactory(
+    public static Supplier<ZlibDecompressor> newFactory(
             ZlibWrapper wrapper, boolean decompressConcatenated, int maxAllocation) {
         return newFactory(wrapper, null, decompressConcatenated, maxAllocation);
     }
 
-    public static Supplier<JdkZlibDecompressor> newFactory(boolean decompressConcatenated) {
+    public static Supplier<ZlibDecompressor> newFactory(boolean decompressConcatenated) {
         return newFactory(ZlibWrapper.GZIP, null, decompressConcatenated, 0);
     }
 
-    public static Supplier<JdkZlibDecompressor> newFactory(boolean decompressConcatenated, int maxAllocation) {
+    public static Supplier<ZlibDecompressor> newFactory(boolean decompressConcatenated, int maxAllocation) {
         return newFactory(ZlibWrapper.GZIP, null, decompressConcatenated, maxAllocation);
     }
 
-    private static Supplier<JdkZlibDecompressor> newFactory(ZlibWrapper wrapper, byte[] dictionary,
-                                                            boolean decompressConcatenated, int maxAllocation) {
+    private static Supplier<ZlibDecompressor> newFactory(ZlibWrapper wrapper, byte[] dictionary,
+                                                         boolean decompressConcatenated, int maxAllocation) {
         requireNonNull(wrapper, "wrapper");
-        return () -> new JdkZlibDecompressor(wrapper, dictionary, decompressConcatenated, maxAllocation);
+        return () -> new ZlibDecompressor(wrapper, dictionary, decompressConcatenated, maxAllocation);
     }
 
     @Override

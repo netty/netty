@@ -22,7 +22,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.Compressor;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
-import io.netty.handler.codec.compression.JdkZlibCompressor;
+import io.netty.handler.codec.compression.ZlibCompressor;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
@@ -198,11 +198,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.factories = new HashMap<>();
 
         if (this.gzipOptions != null) {
-            this.factories.put("gzip", JdkZlibCompressor.newFactory(
+            this.factories.put("gzip", ZlibCompressor.newFactory(
                     ZlibWrapper.GZIP, gzipOptions.compressionLevel()));
         }
         if (this.deflateOptions != null) {
-            this.factories.put("deflate", JdkZlibCompressor.newFactory(
+            this.factories.put("deflate", ZlibCompressor.newFactory(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel()));
         }
         if (this.brotliOptions != null) {
@@ -267,7 +267,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
 
             return new Result(
-                    targetContentEncoding, JdkZlibCompressor.newFactory(wrapper, compressionLevel).get());
+                    targetContentEncoding, ZlibCompressor.newFactory(wrapper, compressionLevel).get());
         }
     }
 

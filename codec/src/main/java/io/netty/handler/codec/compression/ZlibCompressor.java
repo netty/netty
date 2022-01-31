@@ -30,7 +30,7 @@ import static io.netty.util.internal.ObjectUtil.checkInRange;
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
-public final class JdkZlibCompressor implements Compressor {
+public final class ZlibCompressor implements Compressor {
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
 
@@ -48,12 +48,12 @@ public final class JdkZlibCompressor implements Compressor {
     private State state = State.PROCESSING;
     private boolean writeHeader = true;
 
-    private JdkZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
+    private ZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
         this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
     }
 
-    private JdkZlibCompressor(int compressionLevel, byte[] dictionary) {
+    private ZlibCompressor(int compressionLevel, byte[] dictionary) {
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
@@ -66,7 +66,7 @@ public final class JdkZlibCompressor implements Compressor {
      * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory() {
+    public static Supplier<ZlibCompressor> newFactory() {
         return newFactory(6);
     }
 
@@ -81,7 +81,7 @@ public final class JdkZlibCompressor implements Compressor {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory(int compressionLevel) {
+    public static Supplier<ZlibCompressor> newFactory(int compressionLevel) {
         return newFactory(ZlibWrapper.ZLIB, compressionLevel);
     }
 
@@ -92,7 +92,7 @@ public final class JdkZlibCompressor implements Compressor {
      * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper) {
+    public static Supplier<ZlibCompressor> newFactory(ZlibWrapper wrapper) {
         return newFactory(wrapper, 6);
     }
 
@@ -107,7 +107,7 @@ public final class JdkZlibCompressor implements Compressor {
      * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper, int compressionLevel) {
+    public static Supplier<ZlibCompressor> newFactory(ZlibWrapper wrapper, int compressionLevel) {
         checkInRange(compressionLevel, 0, 9 , "compressionLevel");
         requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
@@ -116,7 +116,7 @@ public final class JdkZlibCompressor implements Compressor {
                             "allowed for compression.");
         }
 
-        return () -> new JdkZlibCompressor(wrapper, compressionLevel);
+        return () -> new ZlibCompressor(wrapper, compressionLevel);
     }
 
     /**
@@ -129,7 +129,7 @@ public final class JdkZlibCompressor implements Compressor {
      * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory(byte[] dictionary) {
+    public static Supplier<ZlibCompressor> newFactory(byte[] dictionary) {
         return newFactory(6, dictionary);
     }
 
@@ -147,14 +147,14 @@ public final class JdkZlibCompressor implements Compressor {
      * @return the factory.
      * @throws CompressionException if failed to initialize zlib
      */
-    public static Supplier<JdkZlibCompressor> newFactory(int compressionLevel, byte[] dictionary) {
+    public static Supplier<ZlibCompressor> newFactory(int compressionLevel, byte[] dictionary) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         requireNonNull(dictionary, "dictionary");
 
-        return () -> new JdkZlibCompressor(compressionLevel, dictionary);
+        return () -> new ZlibCompressor(compressionLevel, dictionary);
     }
 
     @Override

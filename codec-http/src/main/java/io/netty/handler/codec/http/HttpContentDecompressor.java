@@ -24,7 +24,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecompressor;
 import io.netty.handler.codec.compression.Decompressor;
-import io.netty.handler.codec.compression.JdkZlibDecompressor;
+import io.netty.handler.codec.compression.ZlibDecompressor;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
@@ -57,12 +57,12 @@ public class HttpContentDecompressor extends HttpContentDecoder {
     protected Decompressor newContentDecoder(String contentEncoding) throws Exception {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return JdkZlibDecompressor.newFactory(ZlibWrapper.GZIP).get();
+            return ZlibDecompressor.newFactory(ZlibWrapper.GZIP).get();
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
             X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
-            JdkZlibDecompressor.newFactory(wrapper).get();
+            ZlibDecompressor.newFactory(wrapper).get();
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return BrotliDecompressor.newFactory().get();
