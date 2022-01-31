@@ -25,6 +25,7 @@ import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
 import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkInRange;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
@@ -107,10 +108,7 @@ public final class JdkZlibCompressor implements Compressor {
      * @throws CompressionException if failed to initialize zlib
      */
     public static Supplier<JdkZlibCompressor> newFactory(ZlibWrapper wrapper, int compressionLevel) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
+        checkInRange(compressionLevel, 0, 9 , "compressionLevel");
         requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
