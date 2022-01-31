@@ -117,21 +117,11 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int windowBits, int memLevel) {
-
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel +
-                    " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException(
-                    "windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
+        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         ObjectUtil.checkNotNull(wrapper, "wrapper");
+
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -208,17 +198,9 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException(
-                    "windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
+        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         ObjectUtil.checkNotNull(dictionary, "dictionary");
 
         int resultCode;
