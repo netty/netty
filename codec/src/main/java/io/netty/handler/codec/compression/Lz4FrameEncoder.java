@@ -49,6 +49,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
+import static io.netty.handler.codec.compression.Lz4Constants.THREAD_POOL_DELAY_SECONDS;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
@@ -383,7 +384,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 public void run() {
                     ctx.close(promise);
                 }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
         }
     }
 

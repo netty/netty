@@ -46,6 +46,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private final CRC32 crc = new CRC32();
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
+    private static final int THREAD_POOL_DELAY_SECONDS = 10;
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6})
@@ -278,7 +279,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 public void run() {
                     ctx.close(promise);
                 }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
         }
     }
 
