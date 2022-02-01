@@ -465,16 +465,18 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         ByteBuffer[] byteBuffers = collector.buffers;
         int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
         int totalBytesWritten = 0;
-        if (channel instanceof GatheringByteChannel) {
-            GatheringByteChannel gatheringChannel = (GatheringByteChannel) channel;
-            totalBytesWritten = toIntExact(gatheringChannel.write(byteBuffers, 0, bufferCount));
-            skipReadable(totalBytesWritten);
-        } else {
-            for (int i = 0; i < bufferCount; i++) {
-                int bytesWritten = channel.write(byteBuffers[i]);
-                skipReadable(bytesWritten);
-                totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+        try {
+            if (channel instanceof GatheringByteChannel) {
+                GatheringByteChannel gatheringChannel = (GatheringByteChannel) channel;
+                totalBytesWritten = toIntExact(gatheringChannel.write(byteBuffers, 0, bufferCount));
+            } else {
+                for (int i = 0; i < bufferCount; i++) {
+                    int bytesWritten = channel.write(byteBuffers[i]);
+                    totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+                }
             }
+        } finally {
+            skipReadable(totalBytesWritten);
         }
         return totalBytesWritten;
     }
@@ -494,23 +496,25 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         ByteBuffer[] byteBuffers = collector.buffers;
         int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
         int totalBytesRead = 0;
-        if (channel instanceof ScatteringByteChannel) {
-            ScatteringByteChannel scatteringChannel = (ScatteringByteChannel) channel;
-            totalBytesRead = toIntExact(scatteringChannel.read(byteBuffers, 0, bufferCount));
-            if (totalBytesRead != -1) {
-                skipWritable(totalBytesRead);
-            }
-        } else {
-            for (int i = 0; i < bufferCount; i++) {
-                int bytesRead = channel.read(byteBuffers[i]);
-                if (bytesRead == -1) {
-                    if (i == 0) {
-                        return -1; // If we're end-of-stream on the first read, immediately return -1.
+        try {
+            if (channel instanceof ScatteringByteChannel) {
+                ScatteringByteChannel scatteringChannel = (ScatteringByteChannel) channel;
+                totalBytesRead = toIntExact(scatteringChannel.read(byteBuffers, 0, bufferCount));
+            } else {
+                for (int i = 0; i < bufferCount; i++) {
+                    int bytesRead = channel.read(byteBuffers[i]);
+                    if (bytesRead == -1) {
+                        if (i == 0) {
+                            return -1; // If we're end-of-stream on the first read, immediately return -1.
+                        }
+                        break;
                     }
-                    break;
+                    totalBytesRead = addExact(totalBytesRead, bytesRead);
                 }
-                skipWritable(bytesRead);
-                totalBytesRead = addExact(totalBytesRead, bytesRead);
+            }
+        } finally {
+            if (totalBytesRead > 0) { // Don't skipWritable if total is 0 or -1
+                skipWritable(totalBytesRead);
             }
         }
         return totalBytesRead;
