@@ -454,7 +454,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
+    public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -480,7 +480,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
+    public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -504,6 +504,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             for (int i = 0; i < bufferCount; i++) {
                 int bytesRead = channel.read(byteBuffers[i]);
                 if (bytesRead == -1) {
+                    if (i == 0) {
+                        return -1; // If we're end-of-stream on the first read, immediately return -1.
+                    }
                     break;
                 }
                 skipWritable(bytesRead);

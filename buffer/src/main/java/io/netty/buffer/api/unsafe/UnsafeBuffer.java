@@ -274,7 +274,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
-    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
+    public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -286,7 +286,7 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     }
 
     @Override
-    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
+    public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }

@@ -116,13 +116,13 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
-        return delegate.readIntoChannelWrite(channel, length);
+    public int transferTo(WritableByteChannel channel, int length) throws IOException {
+        return delegate.transferTo(channel, length);
     }
 
     @Override
-    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
-        return delegate.writeFromChannelRead(channel, length);
+    public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
+        return delegate.transferFrom(channel, length);
     }
 
     @Override

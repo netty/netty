@@ -499,7 +499,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.1</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <junit.version>5.7.0</junit.version>
+    <junit.version>5.8.2</junit.version>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.4.2</brotli4j.version>
     <skipTests>false</skipTests>

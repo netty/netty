@@ -294,10 +294,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return The actual number of bytes written, possibly zero.
      * @throws IOException If the write-operation on the channel failed for some reason.
      */
-    int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException;
+    int transferTo(WritableByteChannel channel, int length) throws IOException;
 
     /**
-     * Write to this buffer, by reading data from the given channel.
+     * Read from the given channel and write to this buffer.
      * The number of bytes actually read from the channel are returned, or -1 is returned if the channel has reached
      * the end-of-stream.
      * No more than the given {@code length} of bytes, or the number of {@linkplain #writableBytes() writable bytes},
@@ -314,7 +314,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return The actual number of bytes read, possibly zero, or -1 if the end-of-stream has been reached.
      * @throws IOException If the read-operation on the channel failed for some reason.
      */
-    int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException;
+    int transferFrom(ReadableByteChannel channel, int length) throws IOException;
 
     /**
      * Writes into this buffer, all the bytes from the given {@code source} using the passed {@code charset}.

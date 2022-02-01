@@ -215,7 +215,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     @Override
-    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
+    public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
@@ -227,7 +227,7 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     }
 
     @Override
-    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
+    public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed(this);
         }
