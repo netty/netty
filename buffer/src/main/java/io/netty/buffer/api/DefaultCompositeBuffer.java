@@ -18,8 +18,13 @@ package io.netty.buffer.api;
 import io.netty.buffer.api.internal.ResourceSupport;
 import io.netty.buffer.api.internal.Statics;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ScatteringByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -31,6 +36,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
 import static java.lang.Math.addExact;
+import static java.lang.Math.toIntExact;
 
 /**
  * The default implementation of the {@link CompositeBuffer} interface.
@@ -445,6 +451,83 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         while (cursor.readByte()) {
             dest.setByte(destPos + --length, cursor.getByte());
         }
+    }
+
+    @Override
+    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        length = Math.min(readableBytes(), length);
+        checkReadBounds(readerOffset(), length);
+        ByteBufferCollector collector = new ByteBufferCollector(countReadableComponents());
+        forEachReadable(0, collector);
+        ByteBuffer[] byteBuffers = collector.buffers;
+        int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
+        int totalBytesWritten = 0;
+        if (channel instanceof GatheringByteChannel) {
+            GatheringByteChannel gatheringChannel = (GatheringByteChannel) channel;
+            totalBytesWritten = toIntExact(gatheringChannel.write(byteBuffers, 0, bufferCount));
+            skipReadable(totalBytesWritten);
+        } else {
+            for (int i = 0; i < bufferCount; i++) {
+                int bytesWritten = channel.write(byteBuffers[i]);
+                skipReadable(bytesWritten);
+                totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+            }
+        }
+        return totalBytesWritten;
+    }
+
+    @Override
+    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
+        length = Math.min(writableBytes(), length);
+        checkWriteBounds(writerOffset(), length);
+        ByteBufferCollector collector = new ByteBufferCollector(countWritableComponents());
+        forEachWritable(0, collector);
+        ByteBuffer[] byteBuffers = collector.buffers;
+        int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
+        int totalBytesRead = 0;
+        if (channel instanceof ScatteringByteChannel) {
+            ScatteringByteChannel scatteringChannel = (ScatteringByteChannel) channel;
+            totalBytesRead = toIntExact(scatteringChannel.read(byteBuffers, 0, bufferCount));
+            if (totalBytesRead != -1) {
+                skipWritable(totalBytesRead);
+            }
+        } else {
+            for (int i = 0; i < bufferCount; i++) {
+                int bytesRead = channel.read(byteBuffers[i]);
+                if (bytesRead == -1) {
+                    break;
+                }
+                skipWritable(bytesRead);
+                totalBytesRead = addExact(totalBytesRead, bytesRead);
+            }
+        }
+        return totalBytesRead;
+    }
+
+    private static int countAndPrepareBuffersForChannelIO(int byteLength, ByteBuffer[] byteBuffers) {
+        int bufferCount = 0;
+        int byteSum = 0;
+        for (ByteBuffer buffer : byteBuffers) {
+            byteSum += buffer.remaining();
+            bufferCount++;
+            if (byteSum >= byteLength) {
+                int diff = byteSum - byteLength;
+                if (diff > 0) {
+                    buffer.limit(buffer.limit() - diff);
+                }
+                break;
+            }
+        }
+        return bufferCount;
     }
 
     @Override
@@ -1752,6 +1835,27 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         @Override
         public int bytesLeft() {
             return currentOffset() - end;
+        }
+    }
+
+    private static final class ByteBufferCollector
+            implements ReadableComponentProcessor<RuntimeException>, WritableComponentProcessor<RuntimeException> {
+        final ByteBuffer[] buffers;
+
+        private ByteBufferCollector(int expectedBufferCount) {
+            buffers = new ByteBuffer[expectedBufferCount];
+        }
+
+        @Override
+        public boolean process(int index, ReadableComponent component) {
+            buffers[index] = component.readableBuffer();
+            return true;
+        }
+
+        @Override
+        public boolean process(int index, WritableComponent component) {
+            buffers[index] = component.writableBuffer();
+            return true;
         }
     }
 }

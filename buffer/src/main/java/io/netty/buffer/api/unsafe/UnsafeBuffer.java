@@ -30,10 +30,13 @@ import io.netty.buffer.api.internal.AdaptableBuffer;
 import io.netty.buffer.api.internal.Statics;
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.IOException;
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
@@ -268,6 +271,35 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
             Reference.reachabilityFence(memory);
             Reference.reachabilityFence(dest);
         }
+    }
+
+    @Override
+    public int readIntoChannelWrite(WritableByteChannel channel, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        length = Math.min(readableBytes(), length);
+        checkGet(readerOffset(), length);
+        int bytesWritten = channel.write(readableBuffer().limit(length));
+        skipReadable(bytesWritten);
+        return bytesWritten;
+    }
+
+    @Override
+    public int writeFromChannelRead(ReadableByteChannel channel, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
+        length = Math.min(writableBytes(), length);
+        checkSet(writerOffset(), length);
+        int bytesRead = channel.read(writableBuffer().limit(length));
+        if (bytesRead != -1) {
+            skipWritable(bytesRead);
+        }
+        return bytesRead;
     }
 
     /**
