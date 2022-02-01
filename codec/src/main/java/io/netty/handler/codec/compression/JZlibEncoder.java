@@ -40,6 +40,8 @@ public class JZlibEncoder extends ZlibEncoder {
     private volatile boolean finished;
     private volatile ChannelHandlerContext ctx;
 
+    private static final int THREAD_POOL_DELAY_SECONDS = 10;
+
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6}),
      * default window bits ({@code 15}), default memory level ({@code 8}),
@@ -336,7 +338,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 public void run() {
                     ctx.close(promise);
                 }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
         }
     }
 
