@@ -490,7 +490,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
-     * @deprecated
+     * @deprecated will be removed
      * Free all cached buffers for the calling {@link Thread}.
      */
     @Deprecated
