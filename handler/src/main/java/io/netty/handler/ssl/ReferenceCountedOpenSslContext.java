@@ -1102,9 +1102,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class CompressionAlgorithm implements CertificateCompressionAlgo {
         private final OpenSslEngineMap engineMap;
-        private final OpenSslCompressionAlgorithm compressionAlgorithm;
+        private final OpenSslCertificateCompressionAlgorithm compressionAlgorithm;
 
-        CompressionAlgorithm(OpenSslEngineMap engineMap, OpenSslCompressionAlgorithm compressionAlgorithm) {
+        CompressionAlgorithm(OpenSslEngineMap engineMap, OpenSslCertificateCompressionAlgorithm compressionAlgorithm) {
             this.engineMap = engineMap;
             this.compressionAlgorithm = compressionAlgorithm;
         }

@@ -17,7 +17,11 @@ package io.netty.handler.ssl;
 
 import javax.net.ssl.SSLEngine;
 
-public interface OpenSslCompressionAlgorithm {
+/**
+ * Provides compression and decompression implementations for TLS Certificate Compression
+ * (<a href="https://tools.ietf.org/html/rfc8879">RFC 8879</a>).
+ */
+public interface OpenSslCertificateCompressionAlgorithm {
 
     /**
      * Compress the given input with the specified algorithm and return the compressed bytes.

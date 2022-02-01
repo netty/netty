@@ -35,7 +35,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLEngine;
@@ -47,8 +46,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OpenSslCertificateCompressionTest {
-
-    private static final int TEST_TIMEOUT = 12;
 
     private static SelfSignedCertificate cert;
     private TestCertCompressionAlgo testZLibAlgoServer;
@@ -73,7 +70,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testSimple() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
@@ -95,7 +91,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testServerPriority() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
@@ -120,7 +115,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testServerPriorityReverse() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
@@ -146,7 +140,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testFailedNegotiation() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = buildClientContext(
@@ -168,7 +161,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testAlgoFailure() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         TestCertCompressionAlgo badZlibAlgoClient =
@@ -198,7 +190,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testAlgoException() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         TestCertCompressionAlgo badZlibAlgoClient =
@@ -228,7 +219,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    @Timeout(TEST_TIMEOUT)
     public void testTlsLessThan13() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL());
         final SslContext clientSslContext = SslContextBuilder.forClient()
@@ -416,7 +406,7 @@ public class OpenSslCertificateCompressionTest {
         }
     }
 
-    private static class TestCertCompressionAlgo implements OpenSslCompressionAlgorithm {
+    private static class TestCertCompressionAlgo implements OpenSslCertificateCompressionAlgorithm {
 
         private static final int BASE_PADDING_SIZE = 10;
         public boolean compressCalled;

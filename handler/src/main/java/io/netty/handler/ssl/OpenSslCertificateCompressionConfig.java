@@ -49,7 +49,7 @@ public final class OpenSslCertificateCompressionConfig implements
     }
 
     /**
-     * Builder for an {@link OpenSslCompressionAlgorithm}.
+     * Builder for an {@link OpenSslCertificateCompressionAlgorithm}.
      */
     public static final class Builder {
         private final List<AlgorithmConfig> algorithmList = new ArrayList<AlgorithmConfig>();
@@ -62,20 +62,20 @@ public final class OpenSslCertificateCompressionConfig implements
          * Most preferred algorithm should be registered first.
          *
          * @param algorithm implementation of the compression and or decompression algorithm as a
-         * {@link OpenSslCompressionAlgorithm}
+         * {@link OpenSslCertificateCompressionAlgorithm}
          * @param mode indicates whether decompression support should be advertized, compression should be applied
          *                  for peers which support it, or both. This allows the caller to support one way compression
          *                  only.
          * @return self.
          */
-        public Builder addAlgorithm(OpenSslCompressionAlgorithm algorithm, AlgorithmMode mode) {
+        public Builder addAlgorithm(OpenSslCertificateCompressionAlgorithm algorithm, AlgorithmMode mode) {
             algorithmList.add(new AlgorithmConfig(algorithm, mode));
             return this;
         }
 
         /**
          * Build a new {@link OpenSslCertificateCompressionConfig} based on the previous
-         * added {@link OpenSslCompressionAlgorithm}s.
+         * added {@link OpenSslCertificateCompressionAlgorithm}s.
          *
          * @return a new config.
          */
@@ -88,10 +88,10 @@ public final class OpenSslCertificateCompressionConfig implements
      * The configuration for algorithm.
      */
     public static final class AlgorithmConfig {
-        private final OpenSslCompressionAlgorithm algorithm;
+        private final OpenSslCertificateCompressionAlgorithm algorithm;
         private final AlgorithmMode mode;
 
-        private AlgorithmConfig(OpenSslCompressionAlgorithm algorithm, AlgorithmMode mode) {
+        private AlgorithmConfig(OpenSslCertificateCompressionAlgorithm algorithm, AlgorithmMode mode) {
             this.algorithm = ObjectUtil.checkNotNull(algorithm, "algorithm");
             this.mode = ObjectUtil.checkNotNull(mode, "mode");
         }
@@ -106,17 +106,17 @@ public final class OpenSslCertificateCompressionConfig implements
         }
 
         /**
-         * The configured {@link OpenSslCompressionAlgorithm}.
+         * The configured {@link OpenSslCertificateCompressionAlgorithm}.
          *
          * @return the algorithm
          */
-        public OpenSslCompressionAlgorithm algorithm() {
+        public OpenSslCertificateCompressionAlgorithm algorithm() {
             return algorithm;
         }
     }
 
     /**
-     * The usage mode of the {@link OpenSslCompressionAlgorithm}.
+     * The usage mode of the {@link OpenSslCertificateCompressionAlgorithm}.
      */
     public enum AlgorithmMode {
         /**
