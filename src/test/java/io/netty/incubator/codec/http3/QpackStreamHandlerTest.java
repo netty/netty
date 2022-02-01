@@ -18,11 +18,11 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.incubator.codec.quic.QuicStreamType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class QpackStreamHandlerTest {
 

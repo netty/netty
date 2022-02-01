@@ -25,7 +25,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.List;
@@ -41,11 +42,13 @@ import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static io.netty.util.ReferenceCountUtil.release;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 
 public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValidationHandlerTest {
     private final QpackDecoder decoder;
@@ -56,7 +59,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     @Override
-    protected ChannelHandler newHandler() {
+    protected ChannelHandler newHandler(boolean server) {
         return new ChannelInitializer<QuicStreamChannel>() {
             @Override
             protected void initChannel(QuicStreamChannel ch) {
@@ -76,24 +79,26 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
                 new DefaultHttp3UnknownFrame(Http3CodecUtils.MAX_RESERVED_FRAME_TYPE, Unpooled.buffer()));
     }
 
-    @Test
-    public void testInvalidFrameSequenceStartInbound() throws Exception {
-        final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler());
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInvalidFrameSequenceStartInbound(boolean server) throws Exception {
+        setUp(server);
+        final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler(server));
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
-        try {
-            channel.writeInbound(dataFrame);
-            fail();
-        } catch (Exception e) {
-            assertException(H3_FRAME_UNEXPECTED, e);
-        }
+
+        Exception e = assertThrows(Exception.class, () -> channel.writeInbound(dataFrame));
+        assertException(H3_FRAME_UNEXPECTED, e);
+
         verifyClose(H3_FRAME_UNEXPECTED, parent);
         assertEquals(0, dataFrame.refCnt());
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testInvalidFrameSequenceEndInbound() throws Exception {
-        final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler());
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInvalidFrameSequenceEndInbound(boolean server) throws Exception {
+        setUp(server);
+        final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler(server));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -105,12 +110,9 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.writeInbound(dataFrame.retainedDuplicate()));
         assertTrue(channel.writeInbound(dataFrame2.retainedDuplicate()));
         assertTrue(channel.writeInbound(trailersFrame));
-        try {
-            channel.writeInbound(dataFrame3);
-            fail();
-        } catch (Exception e) {
-            assertException(H3_FRAME_UNEXPECTED, e);
-        }
+
+        Exception e = assertThrows(Exception.class, () -> channel.writeInbound(dataFrame3));
+        assertException(H3_FRAME_UNEXPECTED, e);
 
         verifyClose(H3_FRAME_UNEXPECTED, parent);
         assertTrue(channel.finish());
@@ -123,24 +125,26 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertNull(channel.readInbound());
     }
 
-    @Test
-    public void testInvalidFrameSequenceStartOutbound() throws Exception {
-        EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler());
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInvalidFrameSequenceStartOutbound(boolean server) throws Exception {
+        setUp(server);
+        EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler(server));
 
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
-        try {
-            channel.writeOutbound(dataFrame);
-            fail();
-        } catch (Exception e) {
-            assertException(H3_FRAME_UNEXPECTED, e);
-        }
+
+        Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(dataFrame));
+       assertException(H3_FRAME_UNEXPECTED, e);
+
         assertFalse(channel.finish());
         assertEquals(0, dataFrame.refCnt());
     }
 
-    @Test
-    public void testInvalidFrameSequenceEndOutbound() throws Exception {
-        EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler());
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInvalidFrameSequenceEndOutbound(boolean server) throws Exception {
+        setUp(server);
+        EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler(server));
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
@@ -152,12 +156,9 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.writeOutbound(dataFrame2.retainedDuplicate()));
         assertTrue(channel.writeOutbound(trailersFrame));
 
-        try {
-            channel.writeOutbound(dat3Frame3);
-            fail();
-        } catch (Exception e) {
-            assertException(H3_FRAME_UNEXPECTED, e);
-        }
+        Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(dat3Frame3));
+        assertException(H3_FRAME_UNEXPECTED, e);
+
         assertTrue(channel.finish());
         assertEquals(0, dat3Frame3.refCnt());
 
@@ -168,25 +169,26 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertNull(channel.readOutbound());
     }
 
-    @Test
-    public void testGoawayReceivedBeforeWritingHeaders() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testGoawayReceivedBeforeWritingHeaders(boolean server) throws Exception {
+        setUp(server);
         EmbeddedQuicStreamChannel channel = newClientStream(() -> true);
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        try {
-            channel.writeOutbound(headersFrame);
-            fail();
-        } catch (Exception e) {
-            assertException(H3_FRAME_UNEXPECTED, e);
-        }
+        Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(headersFrame));
+        assertException(H3_FRAME_UNEXPECTED, e);
+
         // We should have closed the channel.
         assertFalse(channel.isActive());
         assertFalse(channel.finish());
         assertNull(channel.readOutbound());
     }
 
-    @Test
-    public void testGoawayReceivedAfterWritingHeaders() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testGoawayReceivedAfterWritingHeaders(boolean server) throws Exception {
+        setUp(server);
         AtomicBoolean goAway = new AtomicBoolean();
         EmbeddedQuicStreamChannel channel = newClientStream(goAway::get);
 
@@ -202,8 +204,10 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertNull(channel.readOutbound());
     }
 
-    @Test
-    public void testClientHeadRequestWithContentLength() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testClientHeadRequestWithContentLength(boolean server) throws Exception {
+        setUp(server);
         EmbeddedQuicStreamChannel channel = newClientStream(() -> false);
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
@@ -219,23 +223,31 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    @Test
-    public void testClientNonHeadRequestWithContentLengthNoData() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testClientNonHeadRequestWithContentLengthNoData(boolean server) throws Exception {
+        setUp(server);
         testClientNonHeadRequestWithContentLength(true, false);
     }
 
-    @Test
-    public void testClientNonHeadRequestWithContentLengthNoDataAndTrailers() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testClientNonHeadRequestWithContentLengthNoDataAndTrailers(boolean server) throws Exception {
+        setUp(server);
         testClientNonHeadRequestWithContentLength(true, true);
     }
 
-    @Test
-    public void testClientNonHeadRequestWithContentLengthNotEnoughData() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testClientNonHeadRequestWithContentLengthNotEnoughData(boolean server) throws Exception {
+        setUp(server);
         testClientNonHeadRequestWithContentLength(false, false);
     }
 
-    @Test
-    public void testClientNonHeadRequestWithContentLengthNotEnoughDataAndTrailer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testClientNonHeadRequestWithContentLengthNotEnoughDataAndTrailer(boolean server) throws Exception {
+        setUp(server);
         testClientNonHeadRequestWithContentLength(false, true);
     }
 
@@ -266,23 +278,31 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    @Test
-    public void testServerWithContentLengthNoData() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testServerWithContentLengthNoData(boolean server) throws Exception {
+        setUp(server);
         testServerWithContentLength(true, false);
     }
 
-    @Test
-    public void testServerWithContentLengthNoDataAndTrailers() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testServerWithContentLengthNoDataAndTrailers(boolean server) throws Exception {
+        setUp(server);
         testServerWithContentLength(true, true);
     }
 
-    @Test
-    public void testServerWithContentLengthNotEnoughData() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testServerWithContentLengthNotEnoughData(boolean server) throws Exception {
+        setUp(server);
         testServerWithContentLength(false, false);
     }
 
-    @Test
-    public void testServerWithContentLengthNotEnoughDataAndTrailer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testServerWithContentLengthNotEnoughDataAndTrailer(boolean server) throws Exception {
+        setUp(server);
         testServerWithContentLength(false, true);
     }
 
@@ -310,103 +330,137 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    @Test
-    public void testHttp3HeadersFrameWithConnectionHeader() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testHttp3HeadersFrameWithConnectionHeader(boolean server) throws Exception {
+        setUp(server);
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         headersFrame.headers().add(HttpHeaderNames.CONNECTION, "something");
         testHeadersFrame(headersFrame, Http3ErrorCode.H3_MESSAGE_ERROR);
     }
 
-    @Test
-    public void testHttp3HeadersFrameWithTeHeaderAndInvalidValue() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testHttp3HeadersFrameWithTeHeaderAndInvalidValue(boolean server) throws Exception {
+        setUp(server);
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         headersFrame.headers().add(HttpHeaderNames.TE, "something");
         testHeadersFrame(headersFrame, Http3ErrorCode.H3_MESSAGE_ERROR);
     }
 
-    @Test
-    public void testHttp3HeadersFrameWithTeHeaderAndValidValue() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testHttp3HeadersFrameWithTeHeaderAndValidValue(boolean server) throws Exception {
+        setUp(server);
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         headersFrame.headers().add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
         testHeadersFrame(headersFrame, null);
     }
 
-    @Test
-    public void testInformationalResponseAfterActualResponseServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseAfterActualResponseServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, true, newResponse(OK), newResponse(CONTINUE));
     }
 
-    @Test
-    public void testInformationalResponseAfterActualResponseClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseAfterActualResponseClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, true, newResponse(OK), newResponse(CONTINUE));
     }
 
-    @Test
-    public void testMultiInformationalResponseServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testMultiInformationalResponseServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, false, newResponse(CONTINUE), newResponse(CONTINUE), newResponse(OK));
     }
 
-    @Test
-    public void testMultiInformationalResponseClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testMultiInformationalResponseClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, false, newResponse(CONTINUE), newResponse(CONTINUE), newResponse(OK));
     }
 
-    @Test
-    public void testMultiInformationalResponseAfterActualResponseServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testMultiInformationalResponseAfterActualResponseServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, false, newResponse(CONTINUE), newResponse(CONTINUE), newResponse(OK));
     }
 
-    @Test
-    public void testMultiInformationalResponseAfterActualResponseClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testMultiInformationalResponseAfterActualResponseClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, false, newResponse(CONTINUE), newResponse(CONTINUE), newResponse(OK));
     }
 
-    @Test
-    public void testInformationalResponseWithDataAndTrailersServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseWithDataAndTrailersServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, false, newResponse(CONTINUE), newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()),
                 new DefaultHttp3HeadersFrame());
     }
 
-    @Test
-    public void testInformationalResponseWithDataAndTrailersClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseWithDataAndTrailersClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, false, newResponse(CONTINUE), newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()),
                 new DefaultHttp3HeadersFrame());
     }
 
-    @Test
-    public void testInformationalResponseWithDataServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseWithDataServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, false, newResponse(CONTINUE), newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()));
     }
 
-    @Test
-    public void testInformationalResponseWithDataClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponseWithDataClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, false, newResponse(CONTINUE), newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()));
     }
 
-    @Test
-    public void testInformationalResponsePostDataServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponsePostDataServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, true, newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()), newResponse(CONTINUE));
     }
 
-    @Test
-    public void testInformationalResponsePostDataClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponsePostDataClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, true, newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()), newResponse(CONTINUE));
     }
 
-    @Test
-    public void testInformationalResponsePostTrailersServer() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponsePostTrailersServer(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(true, true, newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()), new DefaultHttp3HeadersFrame(), newResponse(CONTINUE));
     }
 
-    @Test
-    public void testInformationalResponsePostTrailersClient() throws Exception {
+    @ParameterizedTest(name = "{index}: server = {0}")
+    @MethodSource("data")
+    public void testInformationalResponsePostTrailersClient(boolean server) throws Exception {
+        setUp(server);
         testInformationalResponse(false, true, newResponse(OK),
                 new DefaultHttp3DataFrame(Unpooled.buffer()), new DefaultHttp3HeadersFrame(), newResponse(CONTINUE));
     }
@@ -481,7 +535,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
     }
 
     private EmbeddedQuicStreamChannel newServerStream() throws Exception {
-        return newStream(QuicStreamType.BIDIRECTIONAL, newHandler());
+        return newStream(QuicStreamType.BIDIRECTIONAL, newHandler(true));
     }
 
     private static Http3Frame newResponse(HttpResponseStatus status) {

@@ -21,8 +21,8 @@ import io.netty.util.ReferenceCounted;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 final class Http3TestUtils {
 
@@ -35,8 +35,8 @@ final class Http3TestUtils {
     }
 
     static void verifyClose(int times, Http3ErrorCode expectedCode, EmbeddedQuicChannel channel) {
-        assertEquals("Close not invoked with expected times with error code: " + expectedCode.code, times,
-                channel.closeErrorCodes().stream().filter(integer -> integer == expectedCode.code).count());
+        assertEquals(times, channel.closeErrorCodes().stream().filter(integer -> integer == expectedCode.code).count(),
+                "Close not invoked with expected times with error code: " + expectedCode.code);
     }
 
     static void verifyClose(Http3ErrorCode expectedCode, EmbeddedQuicChannel channel) {

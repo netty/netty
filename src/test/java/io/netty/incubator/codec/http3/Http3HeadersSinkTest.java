@@ -15,8 +15,10 @@
  */
 package io.netty.incubator.codec.http3;
 
-import org.junit.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Http3HeadersSinkTest {
 
@@ -24,12 +26,9 @@ public class Http3HeadersSinkTest {
     public void testHeaderSizeExceeded() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 32, false, false);
         addMandatoryPseudoHeaders(sink, false);
-        try {
-            sink.finish();
-            Assert.fail();
-        } catch (Http3Exception e) {
-            Http3TestUtils.assertException(Http3ErrorCode.H3_EXCESSIVE_LOAD, e);
-        }
+
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sink.finish());
+        Http3TestUtils.assertException(Http3ErrorCode.H3_EXCESSIVE_LOAD, e);
     }
 
     @Test
@@ -40,27 +39,27 @@ public class Http3HeadersSinkTest {
         sink.finish();
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testPseudoHeaderFollowsNormalHeader() throws Exception {
+    @Test
+    public void testPseudoHeaderFollowsNormalHeader() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept("name", "value");
         sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testInvalidatePseudoHeader() throws Exception {
+    @Test
+    public void testInvalidatePseudoHeader() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept(":invalid", "value");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testMixRequestResponsePseudoHeaders() throws Exception {
+    @Test
+    public void testMixRequestResponsePseudoHeaders() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "value");
         sink.accept(Http3Headers.PseudoHeaderName.STATUS.value(), "value");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
     @Test
@@ -79,37 +78,37 @@ public class Http3HeadersSinkTest {
         sink.finish();
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testDuplicatePseudoHeader() throws Http3Exception {
+    @Test
+    public void testDuplicatePseudoHeader() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         addMandatoryPseudoHeaders(sink, false);
         sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testMandatoryPseudoHeaderMissingRequest() throws Http3Exception {
+    @Test
+    public void testMandatoryPseudoHeaderMissingRequest() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
         sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
         sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testMandatoryPseudoHeaderMissingResponse() throws Http3Exception {
+    @Test
+    public void testMandatoryPseudoHeaderMissingResponse() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testInvalidPseudoHeadersForConnect() throws Exception {
+    @Test
+    public void testInvalidPseudoHeadersForConnect() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "CONNECT");
         sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
         sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
         sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
     @Test
@@ -120,18 +119,18 @@ public class Http3HeadersSinkTest {
         sink.finish();
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testTrailersWithRequestPseudoHeaders() throws Exception {
+    @Test
+    public void testTrailersWithRequestPseudoHeaders() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, true);
         sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "CONNECT");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
-    @Test(expected = Http3HeadersValidationException.class)
-    public void testTrailersWithResponsePseudoHeaders() throws Exception {
+    @Test
+    public void testTrailersWithResponsePseudoHeaders() {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, true);
         sink.accept(Http3Headers.PseudoHeaderName.STATUS.value(), "200");
-        sink.finish();
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
     private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {

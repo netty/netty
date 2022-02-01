@@ -15,7 +15,7 @@
  */
 package io.netty.incubator.codec.http3;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.netty.incubator.codec.http3.QpackUtil.MAX_HEADER_TABLE_SIZE;
 import static java.lang.Math.toIntExact;
@@ -23,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QpackEncoderDynamicTableTest {
     private static final QpackHeaderField emptyHeader = new QpackHeaderField("", "");
@@ -47,14 +48,14 @@ public class QpackEncoderDynamicTableTest {
         addAndValidateHeader(table, emptyHeader);
     }
 
-    @Test(expected = QpackException.class)
-    public void negativeCapacityIsDisallowed() throws Exception {
-        newDynamicTable(-1);
+    @Test
+    public void negativeCapacityIsDisallowed() {
+        assertThrows(QpackException.class, () -> newDynamicTable(-1));
     }
 
-    @Test(expected = QpackException.class)
-    public void capacityTooLarge() throws Exception {
-        newDynamicTable(Long.MAX_VALUE);
+    @Test
+    public void capacityTooLarge() {
+        assertThrows(QpackException.class, () -> newDynamicTable(Long.MAX_VALUE));
     }
 
     @Test

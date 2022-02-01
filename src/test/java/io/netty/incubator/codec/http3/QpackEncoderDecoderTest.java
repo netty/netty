@@ -22,8 +22,8 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -38,7 +38,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -61,7 +61,7 @@ public class QpackEncoderDecoderTest {
     private final EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
     private QpackAttributes attributes;
 
-    @After
+    @AfterEach
     public void tearDown() {
         out.release();
     }
@@ -406,12 +406,7 @@ public class QpackEncoderDecoderTest {
         // Add empty byte to the end of the buffer. This should trigger an exception in the decoder.
         out.writeByte(0);
 
-        try {
-            decode(out, decHeaders);
-            fail();
-        } catch (QpackException exception) {
-            // expected
-        }
+        assertThrows(QpackException.class, () -> decode(out, decHeaders));
     }
 
     private void resetState() {

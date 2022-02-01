@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class Http3ServerConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
     private static final ChannelHandler REQUEST_HANDLER = new ChannelInboundHandlerAdapter() {

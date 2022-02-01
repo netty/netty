@@ -17,8 +17,8 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.incubator.codec.quic.QuicStreamType;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
@@ -30,8 +30,8 @@ import static java.lang.Math.floorDiv;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QpackDecoderHandlerTest {
     private static final QpackHeaderField fooBar = new QpackHeaderField("foo", "bar");
@@ -43,7 +43,7 @@ public class QpackDecoderHandlerTest {
     private int maxEntries;
     private QpackAttributes attributes;
 
-    @After
+    @AfterEach
     public void tearDown() {
         assertFalse(encoderStream.finish());
         assertFalse(decoderStream.finish());
@@ -54,13 +54,9 @@ public class QpackDecoderHandlerTest {
         setup(128L);
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
 
-        try {
-            sendAckForStreamId(decoderStream.streamId());
-            fail();
-        } catch (Http3Exception e) {
-            // expected
-            assertThat(e.getCause(), instanceOf(QpackException.class));
-        }
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        assertThat(e.getCause(), instanceOf(QpackException.class));
+
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
         finishStreams();
     }
@@ -86,13 +82,10 @@ public class QpackDecoderHandlerTest {
     @Test
     public void sectionAckUnknownStream() throws Exception {
         setup(128);
-        try {
-            sendAckForStreamId(1);
-            fail();
-        } catch (Http3Exception e) {
-            // exepected
-            assertThat(e.getCause(), instanceOf(QpackException.class));
-        }
+
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(1));
+        assertThat(e.getCause(), instanceOf(QpackException.class));
+
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
         finishStreams();
     }
@@ -106,13 +99,8 @@ public class QpackDecoderHandlerTest {
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
         sendAckForStreamId(decoderStream.streamId());
 
-        try {
-            sendAckForStreamId(decoderStream.streamId());
-            fail();
-        } catch (Http3Exception e) {
-            // expected
-            assertThat(e.getCause(), instanceOf(QpackException.class));
-        }
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
         finishStreams();
@@ -167,13 +155,9 @@ public class QpackDecoderHandlerTest {
 
         sendStreamCancellation(decoderStream.streamId());
 
-        try {
-            sendAckForStreamId(decoderStream.streamId());
-            fail();
-        } catch (Http3Exception e) {
-            // expected
-            assertThat(e.getCause(), instanceOf(QpackException.class));
-        }
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        assertThat(e.getCause(), instanceOf(QpackException.class));
+
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
         finishStreams();
     }
@@ -260,13 +244,9 @@ public class QpackDecoderHandlerTest {
     @Test
     public void invalidIncrement() throws Exception {
         setup(128);
-        try {
-            sendInsertCountIncrement(2);
-            fail();
-        } catch (Http3Exception e) {
-            // expected
-            assertThat(e.getCause(), instanceOf(QpackException.class));
-        }
+        Http3Exception e = assertThrows(Http3Exception.class, () -> sendInsertCountIncrement(2));
+        assertThat(e.getCause(), instanceOf(QpackException.class));
+
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
         finishStreams();
     }

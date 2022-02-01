@@ -20,10 +20,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,30 +33,22 @@ import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameReleased;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@RunWith(Parameterized.class)
 public class Http3ControlStreamInboundHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3ControlStreamFrame> {
 
-    private final boolean server;
-    private final boolean forwardControlFrames;
     private QpackEncoder qpackEncoder;
     private Http3ControlStreamOutboundHandler remoteControlStreamHandler;
 
-    public Http3ControlStreamInboundHandlerTest(boolean server, boolean forwardControlFrames) {
-        super(true, QuicStreamType.UNIDIRECTIONAL);
-        this.server = server;
-        this.forwardControlFrames = forwardControlFrames;
+    public Http3ControlStreamInboundHandlerTest() {
+        super(QuicStreamType.UNIDIRECTIONAL, false, false);
     }
 
-    @Parameterized.Parameters(name = "{index}: server = {0}, forwardControlFrames = {1}")
-    public static Collection<Object[]> data() {
+    static Collection<Object[]> testData() {
         List<Object[]> config = new ArrayList<>();
         for (int a = 0; a < 2; a++) {
             for (int b = 0; b < 2; b++) {
@@ -67,10 +58,9 @@ public class Http3ControlStreamInboundHandlerTest extends
         return config;
     }
 
-    @Before
     @Override
-    public void setUp() {
-        super.setUp();
+    protected void setUp(boolean server) {
+        super.setUp(server);
         qpackEncoder = new QpackEncoder();
         remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                 new ChannelInboundHandlerAdapter());
@@ -86,8 +76,8 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     @Override
-    protected ChannelHandler newHandler() {
-        return new Http3ControlStreamInboundHandler(true, new ChannelInboundHandlerAdapter(), qpackEncoder,
+    protected ChannelHandler newHandler(boolean server) {
+        return new Http3ControlStreamInboundHandler(server, new ChannelInboundHandlerAdapter(), qpackEncoder,
                 remoteControlStreamHandler);
     }
 
@@ -102,91 +92,114 @@ public class Http3ControlStreamInboundHandlerTest extends
         return Arrays.asList(Http3TestUtils.newHttp3RequestStreamFrame(), Http3TestUtils.newHttp3PushStreamFrame());
     }
 
-    @Test
-    public void testInvalidFirstFrameHttp3GoAwayFrame() throws Exception {
-        testInvalidFirstFrame(new DefaultHttp3GoAwayFrame(0));
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testInvalidFirstFrameHttp3GoAwayFrame(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        testInvalidFirstFrame(server, forwardControlFrames, new DefaultHttp3GoAwayFrame(0));
     }
 
-    @Test
-    public void testInvalidFirstFrameHttp3MaxPushIdFrame() throws Exception {
-        testInvalidFirstFrame(new DefaultHttp3MaxPushIdFrame(0));
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testInvalidFirstFrameHttp3MaxPushIdFrame(boolean server, boolean forwardControlFrames)
+            throws Exception {
+        setUp(server);
+        testInvalidFirstFrame(server, forwardControlFrames, new DefaultHttp3MaxPushIdFrame(0));
     }
 
-    @Test
-    public void testInvalidFirstFrameHttp3CancelPushFrame() throws Exception {
-        testInvalidFirstFrame(new DefaultHttp3CancelPushFrame(0));
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testInvalidFirstFrameHttp3CancelPushFrame(boolean server, boolean forwardControlFrames)
+            throws Exception {
+        setUp(server);
+        testInvalidFirstFrame(server, forwardControlFrames, new DefaultHttp3CancelPushFrame(0));
     }
 
-    @Test
-    public void testInvalidFirstFrameNonControlFrame() throws Exception {
-        testInvalidFirstFrame(() -> 9999);
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testInvalidFirstFrameNonControlFrame(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        testInvalidFirstFrame(server, forwardControlFrames, () -> 9999);
     }
 
-    private void testInvalidFirstFrame(Http3Frame frame) throws Exception {
+    private void testInvalidFirstFrame(boolean server, boolean forwardControlFrames, Http3Frame frame)
+            throws Exception {
         final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
                                 forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
                                 qpackEncoder, remoteControlStreamHandler));
 
-        writeInvalidFrame(Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
+        writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
         verifyClose(Http3ErrorCode.H3_MISSING_SETTINGS, parent);
 
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testValidGoAwayFrame() throws Exception {
-        EmbeddedChannel channel = newStream();
-        writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
-        writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testValidGoAwayFrame(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedChannel channel = newStream(server, forwardControlFrames);
+        writeValidFrame(forwardControlFrames, channel, new DefaultHttp3GoAwayFrame(0));
+        writeValidFrame(forwardControlFrames, channel, new DefaultHttp3GoAwayFrame(0));
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testSecondGoAwayFrameFailsWithHigherId() throws Exception {
-        EmbeddedChannel channel = newStream();
-        writeValidFrame(channel, new DefaultHttp3GoAwayFrame(0));
-        writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(4));
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testSecondGoAwayFrameFailsWithHigherId(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedChannel channel = newStream(server, forwardControlFrames);
+        writeValidFrame(forwardControlFrames, channel, new DefaultHttp3GoAwayFrame(0));
+        writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3GoAwayFrame(4));
         verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testGoAwayFrameIdNonRequestStream() throws Exception {
-        EmbeddedChannel channel = newStream();
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testGoAwayFrameIdNonRequestStream(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedChannel channel = newStream(server, forwardControlFrames);
         if (server) {
-            writeValidFrame(channel, new DefaultHttp3GoAwayFrame(3));
+            writeValidFrame(forwardControlFrames, channel, new DefaultHttp3GoAwayFrame(3));
         } else {
-            writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3GoAwayFrame(3));
+            writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_FRAME_UNEXPECTED, channel,
+                    new DefaultHttp3GoAwayFrame(3));
             verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         }
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testHttp3MaxPushIdFrames() throws Exception {
-        EmbeddedChannel channel = newStream();
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testHttp3MaxPushIdFrames(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedChannel channel = newStream(server, forwardControlFrames);
         if (server) {
-            writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(0));
-            writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(4));
+            writeValidFrame(forwardControlFrames, channel, new DefaultHttp3MaxPushIdFrame(0));
+            writeValidFrame(forwardControlFrames, channel, new DefaultHttp3MaxPushIdFrame(4));
         } else {
-            writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3MaxPushIdFrame(4));
+            writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_FRAME_UNEXPECTED, channel,
+                    new DefaultHttp3MaxPushIdFrame(4));
             verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         }
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testSecondHttp3MaxPushIdFrameFailsWithSmallerId() throws Exception {
-        assumeThat(server, is(true));
-        EmbeddedChannel channel = newStream();
-        writeValidFrame(channel, new DefaultHttp3MaxPushIdFrame(4));
-        writeInvalidFrame(Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3MaxPushIdFrame(0));
+    @ParameterizedTest(name = "{index}: forwardControlFrames = {0}")
+    @ValueSource(booleans = { true, false })
+    public void testSecondHttp3MaxPushIdFrameFailsWithSmallerId(boolean forwardControlFrames)
+            throws Exception {
+        setUp(true);
+        EmbeddedChannel channel = newStream(true, forwardControlFrames);
+        writeValidFrame(forwardControlFrames, channel, new DefaultHttp3MaxPushIdFrame(4));
+        writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_ID_ERROR, channel, new DefaultHttp3MaxPushIdFrame(0));
         verifyClose(Http3ErrorCode.H3_ID_ERROR, parent);
         assertFalse(channel.finish());
     }
 
-    private EmbeddedQuicStreamChannel newStream() throws Exception {
+    private EmbeddedQuicStreamChannel newStream(boolean server, boolean forwardControlFrames) throws Exception {
         EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.UNIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
                                 forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
@@ -210,7 +223,8 @@ public class Http3ControlStreamInboundHandlerTest extends
         return channel;
     }
 
-    private void writeValidFrame(EmbeddedChannel channel, Http3ControlStreamFrame controlStreamFrame) {
+    private void writeValidFrame(boolean forwardControlFrames, EmbeddedChannel channel,
+                                 Http3ControlStreamFrame controlStreamFrame) {
         assertEquals(forwardControlFrames, channel.writeInbound(controlStreamFrame));
         if (forwardControlFrames) {
             assertFrameSame(controlStreamFrame, channel.readInbound());
@@ -219,32 +233,33 @@ public class Http3ControlStreamInboundHandlerTest extends
         }
     }
 
-    private void writeInvalidFrame(Http3ErrorCode expectedCode, EmbeddedChannel channel,
+    private void writeInvalidFrame(boolean forwardControlFrames, Http3ErrorCode expectedCode, EmbeddedChannel channel,
                                    Http3Frame frame) {
         if (forwardControlFrames) {
-            try {
-                channel.writeInbound(frame);
-                fail();
-            } catch (Exception e) {
-                assertException(expectedCode, e);
-            }
+            Exception e = assertThrows(Exception.class, () -> channel.writeInbound(frame));
+            assertException(expectedCode, e);
         } else {
             assertFalse(channel.writeInbound(frame));
         }
         assertFrameReleased(frame);
     }
 
-    @Test
-    public void testSecondSettingsFrameFails() throws Exception {
-        EmbeddedChannel channel = newStream();
-        writeInvalidFrame(Http3ErrorCode.H3_FRAME_UNEXPECTED, channel, new DefaultHttp3SettingsFrame());
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testSecondSettingsFrameFails(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedChannel channel = newStream(server, forwardControlFrames);
+        writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_FRAME_UNEXPECTED, channel,
+                new DefaultHttp3SettingsFrame());
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertFalse(channel.finish());
     }
 
-    @Test
-    public void testControlStreamClosed() throws Exception {
-        EmbeddedQuicStreamChannel channel = newStream();
+    @ParameterizedTest(name = "{index}: server = {0}, forwardControlFrames = {1}")
+    @MethodSource("testData")
+    public void testControlStreamClosed(boolean server, boolean forwardControlFrames) throws Exception {
+        setUp(server);
+        EmbeddedQuicStreamChannel channel = newStream(server, forwardControlFrames);
         channel.writeInboundFin();
         verifyClose(Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
         assertFalse(channel.finish());

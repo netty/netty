@@ -18,9 +18,8 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 
@@ -31,16 +30,12 @@ import static java.lang.Math.floorDiv;
 import static java.lang.Math.toIntExact;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@RunWith(Parameterized.class)
 public class QpackDecoderTest {
     private static final String FOO = "foo";
     private static final String BAR = "bar";
-    private final int capacity;
-    private final int insertionCount;
     private QpackDecoderDynamicTable table;
     private EmbeddedQuicStreamChannel decoderStream;
 
@@ -49,12 +44,6 @@ public class QpackDecoderTest {
     private int maxEntries;
     private QpackAttributes attributes;
 
-    public QpackDecoderTest(int capacity, int insertionCount) {
-        this.capacity = capacity;
-        this.insertionCount = insertionCount;
-    }
-
-    @Parameterized.Parameters(name = "capacity: {0}, inserts: {1}")
     public static Collection<Object[]> data() {
         int capacity = 128; // maxEntries = 128/32 = 4, maxIndex = 2*4 = 8
         return asList(
@@ -69,36 +58,40 @@ public class QpackDecoderTest {
         );
     }
 
-    @Test
-    public void requiredInsertCountAsInserted() throws Exception {
+    @ParameterizedTest(name = "capacity: {0}, inserts: {1}")
+    @MethodSource("data")
+    public void requiredInsertCountAsInserted(int capacity, int insertionCount) throws Exception {
         setup(capacity);
 
         insertLiterals(insertionCount);
         encodeDecodeVerifyRequiredInsertCount(inserted);
     }
 
-    @Test
-    public void requiredInsertCountLessThanInserted() throws Exception {
+    @ParameterizedTest(name = "capacity: {0}, inserts: {1}")
+    @MethodSource("data")
+    public void requiredInsertCountLessThanInserted(int capacity, int insertionCount) throws Exception {
         setup(capacity);
-        assumeThat(insertionCount, greaterThan(0));
+        assumeTrue(insertionCount > 0);
 
         insertLiterals(insertionCount);
         encodeDecodeVerifyRequiredInsertCount(insertionCount - 1);
     }
 
-    @Test
-    public void requiredInsertCountBehindMax() throws Exception {
+    @ParameterizedTest(name = "capacity: {0}, inserts: {1}")
+    @MethodSource("data")
+    public void requiredInsertCountBehindMax(int capacity, int insertionCount) throws Exception {
         setup(capacity);
-        assumeThat(insertionCount, greaterThan(maxEntries));
+        assumeTrue(insertionCount > maxEntries);
 
         insertLiterals(insertionCount);
         encodeDecodeVerifyRequiredInsertCount(insertionCount - maxEntries + 1);
     }
 
-    @Test
-    public void getWithRelativeIndex() throws Exception {
+    @ParameterizedTest(name = "capacity: {0}, inserts: {1}")
+    @MethodSource("data")
+    public void getWithRelativeIndex(int capacity, int insertionCount) throws Exception {
         setup(capacity);
-        assumeThat(insertionCount, greaterThan(3));
+        assumeTrue(insertionCount > 3);
 
         insertLiterals(insertionCount);
         int requiredInsertCount = encodeDecodeRequiredInsertCount(insertionCount);
@@ -108,10 +101,11 @@ public class QpackDecoderTest {
         verifyField(entry, insertionCount - 2);
     }
 
-    @Test
-    public void getWithPostBaseRelativeIndex() throws Exception {
+    @ParameterizedTest(name = "capacity: {0}, inserts: {1}")
+    @MethodSource("data")
+    public void getWithPostBaseRelativeIndex(int capacity, int insertionCount) throws Exception {
         setup(capacity);
-        assumeThat(insertionCount, greaterThan(2));
+        assumeTrue(insertionCount > 2);
 
         insertLiterals(insertionCount);
         int requiredInsertCount = encodeDecodeRequiredInsertCount(insertionCount - 1);

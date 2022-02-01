@@ -15,11 +15,11 @@
  */
 package io.netty.incubator.codec.http3;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 
 public class QpackStaticTableTest {
     @Test
@@ -49,7 +49,7 @@ public class QpackStaticTableTest {
         assertEquals(nameIndex1, nameIndex2);
 
         // index should be masked
-        assertTrue((nameIndex1 & QpackStaticTable.MASK_NAME_REF) == QpackStaticTable.MASK_NAME_REF);
+        assertEquals(nameIndex1 & QpackStaticTable.MASK_NAME_REF, QpackStaticTable.MASK_NAME_REF);
         assertEquals(5, nameIndex1 ^ QpackStaticTable.MASK_NAME_REF);
     }
 

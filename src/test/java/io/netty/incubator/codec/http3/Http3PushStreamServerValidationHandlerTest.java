@@ -26,11 +26,11 @@ public class Http3PushStreamServerValidationHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3PushStreamFrame> {
 
     public Http3PushStreamServerValidationHandlerTest() {
-        super(true, QuicStreamType.UNIDIRECTIONAL);
+        super(QuicStreamType.UNIDIRECTIONAL, false, true);
     }
 
     @Override
-    protected ChannelHandler newHandler() {
+    protected ChannelHandler newHandler(boolean server) {
         return Http3PushStreamServerValidationHandler.INSTANCE;
     }
 

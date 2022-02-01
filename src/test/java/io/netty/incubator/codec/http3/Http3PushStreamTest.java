@@ -21,9 +21,9 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
@@ -32,10 +32,10 @@ import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameEquals;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static io.netty.incubator.codec.quic.QuicStreamType.UNIDIRECTIONAL;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +50,7 @@ public class Http3PushStreamTest {
     private EmbeddedQuicStreamChannel serverLocalControlStream;
     private EmbeddedQuicStreamChannel clientLocalControlStream;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         serverConnectionHandler = new Http3ServerConnectionHandler(new ChannelDuplexHandler(), null, null, null, true);
         serverChannel = new EmbeddedQuicChannel(true, serverConnectionHandler);
@@ -84,7 +84,7 @@ public class Http3PushStreamTest {
         assertTrue(clientLocalControlStream.releaseOutbound());
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         assertFalse(serverLocalControlStream.finish());
         assertFalse(serverChannel.finish());

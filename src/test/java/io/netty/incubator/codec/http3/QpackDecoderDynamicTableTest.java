@@ -16,9 +16,11 @@
 
 package io.netty.incubator.codec.http3;
 
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QpackDecoderDynamicTableTest {
 
@@ -52,18 +54,15 @@ public class QpackDecoderDynamicTableTest {
         table.add(entry);
         assertEquals(entry, table.getEntry(0));
         table.clear();
-        try {
-            table.getEntry(0);
-            fail();
-        } catch (QpackException e) {
-            //success
-        }
+
+        assertThrows(QpackException.class, () -> table.getEntry(0));
     }
 
-    @Test(expected = QpackException.class)
+    @Test
     public void getEntryExceptionally() throws Exception {
         QpackDecoderDynamicTable table = newTable(1);
-        table.getEntry(0);
+
+        assertThrows(QpackException.class, () -> table.getEntry(0));
     }
 
     @Test

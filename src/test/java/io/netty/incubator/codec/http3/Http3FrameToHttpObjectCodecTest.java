@@ -38,14 +38,15 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Http3FrameToHttpObjectCodecTest {
 
@@ -75,15 +76,12 @@ public class Http3FrameToHttpObjectCodecTest {
         assertFalse(ch.finish());
     }
 
-    @Test (expected = EncoderException.class)
+    @Test
     public void encodeNonFullHttpResponse100ContinueIsRejected() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
-        try {
-            ch.writeOutbound(new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
-        } finally {
-            ch.finishAndReleaseAll();
-        }
+        assertThrows(EncoderException.class, () -> ch.writeOutbound(new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
+        ch.finishAndReleaseAll();
     }
 
     @Test

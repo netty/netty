@@ -15,8 +15,9 @@
  */
 package io.netty.incubator.codec.http3;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class Http3FrameTypeValidatorTest {
 
@@ -35,12 +36,7 @@ public abstract class Http3FrameTypeValidatorTest {
     @Test
     public void testInvalidFrameTypes() {
         for (long invalidFrameType: invalidFramesTypes()) {
-            try {
-                newValidator().validate(invalidFrameType, true);
-                Assert.fail("Expected failure for frame type: " + invalidFrameType);
-            } catch (Http3Exception expected) {
-                // ignore
-            }
+            assertThrows(Http3Exception.class, () -> newValidator().validate(invalidFrameType, true));
         }
     }
 }

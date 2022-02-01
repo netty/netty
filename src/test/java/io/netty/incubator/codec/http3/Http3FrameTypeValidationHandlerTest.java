@@ -25,12 +25,12 @@ import java.util.List;
 abstract class Http3FrameTypeValidationHandlerTest extends
         AbstractHttp3FrameTypeValidationHandlerTest<Http3RequestStreamFrame> {
 
-    Http3FrameTypeValidationHandlerTest(boolean isOutbound, boolean isInbound) {
-        super(true, QuicStreamType.BIDIRECTIONAL);
+    Http3FrameTypeValidationHandlerTest(boolean isInbound, boolean isOutbound) {
+        super(QuicStreamType.BIDIRECTIONAL, isInbound, isOutbound);
     }
 
     @Override
-    protected ChannelHandler newHandler() {
+    protected ChannelHandler newHandler(boolean server) {
         return new Http3FrameTypeDuplexValidationHandler<>(Http3RequestStreamFrame.class);
     }
 
