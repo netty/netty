@@ -134,11 +134,11 @@ public class JdkZlibTest {
     }
 
     protected ChannelHandler createEncoder(ZlibWrapper wrapper) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(wrapper, 6));
+        return new CompressionHandler(ZlibCompressor.newFactory(wrapper, 6));
     }
 
     protected ChannelHandler createDecoder(ZlibWrapper wrapper, int maxAllocation) {
-        return new DecompressionHandler(JdkZlibDecompressor.newFactory(wrapper, maxAllocation));
+        return new DecompressionHandler(ZlibDecompressor.newFactory(wrapper, maxAllocation));
     }
 
     static Stream<Arguments> compressionConfigurations() {
@@ -548,7 +548,7 @@ public class JdkZlibTest {
     @Test
     public void testConcatenatedStreamsReadFully() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(
-                new DecompressionHandler(JdkZlibDecompressor.newFactory(true)));
+                new DecompressionHandler(ZlibDecompressor.newFactory(true)));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -571,7 +571,7 @@ public class JdkZlibTest {
     @Test
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(
-                new DecompressionHandler(JdkZlibDecompressor.newFactory(true)));
+                new DecompressionHandler(ZlibDecompressor.newFactory(true)));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -611,7 +611,7 @@ public class JdkZlibTest {
         byte[] compressed = bytesOut.toByteArray();
         ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
         EmbeddedChannel channel = new EmbeddedChannel(
-                new DecompressionHandler(JdkZlibDecompressor.newFactory(ZlibWrapper.GZIP, true)));
+                new DecompressionHandler(ZlibDecompressor.newFactory(ZlibWrapper.GZIP, true)));
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
         assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));

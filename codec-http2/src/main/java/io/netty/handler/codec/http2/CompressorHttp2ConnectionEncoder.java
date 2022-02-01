@@ -24,7 +24,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.Compressor;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
-import io.netty.handler.codec.compression.JdkZlibCompressor;
+import io.netty.handler.codec.compression.ZlibCompressor;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.ZstdCompressor;
@@ -278,14 +278,14 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private Compressor newCompressionChannel(final ChannelHandlerContext ctx, ZlibWrapper wrapper) {
         if (supportsCompressionOptions) {
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
-                return JdkZlibCompressor.newFactory(wrapper, gzipCompressionOptions.compressionLevel()).get();
+                return ZlibCompressor.newFactory(wrapper, gzipCompressionOptions.compressionLevel()).get();
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
-                return JdkZlibCompressor.newFactory(wrapper, deflateOptions.compressionLevel()).get();
+                return ZlibCompressor.newFactory(wrapper, deflateOptions.compressionLevel()).get();
             } else {
                 throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
             }
         }
-        return JdkZlibCompressor.newFactory(wrapper, compressionLevel).get();
+        return ZlibCompressor.newFactory(wrapper, compressionLevel).get();
     }
 
     /**

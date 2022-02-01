@@ -31,44 +31,44 @@ public final class ZlibCodecFactory {
     }
 
     public static ChannelHandler newZlibEncoder(int compressionLevel) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(compressionLevel));
+        return new CompressionHandler(ZlibCompressor.newFactory(compressionLevel));
     }
 
     public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(wrapper));
+        return new CompressionHandler(ZlibCompressor.newFactory(wrapper));
     }
 
     public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(wrapper, compressionLevel));
+        return new CompressionHandler(ZlibCompressor.newFactory(wrapper, compressionLevel));
     }
 
     public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper, int compressionLevel,
                                                 int windowBits, int memLevel) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(wrapper, compressionLevel));
+        return new CompressionHandler(ZlibCompressor.newFactory(wrapper, compressionLevel));
     }
 
     public static ChannelHandler newZlibEncoder(byte[] dictionary) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(dictionary));
+        return new CompressionHandler(ZlibCompressor.newFactory(dictionary));
     }
 
     public static ChannelHandler newZlibEncoder(int compressionLevel, byte[] dictionary) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(compressionLevel, dictionary));
+        return new CompressionHandler(ZlibCompressor.newFactory(compressionLevel, dictionary));
     }
 
     public static ChannelHandler newZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
-        return new CompressionHandler(JdkZlibCompressor.newFactory(compressionLevel, dictionary));
+        return new CompressionHandler(ZlibCompressor.newFactory(compressionLevel, dictionary));
     }
 
     public static ChannelHandler newZlibDecoder() {
-        return new DecompressionHandler(JdkZlibDecompressor.newFactory(true));
+        return new DecompressionHandler(ZlibDecompressor.newFactory(true));
     }
 
     public static ChannelHandler newZlibDecoder(ZlibWrapper wrapper) {
-        return new DecompressionHandler(JdkZlibDecompressor.newFactory(wrapper, true));
+        return new DecompressionHandler(ZlibDecompressor.newFactory(wrapper, true));
     }
 
     public static ChannelHandler newZlibDecoder(byte[] dictionary) {
-        return new DecompressionHandler(JdkZlibDecompressor.newFactory(dictionary));
+        return new DecompressionHandler(ZlibDecompressor.newFactory(dictionary));
     }
 
     private ZlibCodecFactory() {

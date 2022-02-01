@@ -21,7 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecompressor;
 import io.netty.handler.codec.compression.Decompressor;
-import io.netty.handler.codec.compression.JdkZlibDecompressor;
+import io.netty.handler.codec.compression.ZlibDecompressor;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.UnstableApi;
 
@@ -156,12 +156,12 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     protected Decompressor newContentDecompressor(final ChannelHandlerContext ctx, CharSequence contentEncoding)
             throws Http2Exception {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return JdkZlibDecompressor.newFactory(ZlibWrapper.GZIP).get();
+            return ZlibDecompressor.newFactory(ZlibWrapper.GZIP).get();
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return JdkZlibDecompressor.newFactory(wrapper).get();
+            return ZlibDecompressor.newFactory(wrapper).get();
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return BrotliDecompressor.newFactory().get();
