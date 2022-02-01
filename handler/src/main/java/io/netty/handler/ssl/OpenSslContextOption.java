@@ -68,4 +68,12 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      */
     public static final OpenSslContextOption<OpenSslCertificateCompressionConfig> CERTIFICATE_COMPRESSION_ALGORITHMS =
             new OpenSslContextOption<OpenSslCertificateCompressionConfig>("CERTIFICATE_COMPRESSION_ALGORITHMS");
+
+    /**
+     * Set the security level to use.<br>
+     * This is currently only supported when {@code OpenSSL} version 1.1.0 or newer is used.
+     * @see https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_security_level.html
+     */
+    public static final OpenSslContextOption<Integer> SECURITY_LEVEL =
+            new OpenSslContextOption<Integer>("SECURITY_LEVEL");
 }

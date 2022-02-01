@@ -227,6 +227,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         OpenSslPrivateKeyMethod privateKeyMethod = null;
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
         OpenSslCertificateCompressionConfig certCompressionConfig = null;
+        Integer securityLevel = null;
 
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
@@ -242,6 +243,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     asyncPrivateKeyMethod = (OpenSslAsyncPrivateKeyMethod) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS) {
                     certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.SECURITY_LEVEL) {
+                    securityLevel = (Integer) ctxOpt.getValue();
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -409,6 +412,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                             throw new IllegalStateException();
                     }
                 }
+            }
+            if (securityLevel != null) {
+                SSLContext.setSecurityLevel(ctx, securityLevel.intValue());
             }
             // Set the curves.
             SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
