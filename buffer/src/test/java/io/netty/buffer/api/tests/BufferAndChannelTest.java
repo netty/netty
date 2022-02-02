@@ -205,6 +205,17 @@ public class BufferAndChannelTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void transferToZeroBytesMustNotThrowOnClosedChannel(Fixture fixture) throws IOException {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer empty = allocator.allocate(0);
+             Buffer notEmpty = allocator.allocate(4).writeInt(42)) {
+            empty.transferTo(closedChannel, 4);
+            notEmpty.transferTo(closedChannel, 0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void transferFromMustThrowIfBufferIsClosed(Fixture fixture) throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
@@ -428,6 +439,17 @@ public class BufferAndChannelTest extends BufferTestSupport {
             assertThat(buf.readableBytes()).isEqualTo(8);
             assertThat(channel.position()).isEqualTo(position);
             assertThat(channel.size()).isEqualTo(size);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromZeroBytesMustNotThrowOnClosedChannel(Fixture fixture) throws IOException {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer empty = allocator.allocate(0);
+             Buffer notEmpty = allocator.allocate(4)) {
+            empty.transferFrom(closedChannel, 4);
+            notEmpty.transferFrom(closedChannel, 0);
         }
     }
 

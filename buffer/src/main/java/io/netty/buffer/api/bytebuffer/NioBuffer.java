@@ -220,6 +220,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             throw bufferIsClosed(this);
         }
         length = Math.min(readableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
         checkGet(readerOffset(), length);
         int bytesWritten = channel.write(readableBuffer().limit(length));
         skipReadable(bytesWritten);
@@ -235,6 +238,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
             throw bufferIsReadOnly(this);
         }
         length = Math.min(writableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
         checkSet(writerOffset(), length);
         int bytesRead = channel.read(writableBuffer().limit(length));
         if (bytesRead != -1) {

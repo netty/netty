@@ -459,6 +459,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             throw bufferIsClosed(this);
         }
         length = Math.min(readableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
         checkReadBounds(readerOffset(), length);
         ByteBufferCollector collector = new ByteBufferCollector(countReadableComponents());
         forEachReadable(0, collector);
@@ -490,6 +493,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             throw bufferIsReadOnly(this);
         }
         length = Math.min(writableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
         checkWriteBounds(writerOffset(), length);
         ByteBufferCollector collector = new ByteBufferCollector(countWritableComponents());
         forEachWritable(0, collector);
