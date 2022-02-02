@@ -17,8 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.internal.ObjectUtil;
 
@@ -45,7 +43,7 @@ import io.netty.util.internal.ObjectUtil;
  *     }
  * </pre>
  */
-public class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame> {
+public final class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame> {
 
     private final ChunkedInput<ByteBuf> input;
     private final Http2FrameStream stream;
@@ -54,7 +52,7 @@ public class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame> {
     /**
      * Creates a new instance using the specified input.
      *
-     * @param input {@link ChunkedInput} containing data to write
+     * @param input  {@link ChunkedInput} containing data to write
      * @param stream {@link Http2FrameStream} holding stream info
      */
     public Http2DataChunkedInput(ChunkedInput<ByteBuf> input, Http2FrameStream stream) {
@@ -67,9 +65,8 @@ public class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame> {
         if (input.isEndOfInput()) {
             // Only end of input after last HTTP chunk has been sent
             return endStreamSent;
-        } else {
-            return false;
         }
+        return false;
     }
 
     @Override
@@ -83,22 +80,27 @@ public class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame> {
         return readChunk(ctx.alloc());
     }
 
-    @Override
     public Http2DataFrame readChunk(ByteBufAllocator allocator) throws Exception {
-        if (input.isEndOfInput()) {
-            if (endStreamSent) {
-                return null;
-            } else {
-                endStreamSent = true;
-                return new DefaultHttp2DataFrame(true).stream(stream);
-            }
-        } else {
-            ByteBuf buf = input.readChunk(allocator);
-            if (buf == null) {
-                return null;
-            }
-            return new DefaultHttp2DataFrame(buf).stream(stream);
+        if (endStreamSent) {
+            return null;
         }
+
+        if (input.isEndOfInput()) {
+            endStreamSent = true;
+            return new DefaultHttp2DataFrame(true).stream(stream);
+        }
+
+        ByteBuf buf = input.readChunk(allocator);
+        if (buf == null) {
+            return null;
+        }
+
+        final Http2DataFrame dataFrame = new DefaultHttp2DataFrame(buf, input.isEndOfInput()).stream(stream);
+        if (dataFrame.isEndStream()) {
+            endStreamSent = true;
+        }
+
+        return dataFrame;
     }
 
     @Override
