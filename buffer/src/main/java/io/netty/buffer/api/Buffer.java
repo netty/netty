@@ -17,7 +17,12 @@ package io.netty.buffer.api;
 
 import io.netty.buffer.api.internal.Statics;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ScatteringByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 
 /**
@@ -271,6 +276,45 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this or the destination buffer is closed.
      */
     void copyInto(int srcPos, Buffer dest, int destPos, int length);
+
+    /**
+     * Read from this buffer and write to the given channel.
+     * The number of bytes actually written to the channel are returned.
+     * No more than the given {@code length} of bytes, or the number of {@linkplain #readableBytes() readable bytes},
+     * will be written to the channel, whichever is smaller.
+     * If the channel has a position, then it will be advanced by the number of bytes written.
+     * The {@linkplain #readerOffset() reader-offset} of this buffer will likewise be advanced by the number of bytes
+     * written.
+     *
+     * @implNote {@linkplain CompositeBuffer composite buffers} may offer an optimized implementation of this method,
+     * if the given channel implements {@link GatheringByteChannel}.
+     *
+     * @param channel The channel to write to.
+     * @param length The maximum number of bytes to write.
+     * @return The actual number of bytes written, possibly zero.
+     * @throws IOException If the write-operation on the channel failed for some reason.
+     */
+    int transferTo(WritableByteChannel channel, int length) throws IOException;
+
+    /**
+     * Read from the given channel and write to this buffer.
+     * The number of bytes actually read from the channel are returned, or -1 is returned if the channel has reached
+     * the end-of-stream.
+     * No more than the given {@code length} of bytes, or the number of {@linkplain #writableBytes() writable bytes},
+     * will be read from the channel, whichever is smaller.
+     * If the channel has a position, then it will be advanced by the number of bytes read.
+     * The {@linkplain #writerOffset() writer-offset} of this buffer will likewise be advanced by the number of bytes
+     * read.
+     *
+     * @implNote {@linkplain CompositeBuffer composite buffers} may offer an optimized implementation of this method,
+     * if the given channel implements {@link ScatteringByteChannel}.
+     *
+     * @param channel The channel to read from.
+     * @param length The maximum number of bytes to read.
+     * @return The actual number of bytes read, possibly zero, or -1 if the end-of-stream has been reached.
+     * @throws IOException If the read-operation on the channel failed for some reason.
+     */
+    int transferFrom(ReadableByteChannel channel, int length) throws IOException;
 
     /**
      * Writes into this buffer, all the bytes from the given {@code source} using the passed {@code charset}.

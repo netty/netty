@@ -15,7 +15,10 @@
  */
 package io.netty.buffer.api;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 
 /**
@@ -110,6 +113,16 @@ public class BufferStub implements Buffer {
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
         delegate.copyInto(srcPos, dest, destPos, length);
+    }
+
+    @Override
+    public int transferTo(WritableByteChannel channel, int length) throws IOException {
+        return delegate.transferTo(channel, length);
+    }
+
+    @Override
+    public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
+        return delegate.transferFrom(channel, length);
     }
 
     @Override
