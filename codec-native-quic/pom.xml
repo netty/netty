@@ -38,15 +38,15 @@
     <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <boringsslSourceDir>${project.build.directory}/boringssl-source</boringsslSourceDir>
-    <boringsslBuildDir>${boringsslSourceDir}/build</boringsslBuildDir>
+    <boringsslBuildDir>${boringsslSourceDir}/build-target</boringsslBuildDir>
     <boringsslHomeDir>${project.build.directory}/boringssl</boringsslHomeDir>
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Follow what is used in quiche for now -->
-    <!-- https://github.com/cloudflare/quiche/tree/master/deps -->
+    <!-- https://github.com/cloudflare/quiche/tree/master/quiche/deps -->
     <boringsslBranch>master</boringsslBranch>
-    <boringsslCommitSha>19fe7943ce593068bf447f05c2dbed4a324146ef</boringsslCommitSha>
+    <boringsslCommitSha>f1c75347daa2ea81a941e953f2263e0a4d970c8d</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -55,7 +55,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>3ab88cad6e67bb08307d02e19adb01f54e9dd334</quicheCommitSha>
+    <quicheCommitSha>88c14484728ede47c0b6bbe7915e6725d502c0d3</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -610,10 +610,10 @@
 
                     <!-- Only copy the libs and header files we need -->
                     <mkdir dir="${boringsslHomeBuildDir}" />
-                    <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
-                    <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
-                      <fileset dir="${boringsslSourceDir}/include" />
+                      <fileset dir="${boringsslSourceDir}/src/include" />
                     </copy>
                   </else>
                 </if>
