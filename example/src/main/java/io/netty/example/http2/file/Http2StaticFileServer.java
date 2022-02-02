@@ -33,7 +33,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public final class Http2StaticFileServer {
 
-    private static final int PORT = Integer.parseInt(System.getProperty("port","8443"));
+    private static final int PORT = Integer.parseInt(System.getProperty("port", "8443"));
 
     public static void main(String[] args) throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
