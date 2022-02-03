@@ -247,7 +247,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
         ByteBuf buf = cumulation;
         if (buf != null) {
-            // Directly set this to null so we are sure we not access it in any other method here anymore.
+            // Directly set this to null, so we are sure we not access it in any other method here anymore.
             cumulation = null;
             numReads = 0;
             int readable = buf.readableBytes();
