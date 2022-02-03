@@ -98,7 +98,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         try {
             final int required = in.readableBytes();
             if (required > cumulation.maxWritableBytes() ||
-                    (required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1) ||
+                    required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1 ||
                     cumulation.isReadOnly()) {
                 // Expand cumulation (by replacing it) under the following conditions:
                 // - cumulation cannot be resized to accommodate the additional data
@@ -110,7 +110,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             in.readerIndex(in.writerIndex());
             return cumulation;
         } finally {
-            // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
+            // We must release in  all cases as otherwise it may produce a leak if writeBytes(...) throw
             // for whatever release (for example because of OutOfMemoryError)
             in.release();
         }
@@ -119,7 +119,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     /**
      * Cumulate {@link ByteBuf}s by add them to a {@link CompositeByteBuf} and so do no memory copy whenever possible.
      * Be aware that {@link CompositeByteBuf} use a more complex indexing implementation so depending on your use-case
-     * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
+     * and the decoder implementation this may be slower than just use the {@link #MERGE_CUMULATOR}.
      */
 
     public static final Cumulator COMPOSITE_CUMULATOR = (alloc, cumulation, in) -> {
@@ -248,7 +248,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = cumulation;
         if (buf != null) {
-            // Directly set this to null so we are sure we not access it in any other method here anymore.
+            // Directly set this to null, so we are sure we not access it in any other method here anymore.
             cumulation = null;
             numReads = 0;
             int readable = buf.readableBytes();
@@ -294,7 +294,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     cumulation.release();
                     cumulation = null;
                 } else if (++ numReads >= discardAfterReads) {
-                    // We did enough reads already try to discard some bytes so we not risk to see a OOME.
+                    // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
                     // See https://github.com/netty/netty/issues/4275
                     numReads = 0;
                     discardSomeReadBytes();
@@ -470,7 +470,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
      * {@link #channelInactive(ChannelHandlerContext)} was triggered.
      *
-     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf)} but sub-classes may
+     * By default, this will just call {@link #decode(ChannelHandlerContext, ByteBuf)} but sub-classes may
      * override this for some special cleanup operation.
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
