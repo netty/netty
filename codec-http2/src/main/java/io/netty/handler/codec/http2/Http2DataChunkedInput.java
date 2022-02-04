@@ -80,6 +80,7 @@ public final class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame>
         return readChunk(ctx.alloc());
     }
 
+    @Override
     public Http2DataFrame readChunk(ByteBufAllocator allocator) throws Exception {
         if (endStreamSent) {
             return null;
