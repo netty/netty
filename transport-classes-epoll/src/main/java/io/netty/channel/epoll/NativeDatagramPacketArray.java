@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
+import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet6Address;
@@ -163,6 +164,9 @@ final class NativeDatagramPacketArray {
     @UnstableApi
     public final class NativeDatagramPacket {
 
+        // IMPORTANT: Most of the below variables are accessed via JNI. Be aware if you change any of these you also
+        // need to change these in the related .c file!
+
         // This is the actual struct iovec*
         private long memoryAddress;
         private int count;
@@ -211,7 +215,6 @@ final class NativeDatagramPacketArray {
             if (recipientAddrLen != 0) {
                 recipient = newAddress(recipientAddr, recipientAddrLen, recipientPort, recipientScopeId, ipv4Bytes);
             }
-            buffer.writerIndex(count);
 
             // UDP_GRO
             if (segmentSize > 0) {
