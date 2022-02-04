@@ -156,7 +156,6 @@ public class Http2DataChunkedInputTest {
                 break;
             }
 
-
             ByteBuf buffer = dataFrame.content();
             while (buffer.isReadable()) {
                 assertEquals(BYTES[i++], buffer.readByte());
