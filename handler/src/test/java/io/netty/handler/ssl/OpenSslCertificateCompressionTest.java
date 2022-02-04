@@ -41,8 +41,11 @@ import org.junit.jupiter.api.function.Executable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -182,12 +185,13 @@ public class OpenSslCertificateCompressionTest {
                         .build()
         );
 
-        Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
+        CompletionException e = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 runCertCompressionTest(clientSslContext, serverSslContext);
             }
         });
+        assertThat(e).hasCauseInstanceOf(SSLHandshakeException.class);
     }
 
     @Test
@@ -211,12 +215,13 @@ public class OpenSslCertificateCompressionTest {
                         .build()
         );
 
-        Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
+        CompletionException e = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 runCertCompressionTest(clientSslContext, serverSslContext);
             }
         });
+        assertThat(e).hasCauseInstanceOf(SSLHandshakeException.class);
     }
 
     @Test
@@ -253,7 +258,7 @@ public class OpenSslCertificateCompressionTest {
     public void testDuplicateAdd() throws Throwable {
         // Fails with "Failed trying to add certificate compression algorithm"
         assumeTrue(OpenSsl.isBoringSSL());
-        Assertions.assertThrows(Exception.class, new Executable() {
+        assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 buildClientContext(
@@ -267,7 +272,7 @@ public class OpenSslCertificateCompressionTest {
             }
         });
 
-        Assertions.assertThrows(Exception.class, new Executable() {
+        assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 buildServerContext(
@@ -285,7 +290,7 @@ public class OpenSslCertificateCompressionTest {
     public void testNotBoringAdd() throws Throwable {
         // Fails with "TLS Cert Compression only supported by BoringSSL"
         assumeTrue(!OpenSsl.isBoringSSL());
-        Assertions.assertThrows(Exception.class, new Executable() {
+        assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 buildClientContext(
@@ -297,7 +302,7 @@ public class OpenSslCertificateCompressionTest {
             }
         });
 
-        Assertions.assertThrows(Exception.class, new Executable() {
+        assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 buildServerContext(
