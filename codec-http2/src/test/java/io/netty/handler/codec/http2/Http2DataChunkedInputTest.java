@@ -156,9 +156,6 @@ public class Http2DataChunkedInputTest {
                 break;
             }
 
-            if (http2DataFrame != null) {
-                assertTrue(http2DataFrame instanceof DefaultHttp2DataFrame, "Chunk must be DefaultHttp2DataFrame");
-            }
 
             ByteBuf buffer = dataFrame.content();
             while (buffer.isReadable()) {
