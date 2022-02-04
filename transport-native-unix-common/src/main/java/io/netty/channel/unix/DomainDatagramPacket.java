@@ -16,14 +16,12 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.DefaultByteBufAddressedEnvelope;
 
 /**
  * The message container that is used for {@link DomainDatagramChannel} to communicate with the remote peer.
  */
-public final class DomainDatagramPacket
-        extends DefaultAddressedEnvelope<ByteBuf, DomainSocketAddress> implements ByteBufHolder {
+public final class DomainDatagramPacket extends DefaultByteBufAddressedEnvelope<DomainSocketAddress> {
 
     /**
      * Create a new instance with the specified packet {@code data} and {@code recipient} address.

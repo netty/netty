@@ -434,7 +434,7 @@ abstract class DnsResolveContext<T> {
                 // return null as well as the Future will be failed with a CancellationException.
                 AddressedEnvelope<DnsResponse, InetSocketAddress> result = future.getNow();
                 if (result != null) {
-                    result.release();
+                    ReferenceCountUtil.release(result);
                 }
                 return;
             }

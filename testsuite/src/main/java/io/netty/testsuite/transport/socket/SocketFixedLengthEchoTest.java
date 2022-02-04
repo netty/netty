@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.MemoryManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -44,13 +46,11 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testFixedLengthEcho(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testFixedLengthEcho);
     }
 
-    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testFixedLengthEchoNotAutoRead(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testFixedLengthEchoNotAutoRead);
@@ -68,6 +68,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -77,6 +78,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
         });
 
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.option(ChannelOption.AUTO_READ, autoRead);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -88,9 +90,19 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
+
+        Buffer buffer = MemoryManager.unsafeWrap(data).makeReadOnly();
+        MemoryManager memoryManager = MemoryManager.instance();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 3), data.length - i);
-            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
+
+            Buffer msg = memoryManager.allocateConstChild(buffer);
+            msg.skipReadable(i);
+//            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
+//            cc.writeAndFlush(msg.readSplit(length));
+            cc.executor().submit(() -> {
+                cc.writeAndFlush(msg.readSplit(length));
+            });
             i += length;
         }
 
@@ -142,7 +154,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<Buffer> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -161,11 +173,11 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
-            msg.getBytes(0, actual);
+            msg.copyInto(msg.readerOffset(), actual, 0, msg.readableBytes());
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
@@ -173,7 +185,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(msg.retain());
+                channel.write(msg.split());
             }
 
             counter += actual.length;

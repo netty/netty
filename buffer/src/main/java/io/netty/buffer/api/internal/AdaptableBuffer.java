@@ -100,13 +100,13 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
     public boolean release(int decrement) {
         int refCount = 1 + countBorrows();
         if (!isAccessible() || decrement > refCount) {
-            throw new IllegalReferenceCountException(refCount, -decrement);
+            throw attachTrace(new IllegalReferenceCountException(refCount, -decrement));
         }
         for (int i = 0; i < decrement; i++) {
             try {
                 close();
             } catch (RuntimeException e) {
-                throw new IllegalReferenceCountException(e);
+                throw attachTrace(new IllegalReferenceCountException(e));
             }
         }
         return !isAccessible();

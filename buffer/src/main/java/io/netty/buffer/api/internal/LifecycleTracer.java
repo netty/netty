@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 @UnstableApi
 public abstract class LifecycleTracer {
     static final boolean lifecycleTracingEnabled =
-            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", false);
+            SystemPropertyUtil.getBoolean("io.netty.buffer.lifecycleTracingEnabled", true);
 
     /**
      * Get a tracer for a newly allocated resource.

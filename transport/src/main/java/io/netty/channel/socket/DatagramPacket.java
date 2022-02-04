@@ -18,15 +18,14 @@ package io.netty.channel.socket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.DefaultByteBufAddressedEnvelope;
 
 import java.net.InetSocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public class DatagramPacket
-        extends DefaultAddressedEnvelope<ByteBuf, InetSocketAddress> implements ByteBufHolder {
-
+public class DatagramPacket extends DefaultByteBufAddressedEnvelope<InetSocketAddress> {
     /**
      * Create a new instance with the specified packet {@code data} and {@code recipient} address.
      */

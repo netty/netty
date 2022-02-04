@@ -189,7 +189,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         } else if (trySuccess(envelope)) {
             return; // Ownership transferred, don't release
         }
-        envelope.release();
+        ReferenceCountUtil.release(envelope);
     }
 
     @SuppressWarnings("unchecked")

@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,6 +39,18 @@ public final class UnixChannelUtil {
 
     static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf, int iovMax) {
         return !byteBuf.hasMemoryAddress() && (!byteBuf.isDirect() || byteBuf.nioBufferCount() > iovMax);
+    }
+
+    /**
+     * Checks if the specified buffer has memory address or is composed of n(n <= IOV_MAX) NIO direct buffers.
+     * (We check this because otherwise we need to make it a new direct buffer.)
+     */
+    public static boolean isBufferCopyNeededForWrite(Buffer buffer) {
+        return isBufferCopyNeededForWrite(buffer, IOV_MAX);
+    }
+
+    static boolean isBufferCopyNeededForWrite(Buffer buffer, int iovMax) {
+        return !buffer.isDirect() || buffer.countReadableComponents() > iovMax;
     }
 
     public static InetSocketAddress computeRemoteAddr(InetSocketAddress remoteAddr, InetSocketAddress osRemoteAddr) {

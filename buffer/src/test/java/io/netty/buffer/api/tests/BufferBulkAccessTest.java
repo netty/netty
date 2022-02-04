@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 
 import static io.netty.buffer.api.CompositeBuffer.compose;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class BufferBulkAccessTest extends BufferTestSupport {
@@ -375,6 +377,24 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(buffer.writerOffset()).isEqualTo(8);
             assertThat(buffer.readerOffset()).isEqualTo(4);
             assertThat(array).containsExactly(0, 0x03, 0x04, 0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("directAllocators")
+    public void offHeapBuffersMustBeDirect(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            assertTrue(buf.isDirect());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("heapAllocators")
+    public void onHeapBuffersMustNotBeDirect(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            assertFalse(buf.isDirect());
         }
     }
 }

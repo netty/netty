@@ -19,6 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.Resource;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -439,6 +444,53 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         return buf;
+    }
+
+    /**
+     * Allocates a new off-heap copy of the given buffer, unless the cost of doing so is too high.
+     * The given buffer is closed if a copy is created, or returned directly.
+     *
+     * @param buf The buffer to copy.
+     * @return Probably an off-heap copy of the given buffer.
+     */
+    protected final Buffer newDirectBuffer(Buffer buf) {
+        if (buf.readableBytes() == 0) {
+            // Don't bother allocating a zero-sized buffer. They will not cause IO anyway.
+            return buf;
+        }
+
+        BufferAllocator bufferAllocator = bufferAllocator();
+        if (bufferAllocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
+        }
+        if (bufferAllocator.isPooling()) {
+            try (buf) {
+                return bufferAllocator.allocate(buf.readableBytes()).writeBytes(buf);
+            }
+        }
+        return buf; // Un-pooled off-heap allocation is too expensive. Give up.
+    }
+
+    /**
+     * Allocates a new off-heap copy of the given buffer, unless the cost of doing so is too high.
+     * The given holder is closed regardless.
+     *
+     * @param buf The buffer to copy.
+     * @return Probably an off-heap copy of the given buffer.
+     */
+    protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
+        try (holder) {
+            BufferAllocator bufferAllocator = bufferAllocator();
+            if (bufferAllocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+                bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
+            }
+            if (bufferAllocator.isPooling()) {
+                return bufferAllocator.allocate(buf.readableBytes()).writeBytes(buf);
+            }
+            // Un-pooled off-heap allocation is too expensive. Give up.
+            // Use split() to grab the readable part of the buffer; the remainder will be closed along with its holder.
+            return buf.split();
+        }
     }
 
     @Override

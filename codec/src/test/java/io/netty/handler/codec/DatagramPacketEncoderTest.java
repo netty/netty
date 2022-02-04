@@ -82,11 +82,7 @@ public class DatagramPacketEncoderTest {
                 new DefaultAddressedEnvelope<>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));
         DefaultAddressedEnvelope<Long, InetSocketAddress> output = channel.readOutbound();
-        try {
-            assertSame(envelope, output);
-        } finally {
-            output.release();
-        }
+        assertSame(envelope, output);
     }
 
     @Test

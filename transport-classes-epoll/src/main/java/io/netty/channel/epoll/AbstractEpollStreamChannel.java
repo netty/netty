@@ -18,6 +18,9 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -32,6 +35,7 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
@@ -130,6 +134,41 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return doWriteBytes(in, buf);
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
+            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
+                    config().getMaxBytesPerGatheringWrite());
+        }
+    }
+
+    /**
+     * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.
+     * @param in the collection which contains objects to write.
+     * @param buf the {@link Buffer} from which the bytes should be written
+     * @return The value that should be decremented from the write-quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     */
+    private int writeBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            in.remove();
+            return 0;
+        }
+
+        int readableComponents = buf.countReadableComponents();
+        if (readableComponents == 1) {
+            return doWriteBytes(in, buf);
+        } else {
+            ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
+            buf.forEachReadable(0, (index, component) -> {
+                nioBuffers[index] = component.readableBuffer();
+                return true;
+            });
             return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
                     config().getMaxBytesPerGatheringWrite());
         }
@@ -338,7 +377,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
-        if (msg instanceof ByteBufConvertible) {
+        if (msg instanceof Buffer) {
+            return writeBytes(in, (Buffer) msg);
+        } else if (msg instanceof ByteBufConvertible) {
             return writeBytes(in, ((ByteBufConvertible) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
@@ -371,7 +412,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         in.forEachFlushedMessage(array);
 
         if (array.count() >= 1) {
-            // TODO: Handle the case where cnt == 1 specially.
             return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
@@ -381,6 +421,11 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof Buffer) {
+            Buffer buf = (Buffer) msg;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
+        }
+
         if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf): buf;
@@ -513,14 +558,23 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return super.prepareToClose();
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+        private void handleReadException(ChannelPipeline pipeline, Object bufferish, Throwable cause, boolean close,
                 EpollRecvBufferAllocatorHandle allocHandle) {
-            if (byteBuf != null) {
+            if (bufferish instanceof ByteBuf) {
+                ByteBuf byteBuf = (ByteBuf) bufferish;
                 if (byteBuf.isReadable()) {
                     readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
+                }
+            } else if (bufferish instanceof Buffer) {
+                Buffer buffer = (Buffer) bufferish;
+                if (buffer.readableBytes() > 0) {
+                    readPending = false;
+                    pipeline.fireChannelRead(buffer);
+                } else {
+                    buffer.close();
                 }
             }
             allocHandle.readComplete();
@@ -548,36 +602,43 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 clearEpollIn0();
                 return;
             }
-            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
+            final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
+            final boolean useBufferApi = config.getRecvBufferAllocatorUseBuffer();
+            final BufferAllocator bufferAllocator = config.getBufferAllocator();
+            final ByteBufAllocator byteBufAllocator = config.getAllocator();
+            recvAlloc.reset(config);
             epollInBefore();
 
-            ByteBuf byteBuf = null;
+            Object buffer = null;
             boolean close = false;
             try {
                 do {
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
+                    if (useBufferApi) {
+                        buffer = recvAlloc.allocate(bufferAllocator);
+                        recvAlloc.lastBytesRead(doReadBytes((Buffer) buffer));
+                    } else {
+                        buffer = recvAlloc.allocate(byteBufAllocator);
+                        recvAlloc.lastBytesRead(doReadBytes((ByteBuf) buffer));
+                    }
+                    if (recvAlloc.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
+                        closeOrRelease(buffer);
+                        buffer = null;
+                        close = recvAlloc.lastBytesRead() < 0;
                         if (close) {
                             // There is nothing left to read as we received an EOF.
                             readPending = false;
                         }
                         break;
                     }
-                    allocHandle.incMessagesRead(1);
+                    recvAlloc.incMessagesRead(1);
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
+                    pipeline.fireChannelRead(buffer);
+                    buffer = null;
 
                     if (shouldBreakEpollInReady(config)) {
                         // We need to do this for two reasons:
@@ -593,9 +654,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (recvAlloc.continueReading());
 
-                allocHandle.readComplete();
+                recvAlloc.readComplete();
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
@@ -604,9 +665,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     readIfIsAutoRead();
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+                handleReadException(pipeline, buffer, t, close, recvAlloc);
             } finally {
                 epollInFinally(config);
+            }
+        }
+
+        private void closeOrRelease(Object obj) {
+            if (obj instanceof Resource<?>) {
+                ((Resource<?>) obj).close();
+            } else {
+                ReferenceCountUtil.release(obj);
             }
         }
     }

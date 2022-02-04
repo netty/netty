@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.api.Resource;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
@@ -100,7 +101,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     final Object touch(Object msg, DefaultChannelHandlerContext next) {
-        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
+        if (touch) {
+            if (msg instanceof Resource<?>) {
+                return ((Resource<?>) msg).touch(next);
+            }
+            return ReferenceCountUtil.touch(msg, next);
+        }
+        return msg;
     }
 
     private DefaultChannelHandlerContext newContext(String name, ChannelHandler handler) {

@@ -15,11 +15,13 @@
  */
 package io.netty.channel.unix;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.ReadableComponent;
 import io.netty.buffer.api.ReadableComponentProcessor;
+import io.netty.buffer.api.WritableComponent;
+import io.netty.buffer.api.WritableComponentProcessor;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -48,7 +50,8 @@ import static java.lang.Math.min;
  * <a href="https://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
  * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-public final class IovArray implements MessageProcessor, ReadableComponentProcessor<RuntimeException> {
+public final class IovArray implements MessageProcessor, ReadableComponentProcessor<RuntimeException>,
+                                       WritableComponentProcessor<RuntimeException> {
 
     /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = Buffer.addressSize();
@@ -92,14 +95,6 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
     public void clear() {
         count = 0;
         size = 0;
-    }
-
-    /**
-     * @deprecated Use {@link #add(ByteBuf, int, int)}
-     */
-    @Deprecated
-    public boolean add(ByteBuf buf) {
-        return add(buf, buf.readerIndex(), buf.readableBytes());
     }
 
     public boolean add(ByteBuf buf, int offset, int len) {
@@ -193,7 +188,7 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
      * Set the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(ByteBuf, int, int)}
      * <p>
      * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
-     * {@link #add(ByteBuf)}.
+     * {@link #add(ByteBuf, int, int)}.
      * <p>
      * In order to ensure some progress is made at least one {@link ByteBuf} will be accepted even if it's size exceeds
      * this value.
@@ -229,8 +224,9 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
     public boolean processMessage(Object msg) {
         if (msg instanceof io.netty.buffer.api.Buffer) {
             var buffer = (io.netty.buffer.api.Buffer) msg;
-            buffer.forEachReadable(0, this);
-        } else if (msg instanceof ByteBufConvertible) {
+            return buffer.forEachReadable(0, this) >= 0;
+        }
+        if (msg instanceof ByteBufConvertible) {
             ByteBuf buffer = ((ByteBufConvertible) msg).asByteBuf();
             return add(buffer, buffer.readerIndex(), buffer.readableBytes());
         }
@@ -243,6 +239,31 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
 
     @Override
     public boolean process(int index, ReadableComponent component) {
-        return add(memoryAddress, component.readableNativeAddress(), component.readableBytes());
+        return process(component, component.readableBytes());
+    }
+
+    public boolean process(ReadableComponent component, int byteCount) {
+        if (count == IOV_MAX) {
+            // No more room!
+            return false;
+        }
+        long nativeAddress = component.readableNativeAddress();
+        assert nativeAddress != 0;
+        return add(memoryAddress, nativeAddress, byteCount);
+    }
+
+    @Override
+    public boolean process(int index, WritableComponent component) {
+        return process(component, component.writableBytes());
+    }
+
+    public boolean process(WritableComponent component, int byteCount) {
+        if (count == IOV_MAX) {
+            // No more room!
+            return false;
+        }
+        long nativeAddress = component.writableNativeAddress();
+        assert nativeAddress != 0;
+        return add(memoryAddress, nativeAddress, byteCount);
     }
 }

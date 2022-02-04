@@ -101,6 +101,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public boolean isDirect() {
+        return delegate.isDirect();
+    }
+
+    @Override
     public void copyInto(int srcPos, byte[] dest, int destPos, int length) {
         delegate.copyInto(srcPos, dest, destPos, length);
     }

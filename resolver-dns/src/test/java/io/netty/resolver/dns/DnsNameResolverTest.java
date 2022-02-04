@@ -2775,7 +2775,7 @@ public class DnsNameResolverTest {
             }
             assertTrue(txts.contains(txt1));
             assertTrue(txts.contains(txt2));
-            envelope.release();
+            ReferenceCountUtil.release(envelope);
         } finally {
             resolver.close();
             server.stop();
@@ -3126,7 +3126,7 @@ public class DnsNameResolverTest {
             } else {
                 assertTrue(envelope.content().isTruncated());
             }
-            assertTrue(envelope.release());
+            assertTrue(ReferenceCountUtil.release(envelope));
         } finally {
             dnsServer2.stop();
             if (resolver != null) {

@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -122,13 +123,18 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT && config.isTcpFastOpenConnect()) {
             ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
             outbound.addFlush();
-            Object curr;
-            if ((curr = outbound.current()) instanceof ByteBufConvertible) {
-                ByteBuf initialData = ((ByteBufConvertible) curr).asByteBuf();
+            Object curr = outbound.current();
+            if (curr instanceof ByteBufConvertible || curr instanceof Buffer) {
                 // If no cookie is present, the write fails with EINPROGRESS and this call basically
                 // becomes a normal async connect. All writes will be sent normally afterwards.
-                long localFlushedAmount = doWriteOrSendBytes(
-                        initialData, (InetSocketAddress) remote, true);
+                long localFlushedAmount;
+                if (curr instanceof Buffer) {
+                    Buffer initialData = (Buffer) curr;
+                    localFlushedAmount = doWriteOrSendBytes(initialData, (InetSocketAddress) remote, true);
+                } else {
+                    ByteBuf initialData = ((ByteBufConvertible) curr).asByteBuf();
+                    localFlushedAmount = doWriteOrSendBytes(initialData, (InetSocketAddress) remote, true);
+                }
                 if (localFlushedAmount > 0) {
                     // We had a cookie and our fast-open proceeded. Remove written data
                     // then continue with normal TCP operation.

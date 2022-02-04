@@ -361,6 +361,17 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public boolean isDirect() {
+        // A composite buffer is direct, if all components are direct.
+        for (Buffer buf : bufs) {
+            if (!buf.isDirect()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public CompositeBuffer copy(int offset, int length) {
         checkLength(length);
         checkGetBounds(offset, length);

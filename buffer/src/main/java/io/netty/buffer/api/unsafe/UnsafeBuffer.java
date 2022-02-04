@@ -175,6 +175,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
     }
 
     @Override
+    public boolean isDirect() {
+        return base == null;
+    }
+
+    @Override
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);
@@ -1226,14 +1231,14 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
 
     private RuntimeException readAccessCheckException(int index, int size) {
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw attachTrace(bufferIsClosed(this));
         }
         return outOfBounds(index, size);
     }
 
     private RuntimeException writeAccessCheckException(int index, int size) {
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw attachTrace(bufferIsClosed(this));
         }
         if (wsize != rsize) {
             return bufferIsReadOnly(this);

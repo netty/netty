@@ -19,6 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.Resource;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -325,6 +330,32 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return directBuf;
     }
 
+    /**
+     * Returns an off-heap copy of, and then closes, the given {@link Buffer}.
+     */
+    protected final Buffer newDirectBuffer(Buffer buf) {
+        return newDirectBuffer(buf, buf);
+    }
+
+    /**
+     * Returns an off-heap copy of the given {@link Buffer}, and then closes the {@code holder} under the assumption
+     * that it owned (or was itself) the buffer.
+     */
+    protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
+        BufferAllocator allocator = bufferAllocator();
+        if (allocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            allocator = DefaultBufferAllocators.offHeapAllocator();
+        }
+        try (holder) {
+            int readableBytes = buf.readableBytes();
+            Buffer directCopy = allocator.allocate(readableBytes);
+            if (readableBytes > 0) {
+                directCopy.writeBytes(buf);
+            }
+            return directCopy;
+        }
+    }
+
     protected static void checkResolvable(InetSocketAddress addr) {
         if (addr.isUnresolved()) {
             throw new UnresolvedAddressException();
@@ -350,6 +381,24 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return localReadAmount;
     }
 
+    /**
+     * Read bytes into the given {@link Buffer} and return the amount.
+     */
+    protected final int doReadBytes(Buffer buffer) throws Exception {
+        unsafe().recvBufAllocHandle().attemptedBytesRead(buffer.writableBytes());
+        int initialWritableBytes = buffer.writableBytes();
+        buffer.forEachWritable(0, (index, component) -> {
+            long address = component.writableNativeAddress();
+            assert address != 0;
+            int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
+            if (localReadAmount > 0) {
+                component.skipWritable(localReadAmount);
+            }
+            return false;
+        });
+        return initialWritableBytes - buffer.writableBytes();
+    }
+
     protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress()) {
             int localFlushedAmount = socket.writeAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
@@ -366,6 +415,25 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 in.removeBytes(localFlushedAmount);
                 return 1;
             }
+        }
+        return WRITE_STATUS_SNDBUF_FULL;
+    }
+
+    protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
+        int initialReadableBytes = buf.readableBytes();
+        buf.forEachReadable(0, (index, component) -> {
+            long address = component.readableNativeAddress();
+            assert address != 0;
+            int written = socket.writeAddress(address, 0, component.readableBytes());
+            if (written > 0) {
+                component.skipReadable(written);
+            }
+            return false;
+        });
+        int readableBytesLeft = buf.readableBytes();
+        if (readableBytesLeft < initialReadableBytes) {
+            in.removeBytes(initialReadableBytes - readableBytesLeft);
+            return 1; // Some data was written to the socket.
         }
         return WRITE_STATUS_SNDBUF_FULL;
     }
@@ -405,6 +473,25 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
         return socket.sendTo(nioData, nioData.position(), nioData.limit(),
                 remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+    }
+
+    /**
+     * Write bytes to the socket, with or without a remote address.
+     * Used for datagram and TCP client fast open writes.
+     */
+    final long doWriteOrSendBytes(Buffer data, InetSocketAddress remoteAddress, boolean fastOpen)
+            throws IOException {
+        assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
+
+        IovArray array = registration().cleanIovArray();
+        data.forEachReadable(0, array);
+        int count = array.count();
+        assert count != 0;
+        if (remoteAddress == null) {
+            return socket.writevAddresses(array.memoryAddress(0), count);
+        }
+        return socket.sendToAddresses(array.memoryAddress(0), count,
+                                      remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
