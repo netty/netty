@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -76,8 +77,11 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final InternalThreadLocalMap threadLocalMap() {
-        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the caller thread");
+        Thread t = Thread.currentThread();
+        if (this != t && logger.isWarnEnabled()) {
+            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the " +
+                            "caller thread, the stack trace of the caller thread is: {}",
+                    ThrowableUtil.stackTraceToString(new Exception()));
         }
         return threadLocalMap;
     }
@@ -87,8 +91,11 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
-        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.warn("It's not thread-safe to set 'threadLocalMap' which doesn't belong to the caller thread");
+        Thread t = Thread.currentThread();
+        if (this != t && logger.isWarnEnabled()) {
+            logger.warn("It's not thread-safe to set 'threadLocalMap' which doesn't belong to the " +
+                            "caller thread, the stack trace of the caller thread is: {}",
+                    ThrowableUtil.stackTraceToString(new Exception()));
         }
         this.threadLocalMap = threadLocalMap;
     }
