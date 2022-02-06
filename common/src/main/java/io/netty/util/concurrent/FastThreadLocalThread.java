@@ -77,8 +77,7 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final InternalThreadLocalMap threadLocalMap() {
-        Thread t = Thread.currentThread();
-        if (this != t && logger.isWarnEnabled()) {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
             logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the " +
                             "caller thread, the stack trace of the caller thread is: {}",
                     ThrowableUtil.stackTraceToString(new Exception()));
@@ -91,8 +90,7 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
-        Thread t = Thread.currentThread();
-        if (this != t && logger.isWarnEnabled()) {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
             logger.warn("It's not thread-safe to set 'threadLocalMap' which doesn't belong to the " +
                             "caller thread, the stack trace of the caller thread is: {}",
                     ThrowableUtil.stackTraceToString(new Exception()));
