@@ -70,6 +70,11 @@ public final class HttpHeaderNames {
     public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
             AsciiString.cached("access-control-allow-origin");
     /**
+     * {@code "access-control-allow-origin"}
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK =
+            AsciiString.cached("access-control-allow-private-network");
+    /**
      * {@code "access-control-expose-headers"}
      */
     public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
@@ -88,6 +93,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
             AsciiString.cached("access-control-request-method");
+    /**
+     * {@code "access-control-request-private-network"}
+     */
+    public static final AsciiString ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK =
+            AsciiString.cached("access-control-request-private-network");
     /**
      * {@code "age"}
      */

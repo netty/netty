@@ -77,6 +77,7 @@ public final class CorsConfigBuilder {
     final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
     private boolean noPreflightHeaders;
     boolean shortCircuit;
+    boolean allowPrivateNetwork;
 
     /**
      * Creates a new Builder instance with the origin passed in.
@@ -349,6 +350,19 @@ public final class CorsConfigBuilder {
      */
     public CorsConfigBuilder shortCircuit() {
         shortCircuit = true;
+        return this;
+    }
+
+    /**
+     * Web browsers may set the 'Access-Control-Request-Private-Network' request header if a resource is loaded
+     * from a local network.
+     * By default direct access to private network endpoints from public websites is not allowed.
+     * Calling this method will set the CORS 'Access-Control-Request-Private-Network' response header to true.
+     *
+     * @return {@link CorsConfigBuilder} to support method chaining.
+     */
+    public CorsConfigBuilder allowPrivateNetwork() {
+        allowPrivateNetwork = true;
         return this;
     }
 
