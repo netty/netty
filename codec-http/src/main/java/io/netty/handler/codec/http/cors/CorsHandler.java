@@ -67,7 +67,7 @@ public class CorsHandler implements ChannelHandler {
      * config matches a certain origin, the first in the List will be used.
      *
      * @param configList     List of {@link CorsConfig}
-     * @param isShortCircuit Same as {@link CorsConfig#isShortCurcuit()} but applicable to all supplied configs.
+     * @param isShortCircuit Same as {@link CorsConfig#isShortCircuit} but applicable to all supplied configs.
      */
     public CorsHandler(final List<CorsConfig> configList, boolean isShortCircuit) {
         checkNonEmpty(configList, "configList");
@@ -102,6 +102,7 @@ public class CorsHandler implements ChannelHandler {
             setAllowCredentials(response);
             setMaxAge(response);
             setPreflightHeaders(response);
+            setAllowPrivateNetwork(response);
         }
         if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
@@ -213,6 +214,16 @@ public class CorsHandler implements ChannelHandler {
 
     private void setMaxAge(final HttpResponse response) {
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, config.maxAge());
+    }
+
+    private void setAllowPrivateNetwork(final HttpResponse response) {
+        if (request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK)) {
+            if (config.isPrivateNetworkAllowed()) {
+                response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "true");
+            } else {
+                response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "false");
+            }
+        }
     }
 
     @Override

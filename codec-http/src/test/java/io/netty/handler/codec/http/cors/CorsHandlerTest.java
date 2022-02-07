@@ -34,12 +34,15 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_MAX_AGE;
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
@@ -495,6 +498,32 @@ public class CorsHandlerTest {
         assertValues(host2Response, ACCESS_CONTROL_ALLOW_METHODS.toString(), "POST", "GET", "OPTIONS");
         assertThat(host2Response.headers().getAsString(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("*"));
         assertThat(host2Response.headers().getAsString(ACCESS_CONTROL_MAX_AGE), equalTo("1800"));
+    }
+
+    @Test
+    public void simpleRequestAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").allowPrivateNetwork().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("true"));
+        assertIsCloseableAndClose(response);
+    }
+
+    @Test
+    public void simpleRequestDoNotAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("false"));
+        assertIsCloseableAndClose(response);
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {

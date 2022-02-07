@@ -45,6 +45,7 @@ public final class CorsConfig {
     private final boolean allowNullOrigin;
     private final Map<CharSequence, Callable<?>> preflightHeaders;
     private final boolean shortCircuit;
+    private final boolean allowPrivateNetwork;
 
     CorsConfig(final CorsConfigBuilder builder) {
         origins = new LinkedHashSet<>(builder.origins);
@@ -58,6 +59,7 @@ public final class CorsConfig {
         allowNullOrigin = builder.allowNullOrigin;
         preflightHeaders = builder.preflightHeaders;
         shortCircuit = builder.shortCircuit;
+        allowPrivateNetwork = builder.allowPrivateNetwork;
     }
 
     /**
@@ -107,6 +109,20 @@ public final class CorsConfig {
      */
     public boolean isNullOriginAllowed() {
         return allowNullOrigin;
+    }
+
+    /**
+     * Web browsers may set the 'Access-Control-Request-Private-Network' request header if a resource is loaded
+     * from a local network.
+     * By default direct access to private network endpoints from public websites is not allowed.
+     *
+     * If isPrivateNetworkAllowed is true the server will response with the CORS response header
+     * 'Access-Control-Request-Private-Network'.
+     *
+     * @return {@code true} if private network access should be allowed.
+     */
+    public boolean isPrivateNetworkAllowed() {
+        return allowPrivateNetwork;
     }
 
     /**
@@ -253,7 +269,8 @@ public final class CorsConfig {
                 ", maxAge=" + maxAge +
                 ", allowedRequestMethods=" + allowedRequestMethods +
                 ", allowedRequestHeaders=" + allowedRequestHeaders +
-                ", preflightHeaders=" + preflightHeaders + ']';
+                ", preflightHeaders=" + preflightHeaders +
+                ", isPrivateNetworkAllowed=" + allowPrivateNetwork + ']';
     }
 
     /**
