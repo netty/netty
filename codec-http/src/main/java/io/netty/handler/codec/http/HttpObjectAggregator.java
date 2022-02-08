@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregator;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -273,7 +272,7 @@ public class HttpObjectAggregator
             }
         } else if (oversized instanceof HttpResponse) {
             ctx.close();
-            throw new TooLongFrameException("Response entity too large: " + oversized);
+            throw new TooLongHttpContentException("Response entity too large: " + oversized);
         } else {
             throw new IllegalStateException();
         }

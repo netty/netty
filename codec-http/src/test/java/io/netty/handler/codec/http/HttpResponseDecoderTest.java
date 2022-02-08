@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
@@ -98,7 +97,7 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII));
 
         HttpResponse res = ch.readInbound();
-        assertTrue(res.decoderResult().cause() instanceof TooLongFrameException);
+        assertTrue(res.decoderResult().cause() instanceof TooLongHttpHeaderException);
 
         assertFalse(ch.finish());
         assertNull(ch.readInbound());
