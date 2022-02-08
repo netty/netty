@@ -129,27 +129,55 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
 
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
+                    @Override
+                    public boolean acceptInboundMessage(Object msg) throws Exception {
+                        return msg instanceof DomainDatagramPacket || msg instanceof BufferDomainDatagramPacket;
+                    }
 
                     @Override
-                    public void messageReceived(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+                    public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                         try {
-                            if (sender == null) {
-                                assertNotNull(msg.sender());
+                            if (msg instanceof BufferDomainDatagramPacket) {
+                                BufferDomainDatagramPacket packet = (BufferDomainDatagramPacket) msg;
+                                if (sender == null) {
+                                    assertNotNull(packet.sender());
+                                } else {
+                                    assertEquals(sender, packet.sender());
+                                }
+
+                                Buffer buf = packet.content();
+                                assertEquals(bytes.length, buf.readableBytes());
+                                for (int i = 0; i < bytes.length; i++) {
+                                    assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
+                                }
+
+                                assertEquals(ctx.channel().localAddress(), packet.recipient());
+
+                                if (echo) {
+                                    ctx.writeAndFlush(new BufferDomainDatagramPacket(
+                                            buf.split(), packet.sender()));
+                                }
                             } else {
-                                assertEquals(sender, msg.sender());
-                            }
+                                DomainDatagramPacket packet = (DomainDatagramPacket) msg;
+                                if (sender == null) {
+                                    assertNotNull(packet.sender());
+                                } else {
+                                    assertEquals(sender, packet.sender());
+                                }
 
-                            ByteBuf buf = msg.content();
-                            assertEquals(bytes.length, buf.readableBytes());
-                            for (int i = 0; i < bytes.length; i++) {
-                                assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                            }
+                                ByteBuf buf = packet.content();
+                                assertEquals(bytes.length, buf.readableBytes());
+                                for (int i = 0; i < bytes.length; i++) {
+                                    assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
+                                }
 
-                            assertEquals(ctx.channel().localAddress(), msg.recipient());
+                                assertEquals(ctx.channel().localAddress(), packet.recipient());
 
-                            if (echo) {
-                                ctx.writeAndFlush(new DomainDatagramPacket(buf.retainedDuplicate(), msg.sender()));
+                                if (echo) {
+                                    ctx.writeAndFlush(new DomainDatagramPacket(
+                                            buf.retainedDuplicate(), packet.sender()));
+                                }
                             }
                         } finally {
                             latch.countDown();

@@ -130,6 +130,10 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
             @Override
             protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
+                    @Override
+                    public boolean acceptInboundMessage(Object msg) throws Exception {
+                        return msg instanceof DomainDatagramPacket || msg instanceof BufferDomainDatagramPacket;
+                    }
 
                     @Override
                     public void messageReceived(ChannelHandlerContext ctx, Object msg) {

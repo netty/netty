@@ -224,6 +224,9 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
     public boolean processMessage(Object msg) {
         if (msg instanceof io.netty.buffer.api.Buffer) {
             var buffer = (io.netty.buffer.api.Buffer) msg;
+            if (buffer.readableBytes() == 0) {
+                return true;
+            }
             return buffer.forEachReadable(0, this) >= 0;
         }
         if (msg instanceof ByteBufConvertible) {
