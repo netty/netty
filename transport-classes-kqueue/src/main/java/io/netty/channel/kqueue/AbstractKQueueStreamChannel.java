@@ -557,7 +557,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                     // to handle direct buffers.
                     if (useBufferApi) {
                         buffer = allocHandle.allocate(bufferAllocator);
-                        allocHandle.lastBytesRead(doReadBytes((Buffer) buffer));
+                        doReadBytes((Buffer) buffer);
                     } else {
                         buffer = allocHandle.allocate(byteBufAllocator);
                         allocHandle.lastBytesRead(doReadBytes((ByteBuf) buffer));

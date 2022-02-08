@@ -370,7 +370,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
                     final BufferDomainDatagramPacket packet;
                     if (connected) {
-                        allocHandle.lastBytesRead(doReadBytes(buf));
+                        doReadBytes(buf);
                         if (allocHandle.lastBytesRead() <= 0) {
                             // nothing was read, release the buffer.
                             buf.close();

@@ -22,6 +22,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
@@ -46,11 +48,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SocketReadPendingTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
-    public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testReadPendingIsResetAfterEachRead);
+    public void testReadPendingIsResetAfterEachReadByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb, false));
     }
 
-    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
+    public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb, true));
+    }
+
+    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
+            throws Throwable {
+        if (newBufferAPI) {
+            enableNewBufferAPI(sb, cb);
+        }
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -72,11 +84,15 @@ public class SocketReadPendingTest extends AbstractSocketTest {
             clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
-            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
+            clientChannel.writeAndFlush(newBufferAPI ?
+                                                DefaultBufferAllocators.preferredAllocator().copyOf(new byte[4]) :
+                                                Unpooled.wrappedBuffer(new byte[4]));
 
             // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
             assertTrue(serverInitializer.channelInitLatch.await(5, TimeUnit.SECONDS));
-            serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
+            serverInitializer.channel.writeAndFlush(
+                    newBufferAPI ? DefaultBufferAllocators.preferredAllocator().copyOf(new byte[4]) :
+                            Unpooled.wrappedBuffer(new byte[4]));
 
             serverInitializer.channel.read();
             serverInitializer.readPendingHandler.assertAllRead();
@@ -113,7 +129,11 @@ public class SocketReadPendingTest extends AbstractSocketTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ReferenceCountUtil.release(msg);
+            if (msg instanceof Resource<?>) {
+                ((Resource<?>) msg).close();
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
             if (count.incrementAndGet() == 1) {
                 // Call read the first time, to ensure it is not reset the second time.
                 ctx.read();

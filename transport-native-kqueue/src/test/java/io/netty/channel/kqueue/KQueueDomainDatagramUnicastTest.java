@@ -17,11 +17,13 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.unix.BufferDomainDatagramPacket;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -82,18 +84,30 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
     @Override
     protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
                                          final AtomicReference<Throwable> errorRef) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                 try {
-                    ByteBuf buf = msg.content();
-                    assertEquals(bytes.length, buf.readableBytes());
-                    for (int i = 0; i < bytes.length; i++) {
-                        assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                    }
+                    if (msg instanceof BufferDomainDatagramPacket) {
+                        BufferDomainDatagramPacket packet = (BufferDomainDatagramPacket) msg;
+                        Buffer buf = packet.content();
+                        assertEquals(bytes.length, buf.readableBytes());
+                        for (int i = 0; i < bytes.length; i++) {
+                            assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
+                        }
 
-                    assertEquals(ctx.channel().localAddress(), msg.recipient());
+                        assertEquals(ctx.channel().localAddress(), packet.recipient());
+                    } else {
+                        DomainDatagramPacket packet = (DomainDatagramPacket) msg;
+                        ByteBuf buf = packet.content();
+                        assertEquals(bytes.length, buf.readableBytes());
+                        for (int i = 0; i < bytes.length; i++) {
+                            assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
+                        }
+
+                        assertEquals(ctx.channel().localAddress(), packet.recipient());
+                    }
                 } finally {
                     latch.countDown();
                 }
@@ -166,5 +180,10 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
             default:
                 throw new Error("unknown wrap type: " + wrapType);
         }
+    }
+
+    @Override
+    protected Future<Void> write(Channel cc, Buffer buf, SocketAddress remote) {
+        return cc.write(new BufferDomainDatagramPacket(buf, (DomainSocketAddress) remote));
     }
 }

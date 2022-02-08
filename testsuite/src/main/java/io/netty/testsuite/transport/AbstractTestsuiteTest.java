@@ -17,6 +17,8 @@ package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.testsuite.transport.TestsuitePermutation.AllocatorConfig;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -31,27 +33,27 @@ public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?, ?>
 
     protected abstract List<TestsuitePermutation.BootstrapFactory<T>> newFactories();
 
-    protected List<ByteBufAllocator> newAllocators() {
+    protected List<AllocatorConfig> newAllocators() {
         return TestsuitePermutation.allocator();
     }
 
     protected void run(TestInfo testInfo, Runner<T> runner) throws Throwable {
         List<TestsuitePermutation.BootstrapFactory<T>> combos = newFactories();
         String methodName = TestUtils.testMethodName(testInfo);
-        for (ByteBufAllocator allocator: newAllocators()) {
+        for (AllocatorConfig config: newAllocators()) {
             int i = 0;
             for (TestsuitePermutation.BootstrapFactory<T> e: combos) {
                 cb = e.newInstance();
-                configure(cb, allocator);
+                configure(cb, config.byteBufAllocator, config.bufferAllocator);
                 logger.info(String.format(
                         "Running: %s %d of %d with %s",
-                        methodName, ++ i, combos.size(), StringUtil.simpleClassName(allocator)));
+                        methodName, ++ i, combos.size(), StringUtil.simpleClassName(config.byteBufAllocator)));
                 runner.run(cb);
             }
         }
     }
 
-    protected abstract void configure(T bootstrap, ByteBufAllocator allocator);
+    protected abstract void configure(T bootstrap, ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator);
 
     public interface Runner<CB extends AbstractBootstrap<?, ?, ?>> {
         void run(CB cb) throws Throwable;

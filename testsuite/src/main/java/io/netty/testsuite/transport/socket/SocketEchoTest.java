@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,12 +48,33 @@ public class SocketEchoTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSimpleEchoByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEchoByteBuf);
+    }
+
+    public void testSimpleEchoByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, true, false);
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSimpleEchoNotAutoReadByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSimpleEchoNotAutoReadByteBuf);
+    }
+
+    public void testSimpleEchoNotAutoReadByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, false, false);
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSimpleEcho(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testSimpleEcho);
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true);
+        enableNewBufferAPI(sb, cb);
+        testSimpleEcho0(sb, cb, true, true);
     }
 
     @Test
@@ -61,13 +84,13 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false);
+        enableNewBufferAPI(sb, cb);
+        testSimpleEcho0(sb, cb, false, true);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean autoRead)
+            ServerBootstrap sb, Bootstrap cb, boolean autoRead, boolean newBufferAPI)
             throws Throwable {
-
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
@@ -85,11 +108,21 @@ public class SocketEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
 
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
-            cc.writeAndFlush(buf);
-            i += length;
+        if (newBufferAPI) {
+            try (Buffer src = DefaultBufferAllocators.preferredAllocator().copyOf(data)) {
+                for (int i = 0; i < data.length;) {
+                    int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+                    cc.writeAndFlush(src.readSplit(length));
+                    i += length;
+                }
+            }
+        } else {
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+                ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+                cc.writeAndFlush(buf);
+                i += length;
+            }
         }
 
         while (ch.counter < data.length) {
@@ -140,7 +173,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -160,20 +193,38 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+        public void messageReceived(ChannelHandlerContext ctx, Object in) throws Exception {
+            if (in instanceof Buffer) {
+                Buffer buf = (Buffer) in;
+                byte[] actual = new byte[buf.readableBytes()];
+                buf.readBytes(actual, 0, actual.length);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(data[i + lastIdx], actual[i]);
+                }
+
+                if (channel.parent() != null) {
+                    channel.write(ctx.bufferAllocator().copyOf(actual));
+                }
+
+                counter += actual.length;
+            } else {
+                ByteBuf buf = (ByteBuf) in;
+                byte[] actual = new byte[buf.readableBytes()];
+                buf.readBytes(actual);
+
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(data[i + lastIdx], actual[i]);
+                }
+
+                if (channel.parent() != null) {
+                    channel.write(Unpooled.wrappedBuffer(actual));
+                }
+
+                counter += actual.length;
             }
-
-            if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
-            }
-
-            counter += actual.length;
         }
 
         @Override
@@ -188,8 +239,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();

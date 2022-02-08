@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -43,11 +44,22 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownOutput(TestInfo testInfo) throws Throwable {
+    public void testShutdownOutputByteBuf(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testShutdownOutput);
     }
 
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutput(TestInfo testInfo) throws Throwable {
+        run(testInfo, sb -> {
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+            sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+            testShutdownOutput(sb);
+        });
+    }
+
     public void testShutdownOutput(ServerBootstrap sb) throws Throwable {
+        System.out.println("sb = " + sb);
         TestHandler h = new TestHandler();
         Socket s = newSocket();
         Channel sc = null;
@@ -86,8 +98,18 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownOutputWithoutOption(TestInfo testInfo) throws Throwable {
+    public void testShutdownOutputWithoutOptionByteBuf(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testShutdownOutputWithoutOption);
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputWithoutOption(TestInfo testInfo) throws Throwable {
+        run(testInfo, sb -> {
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+            sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+            testShutdownOutputWithoutOption(sb);
+        });
     }
 
     public void testShutdownOutputWithoutOption(ServerBootstrap sb) throws Throwable {
@@ -137,7 +159,7 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     protected abstract Socket newSocket();
 
-    private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class TestHandler extends SimpleChannelInboundHandler<Object> {
         volatile DuplexChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
         final CountDownLatch halfClosure = new CountDownLatch(1);
@@ -155,8 +177,12 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-            queue.offer(msg.readByte());
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof Buffer) {
+                queue.offer(((Buffer) msg).readByte());
+            } else {
+                queue.offer(((ByteBuf) msg).readByte());
+            }
         }
 
         @Override

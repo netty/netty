@@ -18,6 +18,9 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -40,7 +43,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -131,11 +133,35 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testWriteWithFastOpenBeforeConnectByteBuf);
+    }
+
+    public void testWriteWithFastOpenBeforeConnectByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        cb.option(ChannelOption.AUTO_READ, true);
+
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new EchoServerHandler());
+            }
+        });
+
+        Channel sc = sb.bind().get();
+        connectAndVerifyDataTransfer(cb, sc);
+        connectAndVerifyDataTransfer(cb, sc);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testWriteWithFastOpenBeforeConnect(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testWriteWithFastOpenBeforeConnect);
     }
 
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         enableTcpFastOpen(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);
@@ -158,16 +184,24 @@ public class SocketConnectTest extends AbstractSocketTest {
         cb.handler(handler);
         Future<Channel> register = cb.register();
         Channel channel = register.get();
-        Future<Void> write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        Future<Void> write = channel.write(writeAsciiBuffer(sc, "[fastopen]"));
         SocketAddress remoteAddress = sc.localAddress();
         Future<Void> connectFuture = channel.connect(remoteAddress);
         connectFuture.sync();
-        channel.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
+        channel.writeAndFlush(writeAsciiBuffer(sc, "[normal data]")).sync();
         write.sync();
         String expectedString = "[fastopen][normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
         channel.disconnect().sync();
         assertEquals(expectedString, result);
+    }
+
+    private static Object writeAsciiBuffer(Channel sc, String seq) {
+        if (sc.config().getRecvBufferAllocatorUseBuffer()) {
+            return DefaultBufferAllocators.preferredAllocator().copyOf(seq.getBytes(US_ASCII));
+        } else {
+            return ByteBufUtil.writeAscii(DEFAULT, seq);
+        }
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
@@ -187,7 +221,15 @@ public class SocketConnectTest extends AbstractSocketTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof ByteBuf) {
+            if (msg instanceof Buffer) {
+                try (Buffer buf = (Buffer) msg) {
+                    int readableBytes = buf.readableBytes();
+                    byte[] array = new byte[readableBytes];
+                    buf.readBytes(array, 0, array.length);
+                    streamBuffer.write(array);
+                    semaphore.release(readableBytes);
+                }
+            } else if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 int readableBytes = buf.readableBytes();
                 buf.readBytes(streamBuffer, readableBytes);
@@ -209,7 +251,13 @@ public class SocketConnectTest extends AbstractSocketTest {
     private static final class EchoServerHandler extends ChannelHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof ByteBuf) {
+            if (msg instanceof Buffer) {
+                try (Buffer buf = (Buffer) msg) {
+                    Buffer buffer = ctx.bufferAllocator().allocate(buf.readableBytes());
+                    buffer.writeBytes(buf);
+                    ctx.channel().writeAndFlush(buffer);
+                }
+            } else if (msg instanceof ByteBuf) {
                 ByteBuf buffer = ctx.alloc().buffer();
                 ByteBuf buf = (ByteBuf) msg;
                 buffer.writeBytes(buf);

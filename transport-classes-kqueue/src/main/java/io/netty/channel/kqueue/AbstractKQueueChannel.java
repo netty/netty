@@ -306,19 +306,18 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     /**
      * Read bytes into the given {@link Buffer} and return the amount.
      */
-    protected final int doReadBytes(Buffer buffer) throws Exception {
+    protected final void doReadBytes(Buffer buffer) throws Exception {
         unsafe().recvBufAllocHandle().attemptedBytesRead(buffer.writableBytes());
-        int initialWritableBytes = buffer.writableBytes();
         buffer.forEachWritable(0, (index, component) -> {
             long address = component.writableNativeAddress();
             assert address != 0;
             int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
+            unsafe().recvBufAllocHandle().lastBytesRead(localReadAmount);
             if (localReadAmount > 0) {
                 component.skipWritable(localReadAmount);
             }
             return false;
         });
-        return initialWritableBytes - buffer.writableBytes();
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {

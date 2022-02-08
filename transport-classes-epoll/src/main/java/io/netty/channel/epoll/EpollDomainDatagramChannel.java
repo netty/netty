@@ -413,7 +413,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
                     final BufferDomainDatagramPacket packet;
                     if (connected) {
-                        allocHandle.lastBytesRead(doReadBytes(buf));
+                        doReadBytes(buf);
                         if (allocHandle.lastBytesRead() <= 0) {
                             // nothing was read, release the buffer.
                             buf.close();

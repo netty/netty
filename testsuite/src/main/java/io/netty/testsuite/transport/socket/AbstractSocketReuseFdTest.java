@@ -19,13 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -40,6 +40,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty.util.CharsetUtil.US_ASCII;
+
 public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
     @Override
     protected abstract SocketAddress newSocketAddress();
@@ -49,11 +52,17 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
-    public void testReuseFd(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testReuseFd);
+    public void testReuseFdByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, (sb, cb) -> testReuseFd(sb, cb, false));
     }
 
-    public void testReuseFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
+    public void testReuseFd(TestInfo testInfo) throws Throwable {
+        run(testInfo, (sb, cb) -> testReuseFd(sb, cb, true));
+    }
+
+    public void testReuseFd(ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI) throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);
 
@@ -73,7 +82,8 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                     false,
                     globalException,
                     serverRemaining,
-                    serverDonePromise);
+                    serverDonePromise,
+                    newBufferAPI);
                 sch.pipeline().addLast("handler", sh);
             }
         });
@@ -82,10 +92,11 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) {
                 ReuseFdHandler ch = new ReuseFdHandler(
-                    true,
-                    globalException,
-                    clientRemaining,
-                    clientDonePromise);
+                        true,
+                        globalException,
+                        clientRemaining,
+                        clientDonePromise,
+                        newBufferAPI);
                 sch.pipeline().addLast("handler", ch);
             }
         });
@@ -114,6 +125,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         private static final String EXPECTED_PAYLOAD = "payload";
 
         private final Promise<Void> donePromise;
+        private final boolean newBufferAPI;
         private final AtomicInteger remaining;
         private final boolean client;
         volatile Channel channel;
@@ -122,36 +134,54 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         final StringBuilder received = new StringBuilder();
 
         ReuseFdHandler(
-            boolean client,
-            AtomicReference<Throwable> globalException,
-            AtomicInteger remaining,
-            Promise<Void> donePromise) {
+                boolean client,
+                AtomicReference<Throwable> globalException,
+                AtomicInteger remaining,
+                Promise<Void> donePromise,
+                boolean newBufferAPI) {
             this.client = client;
             this.globalException = globalException;
             this.remaining = remaining;
             this.donePromise = donePromise;
+            this.newBufferAPI = newBufferAPI;
         }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (client) {
-                ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII));
+                if (newBufferAPI) {
+                    ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
+                } else {
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, US_ASCII));
+                }
             }
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            if (msg instanceof ByteBuf) {
+            if (msg instanceof Buffer) {
+                Buffer buf = (Buffer) msg;
+                received.append(buf.toString(US_ASCII));
+                buf.close();
+
+                if (received.toString().equals(EXPECTED_PAYLOAD)) {
+                    if (client) {
+                        ctx.close();
+                    } else {
+                        ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
+                    }
+                }
+            } else if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
-                received.append(buf.toString(CharsetUtil.US_ASCII));
+                received.append(buf.toString(US_ASCII));
                 buf.release();
 
                 if (received.toString().equals(EXPECTED_PAYLOAD)) {
                     if (client) {
                         ctx.close();
                     } else {
-                        ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII));
+                        ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, US_ASCII));
                     }
                 }
             }

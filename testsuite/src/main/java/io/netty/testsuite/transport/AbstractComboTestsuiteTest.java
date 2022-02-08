@@ -16,7 +16,12 @@
 package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.AbstractBootstrap;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.channel.ChannelOption;
+import io.netty.testsuite.transport.TestsuitePermutation.AllocatorConfig;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -33,28 +38,36 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
 
     protected abstract List<TestsuitePermutation.BootstrapComboFactory<SB, CB>> newFactories();
 
-    protected List<ByteBufAllocator> newAllocators() {
+    protected List<AllocatorConfig> newAllocators() {
         return TestsuitePermutation.allocator();
     }
 
     protected void run(TestInfo testInfo, Runner<SB, CB> runner) throws Throwable {
         List<TestsuitePermutation.BootstrapComboFactory<SB, CB>> combos = newFactories();
         String methodName = TestUtils.testMethodName(testInfo);
-        for (ByteBufAllocator allocator: newAllocators()) {
+        for (AllocatorConfig config: newAllocators()) {
             int i = 0;
             for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e: combos) {
                 sb = e.newServerInstance();
                 cb = e.newClientInstance();
-                configure(sb, cb, allocator);
+                configure(sb, cb, config.byteBufAllocator, config.bufferAllocator);
                 logger.info(String.format(
                         "Running: %s %d of %d (%s + %s) with %s",
-                        methodName, ++ i, combos.size(), sb, cb, StringUtil.simpleClassName(allocator)));
+                        methodName, ++ i, combos.size(), sb, cb, StringUtil.simpleClassName(config.byteBufAllocator)));
                 runner.run(sb, cb);
             }
         }
     }
 
-    protected abstract void configure(SB sb, CB cb, ByteBufAllocator allocator);
+    protected abstract void configure(SB sb, CB cb, ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator);
+
+    public void enableNewBufferAPI(AbstractBootstrap<?, ?, ?> sb, Bootstrap cb) {
+        sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+        if (sb instanceof ServerBootstrap) {
+            ((ServerBootstrap) sb).childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+        }
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+    }
 
     public interface Runner<SB extends AbstractBootstrap<?, ?, ?>, CB extends AbstractBootstrap<?, ?, ?>> {
         void run(SB sb, CB cb) throws Throwable;

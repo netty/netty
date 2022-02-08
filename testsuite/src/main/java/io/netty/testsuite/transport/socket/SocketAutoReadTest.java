@@ -22,6 +22,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
@@ -43,16 +45,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketAutoReadTest extends AbstractSocketTest {
     @Test
-    public void testAutoReadOffDuringReadOnlyReadsOneTime(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testAutoReadOffDuringReadOnlyReadsOneTime);
+    public void testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf);
     }
 
-    public void testAutoReadOffDuringReadOnlyReadsOneTime(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAutoReadOffDuringReadOnlyReadsOneTime(true, sb, cb);
-        testAutoReadOffDuringReadOnlyReadsOneTime(false, sb, cb);
+    public void testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf(true, sb, cb);
+        testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf(false, sb, cb);
     }
 
-    private static void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
+    private static void testAutoReadOffDuringReadOnlyReadsOneTimeByteBuf(boolean readOutsideEventLoopThread,
                                                            ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -104,6 +106,70 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
     }
 
+    @Test
+    public void testAutoReadOffDuringReadOnlyReadsOne(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testAutoReadOffDuringReadOnlyReadsOne);
+    }
+
+    public void testAutoReadOffDuringReadOnlyReadsOne(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
+        testAutoReadOffDuringReadOnlyReadsOne(true, sb, cb);
+        testAutoReadOffDuringReadOnlyReadsOne(false, sb, cb);
+    }
+
+    private static void testAutoReadOffDuringReadOnlyReadsOne(boolean readOutsideEventLoopThread,
+                                                           ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            AutoReadInitializer serverInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
+            AutoReadInitializer clientInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
+            sb.option(ChannelOption.SO_BACKLOG, 1024)
+                    .option(ChannelOption.AUTO_READ, true)
+                    .childOption(ChannelOption.AUTO_READ, true)
+                    // We want to ensure that we attempt multiple individual read operations per read loop so we can
+                    // test the auto read feature being turned off when data is first read.
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
+                    .childHandler(serverInitializer);
+
+            serverChannel = sb.bind().get();
+
+            cb.option(ChannelOption.AUTO_READ, true)
+                    // We want to ensure that we attempt multiple individual read operations per read loop so we can
+                    // test the auto read feature being turned off when data is first read.
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
+                    .handler(clientInitializer);
+
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            BufferAllocator alloc = DefaultBufferAllocators.onHeapAllocator();
+
+            // 3 bytes means 3 independent reads for TestRecvBufferAllocator
+            clientChannel.writeAndFlush(alloc.copyOf(new byte[3]));
+            serverInitializer.autoReadHandler.assertSingleRead();
+
+            // 3 bytes means 3 independent reads for TestRecvBufferAllocator
+            serverInitializer.channel.writeAndFlush(alloc.copyOf(new byte[3]));
+            clientInitializer.autoReadHandler.assertSingleRead();
+
+            if (readOutsideEventLoopThread) {
+                serverInitializer.channel.read();
+            }
+            serverInitializer.autoReadHandler.assertSingleReadSecondTry();
+
+            if (readOutsideEventLoopThread) {
+                clientChannel.read();
+            }
+            clientInitializer.autoReadHandler.assertSingleReadSecondTry();
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+        }
+    }
+
     private static class AutoReadInitializer extends ChannelInitializer<Channel> {
         final AutoReadHandler autoReadHandler;
         volatile Channel channel;
@@ -132,7 +198,11 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ReferenceCountUtil.release(msg);
+            if (msg instanceof Resource<?>) {
+                ((Resource<?>) msg).close();
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
             if (count.incrementAndGet() == 1) {
                 ctx.channel().config().setAutoRead(false);
             }

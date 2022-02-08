@@ -19,17 +19,16 @@ import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public final class TestsuitePermutation {
 
-    public static List<ByteBufAllocator> allocator() {
-        List<ByteBufAllocator> allocators = new ArrayList<>();
-        allocators.add(UnpooledByteBufAllocator.DEFAULT);
-        allocators.add(PooledByteBufAllocator.DEFAULT);
-        return allocators;
+    public static List<AllocatorConfig> allocator() {
+        return List.of(
+                new AllocatorConfig(UnpooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapUnpooled()),
+                new AllocatorConfig(PooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapPooled()));
     }
 
     private TestsuitePermutation() { }
@@ -42,5 +41,15 @@ public final class TestsuitePermutation {
             CB extends AbstractBootstrap<?, ?, ?>> {
         SB newServerInstance();
         CB newClientInstance();
+    }
+
+    public static final class AllocatorConfig {
+        public final ByteBufAllocator byteBufAllocator;
+        public final BufferAllocator bufferAllocator;
+
+        public AllocatorConfig(ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator) {
+            this.byteBufAllocator = byteBufAllocator;
+            this.bufferAllocator = bufferAllocator;
+        }
     }
 }

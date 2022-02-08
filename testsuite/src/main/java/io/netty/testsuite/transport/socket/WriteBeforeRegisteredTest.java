@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
@@ -30,6 +31,28 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteBeforeConnectByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testWriteBeforeConnectByteBuf);
+    }
+
+    public void testWriteBeforeConnectByteBuf(Bootstrap cb) throws Throwable {
+        TestHandler h = new TestHandler();
+        SocketChannel ch = null;
+        try {
+            cb.handler(h);
+            ch = (SocketChannel) cb.createUnregistered();
+            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 }));
+            ch.register().sync();
+            ch.connect(newSocketAddress());
+        } finally {
+            if (ch != null) {
+                ch.close();
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testWriteBeforeConnect(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testWriteBeforeConnect);
     }
@@ -40,7 +63,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         try {
             cb.handler(h);
             ch = (SocketChannel) cb.createUnregistered();
-            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 }));
+            ch.writeAndFlush(DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 1 }));
             ch.register().sync();
             ch.connect(newSocketAddress());
         } finally {

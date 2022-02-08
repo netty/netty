@@ -19,15 +19,19 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -56,30 +60,23 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 ch.shutdownInput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause.getCause());
+                assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
 
             try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause.getCause());
+                assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
         } finally {
             ch.close().syncUninterruptibly();
         }
     }
 
-    private static void checkThrowable(Throwable cause) throws Throwable {
-        // Depending on OIO / NIO both are ok
-        if (!(cause instanceof NotYetConnectedException) && !(cause instanceof SocketException)) {
-            throw cause;
-        }
-    }
-
     @Test
     @Timeout(30)
-    public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
+    public void readMustBePendingUntilChannelIsActiveByteBuf(TestInfo info) throws Throwable {
         run(info, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
@@ -103,6 +100,48 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
 
                     @Override
                     protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+                        assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
+                        if (in.readableBytes() == Integer.BYTES) {
+                            assertThat(in.readInt()).isEqualTo(42);
+                            readLatch.countDown();
+                        }
+                    }
+                });
+                bootstrap.connect(serverChannel.localAddress()).sync();
+
+                readLatch.await();
+                group.shutdownGracefully().await();
+            }
+        });
+    }
+
+    @Test
+    @Timeout(30)
+    public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
+        run(info, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                bootstrap.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+                SingleThreadEventLoop group = new SingleThreadEventLoop(
+                        new DefaultThreadFactory(getClass()), NioHandler.newFactory().newHandler());
+                ServerBootstrap sb = new ServerBootstrap().group(group);
+                Channel serverChannel = sb.childHandler(new ChannelHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        ctx.writeAndFlush(DefaultBufferAllocators.preferredAllocator().allocate(4).writeInt(42));
+                    }
+                }).channel(NioServerSocketChannel.class).bind(0).get();
+
+                final CountDownLatch readLatch = new CountDownLatch(1);
+                bootstrap.handler(new ByteToMessageDecoderForBuffer() {
+                    @Override
+                    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+                        assertFalse(ctx.channel().isActive());
+                        ctx.read();
+                    }
+
+                    @Override
+                    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
                         assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
                         if (in.readableBytes() == Integer.BYTES) {
                             assertThat(in.readInt()).isEqualTo(42);

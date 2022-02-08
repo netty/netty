@@ -17,17 +17,13 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.api.Buffer;
-import io.netty.buffer.api.MemoryManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -61,6 +57,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
     }
 
     public void testFixedLengthEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         testFixedLengthEcho(sb, cb, false);
     }
 
@@ -68,7 +65,6 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -78,7 +74,6 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
         });
 
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.option(ChannelOption.AUTO_READ, autoRead);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -91,19 +86,12 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
 
-        Buffer buffer = MemoryManager.unsafeWrap(data).makeReadOnly();
-        MemoryManager memoryManager = MemoryManager.instance();
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 3), data.length - i);
-
-            Buffer msg = memoryManager.allocateConstChild(buffer);
-            msg.skipReadable(i);
-//            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
-//            cc.writeAndFlush(msg.readSplit(length));
-            cc.executor().submit(() -> {
-                cc.writeAndFlush(msg.readSplit(length));
-            });
-            i += length;
+        try (Buffer buffer = sc.bufferAllocator().copyOf(data)) {
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 3), data.length - i);
+                cc.writeAndFlush(buffer.readSplit(length));
+                i += length;
+            }
         }
 
         while (ch.counter < data.length) {

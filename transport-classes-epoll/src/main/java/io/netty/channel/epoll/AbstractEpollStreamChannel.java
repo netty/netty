@@ -619,7 +619,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // to handle direct buffers.
                     if (useBufferApi) {
                         buffer = recvAlloc.allocate(bufferAllocator);
-                        recvAlloc.lastBytesRead(doReadBytes((Buffer) buffer));
+                        doReadBytes((Buffer) buffer);
                     } else {
                         buffer = recvAlloc.allocate(byteBufAllocator);
                         recvAlloc.lastBytesRead(doReadBytes((ByteBuf) buffer));
