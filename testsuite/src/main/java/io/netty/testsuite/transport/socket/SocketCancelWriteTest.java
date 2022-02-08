@@ -187,6 +187,9 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
             } else {
                 ByteBuf buf = (ByteBuf) in;
                 counter.getAndAdd(buf.readableBytes());
+                if (received == null) {
+                    received = ctx.alloc().buffer();
+                }
                 ((ByteBuf) received).writeBytes(buf);
             }
         }
