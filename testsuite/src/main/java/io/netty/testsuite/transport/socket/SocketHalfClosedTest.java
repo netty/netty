@@ -604,7 +604,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     private static void testAllDataReadClosure(final boolean autoRead, final boolean allowHalfClosed,
-                                               ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI) throws Throwable {
+                                               ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
+            throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);

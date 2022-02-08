@@ -42,7 +42,6 @@ public abstract class AbstractServerSocketTest extends AbstractTestsuiteTest<Ser
         bootstrap.childOption(ChannelOption.ALLOCATOR, byteBufAllocator);
         bootstrap.option(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
         bootstrap.childOption(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
-
     }
 
     protected SocketAddress newSocketAddress() {
