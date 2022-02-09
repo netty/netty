@@ -371,7 +371,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-
     private boolean doWriteMessage(Object msg) throws Exception {
         final Object data;
         final InetSocketAddress remoteAddress;
