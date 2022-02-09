@@ -20,13 +20,26 @@ import io.netty.buffer.ByteBufHolder;
 
 import java.net.SocketAddress;
 
+/**
+ * The default {@link AddressedEnvelope} implementation for {@link ByteBuf} messages.
+ *
+ * @param <A> the type of the recipient and sender addresses.
+ */
 public class DefaultByteBufAddressedEnvelope<A extends SocketAddress>
         extends DefaultAddressedEnvelope<ByteBuf, A>
         implements ByteBufHolder {
+    /**
+     * Creates a new instance with the specified {@code message}, {@code recipient} address, and
+     * {@code sender} address.
+     */
     public DefaultByteBufAddressedEnvelope(ByteBuf message, A recipient, A sender) {
         super(message, recipient, sender);
     }
 
+    /**
+     * Creates a new instance with the specified {@code message} and {@code recipient} address.
+     * The sender address becomes {@code null}.
+     */
     public DefaultByteBufAddressedEnvelope(ByteBuf message, A recipient) {
         super(message, recipient);
     }

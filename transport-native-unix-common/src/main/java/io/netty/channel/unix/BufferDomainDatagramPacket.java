@@ -18,13 +18,22 @@ package io.netty.channel.unix;
 import io.netty.buffer.api.Buffer;
 import io.netty.channel.BufferAddressedEnvelope;
 
+/**
+ * The message container that is used for {@link DomainDatagramChannel} to communicate with the remote peer.
+ */
 public class BufferDomainDatagramPacket
         extends BufferAddressedEnvelope<DomainSocketAddress, BufferDomainDatagramPacket> {
-    public BufferDomainDatagramPacket(Buffer message,
-                                      DomainSocketAddress recipient, DomainSocketAddress sender) {
+    /**
+     * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
+     * address.
+     */
+    public BufferDomainDatagramPacket(Buffer message, DomainSocketAddress recipient, DomainSocketAddress sender) {
         super(message, recipient, sender);
     }
 
+    /**
+     * Create a new instance with the specified packet {@code data} and {@code recipient} address.
+     */
     public BufferDomainDatagramPacket(Buffer message, DomainSocketAddress recipient) {
         super(message, recipient);
     }

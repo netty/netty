@@ -20,12 +20,21 @@ import io.netty.channel.BufferAddressedEnvelope;
 
 import java.net.InetSocketAddress;
 
+/**
+ * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
+ */
 public class BufferDatagramPacket extends BufferAddressedEnvelope<InetSocketAddress, BufferDatagramPacket> {
-    public BufferDatagramPacket(Buffer message, InetSocketAddress recipient,
-                                InetSocketAddress sender) {
+    /**
+     * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
+     * address.
+     */
+    public BufferDatagramPacket(Buffer message, InetSocketAddress recipient, InetSocketAddress sender) {
         super(message, recipient, sender);
     }
 
+    /**
+     * Create a new instance with the specified packet {@code data} and {@code recipient} address.
+     */
     public BufferDatagramPacket(Buffer message, InetSocketAddress recipient) {
         super(message, recipient);
     }

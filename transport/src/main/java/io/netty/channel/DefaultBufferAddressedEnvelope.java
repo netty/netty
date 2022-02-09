@@ -19,12 +19,25 @@ import io.netty.buffer.api.Buffer;
 
 import java.net.SocketAddress;
 
+/**
+ * The default {@link AddressedEnvelope} implementation for {@link Buffer} messages.
+ *
+ * @param <A> the type of the recipient and sender addresses.
+ */
 public class DefaultBufferAddressedEnvelope<A extends SocketAddress>
         extends BufferAddressedEnvelope<A, DefaultBufferAddressedEnvelope<A>> {
+    /**
+     * Creates a new instance with the specified {@code message}, {@code recipient} address, and
+     * {@code sender} address.
+     */
     public DefaultBufferAddressedEnvelope(Buffer message, A recipient, A sender) {
         super(message, recipient, sender);
     }
 
+    /**
+     * Creates a new instance with the specified {@code message} and {@code recipient} address.
+     * The sender address becomes {@code null}.
+     */
     public DefaultBufferAddressedEnvelope(Buffer message, A recipient) {
         super(message, recipient);
     }

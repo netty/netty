@@ -22,6 +22,12 @@ import io.netty.buffer.api.Send;
 import java.net.SocketAddress;
 import java.util.function.Supplier;
 
+/**
+ * Base class for addressed envelopes that have {@link Buffer} instances as messages.
+ *
+ * @param <A> The type of socket address used for recipient and sender.
+ * @param <T> The concrete sub-type of this class, used for implementing {@link #send()}.
+ */
 public abstract class BufferAddressedEnvelope<A extends SocketAddress, T extends BufferAddressedEnvelope<A, T>>
         extends DefaultAddressedEnvelope<Buffer, A>
         implements Resource<T> {
@@ -42,6 +48,13 @@ public abstract class BufferAddressedEnvelope<A extends SocketAddress, T extends
         return Send.sending(type, supplier);
     }
 
+    /**
+     * Create a new addressed envelope instance, that has the same recipient and sender as this one, but the given
+     * content.
+     *
+     * @param content The contents of the returned addressed envelope instance.
+     * @return An addressed envelope instance that has the same recipient and sender as this one, but the given content.
+     */
     public abstract T replace(Buffer content);
 
     @Override

@@ -29,12 +29,29 @@ public class BufferSegmentedDatagramPacket extends BufferDatagramPacket {
 
     private final int segmentSize;
 
+    /**
+     * Create a new segmented datagram packet.
+     * The attached message may be sent in multiple segment-sized network packets.
+     *
+     * @param message The data to send.
+     * @param segmentSize The (positive) segment size.
+     * @param recipient The recipient address.
+     * @param sender The sender address.
+     */
     public BufferSegmentedDatagramPacket(Buffer message, int segmentSize, InetSocketAddress recipient,
                                          InetSocketAddress sender) {
         super(message, recipient, sender);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
 
+    /**
+     * Create a new segmented datagram packet.
+     * The attached message may be sent in multiple segment-sized network packets.
+     *
+     * @param message The data to send.
+     * @param segmentSize The (positive) segment size.
+     * @param recipient The recipient address.
+     */
     public BufferSegmentedDatagramPacket(Buffer message, int segmentSize, InetSocketAddress recipient) {
         super(message, recipient);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
