@@ -431,7 +431,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         });
         int readableBytesLeft = buf.readableBytes();
         if (readableBytesLeft < initialReadableBytes) {
-            in.removeBytes(initialReadableBytes - readableBytesLeft);
+            int bytesWritten = initialReadableBytes - readableBytesLeft;
+            buf.skipReadable(-bytesWritten); // Restore read offset for ChannelOutboundBuffer.
+            in.removeBytes(bytesWritten);
             return 1; // Some data was written to the socket.
         }
         return WRITE_STATUS_SNDBUF_FULL;

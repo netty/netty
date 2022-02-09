@@ -264,10 +264,17 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         Channel cc = null;
 
         try {
+            AtomicReference<Throwable> errorRef = new AtomicReference<>();
             cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
                 public void messageReceived(ChannelHandlerContext ctx, Object msgs) {
                     // Nothing will be sent.
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    errorRef.set(cause);
+                    super.exceptionCaught(ctx, cause);
                 }
             });
 
@@ -282,7 +289,6 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             }
 
             final CountDownLatch latch = new CountDownLatch(count);
-            AtomicReference<Throwable> errorRef = new AtomicReference<>();
             sc = setupServerChannel(sb, bytes, sender, latch, errorRef, false);
 
             SocketAddress localAddr = sc.localAddress();
@@ -421,11 +427,19 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 if (cause != null) {
                     throw cause;
                 }
+                cause = clientErrorRef.get();
+                if (cause != null) {
+                    throw cause;
+                }
                 fail("timed out waiting for latch(" +
                      "initial count: " + count + ", current count: " + latch.getCount() + "), wrap type: " + wrapType);
             }
             if (!clientLatch.await(10, TimeUnit.SECONDS)) {
                 Throwable cause = clientErrorRef.get();
+                if (cause != null) {
+                    throw cause;
+                }
+                cause = errorRef.get();
                 if (cause != null) {
                     throw cause;
                 }

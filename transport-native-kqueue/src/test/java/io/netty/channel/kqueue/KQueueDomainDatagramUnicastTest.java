@@ -85,6 +85,10 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
     protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
                                          final AtomicReference<Throwable> errorRef) throws Throwable {
         cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public boolean acceptInboundMessage(Object msg) throws Exception {
+                return msg instanceof DomainDatagramPacket || msg instanceof BufferDomainDatagramPacket;
+            }
 
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) {

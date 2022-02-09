@@ -328,14 +328,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof ByteBufConvertible) {
+            if (msgCount > 1 && (in.current() instanceof ByteBufConvertible || in.current() instanceof Buffer)) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
                 clearFlag(Native.EPOLLOUT);
                 // Return here so we not set the EPOLLOUT flag.
                 return;
-            } else {  // msgCount == 1
+            } else { // msgCount == 1
                 writeSpinCount -= doWriteSingle(in);
             }
 
@@ -428,7 +428,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
         if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf): buf;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof FileRegion) {

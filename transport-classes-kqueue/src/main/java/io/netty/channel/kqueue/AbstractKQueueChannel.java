@@ -328,7 +328,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 return 1;
             }
         } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1?
+            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
                     buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
             int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
             if (localFlushedAmount > 0) {

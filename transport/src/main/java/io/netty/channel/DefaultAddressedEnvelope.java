@@ -15,13 +15,11 @@
  */
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link AddressedEnvelope} implementation.
