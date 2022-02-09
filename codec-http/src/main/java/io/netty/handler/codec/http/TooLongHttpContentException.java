@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,7 +21,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * An {@link TooLongFrameException} which is thrown when the length of the
  * content decoded is greater than the allowed maximum.
  */
-public class TooLongHttpContentException extends TooLongFrameException {
+public final class TooLongHttpContentException extends TooLongFrameException {
 
     private static final long serialVersionUID = 3238341182129476117L;
 
