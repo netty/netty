@@ -36,6 +36,7 @@ import java.net.PortUnreachableException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -70,7 +71,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             assertTrue(datagramChannel.isActive());
             datagramChannel.writeAndFlush(
                     Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            assertTrue(promise.asFuture().syncUninterruptibly().getNow() instanceof PortUnreachableException);
+            assertThat(promise.asFuture().syncUninterruptibly().getNow()).isInstanceOf(PortUnreachableException.class);
         } finally {
             if (datagramChannel != null) {
                 datagramChannel.close();
