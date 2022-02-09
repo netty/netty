@@ -371,34 +371,33 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-    private boolean doWriteMessage(Object msg) throws Exception {
-        if (msg instanceof Buffer) {
-            Buffer buffer = (Buffer) msg;
-            if (buffer.readableBytes() == 0) {
-                return true;
-            }
-            return doWriteOrSendBytes(buffer, null, false) > 0;
-        }
 
-        final ByteBuf data;
+    private boolean doWriteMessage(Object msg) throws Exception {
+        final Object data;
         final InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
+            AddressedEnvelope<?, InetSocketAddress> envelope = (AddressedEnvelope<?, InetSocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = ((ByteBufConvertible) msg).asByteBuf();
+            data = msg;
             remoteAddress = null;
         }
 
-        final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
+        if (data instanceof Buffer) {
+            Buffer buf = (Buffer) data;
+            if (buf.readableBytes() == 0) {
+                return true;
+            }
+            return doWriteOrSendBytes(buf, remoteAddress, false) > 0;
+        } else {
+            ByteBuf buf = (ByteBuf) data;
+            if (buf.readableBytes() == 0) {
+                return true;
+            }
+            return doWriteOrSendBytes(buf, remoteAddress, false) > 0;
         }
-
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
     }
 
     @Override
@@ -826,12 +825,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             NativeDatagramPacketArray array, Buffer buf) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
-            int writable = buf.writableBytes();
+            int initialWriterOffset = buf.writerOffset();
 
             boolean added = array.addWritable(buf, 0, null);
             assert added;
 
-            allocHandle.attemptedBytesRead(writable);
+            allocHandle.attemptedBytesRead(buf.writerOffset() - initialWriterOffset);
 
             NativeDatagramPacketArray.NativeDatagramPacket msg = array.packets()[0];
 
@@ -840,7 +839,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 allocHandle.lastBytesRead(-1);
                 return false;
             }
-            buf.skipWritable(bytesReceived);
+            buf.writerOffset(initialWriterOffset + bytesReceived);
             InetSocketAddress local = localAddress();
             BufferDatagramPacket packet = msg.newDatagramPacket(buf, local);
             if (!(packet instanceof BufferSegmentedDatagramPacket)) {
