@@ -420,6 +420,7 @@ public class HpackDecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
+        verify(mockHeaders).contains(of(":authority"));
         verify(mockHeaders).add(of(":authority"), of(value));
         verifyNoMoreInteractions(mockHeaders);
         reset(mockHeaders);

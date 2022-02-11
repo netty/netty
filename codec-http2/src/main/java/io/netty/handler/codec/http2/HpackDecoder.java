@@ -380,7 +380,7 @@ final class HpackDecoder {
     }
 
     private static HeaderType validate(int streamId, CharSequence name,
-                                       HeaderType previousHeaderType) throws Http2Exception {
+                                       HeaderType previousHeaderType, Http2Headers headers) throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
@@ -396,6 +396,10 @@ final class HpackDecoder {
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
             if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
                 throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
+            }
+
+            if (headers.contains(name)) {
+                throw streamError(streamId, PROTOCOL_ERROR, "Duplicate HTTP/2 pseudo-header '%s' encountered.", name);
             }
 
             return currentHeaderType;
@@ -560,13 +564,12 @@ final class HpackDecoder {
 
             if (validate) {
                 try {
-                    previousType = validate(streamId, name, previousType);
+                    previousType = validate(streamId, name, previousType, headers);
                 } catch (Http2Exception ex) {
                     validationException = ex;
                     return;
                 }
             }
-
             headers.add(name, value);
         }
     }
