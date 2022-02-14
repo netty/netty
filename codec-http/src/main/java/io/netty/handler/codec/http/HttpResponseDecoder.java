@@ -17,8 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.TooLongFrameException;
-
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpResponse}s and
@@ -33,12 +31,12 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>{@code maxInitialLineLength}</td>
  * <td>The maximum length of the initial line (e.g. {@code "HTTP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
- *     {@link TooLongFrameException} will be raised.</td>
+ *     {@link TooLongHttpLineException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
- *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
+ *     header exceeds this value, a {@link TooLongHttpHeaderException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxChunkSize}</td>
