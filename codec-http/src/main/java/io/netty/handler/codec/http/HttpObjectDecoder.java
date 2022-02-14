@@ -45,13 +45,13 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * <td>The maximum length of the initial line
  *     (e.g. {@code "GET / HTTP/1.0"} or {@code "HTTP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
- *     {@link TooLongFrameException} will be raised.</td>
+ *     {@link TooLongHttpLineException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
  * <td>{@value #DEFAULT_MAX_HEADER_SIZE}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
- *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
+ *     header exceeds this value, a {@link TooLongHttpHeaderException} will be raised.</td>
  * </tr>
  * </table>
  *
@@ -935,7 +935,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
         }
 
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException("HTTP header is larger than " + maxLength + " bytes.");
+            return new TooLongHttpHeaderException("HTTP header is larger than " + maxLength + " bytes.");
         }
     }
 
@@ -967,7 +967,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
 
         @Override
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException("An HTTP line is larger than " + maxLength + " bytes.");
+            return new TooLongHttpLineException("An HTTP line is larger than " + maxLength + " bytes.");
         }
     }
 }

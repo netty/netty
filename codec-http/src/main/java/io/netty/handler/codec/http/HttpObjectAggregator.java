@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregatorNew;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -304,7 +303,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         return resp;
     }
 
-    private static final class ResponseTooLargeException extends TooLongFrameException {
+    private static final class ResponseTooLargeException extends TooLongHttpContentException {
         ResponseTooLargeException(String message) {
             super(message);
         }

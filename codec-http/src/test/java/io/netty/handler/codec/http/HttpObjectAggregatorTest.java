@@ -20,7 +20,6 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.CompositeBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResultProvider;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -290,7 +289,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
 
-        assertThrows(TooLongFrameException.class, () -> embedder.writeInbound(chunk2));
+        assertThrows(TooLongHttpContentException.class, () -> embedder.writeInbound(chunk2));
 
         assertFalse(embedder.isOpen());
         assertFalse(embedder.finish());

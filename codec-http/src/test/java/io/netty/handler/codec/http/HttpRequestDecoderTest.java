@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.api.Buffer;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -308,7 +307,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
+        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
         assertFalse(channel.finish());
     }
 
@@ -330,7 +329,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
+        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
         assertFalse(channel.finish());
     }
 
@@ -357,7 +356,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
+        assertTrue(request.decoderResult().cause() instanceof TooLongHttpHeaderException);
         assertFalse(channel.finish());
     }
 
