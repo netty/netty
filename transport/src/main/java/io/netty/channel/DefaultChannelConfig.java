@@ -20,6 +20,8 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.DefaultBufferAllocators;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,7 +43,6 @@ import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link ChannelConfig} implementation.

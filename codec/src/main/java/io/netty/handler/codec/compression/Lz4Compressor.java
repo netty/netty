@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.EncoderException;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
@@ -42,7 +44,6 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.

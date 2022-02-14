@@ -16,6 +16,8 @@
 
 package io.netty.util;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 

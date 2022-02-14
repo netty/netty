@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.util.AbstractConstant;
 import io.netty.util.ConstantPool;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -81,6 +81,6 @@ public class SslContextOption<T> extends AbstractConstant<SslContextOption<T>> {
      * may override this for special checks.
      */
     public void validate(T value) {
-        ObjectUtil.checkNotNull(value, "value");
+        requireNonNull(value, "value");
     }
 }

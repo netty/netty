@@ -27,6 +27,8 @@ import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;

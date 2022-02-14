@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,8 +92,8 @@ public final class OpenSslCertificateCompressionConfig implements
         private final AlgorithmMode mode;
 
         private AlgorithmConfig(OpenSslCertificateCompressionAlgorithm algorithm, AlgorithmMode mode) {
-            this.algorithm = ObjectUtil.checkNotNull(algorithm, "algorithm");
-            this.mode = ObjectUtil.checkNotNull(mode, "mode");
+            this.algorithm = requireNonNull(algorithm, "algorithm");
+            this.mode = requireNonNull(mode, "mode");
         }
 
         /**

@@ -18,7 +18,7 @@ package io.netty.util;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder that allows to build {@link Mapping}s that support
@@ -48,7 +48,7 @@ public class DomainWildcardMappingBuilder<V> {
      *                        when nothing matches the input
      */
     public DomainWildcardMappingBuilder(int initialCapacity, V defaultValue) {
-        this.defaultValue = checkNotNull(defaultValue, "defaultValue");
+        this.defaultValue = requireNonNull(defaultValue, "defaultValue");
         map = new LinkedHashMap<String, V>(initialCapacity);
     }
 
@@ -71,16 +71,16 @@ public class DomainWildcardMappingBuilder<V> {
      */
     public DomainWildcardMappingBuilder<V> add(String hostname, V output) {
         map.put(normalizeHostName(hostname),
-                checkNotNull(output, "output"));
+                requireNonNull(output, "output"));
         return this;
     }
 
     private String normalizeHostName(String hostname) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
         if (hostname.isEmpty() || hostname.charAt(0) == '.') {
             throw new IllegalArgumentException("Hostname '" + hostname + "' not valid");
         }
-        hostname = ImmutableDomainWildcardMapping.normalize(checkNotNull(hostname, "hostname"));
+        hostname = ImmutableDomainWildcardMapping.normalize(requireNonNull(hostname, "hostname"));
         if (hostname.charAt(0) == '*') {
             if (hostname.length() < 3 || hostname.charAt(1) != '.') {
                 throw new IllegalArgumentException("Wildcard Hostname '" + hostname + "'not valid");

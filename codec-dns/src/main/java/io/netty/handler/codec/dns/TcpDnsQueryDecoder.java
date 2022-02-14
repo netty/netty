@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
@@ -37,7 +37,7 @@ public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
      */
     public TcpDnsQueryDecoder(DnsRecordDecoder decoder, int maxFrameLength) {
         super(maxFrameLength, 0, 2, 0, 2);
-        this.decoder = ObjectUtil.checkNotNull(decoder, "decoder");
+        this.decoder = requireNonNull(decoder, "decoder");
     }
 
     @Override

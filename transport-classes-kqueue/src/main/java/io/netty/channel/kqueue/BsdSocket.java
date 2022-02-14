@@ -30,7 +30,7 @@ import static io.netty.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A socket which provides access BSD native methods.
@@ -119,7 +119,7 @@ final class BsdSocket extends Socket {
      */
     int connectx(InetSocketAddress source, InetSocketAddress destination, IovArray data, boolean tcpFastOpen)
             throws IOException {
-        checkNotNull(destination, "Destination InetSocketAddress cannot be null.");
+        requireNonNull(destination, "Destination InetSocketAddress cannot be null.");
         int flags = tcpFastOpen ? CONNECT_TCP_FASTOPEN : 0;
 
         boolean sourceIPv6;

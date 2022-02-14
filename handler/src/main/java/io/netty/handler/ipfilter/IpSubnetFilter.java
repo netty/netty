@@ -18,7 +18,7 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
@@ -67,7 +67,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      * @param rules {@link IpSubnetFilterRule} as an array
      */
     public IpSubnetFilter(IpSubnetFilterRule... rules) {
-        this(true, Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
+        this(true, Arrays.asList(requireNonNull(rules, "rules")));
     }
 
     /**
@@ -78,7 +78,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      * @param rules            {@link IpSubnetFilterRule} as an array
      */
     public IpSubnetFilter(boolean acceptIfNotFound, IpSubnetFilterRule... rules) {
-        this(acceptIfNotFound, Arrays.asList(ObjectUtil.checkNotNull(rules, "rules")));
+        this(acceptIfNotFound, Arrays.asList(requireNonNull(rules, "rules")));
     }
 
     /**
@@ -99,7 +99,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      * @param rules            {@link IpSubnetFilterRule} as a {@link List}
      */
     public IpSubnetFilter(boolean acceptIfNotFound, List<IpSubnetFilterRule> rules) {
-        ObjectUtil.checkNotNull(rules, "rules");
+        requireNonNull(rules, "rules");
         this.acceptIfNotFound = acceptIfNotFound;
 
         int numAcceptIPv4 = 0;
@@ -112,7 +112,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
         // Iterate over rules and check for `null` rule.
         for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
-            ObjectUtil.checkNotNull(ipSubnetFilterRule, "rule");
+            requireNonNull(ipSubnetFilterRule, "rule");
 
             if (ipSubnetFilterRule.getFilterRule() instanceof IpSubnetFilterRule.Ip4SubnetFilterRule) {
                 unsortedIPv4Rules.add(ipSubnetFilterRule);

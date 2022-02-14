@@ -17,7 +17,6 @@ package io.netty.util.internal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Map;
 
 /**
@@ -31,15 +30,6 @@ public final class ObjectUtil {
     private static final int INT_ZERO = 0;
 
     private ObjectUtil() {
-    }
-
-    /**
-     * Checks that the given argument is not null. If it is, throws {@link NullPointerException}.
-     * Otherwise, returns the argument.
-     */
-    @Deprecated
-    public static <T> T checkNotNull(T arg, String text) {
-        return Objects.requireNonNull(arg, text);
     }
 
     /**
@@ -210,7 +200,7 @@ public final class ObjectUtil {
     public static <T> T[] checkNonEmpty(T[] array, String name) {
         //No String concatenation for check
         if (requireNonNull(array, name).length == 0) {
-            throw new IllegalArgumentException("Param '" + name + "' must not be emtpy");
+            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return array;
     }
@@ -222,8 +212,8 @@ public final class ObjectUtil {
      */
     public static byte[] checkNonEmpty(byte[] array, String name) {
         //No String concatenation for check
-        if (checkNotNull(array, name).length == 0) {
-            throw new IllegalArgumentException("Param '" + name + "' must not be emtpy");
+        if (requireNonNull(array, name).length == 0) {
+            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return array;
     }
@@ -235,7 +225,7 @@ public final class ObjectUtil {
      */
     public static char[] checkNonEmpty(char[] array, String name) {
         //No String concatenation for check
-        if (checkNotNull(array, name).length == 0) {
+        if (requireNonNull(array, name).length == 0) {
             throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return array;
@@ -260,7 +250,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static String checkNonEmpty(final String value, final String name) {
-        if (checkNotNull(value, name).isEmpty()) {
+        if (requireNonNull(value, name).isEmpty()) {
             throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return value;
@@ -272,8 +262,8 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static <K, V, T extends Map<K, V>> T checkNonEmpty(T value, String name) {
-        if (checkNotNull(value, name).isEmpty()) {
-            throw new IllegalArgumentException("Param '" + name + "' must not be emtpy");
+        if (requireNonNull(value, name).isEmpty()) {
+            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return value;
     }
@@ -284,14 +274,14 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static CharSequence checkNonEmpty(final CharSequence value, final String name) {
-        if (checkNotNull(value, name).length() == 0) {
-            throw new IllegalArgumentException("Param '" + name + "' must not be emtpy");
+        if (requireNonNull(value, name).length() == 0) {
+            throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return value;
     }
 
     /**
-     * Trims the the given argument and checks whether it is neither null nor empty.
+     * Trims the given argument and checks whether it is neither null nor empty.
      * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
      * Otherwise, returns the trimmed argument.
      *
@@ -302,7 +292,7 @@ public final class ObjectUtil {
      * @throws IllegalArgumentException if the trimmed value is empty.
      */
     public static String checkNonEmptyAfterTrim(final String value, final String name) {
-        String trimmed = checkNotNull(value, name).trim();
+        String trimmed = requireNonNull(value, name).trim();
         return checkNonEmpty(trimmed, name);
     }
 

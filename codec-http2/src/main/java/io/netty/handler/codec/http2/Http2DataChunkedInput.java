@@ -18,7 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChunkedInput} that fetches data chunk by chunk for use with HTTP/2 Data Frames.
@@ -56,8 +56,8 @@ public final class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame>
      * @param stream {@link Http2FrameStream} holding stream info
      */
     public Http2DataChunkedInput(ChunkedInput<ByteBuf> input, Http2FrameStream stream) {
-        this.input = ObjectUtil.checkNotNull(input, "input");
-        this.stream = ObjectUtil.checkNotNull(stream, "stream");
+        this.input = requireNonNull(input, "input");
+        this.stream = requireNonNull(stream, "stream");
     }
 
     @Override

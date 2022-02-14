@@ -18,6 +18,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Enforce a limit on the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed
  * before the connection will be closed.

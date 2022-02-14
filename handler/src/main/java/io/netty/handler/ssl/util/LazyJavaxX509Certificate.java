@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl.util;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import javax.security.cert.CertificateException;
 import javax.security.cert.CertificateExpiredException;
@@ -38,7 +38,7 @@ public final class LazyJavaxX509Certificate extends X509Certificate {
      * Creates a new instance which will lazy parse the given bytes. Be aware that the bytes will not be cloned.
      */
     public LazyJavaxX509Certificate(byte[] bytes) {
-        this.bytes = ObjectUtil.checkNotNull(bytes, "bytes");
+        this.bytes = requireNonNull(bytes, "bytes");
     }
 
     @Override

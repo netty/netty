@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link BrotliOptions} holds {@link Encoder.Parameters} for
@@ -38,7 +38,7 @@ public final class BrotliOptions implements CompressionOptions {
             throw new IllegalStateException("Brotli is not available", Brotli.cause());
         }
 
-        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+        this.parameters = requireNonNull(parameters, "Parameters");
     }
 
     public Encoder.Parameters parameters() {

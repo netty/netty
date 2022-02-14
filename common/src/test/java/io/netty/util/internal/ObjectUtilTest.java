@@ -16,6 +16,7 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,7 +76,7 @@ public class ObjectUtilTest {
     public void testCheckNotNull() {
         Exception actualEx = null;
         try {
-            ObjectUtil.checkNotNull(NON_NULL_OBJECT, NON_NULL_NAME);
+            requireNonNull(NON_NULL_OBJECT, NON_NULL_NAME);
         } catch (Exception e) {
             actualEx = e;
         }
@@ -83,7 +84,7 @@ public class ObjectUtilTest {
 
         actualEx = null;
         try {
-            ObjectUtil.checkNotNull(NULL_OBJECT, NULL_NAME);
+            requireNonNull(NULL_OBJECT, NULL_NAME);
         } catch (Exception e) {
             actualEx = e;
         }

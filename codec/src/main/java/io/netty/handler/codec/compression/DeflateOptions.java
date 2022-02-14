@@ -17,6 +17,8 @@ package io.netty.handler.codec.compression;
 
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * {@link DeflateOptions} holds {@link #compressionLevel()},
  * {@link #memLevel()} and {@link #windowBits()} for Deflate compression.

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
@@ -40,7 +40,7 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
      * Creates a new encoder with the specified {@code encoder}.
      */
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
-        this.encoder = ObjectUtil.checkNotNull(encoder, "encoder");
+        this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override
