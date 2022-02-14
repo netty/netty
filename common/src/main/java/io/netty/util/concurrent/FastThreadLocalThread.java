@@ -16,11 +16,16 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
 public class FastThreadLocalThread extends Thread {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
+
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
 
@@ -70,6 +75,10 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     final InternalThreadLocalMap threadLocalMap() {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
+            logger.warn(new RuntimeException("It's not thread-safe to get 'threadLocalMap' " +
+                    "which doesn't belong to the caller thread"));
+        }
         return threadLocalMap;
     }
 
@@ -78,6 +87,10 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
+            logger.warn(new RuntimeException("It's not thread-safe to set 'threadLocalMap' " +
+                    "which doesn't belong to the caller thread"));
+        }
         this.threadLocalMap = threadLocalMap;
     }
 
