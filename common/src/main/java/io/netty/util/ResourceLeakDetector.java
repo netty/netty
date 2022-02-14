@@ -300,7 +300,7 @@ public class ResourceLeakDetector<T> {
                 continue;
             }
 
-            String records = ref.toString();
+            String records = ref.getReportAndClearRecords();
             if (reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
@@ -519,7 +519,16 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public String toString() {
+            TraceRecord oldHead = headUpdater.get(this);
+            return generateReport(oldHead);
+        }
+
+        String getReportAndClearRecords() {
             TraceRecord oldHead = headUpdater.getAndSet(this, null);
+            return generateReport(oldHead);
+        }
+
+        private String generateReport(TraceRecord oldHead) {
             if (oldHead == null) {
                 // Already closed
                 return EMPTY_STRING;

@@ -15,8 +15,6 @@
  */
 package io.netty.util;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -29,7 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class ResourceLeakDetectorTest {
+    @SuppressWarnings("unused")
+    private static volatile int sink;
 
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
@@ -102,31 +104,31 @@ public class ResourceLeakDetectorTest {
         assertNoErrors(error);
     }
 
+    @Timeout(10)
     @Test
-    // triggering GC is too unreliable for regular testing.
-    @Disabled
     public void testLeakSetupHints() throws Throwable {
+        DefaultResource.detectorWithSetupHint.initialise();
         leakResource();
 
-        // trigger GC
-        System.gc();
-        try {
-            @SuppressWarnings("unused")
-            byte[] unused = new byte[(int) Math.min(Runtime.getRuntime().totalMemory(), Integer.MAX_VALUE - 1000)];
-        } catch (OutOfMemoryError ignored) {
-        }
+        do {
+            // Trigger GC.
+            System.gc();
+            // Track another resource to trigger refqueue visiting.
+            Resource resource2 = new DefaultResource();
+            DefaultResource.detectorWithSetupHint.track(resource2).close(resource2);
+            // Give the GC something to work on.
+            for (int i = 0; i < 1000; i++) {
+                sink = System.identityHashCode(new byte[10000]);
+            }
+        } while (DefaultResource.detectorWithSetupHint.getLeaksFound() < 1 && !Thread.interrupted());
 
-        // track another resource to trigger refqueue visiting
-        Resource resource2 = new DefaultResource();
-        DefaultResource.detectorWithSetupHint.track(resource2).close(resource2);
-
-        Assertions.assertEquals(1, DefaultResource.detectorWithSetupHint.getLeaksFound());
+        assertThat(DefaultResource.detectorWithSetupHint.getLeaksFound()).isOne();
         DefaultResource.detectorWithSetupHint.assertNoErrors();
     }
 
-    private void leakResource() {
+    private static void leakResource() {
         Resource resource = new DefaultResource();
-        // we'll never close this ResourceLeakDetector
+        // We'll never close this ResourceLeakTracker.
         DefaultResource.detectorWithSetupHint.track(resource);
     }
 
@@ -208,13 +210,18 @@ public class ResourceLeakDetectorTest {
     }
 
     private static final class CreationRecordLeakDetector<T> extends ResourceLeakDetector<T> {
-        private final String canaryString = "creation-canary-" + UUID.randomUUID();
+        private String canaryString;
 
         private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         private final AtomicInteger leaksFound = new AtomicInteger(0);
 
         CreationRecordLeakDetector(Class<?> resourceType, int samplingInterval) {
             super(resourceType, samplingInterval);
+        }
+
+        public void initialise() {
+            canaryString = "creation-canary-" + UUID.randomUUID();
+            leaksFound.set(0);
         }
 
         @Override
