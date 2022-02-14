@@ -23,6 +23,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * {@link ChannelHandler} which consolidates {@link Channel#flush()} / {@link ChannelHandlerContext#flush()}
  * operations (which also includes

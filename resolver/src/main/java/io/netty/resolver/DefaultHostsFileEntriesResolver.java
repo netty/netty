@@ -16,6 +16,8 @@
 package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;

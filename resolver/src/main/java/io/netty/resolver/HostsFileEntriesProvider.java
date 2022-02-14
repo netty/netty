@@ -37,7 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A container of hosts file entries
@@ -182,8 +182,8 @@ public final class HostsFileEntriesProvider {
 
         @Override
         public HostsFileEntriesProvider parse(File file, Charset... charsets) throws IOException {
-            checkNotNull(file, "file");
-            checkNotNull(charsets, "charsets");
+            requireNonNull(file, "file");
+            requireNonNull(charsets, "charsets");
             if (charsets.length == 0) {
                 charsets = new Charset[]{Charset.defaultCharset()};
             }
@@ -206,7 +206,7 @@ public final class HostsFileEntriesProvider {
 
         @Override
         public HostsFileEntriesProvider parse(Reader reader) throws IOException {
-            checkNotNull(reader, "reader");
+            requireNonNull(reader, "reader");
             BufferedReader buff = new BufferedReader(reader);
             try {
                 Map<String, List<InetAddress>> ipv4Entries = new HashMap<String, List<InetAddress>>();

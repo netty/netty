@@ -30,6 +30,8 @@ import io.netty.handler.codec.compression.ZstdCompressor;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;

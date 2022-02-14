@@ -32,6 +32,8 @@ import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -109,7 +111,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate,
                                             CompressionOptions... compressionOptionsArgs) {
         super(delegate);
-        ObjectUtil.checkNotNull(compressionOptionsArgs, "CompressionOptions");
+        requireNonNull(compressionOptionsArgs, "CompressionOptions");
         ObjectUtil.deepCheckNotNull("CompressionOptions", compressionOptionsArgs);
 
         for (CompressionOptions compressionOptions : compressionOptionsArgs) {

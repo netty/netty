@@ -22,6 +22,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;

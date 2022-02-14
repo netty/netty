@@ -16,8 +16,8 @@
 
 package io.netty.handler.ssl.util;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,7 +44,7 @@ public final class FingerprintTrustManagerFactoryBuilder {
      * @param algorithm a hash algorithm
      */
     FingerprintTrustManagerFactoryBuilder(String algorithm) {
-        this.algorithm = checkNotNull(algorithm, "algorithm");
+        this.algorithm = requireNonNull(algorithm, "algorithm");
     }
 
     /**
@@ -54,7 +54,7 @@ public final class FingerprintTrustManagerFactoryBuilder {
      * @return the same builder
      */
     public FingerprintTrustManagerFactoryBuilder fingerprints(CharSequence... fingerprints) {
-        return fingerprints(Arrays.asList(checkNotNull(fingerprints, "fingerprints")));
+        return fingerprints(Arrays.asList(requireNonNull(fingerprints, "fingerprints")));
     }
 
     /**
@@ -64,7 +64,7 @@ public final class FingerprintTrustManagerFactoryBuilder {
      * @return the same builder
      */
     public FingerprintTrustManagerFactoryBuilder fingerprints(Iterable<? extends CharSequence> fingerprints) {
-        checkNotNull(fingerprints, "fingerprints");
+        requireNonNull(fingerprints, "fingerprints");
         for (CharSequence fingerprint : fingerprints) {
             checkNotNullWithIAE(fingerprint, "fingerprint");
             this.fingerprints.add(fingerprint.toString());

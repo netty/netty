@@ -16,6 +16,8 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.ObjectUtil;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Enforce a limit on the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed
  * before the connection will be closed.

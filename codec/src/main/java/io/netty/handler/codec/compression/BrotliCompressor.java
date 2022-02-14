@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -48,7 +48,7 @@ public final class BrotliCompressor implements Compressor {
      * @param parameters {@link Encoder.Parameters} Instance
      */
     private BrotliCompressor(Encoder.Parameters parameters) {
-        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+        this.parameters = requireNonNull(parameters, "Parameters");
     }
 
     /**
