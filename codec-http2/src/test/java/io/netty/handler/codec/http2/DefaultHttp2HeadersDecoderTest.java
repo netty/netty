@@ -127,6 +127,23 @@ public class DefaultHttp2HeadersDecoderTest {
         }
     }
 
+    @Test
+    public void duplicatePseudoHeadersMustFailValidation() throws Exception {
+        final ByteBuf buf = encode(b(":authority"), b("abc"), b(":authority"), b("def"));
+        try {
+            final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.decodeHeaders(1, buf);
+                }
+            });
+            assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
+        } finally {
+            buf.release();
+        }
+    }
+
     private static byte[] b(String string) {
         return string.getBytes(UTF_8);
     }
