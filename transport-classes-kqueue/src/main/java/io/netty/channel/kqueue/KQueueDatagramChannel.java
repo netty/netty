@@ -376,7 +376,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                         }
                     }
                     return e;
-                } else if (e.content() instanceof ByteBufConvertible) {
+                }
+                if (e.content() instanceof ByteBufConvertible) {
                     ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
                     return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
                             new DefaultByteBufAddressedEnvelope<>(

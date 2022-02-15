@@ -15,6 +15,8 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.util.ReferenceCounted;
+
 /**
  * A resource that has a life-time, and can be {@linkplain #close() closed}.
  * Resources are initially {@linkplain #isAccessible() accessible}, but closing them makes them inaccessible.
@@ -65,5 +67,34 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
     @SuppressWarnings("unchecked")
     default T touch(Object hint) {
         return (T) this;
+    }
+
+    /**
+     * Attempt to dispose of whatever the given object is.
+     * <p>
+     * If the object is {@link AutoCloseable}, such as anything that implements {@link Resource},
+     * then it will be closed.
+     * If the object is {@link io.netty.util.ReferenceCounted}, then it will be released once.
+     * <p>
+     * Any exceptions caused by this will be left to bubble up, and checked exceptions will be wrapped in a
+     * {@link RuntimeException}.
+     *
+     * @param obj The object to dispose of.
+     */
+    static void dispose(Object obj) {
+        if (obj instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) obj).close();
+            } catch (RuntimeException re) {
+                throw re;
+            } catch (Exception e) {
+                throw new RuntimeException("Exception from closing object", e);
+            }
+        } else if (obj instanceof ReferenceCounted) {
+            ReferenceCounted rc = (ReferenceCounted) obj;
+            if (rc.refCnt() > 0) {
+                rc.release();
+            }
+        }
     }
 }

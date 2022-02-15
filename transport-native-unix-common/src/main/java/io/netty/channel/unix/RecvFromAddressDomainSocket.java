@@ -42,7 +42,7 @@ public final class RecvFromAddressDomainSocket implements WritableComponentProce
         return false;
     }
 
-    public DomainDatagramSocketAddress getRemoteAddress() {
+    public DomainDatagramSocketAddress remoteAddress() {
         return remoteAddress;
     }
 }

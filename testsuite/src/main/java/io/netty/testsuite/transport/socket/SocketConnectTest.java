@@ -199,9 +199,8 @@ public class SocketConnectTest extends AbstractSocketTest {
     private static Object writeAsciiBuffer(Channel sc, String seq) {
         if (sc.config().getRecvBufferAllocatorUseBuffer()) {
             return DefaultBufferAllocators.preferredAllocator().copyOf(seq.getBytes(US_ASCII));
-        } else {
-            return ByteBufUtil.writeAscii(DEFAULT, seq);
         }
+        return ByteBufUtil.writeAscii(DEFAULT, seq);
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {

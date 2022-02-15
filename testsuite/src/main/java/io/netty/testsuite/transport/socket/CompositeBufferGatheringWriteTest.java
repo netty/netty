@@ -192,6 +192,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                             // IOException is fine as it will also close the channel and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
+                                closeAggregator();
                                 clientReceived.set(cause);
                                 latch.countDown();
                             }
@@ -203,12 +204,18 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                                 try {
                                     assertEquals(EXPECTED_BYTES, aggregator.readableBytes());
                                 } catch (Throwable cause) {
-                                    aggregator.close();
-                                    aggregator = null;
+                                    closeAggregator();
                                     clientReceived.set(cause);
                                 } finally {
                                     latch.countDown();
                                 }
+                            }
+                        }
+
+                        private void closeAggregator() {
+                            if (aggregator != null) {
+                                aggregator.close();
+                                aggregator = null;
                             }
                         }
                     });
@@ -462,6 +469,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                             // IOException is fine as it will also close the channel and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
+                                closeAggregator();
                                 clientReceived.set(cause);
                                 latch.countDown();
                             }
@@ -473,12 +481,18 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                                 try {
                                     assertEquals(expectedContent.readableBytes(), aggregator.readableBytes());
                                 } catch (Throwable cause) {
-                                    aggregator.close();
-                                    aggregator = null;
+                                    closeAggregator();
                                     clientReceived.set(cause);
                                 } finally {
                                     latch.countDown();
                                 }
+                            }
+                        }
+
+                        private void closeAggregator() {
+                            if (aggregator != null) {
+                                aggregator.close();
+                                aggregator = null;
                             }
                         }
                     });
@@ -491,9 +505,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             latch.await();
             Object received = clientReceived.get();
             if (received instanceof Buffer) {
-                Buffer actual = (Buffer) received;
-                assertEquals(expectedContent, actual);
-                actual.close();
+                try (Buffer actual = (Buffer) received) {
+                    assertEquals(expectedContent, actual);
+                }
             } else {
                 throw (Throwable) received;
             }

@@ -38,7 +38,6 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.RecvFromAddressDomainSocket;
 import io.netty.channel.unix.UnixChannelUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
@@ -135,9 +134,8 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
         if (data instanceof Buffer) {
             return doWriteBufferMessage((Buffer) data, remoteAddress);
-        } else {
-            return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
         }
+        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
     }
 
     private boolean doWriteBufferMessage(Buffer data, DomainSocketAddress remoteAddress) throws IOException {
@@ -256,7 +254,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), domainRecipient);
                         } finally {
-                            releaseOrClose(e);
+                            Resource.dispose(e);
                         }
                     }
                     return e;
@@ -270,14 +268,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
-    }
-
-    private static void releaseOrClose(Object obj) {
-        if (obj instanceof Resource<?>) {
-            ((Resource<?>) obj).close();
-        } else {
-            ReferenceCountUtil.release(obj);
-        }
     }
 
     @Override
@@ -381,7 +371,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                     } else {
                         final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
                         buf.forEachWritable(0, recvFrom);
-                        final DomainDatagramSocketAddress remoteAddress = recvFrom.getRemoteAddress();
+                        final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
 
                         if (remoteAddress == null) {
                             allocHandle.lastBytesRead(-1);

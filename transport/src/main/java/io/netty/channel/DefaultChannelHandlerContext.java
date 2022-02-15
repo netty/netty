@@ -22,7 +22,6 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Resource;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -317,7 +316,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeUserEventTriggered(Object event) {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_USER_EVENT_TRIGGERED);
         if (ctx == null) {
-            closeOrRelease(event);
+            Resource.dispose(event);
             notifyHandlerRemovedAlready();
             return;
         }
@@ -342,7 +341,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             try {
                 executor.execute(() -> findAndInvokeChannelRead(msg));
             } catch (Throwable cause) {
-                closeOrRelease(msg);
+                Resource.dispose(msg);
                 throw cause;
             }
         }
@@ -352,19 +351,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelRead(Object msg) {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ);
         if (ctx == null) {
-            closeOrRelease(msg);
+            Resource.dispose(msg);
             notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelRead(msg);
-    }
-
-    private static void closeOrRelease(Object msg) {
-        if (msg instanceof Resource<?>) {
-            ((Resource<?>) msg).close();
-        } else {
-            ReferenceCountUtil.release(msg);
-        }
     }
 
     void invokeChannelRead(Object msg) {
@@ -705,7 +696,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             final DefaultChannelHandlerContext next = findContextOutbound(flush ?
                     (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
             if (next == null) {
-                closeOrRelease(msg);
+                Resource.dispose(msg);
                 return failRemoved(this);
             }
             if (flush) {
@@ -856,7 +847,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } catch (Throwable cause) {
             try {
                 if (msg != null) {
-                    closeOrRelease(msg);
+                    Resource.dispose(msg);
                 }
             } finally {
                 if (promise != null) {
@@ -917,12 +908,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             try {
                 decrementPendingOutboundBytes();
                 if (promise.isCancelled()) {
-                    closeOrRelease(msg);
+                    Resource.dispose(msg);
                     return;
                 }
                 DefaultChannelHandlerContext next = findContext(ctx);
                 if (next == null) {
-                    closeOrRelease(msg);
+                    Resource.dispose(msg);
                     failRemoved(ctx).cascadeTo(promise);
                     return;
                 }

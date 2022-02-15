@@ -35,7 +35,6 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
@@ -626,7 +625,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     }
                     if (recvAlloc.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
-                        closeOrRelease(buffer);
+                        Resource.dispose(buffer);
                         buffer = null;
                         close = recvAlloc.lastBytesRead() < 0;
                         if (close) {
@@ -668,14 +667,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 handleReadException(pipeline, buffer, t, close, recvAlloc);
             } finally {
                 epollInFinally(config);
-            }
-        }
-
-        private void closeOrRelease(Object obj) {
-            if (obj instanceof Resource<?>) {
-                ((Resource<?>) obj).close();
-            } else {
-                ReferenceCountUtil.release(obj);
             }
         }
     }

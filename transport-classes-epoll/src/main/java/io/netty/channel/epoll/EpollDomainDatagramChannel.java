@@ -424,7 +424,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                     } else {
                         final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
                         buf.forEachWritable(0, recvFrom);
-                        final DomainDatagramSocketAddress remoteAddress = recvFrom.getRemoteAddress();
+                        final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
 
                         if (remoteAddress == null) {
                             allocHandle.lastBytesRead(-1);

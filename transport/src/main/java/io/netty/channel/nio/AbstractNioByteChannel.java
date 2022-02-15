@@ -33,7 +33,6 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
@@ -173,7 +172,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
-                        closeOrRelease(buffer);
+                        Resource.dispose(buffer);
                         buffer = null;
                         close = allocHandle.lastBytesRead() < 0;
                         if (close) {
@@ -209,14 +208,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (!readPending && !config.isAutoRead()) {
                     removeReadOp();
                 }
-            }
-        }
-
-        private void closeOrRelease(Object obj) {
-            if (obj instanceof Resource<?>) {
-                ((Resource<?>) obj).close();
-            } else {
-                ReferenceCountUtil.release(obj);
             }
         }
     }

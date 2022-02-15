@@ -127,7 +127,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
             if (curr instanceof ByteBufConvertible || curr instanceof Buffer) {
                 // If no cookie is present, the write fails with EINPROGRESS and this call basically
                 // becomes a normal async connect. All writes will be sent normally afterwards.
-                long localFlushedAmount;
+                final long localFlushedAmount;
                 if (curr instanceof Buffer) {
                     Buffer initialData = (Buffer) curr;
                     localFlushedAmount = doWriteOrSendBytes(initialData, (InetSocketAddress) remote, true);

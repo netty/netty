@@ -96,7 +96,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         abstract void release();
     }
 
-    private static class ByteBufWriterHandler extends WriteHandler {
+    private static final class ByteBufWriterHandler extends WriteHandler {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -117,7 +117,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // call retain on it so it can't be put back on the pool
             buf.writeBytes(data).retain();
 
-            ctx.channel().writeAndFlush(buf).addListener(future -> latch.countDown());
+            ctx.writeAndFlush(buf).addListener(future -> latch.countDown());
         }
 
         @Override
@@ -142,7 +142,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         }
     }
 
-    private static class BufferWriterHandler extends WriteHandler {
+    private static final class BufferWriterHandler extends WriteHandler {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -159,7 +159,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             byte[] data = new byte[1024];
             random.nextBytes(data);
             buf = ctx.bufferAllocator().copyOf(data);
-            ctx.channel().writeAndFlush(buf).addListener(future -> latch.countDown());
+            ctx.writeAndFlush(buf).addListener(future -> latch.countDown());
         }
 
         @Override

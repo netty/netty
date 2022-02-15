@@ -243,9 +243,8 @@ public final class NioDatagramChannel
 
         if (config.getRecvBufferAllocatorUseBuffer()) {
             return doReadBufferMessages(allocHandle, buf);
-        } else {
-            return doReadByteBufMessages(allocHandle, buf);
         }
+        return doReadByteBufMessages(allocHandle, buf);
     }
 
     private int doReadBufferMessages(Handle allocHandle, List<Object> buf) throws IOException {

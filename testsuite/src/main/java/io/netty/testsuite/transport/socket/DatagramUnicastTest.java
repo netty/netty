@@ -43,6 +43,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -381,18 +382,23 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             for (WrapType type : WrapType.values()) {
                 testSimpleSendWithConnect0(sb, cb, buf.retain(), bytes, count, type);
             }
-        } finally {
             assertTrue(buf.release());
+        } catch (Throwable th) {
+            if (buf.refCnt() != 0) {
+                try {
+                    assertTrue(buf.release());
+                } catch (Exception e) {
+                    th.addSuppressed(e);
+                }
+            }
+            throw th;
         }
     }
 
     private void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb, Buffer buf, final byte[] bytes, int count)
             throws Throwable {
-        try {
-            testSimpleSendWithConnect0(sb, cb, buf, bytes, count);
-        } finally {
-            assertFalse(buf.isAccessible());
-        }
+        testSimpleSendWithConnect0(sb, cb, buf, bytes, count);
+        assertFalse(buf.isAccessible());
     }
 
     private void testSimpleSendWithConnect0(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count,
@@ -461,8 +467,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
                 Future<Void> future = cc.writeAndFlush(
                         buf.retain().duplicate()).awaitUninterruptibly();
-                assertTrue(future.cause() instanceof NotYetConnectedException,
-                        "NotYetConnectedException expected, got: " + future.cause());
+                assertThat(future.cause()).isInstanceOf(NotYetConnectedException.class);
             }
         } finally {
             // release as we used buf.retain() before
@@ -531,8 +536,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 assertNull(cc.remoteAddress());
 
                 Future<Void> future = cc.writeAndFlush(buf.copy()).awaitUninterruptibly();
-                assertTrue(future.cause() instanceof NotYetConnectedException,
-                        "NotYetConnectedException expected, got: " + future.cause());
+                assertThat(future.cause()).isInstanceOf(NotYetConnectedException.class);
             }
         } finally {
             closeChannel(cc);
