@@ -176,12 +176,12 @@ public class ResourceLeakDetector<T> {
         if (level.ordinal() < Level.PARANOID.ordinal()) {
             if (ThreadLocalRandom.current().nextInt(samplingInterval) == 0) {
                 reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks);
+                return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
             }
             return null;
         }
         reportLeak();
-        return new DefaultResourceLeak(obj, refQueue, allLeaks);
+        return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
     }
 
     private void clearRefQueue() {
@@ -221,7 +221,7 @@ public class ResourceLeakDetector<T> {
                 continue;
             }
 
-            String records = ref.toString();
+            String records = ref.getReportAndClearRecords();
             if (reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
@@ -263,6 +263,15 @@ public class ResourceLeakDetector<T> {
     protected void reportInstancesLeak(String resourceType) {
     }
 
+    /**
+     * Create a hint object to be attached to an object tracked by this record. Similar to the additional information
+     * supplied to {@link ResourceLeakTracker#record(Object)}, will be printed alongside the stack trace of the
+     * creation of the resource.
+     */
+    protected Object getInitialHint(String resourceType) {
+        return null;
+    }
+
     private static final class DefaultResourceLeak<T>
             extends WeakReference<Object> implements ResourceLeakTracker<T> {
 
@@ -287,7 +296,8 @@ public class ResourceLeakDetector<T> {
         DefaultResourceLeak(
                 Object referent,
                 ReferenceQueue<Object> refQueue,
-                Set<DefaultResourceLeak<?>> allLeaks) {
+                Set<DefaultResourceLeak<?>> allLeaks,
+                Object initialHint) {
             super(referent, refQueue);
 
             assert referent != null;
@@ -298,7 +308,8 @@ public class ResourceLeakDetector<T> {
             trackedHash = System.identityHashCode(referent);
             allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.
-            headUpdater.set(this, new TraceRecord(TraceRecord.BOTTOM));
+            headUpdater.set(this, initialHint == null ?
+                    new TraceRecord(TraceRecord.BOTTOM) : new TraceRecord(TraceRecord.BOTTOM, initialHint));
             this.allLeaks = allLeaks;
         }
 
@@ -394,7 +405,16 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public String toString() {
+            TraceRecord oldHead = headUpdater.get(this);
+            return generateReport(oldHead);
+        }
+
+        String getReportAndClearRecords() {
             TraceRecord oldHead = headUpdater.getAndSet(this, null);
+            return generateReport(oldHead);
+        }
+
+        private String generateReport(TraceRecord oldHead) {
             if (oldHead == null) {
                 // Already closed
                 return EMPTY_STRING;
