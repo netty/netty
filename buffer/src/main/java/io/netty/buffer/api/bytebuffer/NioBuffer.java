@@ -43,7 +43,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
 import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
+final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
     private ByteBuffer base;

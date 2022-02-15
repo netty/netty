@@ -51,7 +51,8 @@ public class BufferAllocateTest extends BufferTestSupport {
     }
 
     private static void allocateBufferPair(BufferAllocator allocator, int size) {
-        try (Buffer buf = allocator.allocate(size); Buffer buf2 = allocator.allocate(size)) {
+        try (Buffer buf = allocator.allocate(size);
+             Buffer buf2 = allocator.allocate(size)) {
             assertThat(buf.capacity()).isGreaterThanOrEqualTo(size);
             assertThat(buf2.capacity()).isGreaterThanOrEqualTo(size);
         }

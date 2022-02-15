@@ -394,7 +394,10 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             buf.writeLong(0x0102030405060708L);
             int components = buf.forEachReadable(0, (index, component) -> {
                 while (target.writableBytes() > 0 && component.readableBytes() > 0) {
-                    target.writeByte(component.readableBuffer().get());
+                    ByteBuffer byteBuffer = component.readableBuffer();
+                    byte value = byteBuffer.get();
+                    byteBuffer.clear();
+                    target.writeByte(value);
                     assertThrows(IndexOutOfBoundsException.class, () -> component.skipReadable(9));
                     component.skipReadable(0);
                     component.skipReadable(1);
@@ -419,7 +422,10 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             buf.writerOffset(0); // Prime the buffer with data, but leave the write offset at zero.
             int components = buf.forEachWritable(0, (index, component) -> {
                 while (component.writableBytes() > 0) {
-                    assertThat(component.writableBuffer().get()).isEqualTo(target.readByte());
+                    ByteBuffer byteBuffer = component.writableBuffer();
+                    byte value = byteBuffer.get();
+                    byteBuffer.clear();
+                    assertThat(value).isEqualTo(target.readByte());
                     assertThrows(IndexOutOfBoundsException.class, () -> component.skipWritable(9));
                     component.skipWritable(0);
                     component.skipWritable(1);

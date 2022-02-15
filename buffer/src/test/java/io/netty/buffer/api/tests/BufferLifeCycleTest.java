@@ -51,12 +51,9 @@ public class BufferLifeCycleTest extends BufferTestSupport {
                 inner.writeByte((byte) 6);
                 inner.writeByte((byte) 7);
                 inner.writeByte((byte) 8);
-                var re = assertThrows(RuntimeException.class, () -> inner.writeByte((byte) 9));
-                assertThat(re).hasMessageContaining("bound");
-                re = assertThrows(RuntimeException.class, () -> inner.writeByte((byte) 9));
-                assertThat(re).hasMessageContaining("bound");
-                re = assertThrows(RuntimeException.class, () -> buf.writeByte((byte) 9));
-                assertThat(re).hasMessageContaining("bound");
+                assertThrows(IndexOutOfBoundsException.class, () -> inner.writeByte((byte) 9));
+                assertThrows(IndexOutOfBoundsException.class, () -> inner.writeByte((byte) 9));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.writeByte((byte) 9));
             }
             assertEquals((byte) 1, buf.readByte());
             assertEquals((byte) 2, buf.readByte());
@@ -66,8 +63,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             assertEquals((byte) 6, buf.readByte());
             assertEquals((byte) 7, buf.readByte());
             assertEquals((byte) 8, buf.readByte());
-            var re = assertThrows(RuntimeException.class, buf::readByte);
-            assertThat(re).hasMessageContaining("bound");
+            assertThrows(IndexOutOfBoundsException.class, buf::readByte);
             assertThat(toByteArray(buf)).containsExactly(1, 2, 3, 4, 5, 6, 7, 8);
         }
     }
@@ -554,6 +550,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             buf.writeLong(0x0102030405060708L);
             try (Buffer copy = buf.copy()) {
                 buf.close();
+                assertEquals(0x0102030405060708L, copy.getLong(0));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
                 try (Buffer split = copy.split(4)) {
                     split.resetOffsets().ensureWritable(Long.BYTES);

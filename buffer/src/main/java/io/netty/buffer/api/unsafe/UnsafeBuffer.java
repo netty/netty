@@ -44,7 +44,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
 import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
+final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();

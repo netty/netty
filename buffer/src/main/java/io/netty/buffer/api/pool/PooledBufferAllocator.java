@@ -22,6 +22,7 @@ import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
+import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.Statics;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.EventExecutor;
@@ -327,7 +328,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         PooledAllocatorControl control = new PooledAllocatorControl();
         control.parent = this;
         Buffer constantBuffer = manager.allocateShared(
-                control, bytes.length, manager.drop(), allocationType);
+                control, bytes.length, ArcDrop.wrap(manager.drop()), allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }

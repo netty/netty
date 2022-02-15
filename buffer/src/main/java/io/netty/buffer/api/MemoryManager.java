@@ -15,6 +15,7 @@
  */
 package io.netty.buffer.api;
 
+import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.LeakDetection;
 import io.netty.buffer.api.internal.MemoryManagerLoader;
 import io.netty.buffer.api.internal.MemoryManagerOverride;
@@ -76,13 +77,13 @@ public interface MemoryManager {
      * <p>
      * Calls to {@link #instance()} from within the given supplier will get the given managers instance.
      *
-     * @param managers Override the default configured managers instance with this instance.
+     * @param manager Override the default configured managers instance with this instance.
      * @param supplier The supplier function to be called while the override is in place.
      * @param <T> The result type from the supplier.
      * @return The result from the supplier.
      */
-    static <T> T using(MemoryManager managers, Supplier<T> supplier) {
-        return MemoryManagerOverride.using(managers, supplier);
+    static <T> T using(MemoryManager manager, Supplier<T> supplier) {
+        return MemoryManagerOverride.using(manager, supplier);
     }
 
     /**
@@ -140,7 +141,7 @@ public interface MemoryManager {
         MemoryManager manager = instance();
         ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
         WrappingAllocation allocationType = new WrappingAllocation(array);
-        Buffer buffer = manager.allocateShared(allocator, array.length, manager.drop(), allocationType);
+        Buffer buffer = manager.allocateShared(allocator, array.length, ArcDrop.wrap(manager.drop()), allocationType);
         buffer.skipWritable(array.length);
         return buffer.makeReadOnly();
     }
