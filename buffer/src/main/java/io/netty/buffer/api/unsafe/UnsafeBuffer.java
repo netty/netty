@@ -178,14 +178,15 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
-        UnsafeMemory unsafeMemory = memory.memory();
-        Drop<UnsafeBuffer> drop = memory.drop();
-        UnsafeBuffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, drop);
-        drop.attach(copy);
-        copyInto(offset, copy, 0, length);
-        copy.writerOffset(length);
-        return copy;
+        Buffer copy = control.getAllocator().allocate(length);
+        try {
+            copyInto(offset, copy, 0, length);
+            copy.writerOffset(length);
+            return copy;
+        } catch (Exception e) {
+            copy.close();
+            throw e;
+        }
     }
 
     @Override

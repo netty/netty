@@ -166,15 +166,15 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
-        ByteBuffer base = memory.memory();
-        ByteBuffer buffer = length == 0? bbslice(base, 0, 0) : base;
-        Drop<NioBuffer> drop = memory.drop();
-        NioBuffer copy = new NioBuffer(base, buffer, control, drop);
-        drop.attach(copy);
-        copyInto(offset, copy, 0, length);
-        copy.writerOffset(length);
-        return copy;
+        Buffer copy = control.getAllocator().allocate(length);
+        try {
+            copyInto(offset, copy, 0, length);
+            copy.writerOffset(length);
+            return copy;
+        } catch (Exception e) {
+            copy.close();
+            throw e;
+        }
     }
 
     @Override
