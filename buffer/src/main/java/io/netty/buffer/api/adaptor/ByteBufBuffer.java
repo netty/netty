@@ -234,6 +234,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void copyInto(int srcPos, ByteBuffer dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (dest.isReadOnly()) {
             throw new ReadOnlyBufferException();
         }
@@ -245,6 +248,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
         }

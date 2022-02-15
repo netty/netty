@@ -201,6 +201,9 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
         }

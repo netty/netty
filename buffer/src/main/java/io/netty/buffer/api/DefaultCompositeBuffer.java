@@ -406,6 +406,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private void copyInto(int srcPos, CopyInto dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (length < 0) {
             throw new IndexOutOfBoundsException("Length cannot be negative: " + length + '.');
         }
@@ -432,6 +435,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (length < 0) {
             throw new IndexOutOfBoundsException("Length cannot be negative: " + length + '.');
         }

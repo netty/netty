@@ -387,8 +387,11 @@ public abstract class BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer target = allocator.allocate(24)) {
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, target, 0, 1));
+            assertThrows(BufferClosedException.class, () -> buf.copyInto(0, target, 0, 0));
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, new byte[1], 0, 1));
+            assertThrows(BufferClosedException.class, () -> buf.copyInto(0, new byte[1], 0, 0));
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 1));
+            assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 0));
             if (CompositeBuffer.isComposite(buf)) {
                 assertThrows(BufferClosedException.class, () -> ((CompositeBuffer) buf).extendWith(target.send()));
             }
