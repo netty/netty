@@ -428,6 +428,9 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
 
     @Override
     public Buffer compact() {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }

@@ -861,8 +861,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public CompositeBuffer compact() {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (!isOwned()) {
-            throw new IllegalStateException("Buffer must be owned in order to compact.");
+            throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }
         if (readOnly()) {
             throw new BufferReadOnlyException("Buffer must be writable in order to compact, but was read-only.");

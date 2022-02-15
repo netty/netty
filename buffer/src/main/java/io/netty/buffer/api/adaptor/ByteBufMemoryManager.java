@@ -27,7 +27,7 @@ import io.netty.buffer.api.internal.WrappingAllocation;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
-public class ByteBufMemoryManager implements MemoryManager {
+public final class ByteBufMemoryManager implements MemoryManager {
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {

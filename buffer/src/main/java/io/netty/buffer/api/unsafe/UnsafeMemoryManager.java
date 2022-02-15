@@ -29,7 +29,7 @@ import java.lang.ref.Cleaner;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
-public class UnsafeMemoryManager implements MemoryManager {
+public final class UnsafeMemoryManager implements MemoryManager {
     public UnsafeMemoryManager() {
         if (!PlatformDependent.hasUnsafe()) {
             UnsupportedOperationException notSupported = new UnsupportedOperationException("Unsafe is not available.");

@@ -464,6 +464,7 @@ public abstract class BufferTestSupport {
 
         assertThrows(expected, () -> buf.ensureWritable(1));
         assertThrows(expected, () -> buf.fill((byte) 0));
+        assertThrows(expected, () -> buf.compact());
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer source = allocator.allocate(8)) {
             assertThrows(expected, () -> source.copyInto(0, buf, 0, 1));

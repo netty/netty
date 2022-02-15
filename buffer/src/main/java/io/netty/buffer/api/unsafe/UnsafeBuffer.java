@@ -510,6 +510,9 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
 
     @Override
     public Buffer compact() {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }

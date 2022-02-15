@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.convert;
 
-public class ByteBufferMemoryManager implements MemoryManager {
+public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {
