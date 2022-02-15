@@ -204,3 +204,4 @@ jobs:
           path: |
             **/target/surefire-reports/
             **/hs_err*.log
+            **/*.hprof
