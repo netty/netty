@@ -171,7 +171,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
             copyInto(offset, copy, 0, length);
             copy.writerOffset(length);
             return copy;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             copy.close();
             throw e;
         }

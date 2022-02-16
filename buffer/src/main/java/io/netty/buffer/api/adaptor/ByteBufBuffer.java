@@ -410,7 +410,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             copyInto(offset, copy, 0, length);
             copy.skipWritable(length);
             return copy;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             copy.close();
             throw e;
         }

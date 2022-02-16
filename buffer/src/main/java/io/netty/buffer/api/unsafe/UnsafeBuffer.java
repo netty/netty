@@ -183,7 +183,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
             copyInto(offset, copy, 0, length);
             copy.writerOffset(length);
             return copy;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             copy.close();
             throw e;
         }
