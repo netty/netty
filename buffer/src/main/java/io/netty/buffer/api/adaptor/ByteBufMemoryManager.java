@@ -27,6 +27,15 @@ import io.netty.buffer.api.internal.WrappingAllocation;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
+/**
+ * This memory manager produce and manage {@link Buffer} instances that are backed by {@link ByteBuf} instances.
+ * <p>
+ * Memory managers are normally not used directly.
+ * Instead, you likely want to use the {@link io.netty.buffer.api.DefaultBufferAllocators}, or the static methods on
+ * {@link io.netty.buffer.api.BufferAllocator}.
+ * <p>
+ * If you want to get a {@link Buffer} from a {@link ByteBuf}, take a look at {@link ByteBufBuffer#wrap(ByteBuf)}.
+ */
 public final class ByteBufMemoryManager implements MemoryManager {
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,

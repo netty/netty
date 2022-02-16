@@ -29,6 +29,14 @@ import java.lang.ref.Cleaner;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
+/**
+ * This memory manager produces and manages {@link Buffer} instances that are using {@code Unsafe} to allocate and
+ * access memory.
+ * <p>
+ * Memory managers are normally not used directly.
+ * Instead, you likely want to use the {@link io.netty.buffer.api.DefaultBufferAllocators}, or the static methods on
+ * {@link io.netty.buffer.api.BufferAllocator}.
+ */
 public final class UnsafeMemoryManager implements MemoryManager {
     public UnsafeMemoryManager() {
         if (!PlatformDependent.hasUnsafe()) {
