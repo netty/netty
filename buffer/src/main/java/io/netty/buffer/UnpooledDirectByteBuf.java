@@ -108,6 +108,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * Free a direct {@link ByteBuffer}
      */
     protected void freeDirect(ByteBuffer buffer) {
+        if (ByteBufUtil.CLEAR_BUFFERS) {
+            ByteBufUtil.setZero(buffer, 0, buffer.capacity());
+        }
         PlatformDependent.freeDirectBuffer(buffer);
     }
 

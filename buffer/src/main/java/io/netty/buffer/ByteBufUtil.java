@@ -72,6 +72,7 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
+    static final boolean CLEAR_BUFFERS;
 
     static {
         String allocType = SystemPropertyUtil.get(
@@ -97,6 +98,9 @@ public final class ByteBufUtil {
 
         MAX_CHAR_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.maxThreadLocalCharBufferSize", 16 * 1024);
         logger.debug("-Dio.netty.maxThreadLocalCharBufferSize: {}", MAX_CHAR_BUFFER_SIZE);
+
+        CLEAR_BUFFERS = SystemPropertyUtil.getBoolean("io.netty.clearBuffers", false);
+        logger.debug("-Dio.netty.clearBuffers: {}", CLEAR_BUFFERS);
     }
 
     static final int MAX_TL_ARRAY_LEN = 1024;
@@ -1634,6 +1638,9 @@ public final class ByteBufUtil {
             if (capacity() > THREAD_LOCAL_BUFFER_SIZE) {
                 super.deallocate();
             } else {
+                if (CLEAR_BUFFERS) {
+                    UnsafeByteBufUtil.setZero(memoryAddress, capacity());
+                }
                 clear();
                 handle.recycle(this);
             }
@@ -1668,6 +1675,9 @@ public final class ByteBufUtil {
             if (capacity() > THREAD_LOCAL_BUFFER_SIZE) {
                 super.deallocate();
             } else {
+                if (CLEAR_BUFFERS) {
+                    ByteBufUtil.setZero(buffer, 0, buffer.capacity());
+                }
                 clear();
                 handle.recycle(this);
             }
@@ -1910,4 +1920,36 @@ public final class ByteBufUtil {
     }
 
     private ByteBufUtil() { }
+
+    public static void setZero(ByteBuffer buffer, int offset, int length) {
+        if (length == 0) {
+            return;
+        }
+
+        if (buffer.hasArray()) {
+            setZero(buffer.array(), buffer.arrayOffset() + offset, length);
+        } else {
+            // is position and limit used at all?
+            final int position = buffer.position();
+            final int limit = buffer.limit();
+            buffer.clear();
+            for (int i = 0; i < length; ++i) {
+                buffer.put(offset + i, (byte) 0);
+            }
+            buffer.position(position);
+            buffer.limit(limit);
+        }
+    }
+
+    public static void setZero(byte[] array, int offset, int length) {
+        if (length == 0) {
+            return;
+        }
+
+        if (PlatformDependent.hasUnsafe()) {
+            PlatformDependent.setMemory(array, offset, length, (byte) 0);
+        } else {
+            Arrays.fill(array, offset, offset + length, (byte) 0);
+        }
+    }
 }

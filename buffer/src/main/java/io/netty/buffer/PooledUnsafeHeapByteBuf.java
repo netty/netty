@@ -163,4 +163,9 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
         }
         return super.newSwappedByteBuf();
     }
+
+    @Override
+    protected void memoryClean() {
+        UnsafeByteBufUtil.setZero(memory, 0, length);
+    }
 }

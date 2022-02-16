@@ -293,6 +293,9 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
         memoryCopy(oldMemory, oldOffset, buf, bytesToCopy);
         if (freeOldMemory) {
+            if (ByteBufUtil.CLEAR_BUFFERS) {
+                memoryClear(oldMemory, oldOffset, oldMaxLength);
+            }
             free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }
     }
@@ -475,6 +478,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
     protected abstract void memoryCopy(T src, int srcOffset, PooledByteBuf<T> dst, int length);
+    protected abstract void memoryClear(T buf, int offset, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
     @Override
@@ -601,6 +605,11 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
             System.arraycopy(src, srcOffset, dst.memory, dst.offset, length);
         }
+
+        @Override
+        protected void memoryClear(byte[] buf, int offset, int length) {
+            ByteBufUtil.setZero(buf, offset, length);
+        }
     }
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
@@ -683,6 +692,15 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                 src.position(srcOffset).limit(srcOffset + length);
                 dst.position(dstBuf.offset);
                 dst.put(src);
+            }
+        }
+
+        @Override
+        protected void memoryClear(ByteBuffer buf, int offset, int length) {
+            if (HAS_UNSAFE) {
+                UnsafeByteBufUtil.setZero(PlatformDependent.directBufferAddress(buf) + offset, length);
+            } else {
+                ByteBufUtil.setZero(buf, offset, length);
             }
         }
     }

@@ -310,4 +310,9 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public long memoryAddress() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    protected void memoryClean() {
+        ByteBufUtil.setZero(memory, offset, length);
+    }
 }

@@ -40,6 +40,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     ByteBuffer tmpNioBuf;
     private ByteBufAllocator allocator;
 
+    protected abstract void memoryClean();
+
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
@@ -168,6 +170,10 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected final void deallocate() {
+        if (ByteBufUtil.CLEAR_BUFFERS) {
+            memoryClean();
+        }
+
         if (handle >= 0) {
             final long handle = this.handle;
             this.handle = -1;

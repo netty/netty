@@ -251,4 +251,9 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     protected final ByteBuffer newInternalNioBuffer(byte[] memory) {
         return ByteBuffer.wrap(memory);
     }
+
+    @Override
+    protected void memoryClean() {
+        ByteBufUtil.setZero(memory, offset, length);
+    }
 }

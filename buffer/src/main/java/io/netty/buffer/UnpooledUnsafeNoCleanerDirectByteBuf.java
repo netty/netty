@@ -36,6 +36,9 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     @Override
     protected void freeDirect(ByteBuffer buffer) {
+        if (ByteBufUtil.CLEAR_BUFFERS) {
+            ByteBufUtil.setZero(buffer, 0, buffer.capacity());
+        }
         PlatformDependent.freeDirectNoCleaner(buffer);
     }
 
