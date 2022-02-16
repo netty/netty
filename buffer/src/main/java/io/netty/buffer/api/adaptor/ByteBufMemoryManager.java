@@ -17,6 +17,7 @@ package io.netty.buffer.api.adaptor;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
@@ -37,12 +38,15 @@ import static io.netty.buffer.api.internal.Statics.convert;
  * If you want to get a {@link Buffer} from a {@link ByteBuf}, take a look at {@link ByteBufBuffer#wrap(ByteBuf)}.
  */
 public final class ByteBufMemoryManager implements MemoryManager {
+    // Disable leak detection and cleaner, if possible, because the Buffer machinery will take care of these concerns.
+    private final UnpooledByteBufAllocator unpooledDirectAllocator = new UnpooledByteBufAllocator(true, true, true);
+
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
-            ByteBuf byteBuf = Unpooled.directBuffer(capacity, capacity);
+            ByteBuf byteBuf = unpooledDirectAllocator.directBuffer(capacity, capacity);
             byteBuf.setZero(0, capacity);
             return ByteBufBuffer.wrap(byteBuf, allocatorControl, convert(drop));
         }
