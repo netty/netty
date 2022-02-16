@@ -63,8 +63,6 @@ import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
  * or you can allocate a {@link ByteBuf} yourself, and then {@linkplain #wrap(ByteBuf) wrap} it.
  */
 public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> implements Buffer {
-    // Using field type 'Object' instead of 'ByteBuf' in order to bypass checkstyle StaticFinalBuffer check.
-    private static final Object CLOSED_BYTEBUF = closedByteBuf();
 
     private final AllocatorControl control;
     private ByteBuf delegate;
@@ -73,12 +71,6 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         super(drop);
         this.control = control;
         this.delegate = delegate;
-    }
-
-    private static ByteBuf closedByteBuf() {
-        ByteBuf buf = Unpooled.wrappedBuffer(new byte[1]);
-        buf.release();
-        return buf;
     }
 
     static Buffer wrap(ByteBuf byteBuf, AllocatorControl control, Drop<ByteBufBuffer> drop) {
@@ -145,7 +137,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     protected void makeInaccessible() {
         super.makeInaccessible();
-        delegate = (ByteBuf) CLOSED_BYTEBUF;
+        delegate = ClosedByteBufHolder.closedByteBufInstance();
     }
 
     @Override
@@ -1321,6 +1313,35 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
         @Override
         public void attach(ByteBufBuffer obj) {
+        }
+    }
+
+    static final class ClosedByteBufHolder {
+        // Using field type 'Object' instead of 'ByteBuf' in order to bypass checkstyle StaticFinalBuffer check.
+        private static volatile Object closedByteBufInstance;
+
+        private ClosedByteBufHolder() {
+        }
+
+        private static synchronized Object init() {
+            Object obj = closedByteBufInstance;
+            if (obj != null) {
+                return obj;
+            }
+            ByteBuf buf = Unpooled.wrappedBuffer(new byte[1]);
+            buf.release();
+            closedByteBufInstance = buf;
+            return buf;
+        }
+
+        static ByteBuf closedByteBufInstance() {
+            // Using double-checked-locking to initialise this at runtime instead of class-load time.
+            // This helps with Graal NativeImage building.
+            Object closed = closedByteBufInstance;
+            if (closed == null) {
+                closed = init();
+            }
+            return (ByteBuf) closed;
         }
     }
 }
