@@ -143,7 +143,8 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
             final PoolSubpage s = head.next;
             needsNormalAllocation = s == head;
             if (!needsNormalAllocation) {
-                assert s.doNotDestroy && s.elemSize == sizeIdx2size(sizeIdx);
+                assert s.doNotDestroy && s.elemSize == sizeIdx2size(sizeIdx) :
+                        "doNotDestroy=" + s.doNotDestroy + ", elemSize=" + s.elemSize + ", sizeIdx=" + sizeIdx;
                 long handle = s.allocate();
                 assert handle >= 0;
                 memory = s.chunk.allocateBufferWithSubpage(handle, size, cache, control);
