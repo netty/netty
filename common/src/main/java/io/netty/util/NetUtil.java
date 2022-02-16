@@ -70,8 +70,8 @@ public final class NetUtil {
     public static final NetworkInterface LOOPBACK_IF;
 
     /**
-     * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200}  is used as a
-     * default value for Windows or {@code 128} for others.
+     * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200} is used as a
+     * default value for Windows and {@code 128} for others.
      */
     public static final int SOMAXCONN;
 
@@ -86,7 +86,7 @@ public final class NetUtil {
     private static final int IPV6_MAX_CHAR_COUNT = 39;
 
     /**
-     * Number of bytes needed to represent and IPV6 value
+     * Number of bytes needed to represent an IPV6 value
      */
     private static final int IPV6_BYTE_COUNT = 16;
 
