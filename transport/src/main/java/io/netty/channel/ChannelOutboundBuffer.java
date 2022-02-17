@@ -265,7 +265,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            Resource.dispose(msg);
+            safeDispose(msg);
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -300,7 +300,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
-            Resource.dispose(msg);
+            safeDispose(msg);
 
             safeFail(promise, cause);
             decrementPendingOutboundBytes(size, false, notifyWritability);
@@ -310,6 +310,14 @@ public final class ChannelOutboundBuffer {
         e.recycle();
 
         return true;
+    }
+
+    private static void safeDispose(Object msg) {
+        try {
+            Resource.dispose(msg);
+        } catch (Exception e) {
+            logger.warn("Failed to dispose of message: " + msg, e);
+        }
     }
 
     private void removeEntry(Entry e) {
@@ -738,7 +746,7 @@ public final class ChannelOutboundBuffer {
                 TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 if (!e.cancelled) {
-                    Resource.dispose(e.msg);
+                    safeDispose(e.msg);
                     safeFail(e.promise, cause);
                 }
                 e = e.recycleAndGetNext();
@@ -869,7 +877,7 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
-                Resource.dispose(msg);
+                safeDispose(msg);
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;
