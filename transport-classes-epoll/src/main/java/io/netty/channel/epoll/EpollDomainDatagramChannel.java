@@ -180,9 +180,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
         if (data instanceof Buffer) {
             return doWriteBufferMessage((Buffer) data, remoteAddress);
-        } else {
-            return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
         }
+        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
     }
 
     private boolean doWriteBufferMessage(Buffer data, DomainSocketAddress remoteAddress) throws IOException {
@@ -205,24 +204,23 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                         array.memoryAddress(0), count, remoteAddress.path().getBytes(UTF_8));
             }
             return writtenBytes > 0;
-        } else {
-            if (remoteAddress == null) {
-                data.forEachReadable(0, (index, component) -> {
-                    int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
-                    component.skipReadable(written);
-                    return false;
-                });
-            } else {
-                data.forEachReadable(0, (index, component) -> {
-                    int written = socket.sendToAddressDomainSocket(
-                            component.readableNativeAddress(), 0, component.readableBytes(),
-                            remoteAddress.path().getBytes(UTF_8));
-                    component.skipReadable(written);
-                    return false;
-                });
-            }
-            return data.readableBytes() < initialReadableBytes;
         }
+        if (remoteAddress == null) {
+            data.forEachReadable(0, (index, component) -> {
+                int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
+                component.skipReadable(written);
+                return false;
+            });
+        } else {
+            data.forEachReadable(0, (index, component) -> {
+                int written = socket.sendToAddressDomainSocket(
+                        component.readableNativeAddress(), 0, component.readableBytes(),
+                        remoteAddress.path().getBytes(UTF_8));
+                component.skipReadable(written);
+                return false;
+            });
+        }
+        return data.readableBytes() < initialReadableBytes;
     }
 
     private boolean doWriteByteBufMessage(ByteBuf data, DomainSocketAddress remoteAddress) throws IOException {
@@ -305,7 +303,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                         }
                     }
                     return e;
-                } else if (e.content() instanceof ByteBufConvertible) {
+                }
+                if (e.content() instanceof ByteBufConvertible) {
                     ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
                     return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                             new DefaultByteBufAddressedEnvelope<>(newDirectBuffer(e, content), domainRecipient) : e;

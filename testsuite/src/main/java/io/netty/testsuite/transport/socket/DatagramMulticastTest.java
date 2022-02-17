@@ -238,7 +238,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         private boolean done;
         private volatile boolean fail;
-        private volatile Exception error;
+        private volatile Throwable error;
 
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket msg) throws Exception {
@@ -248,7 +248,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
             try {
                 assertEquals(1, msg.content().readInt());
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 error = e;
             }
 
@@ -260,7 +260,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         public boolean await() throws Exception {
             boolean success = latch.await(10, TimeUnit.SECONDS);
-            Exception error = this.error;
+            Throwable error = this.error;
             if (error != null) {
                 throw new Exception("Exception thrown in messageReceived", error);
             }

@@ -253,9 +253,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
         if (data instanceof Buffer) {
             return doWriteBufferMessage((Buffer) data, remoteAddress);
-        } else {
-            return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
         }
+        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
     }
 
     private boolean doWriteBufferMessage(Buffer data, InetSocketAddress remoteAddress) throws IOException {

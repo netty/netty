@@ -258,7 +258,8 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         }
                     }
                     return e;
-                } else if (e.content() instanceof ByteBufConvertible) {
+                }
+                if (e.content() instanceof ByteBufConvertible) {
                     ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
                     return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                             new DefaultByteBufAddressedEnvelope<>(newDirectBuffer(e, content), domainRecipient) : e;

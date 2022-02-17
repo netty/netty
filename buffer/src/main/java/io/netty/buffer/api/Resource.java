@@ -92,9 +92,7 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
             }
         } else if (obj instanceof ReferenceCounted) {
             ReferenceCounted rc = (ReferenceCounted) obj;
-            if (rc.refCnt() > 0) {
-                rc.release();
-            }
+            rc.release();
         }
     }
 }

@@ -143,15 +143,14 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         int readableComponents = buf.countReadableComponents();
         if (readableComponents == 1) {
             return doWriteBytes(in, buf);
-        } else {
-            ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
-            buf.forEachReadable(0, (index, component) -> {
-                nioBuffers[index] = component.readableBuffer();
-                return true;
-            });
-            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                                      config().getMaxBytesPerGatheringWrite());
         }
+        ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
+        buf.forEachReadable(0, (index, component) -> {
+            nioBuffers[index] = component.readableBuffer();
+            return true;
+        });
+        return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
+                                  config().getMaxBytesPerGatheringWrite());
     }
 
     private void adjustMaxBytesPerGatheringWrite(long attempted, long written, long oldMaxBytesPerGatheringWrite) {
