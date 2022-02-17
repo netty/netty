@@ -91,6 +91,9 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      * Decrement the reference count, and dispose of the resource if the last reference is closed.
      * <p>
      * Note, this method is not thread-safe because Resources are meant to be thread-confined.
+     * <p>
+     * Subclasses who wish to attach behaviour to the close action should override the {@link #makeInaccessible()}
+     * method instead, or make it part of their drop implementation.
      *
      * @throws IllegalStateException If this Resource has already been closed.
      */

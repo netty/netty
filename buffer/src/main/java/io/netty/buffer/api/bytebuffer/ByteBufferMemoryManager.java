@@ -29,7 +29,15 @@ import java.nio.ByteBuffer;
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.convert;
 
-public class ByteBufferMemoryManager implements MemoryManager {
+/**
+ * This memory manager produces and manages {@link Buffer} instances that are backed by NIO {@link ByteBuffer}
+ * instances.
+ * <p>
+ * Memory managers are normally not used directly.
+ * Instead, you likely want to use the {@link io.netty.buffer.api.DefaultBufferAllocators}, or the static methods on
+ * {@link io.netty.buffer.api.BufferAllocator}.
+ */
+public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
                                  AllocationType allocationType) {

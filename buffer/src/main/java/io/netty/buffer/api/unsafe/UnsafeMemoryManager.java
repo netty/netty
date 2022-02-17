@@ -29,7 +29,15 @@ import java.lang.ref.Cleaner;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
-public class UnsafeMemoryManager implements MemoryManager {
+/**
+ * This memory manager produces and manages {@link Buffer} instances that are using {@code Unsafe} to allocate and
+ * access memory.
+ * <p>
+ * Memory managers are normally not used directly.
+ * Instead, you likely want to use the {@link io.netty.buffer.api.DefaultBufferAllocators}, or the static methods on
+ * {@link io.netty.buffer.api.BufferAllocator}.
+ */
+public final class UnsafeMemoryManager implements MemoryManager {
     public UnsafeMemoryManager() {
         if (!PlatformDependent.hasUnsafe()) {
             UnsupportedOperationException notSupported = new UnsupportedOperationException("Unsafe is not available.");
@@ -55,7 +63,7 @@ public class UnsafeMemoryManager implements MemoryManager {
             Statics.MEM_USAGE_NATIVE.add(size);
             PlatformDependent.setMemory(address, size, (byte) 0);
             memory = new UnsafeMemory(base, address, size32);
-            drop = new UnsafeCleanerDrop(memory, drop, cleaner);
+            cleaner.register(memory, new FreeAddress(address, size32));
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
             base = new byte[size32];
             address = PlatformDependent.byteArrayBaseOffset();

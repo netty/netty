@@ -131,6 +131,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     /**
      * Convert the given {@link Buffer} into a {@link ByteBuf} using the most optimal method.
      * The contents of both buffers will be mirrored.
+     * <p>
+     * If the given {@link Buffer} is a {@link ByteBufBuffer}, then its inner {@link ByteBuf} is extracted.
      *
      * @param buffer The {@link Buffer} to convert into a {@link ByteBuf}.
      * @return A {@link ByteBuf} that uses the given {@link Buffer} as a backing store.
@@ -139,6 +141,9 @@ public final class ByteBufAdaptor extends ByteBuf {
         if (buffer instanceof ByteBufConvertible) {
             ByteBufConvertible convertible = (ByteBufConvertible) buffer;
             return convertible.asByteBuf();
+        } else if (buffer instanceof ByteBufBuffer) {
+            ByteBufBuffer byteBufBuffer = (ByteBufBuffer) buffer;
+            return byteBufBuffer.unwrapAndClose();
         } else {
             return new ByteBufAdaptor(ByteBufAllocatorAdaptor.DEFAULT_INSTANCE, buffer, buffer.capacity());
         }

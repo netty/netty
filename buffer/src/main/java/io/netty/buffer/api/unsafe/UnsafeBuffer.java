@@ -44,7 +44,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
 import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
+final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
@@ -178,14 +178,15 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
-        UnsafeMemory unsafeMemory = memory.memory();
-        Drop<UnsafeBuffer> drop = memory.drop();
-        UnsafeBuffer copy = new UnsafeBuffer(unsafeMemory, 0, length, control, drop);
-        drop.attach(copy);
-        copyInto(offset, copy, 0, length);
-        copy.writerOffset(length);
-        return copy;
+        Buffer copy = control.getAllocator().allocate(length);
+        try {
+            copyInto(offset, copy, 0, length);
+            copy.writerOffset(length);
+            return copy;
+        } catch (Throwable e) {
+            copy.close();
+            throw e;
+        }
     }
 
     @Override
@@ -509,6 +510,9 @@ class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComp
 
     @Override
     public Buffer compact() {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }

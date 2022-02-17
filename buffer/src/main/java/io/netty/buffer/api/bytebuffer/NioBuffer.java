@@ -43,7 +43,7 @@ import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty.buffer.api.internal.Statics.checkLength;
 import static io.netty.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
+final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
     private ByteBuffer base;
@@ -166,15 +166,15 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);
-        AllocatorControl.UntetheredMemory memory = control.allocateUntethered(this, length);
-        ByteBuffer base = memory.memory();
-        ByteBuffer buffer = length == 0? bbslice(base, 0, 0) : base;
-        Drop<NioBuffer> drop = memory.drop();
-        NioBuffer copy = new NioBuffer(base, buffer, control, drop);
-        drop.attach(copy);
-        copyInto(offset, copy, 0, length);
-        copy.writerOffset(length);
-        return copy;
+        Buffer copy = control.getAllocator().allocate(length);
+        try {
+            copyInto(offset, copy, 0, length);
+            copy.writerOffset(length);
+            return copy;
+        } catch (Throwable e) {
+            copy.close();
+            throw e;
+        }
     }
 
     @Override
@@ -201,6 +201,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
         }
@@ -425,6 +428,9 @@ class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent,
 
     @Override
     public Buffer compact() {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
         }

@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,6 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class BufferCleanerTest extends BufferTestSupport {
+    @SuppressWarnings("unused")
+    private static volatile int sink;
+
     static Fixture[] unsafeAllocators() {
         Optional<MemoryManager> maybeManager = MemoryManager.lookupImplementation("Unsafe");
         assumeTrue(maybeManager.isPresent());
@@ -57,6 +61,7 @@ public class BufferCleanerTest extends BufferTestSupport {
                 // The memory must have been cleaned.
                 return;
             }
+            produceGarbage(); // Produce a large amount of garbage to give the GC something to work on.
         }
         assertThat(sum).isLessThan(allocationSize);
     }
@@ -65,5 +70,18 @@ public class BufferCleanerTest extends BufferTestSupport {
         var allocator = fixture.createAllocator();
         allocator.allocate(size);
         allocator.close();
+    }
+
+    private static void produceGarbage() {
+        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        for (int j = 0; j < 1000; j++) {
+            final int size;
+            switch (rng.nextInt(0, 2)) {
+            case 0: size = 1000; break;
+            case 1: size = 10_000; break;
+            default: size = 50_000; break;
+            }
+            sink = System.identityHashCode(new byte[size]);
+        }
     }
 }
