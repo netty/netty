@@ -873,32 +873,6 @@ public final class NetUtil {
             System.arraycopy(bytes, compressBegin, bytes, targetIndex, toBeCopiedLength);
             Arrays.fill(bytes, compressBegin, compressBegin + (bytes.length - currentIndex), (byte) 0);
         }
-//        i = currentIndex + compressLength;
-//        if (needsShift || i >= bytes.length) {
-//            // Right shift array
-//            if (i >= bytes.length) {
-//                ++compressBegin;
-//            }
-//            for (i = currentIndex; i < bytes.length; ++i) {
-//                for (begin = bytes.length - 1; begin >= compressBegin; --begin) {
-//                    bytes[begin] = bytes[begin - 1];
-//                }
-//                bytes[begin] = 0;
-//                ++compressBegin;
-//            }
-//        } else {
-//            // Selectively move elements
-//            for (i = 0; i < compressLength; ++i) {
-//                begin = i + compressBegin;
-//                currentIndex = begin + compressLength;
-//                if (currentIndex < bytes.length) {
-//                    bytes[currentIndex] = bytes[begin];
-//                    bytes[begin] = 0;
-//                } else {
-//                    break;
-//                }
-//            }
-//        }
 
         if (ipv4Separators > 0) {
             // We only support IPv4-Mapped addresses [1] because IPv4-Compatible addresses are deprecated [2].
