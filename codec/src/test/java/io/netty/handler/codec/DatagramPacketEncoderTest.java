@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultAddressedEnvelope;
@@ -82,11 +83,7 @@ public class DatagramPacketEncoderTest {
                 new DefaultAddressedEnvelope<>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));
         DefaultAddressedEnvelope<Long, InetSocketAddress> output = channel.readOutbound();
-        try {
-            assertSame(envelope, output);
-        } finally {
-            output.release();
-        }
+        assertSame(envelope, output);
     }
 
     @Test

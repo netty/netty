@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,6 +36,7 @@ import java.net.PortUnreachableException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -43,6 +45,38 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.datagramSocket();
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testConnectNotExistsByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testConnectNotExistsByteBuf);
+    }
+
+    public void testConnectNotExistsByteBuf(Bootstrap cb) throws Throwable {
+        // Currently, not works on windows
+        // See https://github.com/netty/netty/issues/11285
+        assumeFalse(PlatformDependent.isWindows());
+        final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        cb.handler(new ChannelHandler() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                promise.trySuccess(cause);
+            }
+        });
+        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, SocketTestPermutation.BAD_PORT);
+        Channel datagramChannel = null;
+        try {
+            datagramChannel = future.get();
+            assertTrue(datagramChannel.isActive());
+            datagramChannel.writeAndFlush(
+                    Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
+            assertThat(promise.asFuture().syncUninterruptibly().getNow()).isInstanceOf(PortUnreachableException.class);
+        } finally {
+            if (datagramChannel != null) {
+                datagramChannel.close();
+            }
+        }
     }
 
     @Test
@@ -67,8 +101,9 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
         try {
             datagramChannel = future.get();
             assertTrue(datagramChannel.isActive());
+            BufferAllocator allocator = datagramChannel.bufferAllocator();
             datagramChannel.writeAndFlush(
-                    Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
+                    allocator.copyOf("test".getBytes(CharsetUtil.US_ASCII))).syncUninterruptibly();
             assertTrue(promise.asFuture().syncUninterruptibly().getNow() instanceof PortUnreachableException);
         } finally {
             if (datagramChannel != null) {

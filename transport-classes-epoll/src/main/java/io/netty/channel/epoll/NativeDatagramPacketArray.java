@@ -17,9 +17,12 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
+import io.netty.channel.socket.BufferDatagramPacket;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.unix.BufferSegmentedDatagramPacket;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.SegmentedDatagramPacket;
@@ -55,6 +58,60 @@ final class NativeDatagramPacketArray {
         for (int i = 0; i < packets.length; i++) {
             packets[i] = new NativeDatagramPacket();
         }
+    }
+
+    boolean addWritable(Buffer buf, int segmentLen, InetSocketAddress recipient) {
+        if (count == packets.length) {
+            // We already filled up to UIO_MAX_IOV messages. This is the max allowed per
+            // recvmmsg(...) / sendmmsg(...) call, we will try again later.
+            return false;
+        }
+        if (buf.writableBytes() == 0) {
+            return true;
+        }
+        int offset = iovArray.count();
+        if (offset == Limits.IOV_MAX) {
+            return false;
+        }
+        return 0 != buf.forEachWritable(0, (index, component) -> {
+            int writableBytes = component.writableBytes();
+            int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+            if (iovArray.process(component, byteCount)) {
+                NativeDatagramPacket p = packets[count];
+                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                count++;
+                component.skipWritable(byteCount);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    boolean addReadable(Buffer buf, int segmentLen, InetSocketAddress recipient) {
+        if (count == packets.length) {
+            // We already filled up to UIO_MAX_IOV messages. This is the max allowed per
+            // recvmmsg(...) / sendmmsg(...) call, we will try again later.
+            return false;
+        }
+        if (buf.writableBytes() == 0) {
+            return true;
+        }
+        int offset = iovArray.count();
+        if (offset == Limits.IOV_MAX) {
+            return false;
+        }
+        return 0 != buf.forEachReadable(0, (index, component) -> {
+            int writableBytes = component.readableBytes();
+            int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+            if (iovArray.process(component, byteCount)) {
+                NativeDatagramPacket p = packets[count];
+                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                count++;
+                component.skipReadable(byteCount);
+                return true;
+            }
+            return false;
+        });
     }
 
     boolean addWritable(ByteBuf buf, int index, int len) {
@@ -103,8 +160,8 @@ final class NativeDatagramPacketArray {
     }
 
     void clear() {
-        this.count = 0;
-        this.iovArray.clear();
+        count = 0;
+        iovArray.clear();
     }
 
     void release() {
@@ -118,12 +175,25 @@ final class NativeDatagramPacketArray {
         @Override
         public boolean processMessage(Object msg) {
             final boolean added;
-            if (msg instanceof DatagramPacket) {
+            if (msg instanceof BufferDatagramPacket) {
+                BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+                Buffer buf = packet.content();
+                int segmentSize = 0;
+                if (packet instanceof BufferSegmentedDatagramPacket) {
+                    int seg = ((BufferSegmentedDatagramPacket) packet).segmentSize();
+                    // We only need to tell the kernel that we want to use UDP_SEGMENT if there are multiple
+                    // segments in the packet.
+                    if (buf.readableBytes() > seg) {
+                        segmentSize = seg;
+                    }
+                }
+                added = addReadable(buf, segmentSize, packet.recipient());
+            } else if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
                 int segmentSize = 0;
-                if (packet instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
-                    int seg = ((io.netty.channel.unix.SegmentedDatagramPacket) packet).segmentSize();
+                if (packet instanceof SegmentedDatagramPacket) {
+                    int seg = ((SegmentedDatagramPacket) packet).segmentSize();
                     // We only need to tell the kernel that we want to use UDP_SEGMENT if there are multiple
                     // segments in the packet.
                     if (buf.readableBytes() > seg) {
@@ -131,8 +201,11 @@ final class NativeDatagramPacketArray {
                     }
                 }
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+            } else if (msg instanceof Buffer && connected) {
+                Buffer buf = (Buffer) msg;
+                added = addReadable(buf, 0, null);
             } else if (msg instanceof ByteBufConvertible && connected) {
-                    ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
+                ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
             } else {
                 added = false;
@@ -188,14 +261,14 @@ final class NativeDatagramPacketArray {
             this.count = count;
             this.segmentSize = segmentSize;
 
-            this.senderScopeId = 0;
-            this.senderPort = 0;
-            this.senderAddrLen = 0;
+            senderScopeId = 0;
+            senderPort = 0;
+            senderAddrLen = 0;
 
             if (recipient == null) {
-                this.recipientScopeId = 0;
-                this.recipientPort = 0;
-                this.recipientAddrLen = 0;
+                recipientScopeId = 0;
+                recipientPort = 0;
+                recipientAddrLen = 0;
             } else {
                 InetAddress address = recipient.getAddress();
                 if (address instanceof Inet6Address) {
@@ -221,6 +294,19 @@ final class NativeDatagramPacketArray {
                 return new SegmentedDatagramPacket(buffer, segmentSize, recipient, sender);
             }
             return new DatagramPacket(buffer, recipient, sender);
+        }
+
+        BufferDatagramPacket newDatagramPacket(Buffer buffer, InetSocketAddress recipient) throws UnknownHostException {
+            InetSocketAddress sender = newAddress(senderAddr, senderAddrLen, senderPort, senderScopeId, ipv4Bytes);
+            if (recipientAddrLen != 0) {
+                recipient = newAddress(recipientAddr, recipientAddrLen, recipientPort, recipientScopeId, ipv4Bytes);
+            }
+
+            // UDP_GRO
+            if (segmentSize > 0) {
+                return new BufferSegmentedDatagramPacket(buffer, segmentSize, recipient, sender);
+            }
+            return new BufferDatagramPacket(buffer, recipient, sender);
         }
     }
 }

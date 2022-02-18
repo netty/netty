@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
@@ -21,8 +20,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.CompositeBuffer;
+import io.netty.buffer.api.Send;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,13 +41,29 @@ public class UnixChannelUtilTest {
     private static final int IOV_MAX = 1024;
 
     @Test
-    public void testPooledAllocatorIsBufferCopyNeededForWrite() {
+    public void testPooledByteBufAllocatorIsBufferCopyNeededForWrite() {
         testIsBufferCopyNeededForWrite(PooledByteBufAllocator.DEFAULT);
     }
 
     @Test
-    public void testUnPooledAllocatorIsBufferCopyNeededForWrite() {
+    public void testUnPooledByteBufAllocatorIsBufferCopyNeededForWrite() {
         testIsBufferCopyNeededForWrite(UnpooledByteBufAllocator.DEFAULT);
+    }
+
+    @Test
+    public void testPooledBufferAllocatorIsBufferCopyNeededForWrite() {
+        try (BufferAllocator onHeap = BufferAllocator.onHeapPooled();
+             BufferAllocator offHeap = BufferAllocator.offHeapPooled()) {
+            testIsBufferCopyNeededForWrite(onHeap, offHeap);
+        }
+    }
+
+    @Test
+    public void testUnPooledBufferAllocatorIsBufferCopyNeededForWrite() {
+        try (BufferAllocator onHeap = BufferAllocator.onHeapUnpooled();
+             BufferAllocator offHeap = BufferAllocator.offHeapUnpooled()) {
+            testIsBufferCopyNeededForWrite(onHeap, offHeap);
+        }
     }
 
     private static void testIsBufferCopyNeededForWrite(ByteBufAllocator alloc) {
@@ -84,5 +104,42 @@ public class UnixChannelUtilTest {
 
         assertEquals(expected, isBufferCopyNeededForWrite(comp, IOV_MAX), byteBufs.toString());
         assertTrue(comp.release());
+    }
+
+    private static void testIsBufferCopyNeededForWrite(BufferAllocator onHeap, BufferAllocator offHeap) {
+        try (Buffer buf = offHeap.allocate(256)) {
+            assertFalse(isBufferCopyNeededForWrite(buf, IOV_MAX));
+            assertFalse(isBufferCopyNeededForWrite(buf.makeReadOnly(), IOV_MAX));
+        }
+
+        try (Buffer buf = onHeap.allocate(256)) {
+            assertTrue(isBufferCopyNeededForWrite(buf, IOV_MAX));
+            assertTrue(isBufferCopyNeededForWrite(buf.makeReadOnly(), IOV_MAX));
+        }
+
+        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 2, onHeap, 0, false);
+        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, IOV_MAX + 1, onHeap, 0, true);
+        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 0, onHeap, 2, true);
+        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 1, onHeap, 1, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertCompositeByteBufIsBufferCopyNeededForWrite(
+            BufferAllocator offHeap, int numDirect, BufferAllocator onHeap, int numHeap, boolean expected) {
+        List<Send<Buffer>> buffers = new ArrayList<>(numHeap + numDirect);
+
+        while (numDirect > 0) {
+            buffers.add(offHeap.allocate(1).writeByte((byte) 1).send());
+            numDirect--;
+        }
+        while (numHeap > 0) {
+            buffers.add(onHeap.allocate(1).writeByte((byte) 1).send());
+            numHeap--;
+        }
+
+        Collections.shuffle(buffers);
+        try (CompositeBuffer comp = CompositeBuffer.compose(offHeap, buffers.toArray(Send[]::new))) {
+            assertEquals(expected, isBufferCopyNeededForWrite(comp, IOV_MAX), buffers.toString());
+        }
     }
 }

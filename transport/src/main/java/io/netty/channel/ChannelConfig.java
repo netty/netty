@@ -202,6 +202,21 @@ public interface ChannelConfig {
     ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
 
     /**
+     * Returns whether the {@link RecvBufferAllocator} should be used to allocate {@link io.netty.buffer.api.Buffer}
+     * instances.
+     * The default is {@code false}, which means {@link io.netty.buffer.ByteBuf} instances will be allocated instead.
+     *
+     * @return {@code true} if the {@link RecvBufferAllocator} should use the new buffer API.
+     */
+    boolean getRecvBufferAllocatorUseBuffer();
+
+    /**
+     * Set whether the {@link RecvBufferAllocator} should be used to allocate {@link io.netty.buffer.api.Buffer}
+     * instances (when set to {@code true}), or {@link io.netty.buffer.ByteBuf} instances (when {@code false}).
+     */
+    ChannelConfig setRecvBufferAllocatorUseBuffer(boolean useBufferApi);
+
+    /**
      * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that
      * a user application doesn't need to call it at all. The default value is {@code true}.
      */

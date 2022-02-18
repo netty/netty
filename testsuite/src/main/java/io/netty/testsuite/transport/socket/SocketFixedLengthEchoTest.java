@@ -17,15 +17,13 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -44,23 +42,23 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
-    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testFixedLengthEcho(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testFixedLengthEcho);
     }
 
-    @Disabled("FixedLengthFrameDecoder is migrated to use Buffer")
     @Test
     public void testFixedLengthEchoNotAutoRead(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testFixedLengthEchoNotAutoRead);
     }
 
     public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         testFixedLengthEcho(sb, cb, true);
     }
 
     public void testFixedLengthEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         testFixedLengthEcho(sb, cb, false);
     }
 
@@ -88,10 +86,13 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 3), data.length - i);
-            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
-            i += length;
+
+        try (Buffer buffer = sc.bufferAllocator().copyOf(data)) {
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 3), data.length - i);
+                cc.writeAndFlush(buffer.readSplit(length));
+                i += length;
+            }
         }
 
         while (ch.counter < data.length) {
@@ -102,11 +103,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         while (sh.counter < data.length) {
@@ -117,11 +114,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         sh.channel.close().sync();
@@ -142,7 +135,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<Buffer> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -161,11 +154,11 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
-            msg.getBytes(0, actual);
+            msg.copyInto(msg.readerOffset(), actual, 0, msg.readableBytes());
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
@@ -173,7 +166,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(msg.retain());
+                channel.write(msg.split());
             }
 
             counter += actual.length;

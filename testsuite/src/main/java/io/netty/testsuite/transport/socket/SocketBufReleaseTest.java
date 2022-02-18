@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -32,6 +33,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class SocketBufReleaseTest extends AbstractSocketTest {
 
@@ -39,13 +41,34 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             new DefaultEventExecutorGroup(1, new DefaultThreadFactory(SocketBufReleaseTest.class, true)).next();
 
     @Test
-    public void testBufRelease(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testBufRelease);
+    public void testByteBufRelease(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testByteBufRelease);
     }
 
-    public void testBufRelease(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        BufWriterHandler serverHandler = new BufWriterHandler();
-        BufWriterHandler clientHandler = new BufWriterHandler();
+    public void testByteBufRelease(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testRelease(sb, cb, false);
+    }
+
+    @Test
+    public void testBufferRelease(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testBufferRelease);
+    }
+
+    public void testBufferRelease(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testRelease(sb, cb, true);
+    }
+
+    public void testRelease(ServerBootstrap sb, Bootstrap cb, boolean useNewBufferAPI) throws Throwable {
+        final WriteHandler serverHandler;
+        final WriteHandler clientHandler;
+        if (useNewBufferAPI) {
+            enableNewBufferAPI(sb, cb);
+            serverHandler = new BufferWriterHandler();
+            clientHandler = new BufferWriterHandler();
+        } else {
+            serverHandler = new ByteBufWriterHandler();
+            clientHandler = new ByteBufWriterHandler();
+        }
 
         sb.childHandler(serverHandler);
         cb.handler(clientHandler);
@@ -54,7 +77,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         Channel cc = cb.connect(sc.localAddress()).get();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
-        serverHandler.channelFuture.asFuture().sync();
+        serverHandler.awaitPipelineInit();
 
         // and then close all sockets.
         sc.close().sync();
@@ -67,7 +90,13 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         clientHandler.release();
     }
 
-    private static class BufWriterHandler extends SimpleChannelInboundHandler<Object> {
+    private abstract static class WriteHandler extends SimpleChannelInboundHandler<Object> {
+        abstract void awaitPipelineInit() throws InterruptedException;
+        abstract void check() throws InterruptedException;
+        abstract void release();
+    }
+
+    private static final class ByteBufWriterHandler extends WriteHandler {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -88,7 +117,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // call retain on it so it can't be put back on the pool
             buf.writeBytes(data).retain();
 
-            ctx.channel().writeAndFlush(buf).addListener(future -> latch.countDown());
+            ctx.writeAndFlush(buf).addListener(future -> latch.countDown());
         }
 
         @Override
@@ -96,13 +125,61 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // discard
         }
 
-        public void check() throws InterruptedException {
+        @Override
+        void awaitPipelineInit() throws InterruptedException {
+            channelFuture.asFuture().sync();
+        }
+
+        @Override
+        void check() throws InterruptedException {
             latch.await();
             assertEquals(1, buf.refCnt());
         }
 
+        @Override
         void release() {
             buf.release();
+        }
+    }
+
+    private static final class BufferWriterHandler extends WriteHandler {
+
+        private final Random random = new Random();
+        private final CountDownLatch latch = new CountDownLatch(1);
+        private Buffer buf;
+        private final Promise<Channel> channelFuture = executor.newPromise();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            channelFuture.setSuccess(ctx.channel());
+        }
+
+        @Override
+        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+            byte[] data = new byte[1024];
+            random.nextBytes(data);
+            buf = ctx.bufferAllocator().copyOf(data);
+            ctx.writeAndFlush(buf).addListener(future -> latch.countDown());
+        }
+
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            // discard
+        }
+
+        @Override
+        void awaitPipelineInit() throws InterruptedException {
+            channelFuture.asFuture().sync();
+        }
+
+        @Override
+        void check() throws InterruptedException {
+            latch.await();
+            assertFalse(buf.isAccessible());
+        }
+
+        @Override
+        void release() {
         }
     }
 }

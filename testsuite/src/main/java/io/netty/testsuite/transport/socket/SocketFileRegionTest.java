@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -250,8 +251,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

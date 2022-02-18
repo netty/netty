@@ -21,12 +21,15 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -88,7 +91,7 @@ public class DnsResponseTest {
             assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));
             assertThat(response.count(DnsSection.ADDITIONAL), is(raw.getUnsignedShort(10)));
 
-            envelope.release();
+            ReferenceCountUtil.release(envelope);
         }
         assertFalse(embedder.finish());
     }

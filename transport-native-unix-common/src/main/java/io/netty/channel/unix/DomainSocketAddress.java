@@ -15,10 +15,10 @@
  */
 package io.netty.channel.unix;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.File;
 import java.net.SocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A address for a

@@ -18,10 +18,13 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.DefaultBufferAddressedEnvelope;
+import io.netty.channel.DefaultByteBufAddressedEnvelope;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.BufferDatagramPacket;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -29,12 +32,14 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -234,21 +239,65 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
     @Override
     protected boolean doWriteMessage(Object msg) throws Exception {
-        final ByteBuf data;
-        InetSocketAddress remoteAddress;
+        final Object data;
+        final InetSocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
+            AddressedEnvelope<?, InetSocketAddress> envelope = (AddressedEnvelope<?, InetSocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = ((ByteBufConvertible) msg).asByteBuf();
+            data = msg;
             remoteAddress = null;
         }
 
-        final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
+        if (data instanceof Buffer) {
+            return doWriteBufferMessage((Buffer) data, remoteAddress);
+        }
+        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
+    }
+
+    private boolean doWriteBufferMessage(Buffer data, InetSocketAddress remoteAddress) throws IOException {
+        final int initialReadableBytes = data.readableBytes();
+        if (initialReadableBytes == 0) {
+            return true;
+        }
+
+        if (data.countReadableComponents() > 1) {
+            IovArray array = registration().cleanArray();
+            data.forEachReadable(0, array);
+            int count = array.count();
+            assert count != 0;
+
+            final long writtenBytes;
+            if (remoteAddress == null) {
+                writtenBytes = socket.writevAddresses(array.memoryAddress(0), count);
+            } else {
+                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), count,
+                                                      remoteAddress.getAddress(), remoteAddress.getPort());
+            }
+            return writtenBytes > 0;
+        } else {
+            if (remoteAddress == null) {
+                data.forEachReadable(0, (index, component) -> {
+                    int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
+                    component.skipReadable(written);
+                    return false;
+                });
+            } else {
+                data.forEachReadable(0, (index, component) -> {
+                    int written = socket.sendToAddress(component.readableNativeAddress(), 0, component.readableBytes(),
+                                                            remoteAddress.getAddress(), remoteAddress.getPort());
+                    component.skipReadable(written);
+                    return false;
+                });
+            }
+            return data.readableBytes() < initialReadableBytes;
+        }
+    }
+
+    private boolean doWriteByteBufMessage(ByteBuf data, InetSocketAddress remoteAddress) throws IOException {
+        if (data.readableBytes() == 0) {
             return true;
         }
 
@@ -259,7 +308,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
             } else {
                 writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                                                    remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
             IovArray array = registration().cleanArray();
@@ -271,7 +320,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
             } else {
                 writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                                                      remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else  {
             ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
@@ -279,7 +328,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
             } else {
                 writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                                             remoteAddress.getAddress(), remoteAddress.getPort());
             }
         }
 
@@ -294,7 +343,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
+        if (msg instanceof BufferDatagramPacket) {
+            BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+            Buffer content = packet.content();
+            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
+                    new BufferDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+        }
 
+        if (msg instanceof Buffer) {
+            Buffer buf = (Buffer) msg;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
+        }
         if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
@@ -303,13 +362,26 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBufConvertible &&
-                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
-                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<>(
-                                newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
+            SocketAddress recipient = e.recipient();
+            if (recipient == null || recipient instanceof InetSocketAddress) {
+                InetSocketAddress inetRecipient = (InetSocketAddress) recipient;
+                if (e.content() instanceof Buffer) {
+                    Buffer buf = (Buffer) e.content();
+                    if (UnixChannelUtil.isBufferCopyNeededForWrite(buf)) {
+                        try {
+                            return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), inetRecipient);
+                        } finally {
+                            ReferenceCountUtil.release(e);
+                        }
+                    }
+                    return e;
+                }
+                if (e.content() instanceof ByteBufConvertible) {
+                    ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
+                    return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
+                            new DefaultByteBufAddressedEnvelope<>(
+                                    newDirectBuffer(e, content), inetRecipient) : e;
+                }
             }
         }
 

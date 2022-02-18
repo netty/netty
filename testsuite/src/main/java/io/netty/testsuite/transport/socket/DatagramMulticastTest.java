@@ -17,9 +17,11 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.BufferDatagramPacket;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -48,11 +50,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Test
-    public void testMulticast(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testMulticast);
+    public void testMulticastByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testMulticastByteBuf);
     }
 
-    public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
+    public void testMulticastByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
         NetworkInterface iface = multicastNetworkInterface();
         assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
                              socketInternetProtocalFamily());
@@ -118,6 +120,79 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
+    @Test
+    public void testMulticast(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testMulticast);
+    }
+
+    public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
+        NetworkInterface iface = multicastNetworkInterface();
+        assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
+                             socketInternetProtocalFamily());
+
+        MulticastBufferTestHandler mhandler = new MulticastBufferTestHandler();
+
+        sb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+
+        cb.handler(mhandler);
+
+        sb.option(ChannelOption.IP_MULTICAST_IF, iface);
+        sb.option(ChannelOption.SO_REUSEADDR, true);
+
+        cb.option(ChannelOption.IP_MULTICAST_IF, iface);
+        cb.option(ChannelOption.SO_REUSEADDR, true);
+
+        DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).get();
+        assertEquals(iface, sc.config().getNetworkInterface());
+        assertInterfaceAddress(iface, sc.config().getInterface());
+
+        InetSocketAddress addr = sc.localAddress();
+        cb.localAddress(addr.getPort());
+
+        DatagramChannel cc = (DatagramChannel) cb.bind().get();
+        assertEquals(iface, cc.config().getNetworkInterface());
+        assertInterfaceAddress(iface, cc.config().getInterface());
+
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
+
+        cc.joinGroup(groupAddress, iface).sync();
+
+        BufferAllocator allocator = sc.bufferAllocator();
+        sc.writeAndFlush(new BufferDatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).sync();
+        assertTrue(mhandler.await());
+
+        // leave the group
+        cc.leaveGroup(groupAddress, iface).sync();
+
+        // sleep a second to make sure we left the group
+        Thread.sleep(1000);
+
+        // we should not receive a message anymore as we left the group before
+        sc.writeAndFlush(new BufferDatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).sync();
+        mhandler.await();
+
+        cc.config().setLoopbackModeDisabled(false);
+        sc.config().setLoopbackModeDisabled(false);
+
+        assertFalse(cc.config().isLoopbackModeDisabled());
+        assertFalse(sc.config().isLoopbackModeDisabled());
+
+        cc.config().setLoopbackModeDisabled(true);
+        sc.config().setLoopbackModeDisabled(true);
+
+        assertTrue(cc.config().isLoopbackModeDisabled());
+        assertTrue(sc.config().isLoopbackModeDisabled());
+
+        sc.close().awaitUninterruptibly();
+        cc.close().awaitUninterruptibly();
+    }
+
     private static void assertInterfaceAddress(NetworkInterface networkInterface, InetAddress expected) {
         Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
         while (addresses.hasMoreElements()) {
@@ -152,6 +227,45 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             boolean success = latch.await(10, TimeUnit.SECONDS);
             if (fail) {
                 // fail if we receive an message after we are done
+                fail();
+            }
+            return success;
+        }
+    }
+
+    private static final class MulticastBufferTestHandler extends SimpleChannelInboundHandler<BufferDatagramPacket> {
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        private boolean done;
+        private volatile boolean fail;
+        private volatile Throwable error;
+
+        @Override
+        protected void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket msg) throws Exception {
+            if (done) {
+                fail = true;
+            }
+
+            try {
+                assertEquals(1, msg.content().readInt());
+            } catch (Throwable e) {
+                error = e;
+            }
+
+            latch.countDown();
+
+            // mark the handler as done as we only are supposed to receive one message
+            done = true;
+        }
+
+        public boolean await() throws Exception {
+            boolean success = latch.await(10, TimeUnit.SECONDS);
+            Throwable error = this.error;
+            if (error != null) {
+                throw new Exception("Exception thrown in messageReceived", error);
+            }
+            if (fail) {
+                // fail if we receive a message after we are done
                 fail();
             }
             return success;

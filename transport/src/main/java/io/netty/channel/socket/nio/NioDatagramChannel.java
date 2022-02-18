@@ -17,19 +17,27 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Resource;
+import io.netty.buffer.api.WritableComponent;
+import io.netty.buffer.api.WritableComponentProcessor;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.DefaultBufferAddressedEnvelope;
+import io.netty.channel.DefaultByteBufAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvBufferAllocator;
+import io.netty.channel.RecvBufferAllocator.Handle;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.socket.BufferDatagramPacket;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -230,24 +238,55 @@ public final class NioDatagramChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        DatagramChannel ch = javaChannel();
         DatagramChannelConfig config = config();
         RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
+        if (config.getRecvBufferAllocatorUseBuffer()) {
+            return doReadBufferMessages(allocHandle, buf);
+        }
+        return doReadByteBufMessages(allocHandle, buf);
+    }
+
+    private int doReadBufferMessages(Handle allocHandle, List<Object> buf) throws IOException {
+        DatagramChannel ch = javaChannel();
+        Buffer data = allocHandle.allocate(config.getBufferAllocator());
+        allocHandle.attemptedBytesRead(data.writableBytes());
+        boolean free = true;
+        try {
+            ReceiveDatagram receiveDatagram = new ReceiveDatagram(javaChannel());
+            data.forEachWritable(0, receiveDatagram);
+            InetSocketAddress remoteAddress = receiveDatagram.remoteAddress;
+            if (remoteAddress == null) {
+                return 0;
+            }
+
+            allocHandle.lastBytesRead(receiveDatagram.bytesReceived);
+            data.skipWritable(allocHandle.lastBytesRead());
+            buf.add(new BufferDatagramPacket(data, localAddress(), remoteAddress));
+            free = false;
+            return 1;
+        } finally {
+            if (free) {
+                data.close();
+            }
+        }
+    }
+
+    private int doReadByteBufMessages(Handle allocHandle, List<Object> buf) throws IOException {
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         allocHandle.attemptedBytesRead(data.writableBytes());
         boolean free = true;
         try {
             ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
             int pos = nioData.position();
-            InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(nioData);
+            InetSocketAddress remoteAddress = (InetSocketAddress) javaChannel().receive(nioData);
             if (remoteAddress == null) {
                 return 0;
             }
 
             allocHandle.lastBytesRead(nioData.position() - pos);
             buf.add(new DatagramPacket(data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead()),
-                    localAddress(), remoteAddress));
+                                       localAddress(), remoteAddress));
             free = false;
             return 1;
         } finally {
@@ -260,31 +299,53 @@ public final class NioDatagramChannel
     @Override
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         final SocketAddress remoteAddress;
-        final ByteBuf data;
+        final Object data;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, SocketAddress> envelope = (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
+            AddressedEnvelope<?, SocketAddress> envelope = (AddressedEnvelope<?, SocketAddress>) msg;
             remoteAddress = envelope.recipient();
             data = envelope.content();
         } else {
-            data = ((ByteBufConvertible) msg).asByteBuf();
+            data = msg;
             remoteAddress = null;
         }
 
-        final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
+        if (data instanceof Buffer) {
+            Buffer buf = (Buffer) data;
+            final int length = buf.readableBytes();
+            if (length == 0) {
+                return true;
+            }
 
-        final ByteBuffer nioData = data.nioBufferCount() == 1 ? data.internalNioBuffer(data.readerIndex(), dataLen)
-                                                              : data.nioBuffer(data.readerIndex(), dataLen);
-        final int writtenBytes;
-        if (remoteAddress != null) {
-            writtenBytes = javaChannel().send(nioData, remoteAddress);
+            int initialReadable = buf.readableBytes();
+            buf.forEachReadable(0, (index, component) -> {
+                final int writtenBytes;
+                if (remoteAddress != null) {
+                    writtenBytes = javaChannel().send(component.readableBuffer(), remoteAddress);
+                } else {
+                    writtenBytes = javaChannel().write(component.readableBuffer());
+                }
+                component.skipReadable(writtenBytes);
+                return true;
+            });
+            return buf.readableBytes() < initialReadable;
         } else {
-            writtenBytes = javaChannel().write(nioData);
+            ByteBuf buf = ((ByteBufConvertible) data).asByteBuf();
+            final int length = buf.readableBytes();
+            if (length == 0) {
+                return true;
+            }
+
+            final ByteBuffer nioData = buf.nioBufferCount() == 1 ? buf.internalNioBuffer(buf.readerIndex(), length)
+                    : buf.nioBuffer(buf.readerIndex(), length);
+            final int writtenBytes;
+            if (remoteAddress != null) {
+                writtenBytes = javaChannel().send(nioData, remoteAddress);
+            } else {
+                writtenBytes = javaChannel().write(nioData);
+            }
+            return writtenBytes > 0;
         }
-        return writtenBytes > 0;
     }
 
     @Override
@@ -297,7 +358,22 @@ public final class NioDatagramChannel
             }
             return new DatagramPacket(newDirectBuffer(p, content), p.recipient());
         }
+        if (msg instanceof BufferDatagramPacket) {
+            BufferDatagramPacket p = (BufferDatagramPacket) msg;
+            Buffer content = p.content();
+            if (isSingleDirectBuffer(content)) {
+                return p;
+            }
+            return new BufferDatagramPacket(newDirectBuffer(p, content), p.recipient());
+        }
 
+        if (msg instanceof Buffer) {
+            Buffer buf = (Buffer) msg;
+            if (isSingleDirectBuffer(buf)) {
+                return buf;
+            }
+            return newDirectBuffer(buf);
+        }
         if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (isSingleDirectBuffer(buf)) {
@@ -309,12 +385,20 @@ public final class NioDatagramChannel
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBufConvertible) {
-                ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
-                if (isSingleDirectBuffer(content)) {
+            Object content = e.content();
+            if (content instanceof Buffer) {
+                Buffer buf = (Buffer) content;
+                if (isSingleDirectBuffer(buf)) {
                     return e;
                 }
-                return new DefaultAddressedEnvelope<>(newDirectBuffer(e, content), e.recipient());
+                return new DefaultBufferAddressedEnvelope<>(newDirectBuffer((Resource<?>) e, buf), e.recipient());
+            }
+            if (content instanceof ByteBufConvertible) {
+                ByteBuf buf = ((ByteBufConvertible) content).asByteBuf();
+                if (isSingleDirectBuffer(buf)) {
+                    return e;
+                }
+                return new DefaultByteBufAddressedEnvelope<>(newDirectBuffer((ReferenceCounted) e, buf), e.recipient());
             }
         }
 
@@ -328,6 +412,14 @@ public final class NioDatagramChannel
      */
     private static boolean isSingleDirectBuffer(ByteBuf buf) {
         return buf.isDirect() && buf.nioBufferCount() == 1;
+    }
+
+    /**
+     * Checks if the specified buffer is a direct buffer and not composite.
+     * (We check this because otherwise we need to make it a non-composite buffer.)
+     */
+    private static boolean isSingleDirectBuffer(Buffer buf) {
+        return buf.isDirect() && buf.countComponents() == 1;
     }
 
     @Override
@@ -583,5 +675,24 @@ public final class NioDatagramChannel
         // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
         // as we read anything).
         return allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER);
+    }
+
+    private static final class ReceiveDatagram implements WritableComponentProcessor<IOException> {
+        private final DatagramChannel channel;
+        private InetSocketAddress remoteAddress;
+        private int bytesReceived;
+
+        ReceiveDatagram(DatagramChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public boolean process(int index, WritableComponent component) throws IOException {
+            ByteBuffer dst = component.writableBuffer();
+            int position = dst.position();
+            remoteAddress = (InetSocketAddress) channel.receive(dst);
+            bytesReceived = dst.position() - position;
+            return false;
+        }
     }
 }

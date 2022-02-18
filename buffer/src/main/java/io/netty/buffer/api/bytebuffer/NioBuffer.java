@@ -163,6 +163,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     }
 
     @Override
+    public boolean isDirect() {
+        return rmem.isDirect();
+    }
+
+    @Override
     public Buffer copy(int offset, int length) {
         checkLength(length);
         checkGet(offset, length);

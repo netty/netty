@@ -23,10 +23,14 @@ import java.net.SocketAddress;
 /**
  * A message that wraps another message with a sender address and a recipient address.
  *
+ * @implNote AddressedEnvelope implementors likely also implement either {@link ReferenceCounted}
+ * or {@link io.netty.buffer.api.Resource}. Users should be mindful to release or close any address envelopes if
+ * that's the case.
+ *
  * @param <M> the type of the wrapped message
  * @param <A> the type of the address
  */
-public interface AddressedEnvelope<M, A extends SocketAddress> extends ReferenceCounted {
+public interface AddressedEnvelope<M, A extends SocketAddress> {
     /**
      * Returns the message wrapped by this envelope message.
      */
@@ -41,16 +45,4 @@ public interface AddressedEnvelope<M, A extends SocketAddress> extends Reference
      * Returns the address of the recipient of this message.
      */
     A recipient();
-
-    @Override
-    AddressedEnvelope<M, A> retain();
-
-    @Override
-    AddressedEnvelope<M, A> retain(int increment);
-
-    @Override
-    AddressedEnvelope<M, A> touch();
-
-    @Override
-    AddressedEnvelope<M, A> touch(Object hint);
 }

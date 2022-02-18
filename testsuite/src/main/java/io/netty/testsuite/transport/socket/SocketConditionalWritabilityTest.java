@@ -18,6 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,11 +37,11 @@ import java.util.concurrent.TimeUnit;
 public class SocketConditionalWritabilityTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testConditionalWritability(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testConditionalWritability);
+    public void testConditionalWritabilityByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testConditionalWritabilityByteBuf);
     }
 
-    public void testConditionalWritability(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testConditionalWritabilityByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -109,6 +111,108 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                                 }
                             }
                             ReferenceCountUtil.release(msg);
+                        }
+                    });
+                }
+            });
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            latch.await();
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close();
+            }
+            if (clientChannel != null) {
+                clientChannel.close();
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testConditionalWritability(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testConditionalWritability);
+    }
+
+    public void testConditionalWritability(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            final int expectedBytes = 100 * 1024 * 1024;
+            final int maxWriteChunkSize = 16 * 1024;
+            final CountDownLatch latch = new CountDownLatch(1);
+            sb.childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(8 * 1024, 16 * 1024));
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new ChannelHandler() {
+                        private int bytesWritten;
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof Resource<?>) {
+                                ((Resource<?>) msg).close();
+                            } else {
+                                ReferenceCountUtil.release(msg);
+                            }
+                            writeRemainingBytes(ctx);
+                        }
+
+                        @Override
+                        public void flush(ChannelHandlerContext ctx) {
+                            if (ctx.channel().isWritable()) {
+                                writeRemainingBytes(ctx);
+                            } else {
+                                ctx.flush();
+                            }
+                        }
+
+                        @Override
+                        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                            if (ctx.channel().isWritable()) {
+                                writeRemainingBytes(ctx);
+                            }
+                            ctx.fireChannelWritabilityChanged();
+                        }
+
+                        private void writeRemainingBytes(ChannelHandlerContext ctx) {
+                            while (ctx.channel().isWritable() && bytesWritten < expectedBytes) {
+                                int chunkSize = Math.min(expectedBytes - bytesWritten, maxWriteChunkSize);
+                                bytesWritten += chunkSize;
+                                Buffer buffer = ctx.bufferAllocator().allocate(chunkSize);
+                                buffer.skipWritable(chunkSize);
+                                ctx.write(buffer);
+                            }
+                            ctx.flush();
+                        }
+                    });
+                }
+            });
+
+            serverChannel = sb.bind().get();
+
+            cb.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new ChannelHandler() {
+                        private int totalRead;
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            ctx.writeAndFlush(ctx.bufferAllocator().allocate(1).writeByte((byte) 0));
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof Buffer) {
+                                try (Buffer buffer = (Buffer) msg) {
+                                    totalRead += buffer.readableBytes();
+                                    if (totalRead == expectedBytes) {
+                                        latch.countDown();
+                                    }
+                                }
+                            } else {
+                                ReferenceCountUtil.release(msg);
+                            }
                         }
                     });
                 }

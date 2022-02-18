@@ -37,6 +37,7 @@ import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
@@ -63,6 +64,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile RecvBufferAllocator rcvBufAllocator;
+    private volatile boolean rcvBufAllocatorUseBuffer;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
@@ -73,7 +75,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
-    private volatile boolean pinEventExecutor = true;
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvBufferAllocator());
@@ -90,8 +91,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
+                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, RCVBUF_ALLOCATOR_USE_BUFFER,
+                WRITE_BUFFER_HIGH_WATER_MARK, WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK,
+                MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -143,6 +145,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == RCVBUF_ALLOCATOR) {
             return (T) getRecvBufferAllocator();
         }
+        if (option == RCVBUF_ALLOCATOR_USE_BUFFER) {
+            return (T) Boolean.valueOf(getRecvBufferAllocatorUseBuffer());
+        }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
@@ -184,6 +189,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
             setRecvBufferAllocator((RecvBufferAllocator) value);
+        } else if (option == RCVBUF_ALLOCATOR_USE_BUFFER) {
+            setRecvBufferAllocatorUseBuffer((Boolean) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
@@ -328,6 +335,17 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     public ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
         rcvBufAllocator = requireNonNull(allocator, "allocator");
+        return this;
+    }
+
+    @Override
+    public boolean getRecvBufferAllocatorUseBuffer() {
+        return rcvBufAllocatorUseBuffer;
+    }
+
+    @Override
+    public ChannelConfig setRecvBufferAllocatorUseBuffer(boolean useBufferApi) {
+        rcvBufAllocatorUseBuffer = useBufferApi;
         return this;
     }
 

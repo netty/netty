@@ -213,6 +213,14 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     boolean readOnly();
 
     /**
+     * Queries if this buffer is backed by native memory, or not.
+     *
+     * @return {@code true} if this buffer is backed by native, off-heap, memory. Otherwise, {@code false}, if this
+     * buffer is backed by on-heap memory.
+     */
+    boolean isDirect();
+
+    /**
      * Copies the given length of data from this buffer into the given destination array, beginning at the given source
      * position in this buffer, and the given destination position in the destination array.
      * <p>

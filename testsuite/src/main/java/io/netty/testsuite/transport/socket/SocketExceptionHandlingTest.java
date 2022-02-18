@@ -18,6 +18,8 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.DefaultBufferAllocators;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,11 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketExceptionHandlingTest extends AbstractSocketTest {
     @Test
-    public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testReadPendingIsResetAfterEachRead);
+    public void testReadPendingIsResetAfterEachReadByteBuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testReadPendingIsResetAfterEachReadByteBuf);
     }
 
-    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testReadPendingIsResetAfterEachReadByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -55,6 +57,44 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
             clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[1024]));
+
+            // We expect to get 2 exceptions (1 from BuggyChannelHandler and 1 from ExceptionHandler).
+            assertTrue(serverInitializer.exceptionHandler.latch1.await(5, TimeUnit.SECONDS));
+
+            // After we get the first exception, we should get no more, this is expected to timeout.
+            assertFalse(serverInitializer.exceptionHandler.latch2.await(1, TimeUnit.SECONDS),
+                "Encountered " + serverInitializer.exceptionHandler.count.get() +
+                                        " exceptions when 1 was expected");
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+        }
+    }
+
+    @Test
+    public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testReadPendingIsResetAfterEachRead);
+    }
+
+    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            MyInitializer serverInitializer = new MyInitializer();
+            sb.option(ChannelOption.SO_BACKLOG, 1024);
+            sb.childHandler(serverInitializer);
+
+            serverChannel = sb.bind().get();
+
+            cb.handler(new MyInitializer());
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
+
+            clientChannel.writeAndFlush(DefaultBufferAllocators.preferredAllocator().copyOf(new byte[1024]));
 
             // We expect to get 2 exceptions (1 from BuggyChannelHandler and 1 from ExceptionHandler).
             assertTrue(serverInitializer.exceptionHandler.latch1.await(5, TimeUnit.SECONDS));
@@ -87,7 +127,11 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
     private static class BuggyChannelHandler implements ChannelHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ReferenceCountUtil.release(msg);
+            if (msg instanceof Resource<?>) {
+                ((Resource<?>) msg).close();
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
             throw new NullPointerException("I am a bug!");
         }
     }

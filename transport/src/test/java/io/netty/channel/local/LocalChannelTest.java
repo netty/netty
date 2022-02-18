@@ -1352,7 +1352,6 @@ public class LocalChannelTest {
                                     // Fill the ChannelOutboundBuffer with multiple buffers
                                     ctx.write(buffer.readSplit(1));
                                 }
-                                buffer.close();
                                 // Flush and so transfer the written buffers to the inboundBuffer of the remote peer.
                                 // After this point the remote peer is responsible to release all the buffers.
                                 ctx.flush();

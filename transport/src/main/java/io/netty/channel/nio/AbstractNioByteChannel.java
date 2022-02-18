@@ -18,6 +18,9 @@ package io.netty.channel.nio;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.Buffer;
+import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Resource;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -110,14 +113,23 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+        private void handleReadException(ChannelPipeline pipeline, Object bufferish, Throwable cause, boolean close,
                 RecvBufferAllocator.Handle allocHandle) {
-            if (byteBuf != null) {
-                if (byteBuf.isReadable()) {
+            if (bufferish instanceof ByteBuf) {
+                ByteBuf buffer = (ByteBuf) bufferish;
+                if (buffer.isReadable()) {
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    pipeline.fireChannelRead(buffer);
                 } else {
-                    byteBuf.release();
+                    buffer.release();
+                }
+            } else if (bufferish instanceof Buffer) {
+                Buffer buffer = (Buffer) bufferish;
+                if (buffer.readableBytes() > 0) {
+                    readPending = false;
+                    pipeline.fireChannelRead(buffer);
+                } else {
+                    buffer.close();
                 }
             }
             allocHandle.readComplete();
@@ -141,20 +153,27 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
+            final boolean useBufferApi = config.getRecvBufferAllocatorUseBuffer();
+            final BufferAllocator bufferAllocator = config.getBufferAllocator();
+            final ByteBufAllocator byteBufAllocator = config.getAllocator();
             final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
-            ByteBuf byteBuf = null;
+            Object buffer = null;
             boolean close = false;
             try {
                 do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    if (useBufferApi) {
+                        buffer = allocHandle.allocate(bufferAllocator);
+                        allocHandle.lastBytesRead(doReadBytes((Buffer) buffer));
+                    } else {
+                        buffer = allocHandle.allocate(byteBufAllocator);
+                        allocHandle.lastBytesRead(doReadBytes((ByteBuf) buffer));
+                    }
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
+                        Resource.dispose(buffer);
+                        buffer = null;
                         close = allocHandle.lastBytesRead() < 0;
                         if (close) {
                             // There is nothing left to read as we received an EOF.
@@ -165,8 +184,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
+                    pipeline.fireChannelRead(buffer);
+                    buffer = null;
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
@@ -178,7 +197,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     readIfIsAutoRead();
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+                handleReadException(pipeline, buffer, t, close, allocHandle);
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
@@ -217,7 +236,22 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private int doWriteInternal(ChannelOutboundBuffer in, Object msg) throws Exception {
-        if (msg instanceof ByteBufConvertible) {
+        if (msg instanceof Buffer) {
+            Buffer buf = (Buffer) msg;
+            if (buf.readableBytes() == 0) {
+                in.remove();
+                return 0;
+            }
+
+            final int localFlushAmount = doWriteBytes(buf);
+            if (localFlushAmount > 0) {
+                in.progress(localFlushAmount);
+                if (buf.readableBytes() == 0) {
+                    in.remove();
+                }
+                return 1;
+            }
+        } else if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (!buf.isReadable()) {
                 in.remove();
@@ -273,6 +307,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected final Object filterOutboundMessage(Object msg) {
+        if (msg instanceof Buffer) {
+            Buffer buf = (Buffer) msg;
+            if (buf.isDirect()) {
+                return msg;
+            }
+
+            return newDirectBuffer(buf);
+        }
+
         if (msg instanceof ByteBufConvertible) {
             ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (buf.isDirect()) {
@@ -320,11 +363,23 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
 
     /**
+     * Read bytes into the given {@link Buffer} and return the amount.
+     */
+    protected abstract int doReadBytes(Buffer buf) throws Exception;
+
+    /**
      * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
      * @param buf           the {@link ByteBuf} from which the bytes should be written
      * @return amount       the amount of written bytes
      */
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
+
+    /**
+     * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.
+     * @param buf           the {@link Buffer} from which the bytes should be written
+     * @return amount       the amount of written bytes
+     */
+    protected abstract int doWriteBytes(Buffer buf) throws Exception;
 
     protected final void setOpWrite() {
         final SelectionKey key = selectionKey();

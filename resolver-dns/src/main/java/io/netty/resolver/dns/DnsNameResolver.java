@@ -49,6 +49,7 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
@@ -1357,7 +1358,8 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private static final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress> {
+    private static final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress>,
+                                                                   ReferenceCounted {
         private final InetSocketAddress sender;
         private final InetSocketAddress recipient;
         private final DnsResponse response;
@@ -1384,25 +1386,25 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         @Override
-        public AddressedEnvelope<DnsResponse, InetSocketAddress> retain() {
+        public AddressedEnvelopeAdapter retain() {
             response.retain();
             return this;
         }
 
         @Override
-        public AddressedEnvelope<DnsResponse, InetSocketAddress> retain(int increment) {
+        public AddressedEnvelopeAdapter retain(int increment) {
             response.retain(increment);
             return this;
         }
 
         @Override
-        public AddressedEnvelope<DnsResponse, InetSocketAddress> touch() {
+        public AddressedEnvelopeAdapter touch() {
             response.touch();
             return this;
         }
 
         @Override
-        public AddressedEnvelope<DnsResponse, InetSocketAddress> touch(Object hint) {
+        public AddressedEnvelopeAdapter touch(Object hint) {
             response.touch(hint);
             return this;
         }

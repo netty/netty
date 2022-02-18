@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.api.Buffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
@@ -57,12 +58,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     private static SocketChannel newSocket(SelectorProvider provider) {
         try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
+            //  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+            //  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
+            //
+            //  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
             return provider.openSocketChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
@@ -316,9 +315,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
+    protected int doReadBytes(Buffer buffer) throws Exception {
+        final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        allocHandle.attemptedBytesRead(buffer.writableBytes());
+        return buffer.transferFrom(javaChannel(), allocHandle.attemptedBytesRead());
+    }
+
+    @Override
     protected int doWriteBytes(ByteBuf buf) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
         return buf.readBytes(javaChannel(), expectedWrittenBytes);
+    }
+
+    @Override
+    protected int doWriteBytes(Buffer buf) throws Exception {
+        final int expectedWrittenBytes = buf.readableBytes();
+        return buf.transferTo(javaChannel(), expectedWrittenBytes);
     }
 
     @Override

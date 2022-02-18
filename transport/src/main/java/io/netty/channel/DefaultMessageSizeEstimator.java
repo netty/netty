@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.api.Buffer;
 
 /**
  * Default {@link MessageSizeEstimator} implementation which supports the estimation of the size of
@@ -36,6 +37,9 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
 
         @Override
         public int size(Object msg) {
+            if (msg instanceof Buffer) {
+                return ((Buffer) msg).readableBytes();
+            }
             if (msg instanceof ByteBufConvertible) {
                 return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
             }

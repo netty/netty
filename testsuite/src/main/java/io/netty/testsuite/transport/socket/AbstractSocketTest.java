@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.api.BufferAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -34,11 +35,15 @@ public abstract class AbstractSocketTest extends AbstractComboTestsuiteTest<Serv
     }
 
     @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
+    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator byteBufAllocator,
+                             BufferAllocator bufferAllocator) {
         sb.localAddress(newSocketAddress());
-        sb.option(ChannelOption.ALLOCATOR, allocator);
-        sb.childOption(ChannelOption.ALLOCATOR, allocator);
-        cb.option(ChannelOption.ALLOCATOR, allocator);
+        sb.option(ChannelOption.ALLOCATOR, byteBufAllocator);
+        sb.childOption(ChannelOption.ALLOCATOR, byteBufAllocator);
+        cb.option(ChannelOption.ALLOCATOR, byteBufAllocator);
+        sb.option(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
+        sb.childOption(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
+        cb.option(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
     }
 
     protected SocketAddress newSocketAddress() {

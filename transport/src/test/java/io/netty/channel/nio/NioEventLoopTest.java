@@ -211,7 +211,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 strategyLatch.await();
                 if (!thrown) {
                     thrown = true;
-                    throw new IOException();
+                    throw new IOException("expected exception!");
                 }
                 latch.countDown();
                 return -1;

@@ -21,7 +21,7 @@ import io.netty.testsuite.transport.socket.WriteBeforeRegisteredTest;
 
 import java.util.List;
 
-public class KqueueWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
+public class KQueueWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {

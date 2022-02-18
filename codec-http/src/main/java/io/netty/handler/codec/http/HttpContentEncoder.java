@@ -316,7 +316,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private void cleanup() {
         if (compressor != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            compressor.close();
+            try {
+                compressor.close();
+            } finally {
+                compressor = null;
+            }
         }
     }
 
