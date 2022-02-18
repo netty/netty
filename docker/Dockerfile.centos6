@@ -8,7 +8,7 @@ ENV NINJA_VERSION 1.7.2
 ENV GO_VERSION 1.9.3
 
 # Update yum repos as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/vault.centos.org\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
