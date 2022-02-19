@@ -718,8 +718,6 @@ public final class NetUtil {
         int ipv6Separators = 0;
         int ipv4Separators = 0;
         int tmp;
-        // maybe useless
-        boolean needsShift = false;
         for (; i < ipLength; ++i) {
             final char c = ip.charAt(i);
             switch (c) {
@@ -748,8 +746,6 @@ public final class NetUtil {
                         return null;
                     }
                     ++ipv6Separators;
-                    // maybe useless
-                    needsShift = ipv6Separators == 2 && value == 0;
                     compressBegin = currentIndex;
                     compressLength = bytes.length - compressBegin - 2;
                     ++i;
@@ -784,8 +780,7 @@ public final class NetUtil {
                 // The following bit shifting is to restructure the bytes to be left (most significant) to
                 // right (least significant) while also accounting for each IPv4 digit is base 10.
                 begin = (value & 0xf) * 100 + ((value >> 4) & 0xf) * 10 + ((value >> 8) & 0xf);
-                // My IDE says it's always false
-                if (/*begin < 0 ||*/begin > 255) {
+                if (begin > 255) {
                     return null;
                 }
                 bytes[currentIndex++] = (byte) begin;
@@ -818,16 +813,10 @@ public final class NetUtil {
                     currentIndex >= bytes.length) {
                 return null;
             }
-            if (ipv6Separators == 0) {
-                // maybe useless
-                compressLength = 12;
-            } else if (ipv6Separators >= IPV6_MIN_SEPARATORS &&
+            if (!(ipv6Separators == 0 || ipv6Separators >= IPV6_MIN_SEPARATORS &&
                            (!isCompressed && (ipv6Separators == 6 && ip.charAt(0) != ':') ||
                             isCompressed && (ipv6Separators < IPV6_MAX_SEPARATORS &&
-                                             (ip.charAt(0) != ':' || compressBegin <= 2)))) {
-                // maybe useless
-                compressLength -= 2;
-            } else {
+                                             (ip.charAt(0) != ':' || compressBegin <= 2))))) {
                 return null;
             }
             value <<= (IPV4_MAX_CHAR_BETWEEN_SEPARATOR - (i - begin)) << 2;
@@ -836,8 +825,7 @@ public final class NetUtil {
             // The following bit shifting is to restructure the bytes to be left (most significant) to
             // right (least significant) while also accounting for each IPv4 digit is base 10.
             begin = (value & 0xf) * 100 + ((value >> 4) & 0xf) * 10 + ((value >> 8) & 0xf);
-            // My IDE says it's always false
-            if (/*begin < 0 || */begin > 255) {
+            if (begin > 255) {
                 return null;
             }
             bytes[currentIndex++] = (byte) begin;
@@ -866,7 +854,6 @@ public final class NetUtil {
             bytes[currentIndex++] = (byte) ((((value >> 8) & 0xf) << 4) | ((value >> 12) & 0xf));
         }
 
-        // here's the potential optimization
         if (currentIndex < bytes.length) {
             int toBeCopiedLength = currentIndex - compressBegin;
             int targetIndex = bytes.length - (currentIndex - compressBegin);
