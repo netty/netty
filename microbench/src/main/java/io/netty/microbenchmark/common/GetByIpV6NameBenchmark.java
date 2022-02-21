@@ -46,8 +46,8 @@ public class GetByIpV6NameBenchmark extends AbstractMicrobenchmark {
     private String ip;
 
     @Benchmark
-    public void getNameOld() {
-        GetByNameHolder.getIPv6ByNameOld(ip, true);
+    public byte[] getNameOld() {
+        return GetByNameHolder.getIPv6ByNameOld(ip, true);
     }
 
     @Benchmark
