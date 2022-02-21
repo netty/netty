@@ -196,8 +196,9 @@ public final class HttpUtil {
      * Get an {@code int} representation of {@link #getContentLength(HttpMessage, long)}.
      *
      * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header or its value is not
-     *         a number. Not to exceed the boundaries of integer.
+     *         not have the {@code "Content-Length"} header.
+     *
+     * @throws NumberFormatException if the {@code "Content-Length"} header does not parse as an int
      */
     public static int getContentLength(HttpMessage message, int defaultValue) {
         return (int) Math.min(Integer.MAX_VALUE, getContentLength(message, (long) defaultValue));
