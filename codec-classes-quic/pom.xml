@@ -19,11 +19,11 @@
   <parent>
     <groupId>io.netty.incubator</groupId>
     <artifactId>netty-incubator-codec-parent-quic</artifactId>
-    <version>0.0.26.Final-SNAPSHOT</version>
+    <version>0.0.26.Final</version>
   </parent>
 
   <artifactId>netty-incubator-codec-classes-quic</artifactId>
-  <version>0.0.26.Final-SNAPSHOT</version>
+  <version>0.0.26.Final</version>
   <name>Netty/Incubator/Codec/Classes/Quic</name>
   <packaging>jar</packaging>
 
