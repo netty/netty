@@ -16,7 +16,6 @@
 package io.netty.microbenchmark.common;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -66,7 +65,6 @@ final class GetByNameHolder {
     private static final int IPV6_MAX_SEPARATORS = 8;
     private static final int IPV4_MAX_CHAR_BETWEEN_SEPARATOR = 3;
     private static final int IPV4_SEPARATORS = 3;
-
 
     public static byte[] getIPv6ByNameNew(CharSequence ip, boolean ipv4Mapped) {
         final byte[] bytes = new byte[IPV6_BYTE_COUNT];
