@@ -706,7 +706,8 @@ public final class NetUtil {
      * </ul>
      * @return byte array representation of the {@code ip} or {@code null} if not a valid IP address.
      */
-    private static byte[] getIPv6ByName(CharSequence ip, boolean ipv4Mapped) {
+     // visible for test
+    static byte[] getIPv6ByName(CharSequence ip, boolean ipv4Mapped) {
         final byte[] bytes = new byte[IPV6_BYTE_COUNT];
         final int ipLength = ip.length();
         int compressBegin = 0;
