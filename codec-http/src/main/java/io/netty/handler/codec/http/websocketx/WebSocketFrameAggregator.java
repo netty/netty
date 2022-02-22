@@ -69,12 +69,12 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected boolean isContentLengthInvalid(WebSocketFrame start, int maxContentLength) {
+    protected boolean isContentLengthInvalid(WebSocketFrame start, long maxContentLength) {
         return false;
     }
 
     @Override
-    protected Object newContinueResponse(WebSocketFrame start, int maxContentLength, ChannelPipeline pipeline) {
+    protected Object newContinueResponse(WebSocketFrame start, long maxContentLength, ChannelPipeline pipeline) {
         return null;
     }
 

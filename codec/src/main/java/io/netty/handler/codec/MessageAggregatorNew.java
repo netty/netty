@@ -45,7 +45,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A extends AutoCloseable>
         extends MessageToMessageDecoder<I> {
-    private final int maxContentLength;
+    private final long maxContentLength;
     private A currentMessage;
     private boolean handlingOversizedMessage;
 
@@ -62,18 +62,18 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      *        If the length of the aggregated content exceeds this value,
      *        {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
      */
-    protected MessageAggregatorNew(int maxContentLength) {
+    protected MessageAggregatorNew(long maxContentLength) {
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;
     }
 
-    protected MessageAggregatorNew(int maxContentLength, Class<? extends I> inboundMessageType) {
+    protected MessageAggregatorNew(long maxContentLength, Class<? extends I> inboundMessageType) {
         super(inboundMessageType);
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;
     }
 
-    private static void validateMaxContentLength(int maxContentLength) {
+    private static void validateMaxContentLength(long maxContentLength) {
         checkPositiveOrZero(maxContentLength, "maxContentLength");
     }
 
@@ -147,7 +147,7 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
     /**
      * Returns the maximum allowed length of the aggregated message in bytes.
      */
-    public final int maxContentLength() {
+    public final long maxContentLength() {
         return maxContentLength;
     }
 
@@ -268,7 +268,7 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      * @return {@code true} if the message {@code start}'s content length is known, and if it greater than
      * {@code maxContentLength}. {@code false} otherwise.
      */
-    protected abstract boolean isContentLengthInvalid(S start, int maxContentLength) throws Exception;
+    protected abstract boolean isContentLengthInvalid(S start, long maxContentLength) throws Exception;
 
     /**
      * Returns the 'continue response' for the specified start message if necessary. For example, this method is
@@ -276,15 +276,15 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      *
      * @return the 'continue response', or {@code null} if there's no message to send
      */
-    protected abstract Object newContinueResponse(S start, int maxContentLength, ChannelPipeline pipeline)
+    protected abstract Object newContinueResponse(S start, long maxContentLength, ChannelPipeline pipeline)
             throws Exception;
 
     /**
      * Determine if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written.
-     * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
+     * {@link #newContinueResponse(Object, long, ChannelPipeline)} is written.
+     * @param msg The return value from {@link #newContinueResponse(Object, long, ChannelPipeline)}.
      * @return {@code true} if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written. {@code false} otherwise.
+     * {@link #newContinueResponse(Object, long, ChannelPipeline)} is written. {@code false} otherwise.
      */
     protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
 
@@ -293,7 +293,7 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      * Messages will stop being ignored the next time {@link #tryContentMessage(Object)} returns a {@code non null}
      * value.
      *
-     * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
+     * @param msg The return value from {@link #newContinueResponse(Object, long, ChannelPipeline)}.
      * @return {@code true} if all objects for the current request/response should be ignored or not.
      * {@code false} otherwise.
      */

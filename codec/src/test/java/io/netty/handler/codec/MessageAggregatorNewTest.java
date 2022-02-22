@@ -84,12 +84,12 @@ public class MessageAggregatorNewTest {
         }
 
         @Override
-        protected boolean isContentLengthInvalid(Buffer start, int maxContentLength) {
+        protected boolean isContentLengthInvalid(Buffer start, long maxContentLength) {
             return start.readableBytes() > maxContentLength;
         }
 
         @Override
-        protected Object newContinueResponse(Buffer start, int maxContentLength, ChannelPipeline pipeline) {
+        protected Object newContinueResponse(Buffer start, long maxContentLength, ChannelPipeline pipeline) {
             return null;
         }
 
