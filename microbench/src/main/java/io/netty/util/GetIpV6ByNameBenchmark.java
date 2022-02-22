@@ -54,8 +54,7 @@ public class GetIpV6ByNameBenchmark extends AbstractMicrobenchmark {
     }
 }
 /*
-* this is the original implementation
-* I only changed line 225 - 250, and removed some unused statements.
+* this is the original implementation, intact
 * */
 final class GetByNameHolder {
     private GetByNameHolder() {
