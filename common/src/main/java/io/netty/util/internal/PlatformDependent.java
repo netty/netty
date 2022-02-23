@@ -89,7 +89,7 @@ public final class PlatformDependent {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
-    private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+    private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
@@ -1147,7 +1147,16 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static long maxDirectMemory0() {
+    /**
+     * Compute an estimate of the maximum amount of direct memory available to this JVM.
+     * <p>
+     * The computation is not cached, so you probably want to use {@link #maxDirectMemory()} instead.
+     * <p>
+     * This will produce debug log output when called.
+     *
+     * @return The estimated max direct memory, in bytes.
+     */
+    public static long estimateMaxDirectMemory() {
         long maxDirectMemory = 0;
 
         ClassLoader systemClassLoader = null;
