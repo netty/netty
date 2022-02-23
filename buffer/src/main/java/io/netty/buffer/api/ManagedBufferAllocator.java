@@ -19,7 +19,6 @@ import io.netty.buffer.api.internal.Statics;
 
 import java.util.function.Supplier;
 
-import static io.netty.buffer.api.internal.Statics.NO_OP_DROP;
 import static io.netty.buffer.api.internal.Statics.allocatorClosedException;
 import static io.netty.buffer.api.internal.Statics.standardDrop;
 
@@ -66,24 +65,6 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     @Override
     public void close() {
         closed = true;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-        Statics.assertValidBufferSize(size);
-        var buf = manager.allocateShared(this, size, NO_OP_DROP, allocationType);
-        return new UntetheredMemory() {
-            @Override
-            public <Memory> Memory memory() {
-                return (Memory) manager.unwrapRecoverableMemory(buf);
-            }
-
-            @Override
-            public <BufferType extends Buffer> Drop<BufferType> drop() {
-                return (Drop<BufferType>) standardDrop(manager);
-            }
-        };
     }
 
     @Override

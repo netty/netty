@@ -25,6 +25,7 @@ import io.netty.buffer.api.internal.Statics;
 import io.netty.buffer.api.internal.WrappingAllocation;
 
 import java.nio.ByteBuffer;
+import java.util.function.Function;
 
 import static io.netty.buffer.api.internal.Statics.bbslice;
 import static io.netty.buffer.api.internal.Statics.convert;
@@ -39,7 +40,8 @@ import static io.netty.buffer.api.internal.Statics.convert;
  */
 public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
+    public Buffer allocateShared(AllocatorControl allocatorControl, long size,
+                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         final ByteBuffer buffer;
@@ -52,7 +54,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return createBuffer(buffer, allocatorControl, drop);
+        return createBuffer(buffer, allocatorControl, adaptor.apply(drop()));
     }
 
     @Override
@@ -61,8 +63,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
         return buf.newConstChild();
     }
 
-    @Override
-    public Drop<Buffer> drop() {
+    private static Drop<Buffer> drop() {
         return Statics.NO_OP_DROP;
     }
 

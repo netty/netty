@@ -18,8 +18,8 @@ package io.netty.buffer.api.adaptor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.api.AllocationType;
 import io.netty.buffer.api.AllocatorControl;
-import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.BufferClosedException;
@@ -30,6 +30,7 @@ import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.Owned;
 import io.netty.buffer.api.ReadableComponent;
 import io.netty.buffer.api.ReadableComponentProcessor;
+import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.WritableComponent;
 import io.netty.buffer.api.WritableComponentProcessor;
 import io.netty.buffer.api.internal.ResourceSupport;
@@ -44,6 +45,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.function.Supplier;
 
 import static io.netty.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty.buffer.api.internal.Statics.bufferIsReadOnly;
@@ -394,16 +396,21 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             // The ensureWritable call is not guaranteed to work, in which case we'll have to re-allocate ourselves.
             int newSize = readableBytes() + writableBytes() + growBy;
             Statics.assertValidBufferSize(newSize);
-            UntetheredMemory mem = control.allocateUntethered(this, newSize);
-            ByteBuf buf = mem.memory();
-            Drop<ByteBufBuffer> drop = mem.drop();
-            buf.setBytes(0, delegate, 0, delegate.capacity());
-            buf.writerIndex(delegate.writerIndex());
-            buf.readerIndex(delegate.readerIndex());
+            ByteBufBuffer buffer = (ByteBufBuffer) control.getAllocator().allocate(newSize);
+
+            // Copy contents
+            copyInto(0, buffer, 0, capacity());
+
+            // Release the old memory ad install the new:
+            Drop<ByteBufBuffer> drop = buffer.unsafeGetDrop();
+            int roff = readerOffset();
+            int woff = writerOffset();
             unsafeGetDrop().drop(this);
-            delegate = buf;
+            delegate = buffer.delegate;
             unsafeSetDrop(drop);
             drop.attach(this);
+            writerOffset(woff);
+            readerOffset(roff);
         }
         return this;
     }
@@ -1267,7 +1274,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
     }
 
-    private static final class ByteBufAllocatorControl implements AllocatorControl {
+    private static final class ByteBufAllocatorControl implements AllocatorControl, BufferAllocator {
         private final boolean direct;
         private final ByteBufAllocator allocator;
 
@@ -1277,29 +1284,33 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
 
         @Override
-        public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-            return new UntetheredMemory() {
-                @SuppressWarnings("unchecked")
-                @Override
-                public <Memory> Memory memory() {
-                    if (direct) {
-                        return (Memory) allocator.directBuffer(size, size);
-                    }
-                    return (Memory) allocator.heapBuffer(size, size);
-                }
-
-                @Override
-                public <BufferType extends Buffer> Drop<BufferType> drop() {
-                    return convert(ByteBufDrop.INSTANCE);
-                }
-            };
+        public BufferAllocator getAllocator() {
+            return this;
         }
 
         @Override
-        public BufferAllocator getAllocator() {
-            ByteBufMemoryManager manager = new ByteBufMemoryManager();
-            return MemoryManager.using(
-                    manager, () -> direct ? BufferAllocator.offHeapUnpooled() : BufferAllocator.onHeapUnpooled());
+        public boolean isPooling() {
+            return false;
+        }
+
+        @Override
+        public AllocationType getAllocationType() {
+            return direct ? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
+        }
+
+        @Override
+        public Buffer allocate(int size) {
+            return wrap(direct ? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size));
+        }
+
+        @Override
+        public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+            byte[] data = bytes.clone();
+            return () -> wrap(Unpooled.wrappedBuffer(data));
+        }
+
+        @Override
+        public void close() {
         }
     }
 

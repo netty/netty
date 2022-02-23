@@ -119,11 +119,6 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
 
     private static final class NoOpAllocatorControl implements AllocatorControl {
         @Override
-        public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public BufferAllocator getAllocator() {
             throw new UnsupportedOperationException();
         }

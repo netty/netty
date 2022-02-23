@@ -366,14 +366,13 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
         Statics.assertValidBufferSize(newSize);
-        var untethered = control.allocateUntethered(this, (int) newSize);
-        ByteBuffer buffer = untethered.memory();
+        NioBuffer buffer = (NioBuffer) control.getAllocator().allocate((int) newSize);
 
         // Copy contents.
         copyInto(0, buffer, 0, capacity());
 
         // Release the old memory and install the new:
-        Drop<NioBuffer> drop = untethered.drop();
+        Drop<NioBuffer> drop = buffer.unsafeGetDrop();
         disconnectDrop(drop);
         attachNewBuffer(buffer, drop);
         return this;
@@ -389,10 +388,10 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
         this.woff = woff;
     }
 
-    private void attachNewBuffer(ByteBuffer buffer, Drop<NioBuffer> drop) {
-        base = buffer;
-        rmem = buffer;
-        wmem = buffer;
+    private void attachNewBuffer(NioBuffer buffer, Drop<NioBuffer> drop) {
+        base = buffer.base;
+        rmem = buffer.rmem;
+        wmem = buffer.wmem;
         drop.attach(this);
     }
 

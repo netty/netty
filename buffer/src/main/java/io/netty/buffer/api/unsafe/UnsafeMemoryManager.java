@@ -26,6 +26,7 @@ import io.netty.buffer.api.internal.WrappingAllocation;
 import io.netty.util.internal.PlatformDependent;
 
 import java.lang.ref.Cleaner;
+import java.util.function.Function;
 
 import static io.netty.buffer.api.internal.Statics.convert;
 
@@ -50,7 +51,8 @@ public final class UnsafeMemoryManager implements MemoryManager {
     }
 
     @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
+    public Buffer allocateShared(AllocatorControl control, long size,
+                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
                                  AllocationType allocationType) {
         final Object base;
         final long address;
@@ -75,7 +77,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return createBuffer(memory, size32, allocatorControl, drop);
+        return createBuffer(memory, size32, control, adaptor.apply(drop()));
     }
 
     @Override
@@ -84,8 +86,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
         return buf.newConstChild();
     }
 
-    @Override
-    public Drop<Buffer> drop() {
+    private static Drop<Buffer> drop() {
         // We cannot reliably drop unsafe memory. We have to rely on the cleaner to do that.
         return Statics.NO_OP_DROP;
     }

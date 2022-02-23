@@ -438,21 +438,20 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
         Statics.assertValidBufferSize(newSize);
-        var untethered = control.allocateUntethered(this, (int) newSize);
-        UnsafeMemory memory = untethered.memory();
+        UnsafeBuffer buffer = (UnsafeBuffer) control.getAllocator().allocate((int) newSize);
 
         // Copy contents.
         try {
-            PlatformDependent.copyMemory(base, address, memory.base, memory.address, rsize);
+            copyInto(0, buffer, 0, capacity());
         } finally {
-            Reference.reachabilityFence(this.memory);
             Reference.reachabilityFence(memory);
+            Reference.reachabilityFence(buffer.memory);
         }
 
         // Release the old memory, and install the new memory:
-        Drop<UnsafeBuffer> drop = untethered.drop();
+        Drop<UnsafeBuffer> drop = buffer.unsafeGetDrop();
         disconnectDrop(drop);
-        attachNewMemory(memory, drop);
+        attachNewMemory(buffer.memory, drop);
         return this;
     }
 

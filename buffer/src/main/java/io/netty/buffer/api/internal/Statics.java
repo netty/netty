@@ -32,6 +32,7 @@ import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Function;
 
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -88,8 +89,8 @@ public interface Statics {
         return CleanerDrop.wrap(ArcDrop.wrap(drop), manager);
     }
 
-    static Drop<Buffer> standardDrop(MemoryManager manager) {
-        return standardDropWrap(manager.drop(), manager);
+    static Function<Drop<Buffer>, Drop<Buffer>> standardDrop(MemoryManager manager) {
+        return drop -> standardDropWrap(drop, manager);
     }
 
     static VarHandle findVarHandle(Lookup lookup, Class<?> recv, String name, Class<?> type) {

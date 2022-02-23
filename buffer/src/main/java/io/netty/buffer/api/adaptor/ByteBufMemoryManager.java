@@ -26,6 +26,8 @@ import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.StandardAllocationTypes;
 import io.netty.buffer.api.internal.WrappingAllocation;
 
+import java.util.function.Function;
+
 import static io.netty.buffer.api.internal.Statics.convert;
 
 /**
@@ -42,24 +44,25 @@ public final class ByteBufMemoryManager implements MemoryManager {
     private final UnpooledByteBufAllocator unpooledDirectAllocator = new UnpooledByteBufAllocator(true, true, true);
 
     @Override
-    public Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
+    public Buffer allocateShared(AllocatorControl control, long size,
+                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             ByteBuf byteBuf = unpooledDirectAllocator.directBuffer(capacity, capacity);
             byteBuf.setZero(0, capacity);
-            return ByteBufBuffer.wrap(byteBuf, allocatorControl, convert(drop));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
         }
         if (allocationType == StandardAllocationTypes.ON_HEAP) {
             ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[capacity]);
             byteBuf.setIndex(0, 0);
-            return ByteBufBuffer.wrap(byteBuf, allocatorControl, convert(drop));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
         }
         if (allocationType instanceof WrappingAllocation) {
             byte[] array = ((WrappingAllocation) allocationType).getArray();
             ByteBuf byteBuf = Unpooled.wrappedBuffer(array);
             byteBuf.setIndex(0, 0);
-            return ByteBufBuffer.wrap(byteBuf, allocatorControl, convert(drop));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
         }
         throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
     }
@@ -70,8 +73,7 @@ public final class ByteBufMemoryManager implements MemoryManager {
         return buf.newConstChild();
     }
 
-    @Override
-    public Drop<Buffer> drop() {
+    private static Drop<Buffer> drop() {
         return convert(ByteBufBuffer.ByteBufDrop.INSTANCE);
     }
 

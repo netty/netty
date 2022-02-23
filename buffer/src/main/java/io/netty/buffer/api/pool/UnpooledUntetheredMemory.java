@@ -16,24 +16,25 @@
 package io.netty.buffer.api.pool;
 
 import io.netty.buffer.api.AllocationType;
-import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
+import io.netty.buffer.api.internal.DropCaptor;
 
 import static io.netty.buffer.api.internal.Statics.standardDrop;
 
 @SuppressWarnings("unchecked")
-class UnpooledUntetheredMemory implements AllocatorControl.UntetheredMemory {
+class UnpooledUntetheredMemory implements UntetheredMemory {
     private final MemoryManager manager;
     private final Buffer buffer;
+    private final DropCaptor<Buffer> dropCaptor;
 
     UnpooledUntetheredMemory(PooledBufferAllocator allocator, MemoryManager manager,
                              AllocationType allocationType, int size) {
         this.manager = manager;
-        PooledAllocatorControl allocatorControl = new PooledAllocatorControl();
-        allocatorControl.parent = allocator;
-        buffer = manager.allocateShared(allocatorControl, size, manager.drop(), allocationType);
+        PooledAllocatorControl allocatorControl = new PooledAllocatorControl(allocator);
+        dropCaptor = new DropCaptor<>();
+        buffer = manager.allocateShared(allocatorControl, size, dropCaptor, allocationType);
     }
 
     @Override
@@ -43,6 +44,6 @@ class UnpooledUntetheredMemory implements AllocatorControl.UntetheredMemory {
 
     @Override
     public <BufferType extends Buffer> Drop<BufferType> drop() {
-        return (Drop<BufferType>) standardDrop(manager);
+        return (Drop<BufferType>) standardDrop(manager).apply(dropCaptor.drop);
     }
 }

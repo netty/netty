@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader.Provider;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -141,7 +142,7 @@ public interface MemoryManager {
         MemoryManager manager = instance();
         ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
         WrappingAllocation allocationType = new WrappingAllocation(array);
-        Buffer buffer = manager.allocateShared(allocator, array.length, ArcDrop.wrap(manager.drop()), allocationType);
+        Buffer buffer = manager.allocateShared(allocator, array.length, ArcDrop::wrap, allocationType);
         buffer.skipWritable(array.length);
         return buffer.makeReadOnly();
     }
@@ -159,7 +160,7 @@ public interface MemoryManager {
      * @return A {@link Buffer} instance with the given configuration.
      * @throws IllegalArgumentException For unknown {@link AllocationType}s.
      */
-    Buffer allocateShared(AllocatorControl allocatorControl, long size, Drop<Buffer> drop,
+    Buffer allocateShared(AllocatorControl allocatorControl, long size, Function<Drop<Buffer>, Drop<Buffer>> drop,
                           AllocationType allocationType);
 
     /**
@@ -172,18 +173,11 @@ public interface MemoryManager {
      *
      * @param readOnlyConstParent The read-only parent buffer for which a const buffer should be created. The parent
      *                            buffer is allocated in the usual way, with
-     *                            {@link #allocateShared(AllocatorControl, long, Drop, AllocationType)},
+     *                            {@link #allocateShared(AllocatorControl, long, Function, AllocationType)},
      *                            initialised with contents, and then made {@linkplain Buffer#makeReadOnly() read-only}.
      * @return A const buffer with the same size, contents, and read-only state of the given parent buffer.
      */
     Buffer allocateConstChild(Buffer readOnlyConstParent);
-
-    /**
-     * The buffer implementation-specific {@link Drop} implementation that will release the underlying memory.
-     *
-     * @return A new drop instance.
-     */
-    Drop<Buffer> drop();
 
     /**
      * Create an object that represents the internal memory of the given buffer.
