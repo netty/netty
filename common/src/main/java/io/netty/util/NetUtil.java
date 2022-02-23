@@ -36,6 +36,7 @@ import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 
 import static io.netty.util.AsciiString.indexOf;
 
@@ -705,7 +706,8 @@ public final class NetUtil {
      * </ul>
      * @return byte array representation of the {@code ip} or {@code null} if not a valid IP address.
      */
-    private static byte[] getIPv6ByName(CharSequence ip, boolean ipv4Mapped) {
+     // visible for test
+    static byte[] getIPv6ByName(CharSequence ip, boolean ipv4Mapped) {
         final byte[] bytes = new byte[IPV6_BYTE_COUNT];
         final int ipLength = ip.length();
         int compressBegin = 0;
@@ -717,7 +719,6 @@ public final class NetUtil {
         int ipv6Separators = 0;
         int ipv4Separators = 0;
         int tmp;
-        boolean needsShift = false;
         for (; i < ipLength; ++i) {
             final char c = ip.charAt(i);
             switch (c) {
@@ -746,7 +747,6 @@ public final class NetUtil {
                         return null;
                     }
                     ++ipv6Separators;
-                    needsShift = ipv6Separators == 2 && value == 0;
                     compressBegin = currentIndex;
                     compressLength = bytes.length - compressBegin - 2;
                     ++i;
@@ -781,7 +781,7 @@ public final class NetUtil {
                 // The following bit shifting is to restructure the bytes to be left (most significant) to
                 // right (least significant) while also accounting for each IPv4 digit is base 10.
                 begin = (value & 0xf) * 100 + ((value >> 4) & 0xf) * 10 + ((value >> 8) & 0xf);
-                if (begin < 0 || begin > 255) {
+                if (begin > 255) {
                     return null;
                 }
                 bytes[currentIndex++] = (byte) begin;
@@ -814,14 +814,10 @@ public final class NetUtil {
                     currentIndex >= bytes.length) {
                 return null;
             }
-            if (ipv6Separators == 0) {
-                compressLength = 12;
-            } else if (ipv6Separators >= IPV6_MIN_SEPARATORS &&
+            if (!(ipv6Separators == 0 || ipv6Separators >= IPV6_MIN_SEPARATORS &&
                            (!isCompressed && (ipv6Separators == 6 && ip.charAt(0) != ':') ||
                             isCompressed && (ipv6Separators < IPV6_MAX_SEPARATORS &&
-                                             (ip.charAt(0) != ':' || compressBegin <= 2)))) {
-                compressLength -= 2;
-            } else {
+                                             (ip.charAt(0) != ':' || compressBegin <= 2))))) {
                 return null;
             }
             value <<= (IPV4_MAX_CHAR_BETWEEN_SEPARATOR - (i - begin)) << 2;
@@ -830,7 +826,7 @@ public final class NetUtil {
             // The following bit shifting is to restructure the bytes to be left (most significant) to
             // right (least significant) while also accounting for each IPv4 digit is base 10.
             begin = (value & 0xf) * 100 + ((value >> 4) & 0xf) * 10 + ((value >> 8) & 0xf);
-            if (begin < 0 || begin > 255) {
+            if (begin > 255) {
                 return null;
             }
             bytes[currentIndex++] = (byte) begin;
@@ -859,31 +855,12 @@ public final class NetUtil {
             bytes[currentIndex++] = (byte) ((((value >> 8) & 0xf) << 4) | ((value >> 12) & 0xf));
         }
 
-        i = currentIndex + compressLength;
-        if (needsShift || i >= bytes.length) {
-            // Right shift array
-            if (i >= bytes.length) {
-                ++compressBegin;
-            }
-            for (i = currentIndex; i < bytes.length; ++i) {
-                for (begin = bytes.length - 1; begin >= compressBegin; --begin) {
-                    bytes[begin] = bytes[begin - 1];
-                }
-                bytes[begin] = 0;
-                ++compressBegin;
-            }
-        } else {
-            // Selectively move elements
-            for (i = 0; i < compressLength; ++i) {
-                begin = i + compressBegin;
-                currentIndex = begin + compressLength;
-                if (currentIndex < bytes.length) {
-                    bytes[currentIndex] = bytes[begin];
-                    bytes[begin] = 0;
-                } else {
-                    break;
-                }
-            }
+        if (currentIndex < bytes.length) {
+            int toBeCopiedLength = currentIndex - compressBegin;
+            int targetIndex = bytes.length - toBeCopiedLength;
+            System.arraycopy(bytes, compressBegin, bytes, targetIndex, toBeCopiedLength);
+            // targetIndex is also the `toIndex` to fill 0
+            Arrays.fill(bytes, compressBegin, targetIndex, (byte) 0);
         }
 
         if (ipv4Separators > 0) {
