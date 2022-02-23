@@ -857,9 +857,10 @@ public final class NetUtil {
 
         if (currentIndex < bytes.length) {
             int toBeCopiedLength = currentIndex - compressBegin;
-            int targetIndex = bytes.length - (currentIndex - compressBegin);
+            int targetIndex = bytes.length - toBeCopiedLength;
             System.arraycopy(bytes, compressBegin, bytes, targetIndex, toBeCopiedLength);
-            Arrays.fill(bytes, compressBegin, compressBegin + (bytes.length - currentIndex), (byte) 0);
+            // targetIndex is also the `toIndex` to fill 0
+            Arrays.fill(bytes, compressBegin, targetIndex, (byte) 0);
         }
 
         if (ipv4Separators > 0) {
