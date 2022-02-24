@@ -44,6 +44,6 @@ class UnpooledUntetheredMemory implements UntetheredMemory {
 
     @Override
     public <BufferType extends Buffer> Drop<BufferType> drop() {
-        return (Drop<BufferType>) standardDrop(manager).apply(dropCaptor.drop);
+        return (Drop<BufferType>) standardDrop(manager).apply(dropCaptor.getDrop());
     }
 }

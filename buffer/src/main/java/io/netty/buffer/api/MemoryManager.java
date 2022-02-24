@@ -154,13 +154,16 @@ public interface MemoryManager {
      * @param allocatorControl Call-back interface for controlling the {@linkplain BufferAllocator allocator} that
      *                        requested the allocation of this buffer.
      * @param size The size of the buffer to allocate. This size is assumed to be valid for the implementation.
-     * @param drop The {@link Drop} instance to use when the buffer is {@linkplain Resource#close() closed}.
+     * @param dropDecorator A function to decorate the memory managers {@link Drop} instance.
+     *                     The {@link Drop} instance returned by this function will be used when the buffer is
+     *                     {@linkplain Resource#close() closed}.
      * @param allocationType The type of allocation to perform.
      *                      Typically, one of the {@linkplain StandardAllocationTypes}.
      * @return A {@link Buffer} instance with the given configuration.
      * @throws IllegalArgumentException For unknown {@link AllocationType}s.
      */
-    Buffer allocateShared(AllocatorControl allocatorControl, long size, Function<Drop<Buffer>, Drop<Buffer>> drop,
+    Buffer allocateShared(AllocatorControl allocatorControl, long size,
+                          Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                           AllocationType allocationType);
 
     /**

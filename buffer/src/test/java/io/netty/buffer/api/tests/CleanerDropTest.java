@@ -122,9 +122,9 @@ public class CleanerDropTest {
 
         @Override
         public Buffer allocateShared(AllocatorControl allocatorControl, long size,
-                                     Function<Drop<Buffer>, Drop<Buffer>> adaptor,
+                                     Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                                      AllocationType allocationType) {
-            return manager.allocateShared(allocatorControl, size, adaptor, allocationType);
+            return manager.allocateShared(allocatorControl, size, dropDecorator, allocationType);
         }
 
         @Override

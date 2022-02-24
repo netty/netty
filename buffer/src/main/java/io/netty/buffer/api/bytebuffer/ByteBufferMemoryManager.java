@@ -41,7 +41,7 @@ import static io.netty.buffer.api.internal.Statics.convert;
 public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public Buffer allocateShared(AllocatorControl allocatorControl, long size,
-                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
+                                 Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         final ByteBuffer buffer;
@@ -54,7 +54,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return createBuffer(buffer, allocatorControl, adaptor.apply(drop()));
+        return createBuffer(buffer, allocatorControl, dropDecorator.apply(drop()));
     }
 
     @Override

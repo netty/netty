@@ -194,7 +194,7 @@ final class PoolChunk implements PoolChunkMetric {
         DropCaptor<Buffer> dropCaptor = new DropCaptor<>();
         base = manager.allocateShared(CONTROL, chunkSize, drop ->
             dropCaptor.capture(ArcDrop.wrap(CleanerDrop.wrap(drop, manager))), arena.allocationType);
-        baseDrop = dropCaptor.drop;
+        baseDrop = dropCaptor.getDrop();
         memory = manager.unwrapRecoverableMemory(base);
         baseDrop.attach(base);
         this.pageSize = pageSize;

@@ -52,7 +52,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
 
     @Override
     public Buffer allocateShared(AllocatorControl control, long size,
-                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
+                                 Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                                  AllocationType allocationType) {
         final Object base;
         final long address;
@@ -77,7 +77,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return createBuffer(memory, size32, control, adaptor.apply(drop()));
+        return createBuffer(memory, size32, control, dropDecorator.apply(drop()));
     }
 
     @Override

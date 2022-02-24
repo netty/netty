@@ -24,8 +24,8 @@ import java.util.function.Function;
  *
  * @param <T> The type argument to {@link Drop}.
  */
-public class DropCaptor<T> implements Function<Drop<T>, Drop<T>> {
-    public Drop<T> drop;
+public final class DropCaptor<T> implements Function<Drop<T>, Drop<T>> {
+    private Drop<T> drop;
 
     public Drop<T> capture(Drop<T> drop) {
         this.drop = drop;
@@ -35,5 +35,9 @@ public class DropCaptor<T> implements Function<Drop<T>, Drop<T>> {
     @Override
     public Drop<T> apply(Drop<T> drop) {
         return capture(drop);
+    }
+
+    public Drop<T> getDrop() {
+        return drop;
     }
 }

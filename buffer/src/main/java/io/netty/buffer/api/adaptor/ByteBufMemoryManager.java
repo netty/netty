@@ -45,24 +45,24 @@ public final class ByteBufMemoryManager implements MemoryManager {
 
     @Override
     public Buffer allocateShared(AllocatorControl control, long size,
-                                 Function<Drop<Buffer>, Drop<Buffer>> adaptor,
+                                 Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             ByteBuf byteBuf = unpooledDirectAllocator.directBuffer(capacity, capacity);
             byteBuf.setZero(0, capacity);
-            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(dropDecorator.apply(drop())));
         }
         if (allocationType == StandardAllocationTypes.ON_HEAP) {
             ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[capacity]);
             byteBuf.setIndex(0, 0);
-            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(dropDecorator.apply(drop())));
         }
         if (allocationType instanceof WrappingAllocation) {
             byte[] array = ((WrappingAllocation) allocationType).getArray();
             ByteBuf byteBuf = Unpooled.wrappedBuffer(array);
             byteBuf.setIndex(0, 0);
-            return ByteBufBuffer.wrap(byteBuf, control, convert(adaptor.apply(drop())));
+            return ByteBufBuffer.wrap(byteBuf, control, convert(dropDecorator.apply(drop())));
         }
         throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
     }
