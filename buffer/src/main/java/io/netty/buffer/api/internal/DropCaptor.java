@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,20 +13,31 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.api.pool;
+package io.netty.buffer.api.internal;
 
-import io.netty.buffer.api.AllocatorControl;
-import io.netty.buffer.api.BufferAllocator;
+import io.netty.buffer.api.Drop;
 
-class PooledAllocatorControl implements AllocatorControl {
-    private final PooledBufferAllocator parent;
+import java.util.function.Function;
 
-    PooledAllocatorControl(PooledBufferAllocator parent) {
-        this.parent = parent;
+/**
+ * Utility class to capture or hold on to a drop instance.
+ *
+ * @param <T> The type argument to {@link Drop}.
+ */
+public final class DropCaptor<T> implements Function<Drop<T>, Drop<T>> {
+    private Drop<T> drop;
+
+    public Drop<T> capture(Drop<T> drop) {
+        this.drop = drop;
+        return drop;
     }
 
     @Override
-    public BufferAllocator getAllocator() {
-        return parent;
+    public Drop<T> apply(Drop<T> drop) {
+        return capture(drop);
+    }
+
+    public Drop<T> getDrop() {
+        return drop;
     }
 }

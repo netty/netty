@@ -15,7 +15,6 @@
  */
 package io.netty.buffer.api.pool;
 
-import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.pool.PoolArena.SizeClass;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
@@ -135,23 +134,23 @@ final class PoolThreadCache {
     /**
      * Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
-    UntetheredMemory allocateSmall(PooledAllocatorControl control, int size, int sizeIdx) {
-        return allocate(cacheForSmall(sizeIdx), control, size);
+    UntetheredMemory allocateSmall(int size, int sizeIdx) {
+        return allocate(cacheForSmall(sizeIdx), size);
     }
 
     /**
      * Try to allocate a normal buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
-    UntetheredMemory allocateNormal(PoolArena area, PooledAllocatorControl control, int size, int sizeIdx) {
-        return allocate(cacheForNormal(area, sizeIdx), control, size);
+    UntetheredMemory allocateNormal(PoolArena area, int size, int sizeIdx) {
+        return allocate(cacheForNormal(area, sizeIdx), size);
     }
 
-    private UntetheredMemory allocate(MemoryRegionCache cache, PooledAllocatorControl control, int size) {
+    private UntetheredMemory allocate(MemoryRegionCache cache, int size) {
         if (cache == null) {
             // no cache found so just return false here
             return null;
         }
-        UntetheredMemory allocated = cache.allocate(size, this, control);
+        UntetheredMemory allocated = cache.allocate(size, this);
         if (++allocations >= freeSweepAllocationThreshold) {
             allocations = 0;
             trim();
@@ -279,9 +278,8 @@ final class PoolThreadCache {
         }
 
         @Override
-        protected UntetheredMemory allocBuf(PoolChunk chunk, long handle, int size, PoolThreadCache threadCache,
-                                  PooledAllocatorControl control) {
-            return chunk.allocateBufferWithSubpage(handle, size, threadCache, control);
+        protected UntetheredMemory allocBuf(PoolChunk chunk, long handle, int size, PoolThreadCache threadCache) {
+            return chunk.allocateBufferWithSubpage(handle, size, threadCache);
         }
     }
 
@@ -294,9 +292,8 @@ final class PoolThreadCache {
         }
 
         @Override
-        protected UntetheredMemory allocBuf(PoolChunk chunk, long handle, int size, PoolThreadCache threadCache,
-                                  PooledAllocatorControl control) {
-            return chunk.allocateBuffer(handle, size, threadCache, control);
+        protected UntetheredMemory allocBuf(PoolChunk chunk, long handle, int size, PoolThreadCache threadCache) {
+            return chunk.allocateBuffer(handle, size, threadCache);
         }
     }
 
@@ -330,7 +327,7 @@ final class PoolThreadCache {
          * Allocate a new {@link UntetheredMemory} using the provided chunk and handle with the capacity restrictions.
          */
         protected abstract UntetheredMemory allocBuf(
-                PoolChunk chunk, long handle, int size, PoolThreadCache threadCache, PooledAllocatorControl control);
+                PoolChunk chunk, long handle, int size, PoolThreadCache threadCache);
 
         /**
          * Add to cache if not already full.
@@ -349,12 +346,12 @@ final class PoolThreadCache {
         /**
          * Allocate something out of the cache if possible and remove the entry from the cache.
          */
-        public final UntetheredMemory allocate(int size, PoolThreadCache threadCache, PooledAllocatorControl control) {
+        public final UntetheredMemory allocate(int size, PoolThreadCache threadCache) {
             Entry entry = queue.poll();
             if (entry == null) {
                 return null;
             }
-            UntetheredMemory buffer = allocBuf(entry.chunk, entry.handle, size, threadCache, control);
+            UntetheredMemory buffer = allocBuf(entry.chunk, entry.handle, size, threadCache);
             entry.recycle();
 
             // allocations are not thread-safe which is fine as this is only called from the same thread all time.

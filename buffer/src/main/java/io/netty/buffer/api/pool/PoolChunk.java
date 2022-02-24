@@ -17,12 +17,12 @@ package io.netty.buffer.api.pool;
 
 import io.netty.buffer.api.AllocatorControl;
 import io.netty.buffer.api.BufferAllocator;
-import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.Drop;
 import io.netty.buffer.api.MemoryManager;
 import io.netty.buffer.api.internal.ArcDrop;
 import io.netty.buffer.api.internal.CleanerDrop;
+import io.netty.buffer.api.internal.DropCaptor;
 import io.netty.util.internal.LongLongHashMap;
 import io.netty.util.internal.LongPriorityQueue;
 
@@ -146,11 +146,6 @@ final class PoolChunk implements PoolChunkMetric {
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
     private static final AllocatorControl CONTROL = new AllocatorControl() {
         @Override
-        public UntetheredMemory allocateUntethered(Buffer originator, int size) {
-            throw new AssertionError("PoolChunk base allocations should never need to resize.");
-        }
-
-        @Override
         public BufferAllocator getAllocator() {
             throw new AssertionError("PoolChunk base allocations should never need to access their allocator.");
         }
@@ -196,8 +191,10 @@ final class PoolChunk implements PoolChunkMetric {
         MemoryManager manager = arena.manager;
         // Unlike a standard wrapping, the CleanerDrop needs to be inside the ArcDrop here, because it can only drop
         // once. And we need the ArcDrop for the reference counting by every buffer allocated from this chunk.
-        baseDrop = ArcDrop.wrap(CleanerDrop.wrap(manager.drop(), manager));
-        base = manager.allocateShared(CONTROL, chunkSize, baseDrop, arena.allocationType);
+        DropCaptor<Buffer> dropCaptor = new DropCaptor<>();
+        base = manager.allocateShared(CONTROL, chunkSize, drop ->
+            dropCaptor.capture(ArcDrop.wrap(CleanerDrop.wrap(drop, manager))), arena.allocationType);
+        baseDrop = dropCaptor.getDrop();
         memory = manager.unwrapRecoverableMemory(base);
         baseDrop.attach(base);
         this.pageSize = pageSize;
@@ -289,7 +286,7 @@ final class PoolChunk implements PoolChunkMetric {
         return 100 - freePercentage;
     }
 
-    UntetheredMemory allocate(int size, int sizeIdx, PoolThreadCache cache, PooledAllocatorControl control) {
+    UntetheredMemory allocate(int size, int sizeIdx, PoolThreadCache cache) {
         final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
@@ -308,7 +305,7 @@ final class PoolChunk implements PoolChunkMetric {
             }
         }
 
-        return allocateBuffer(handle, size, cache, control);
+        return allocateBuffer(handle, size, cache);
     }
 
     private long allocateRun(int runSize) {
@@ -540,22 +537,19 @@ final class PoolChunk implements PoolChunkMetric {
                | (long) inUsed << IS_USED_SHIFT;
     }
 
-    UntetheredMemory allocateBuffer(long handle, int size, PoolThreadCache threadCache,
-                                    PooledAllocatorControl control) {
+    UntetheredMemory allocateBuffer(long handle, int size, PoolThreadCache threadCache) {
         if (isSubpage(handle)) {
-            return allocateBufferWithSubpage(handle, size, threadCache, control);
+            return allocateBufferWithSubpage(handle, size, threadCache);
         } else {
             int offset = runOffset(handle) << pageShifts;
             int maxLength = runSize(pageShifts, handle);
             PoolThreadCache poolThreadCache = arena.parent.threadCache();
-            initAllocatorControl(control, poolThreadCache, handle, maxLength);
             return new UntetheredChunkAllocation(
                     memory, this, poolThreadCache, handle, maxLength, offset, size);
         }
     }
 
-    UntetheredMemory allocateBufferWithSubpage(long handle, int size, PoolThreadCache threadCache,
-                                                                PooledAllocatorControl control) {
+    UntetheredMemory allocateBufferWithSubpage(long handle, int size, PoolThreadCache threadCache) {
         int runOffset = runOffset(handle);
         int bitmapIdx = bitmapIdx(handle);
 
@@ -564,7 +558,6 @@ final class PoolChunk implements PoolChunkMetric {
         assert size <= s.elemSize : size + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
-        initAllocatorControl(control, threadCache, handle, s.elemSize);
         return new UntetheredChunkAllocation(memory, this, threadCache, handle, s.elemSize, offset, size);
     }
 
@@ -600,15 +593,6 @@ final class PoolChunk implements PoolChunkMetric {
             var pooledDrop = new PooledDrop(chunk, threadCache, handle, maxLength);
             return (Drop<BufferType>) standardDropWrap(pooledDrop, chunk.arena.manager);
         }
-    }
-
-    private void initAllocatorControl(PooledAllocatorControl control, PoolThreadCache threadCache, long handle,
-                                      int normSize) {
-        control.arena = arena;
-        control.chunk = this;
-        control.threadCache = threadCache;
-        control.handle = handle;
-        control.normSize = normSize;
     }
 
     @Override
@@ -661,10 +645,6 @@ final class PoolChunk implements PoolChunkMetric {
 
     static boolean isUsed(long handle) {
         return (handle >> IS_USED_SHIFT & 1) == 1L;
-    }
-
-    static boolean isRun(long handle) {
-        return !isSubpage(handle);
     }
 
     static boolean isSubpage(long handle) {

@@ -29,39 +29,9 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public interface AllocatorControl {
     /**
-     * Allocates a buffer that is not tethered to any particular {@link Buffer} object,
-     * and return the recoverable memory object from it.
-     * <p>
-     * This allows a buffer to implement {@link Buffer#ensureWritable(int)} by having new memory allocated to it,
-     * without that memory being attached to some other lifetime.
-     *
-     * @param originator The buffer that originated the request for an untethered memory allocated.
-     * @param size The size of the requested memory allocation, in bytes.
-     * @return A {@link UntetheredMemory} object that is the requested allocation.
-     */
-    UntetheredMemory allocateUntethered(Buffer originator, int size);
-
-    /**
      * Get the {@link BufferAllocator} instance that is the source of this allocator control.
      *
      * @return The {@link BufferAllocator} controlled by this {@link AllocatorControl}.
      */
     BufferAllocator getAllocator();
-
-    /**
-     * Memory that isn't attached to any particular buffer.
-     */
-    interface UntetheredMemory {
-        /**
-         * Produces the recoverable memory object associated with this piece of untethered memory.
-         * @implNote This method should only be called once, since it might be expensive.
-         */
-        <Memory> Memory memory();
-
-        /**
-         * Produces the drop instance associated with this piece of untethered memory.
-         * @implNote This method should only be called once, since it might be expensive, or interact with Cleaners.
-         */
-        <BufferType extends Buffer> Drop<BufferType> drop();
-    }
 }

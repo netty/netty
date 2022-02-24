@@ -16,7 +16,6 @@
 package io.netty.buffer.api.pool;
 
 import io.netty.buffer.api.AllocationType;
-import io.netty.buffer.api.AllocatorControl.UntetheredMemory;
 import io.netty.buffer.api.Buffer;
 import io.netty.buffer.api.BufferAllocator;
 import io.netty.buffer.api.Drop;
@@ -311,9 +310,8 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             throw allocatorClosedException();
         }
         Statics.assertValidBufferSize(size);
-        PooledAllocatorControl control = new PooledAllocatorControl();
-        control.parent = this;
-        UntetheredMemory memory = allocate(control, size);
+        PooledAllocatorControl control = new PooledAllocatorControl(this);
+        UntetheredMemory memory = allocateUntethered(size);
         Drop<Buffer> drop = memory.drop();
         Buffer buffer = manager.recoverMemory(control, memory.memory(), drop);
         drop.attach(buffer);
@@ -325,20 +323,19 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         if (closed) {
             throw allocatorClosedException();
         }
-        PooledAllocatorControl control = new PooledAllocatorControl();
-        control.parent = this;
+        PooledAllocatorControl control = new PooledAllocatorControl(this);
         Buffer constantBuffer = manager.allocateShared(
-                control, bytes.length, ArcDrop.wrap(manager.drop()), allocationType);
+                control, bytes.length, ArcDrop::wrap, allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
 
-    UntetheredMemory allocate(PooledAllocatorControl control, int size) {
+    UntetheredMemory allocateUntethered(int size) {
         PoolThreadCache cache = threadCache.get();
         PoolArena arena = cache.getArena();
 
         if (arena != null) {
-            return arena.allocate(control, cache, size);
+            return arena.allocate(cache, size);
         }
         return allocateUnpooled(size);
     }

@@ -29,6 +29,7 @@ import java.util.ServiceConfigurationError;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -121,19 +122,14 @@ public class CleanerDropTest {
 
         @Override
         public Buffer allocateShared(AllocatorControl allocatorControl, long size,
-                                     Drop<Buffer> drop,
+                                     Function<Drop<Buffer>, Drop<Buffer>> dropDecorator,
                                      AllocationType allocationType) {
-            return manager.allocateShared(allocatorControl, size, drop, allocationType);
+            return manager.allocateShared(allocatorControl, size, dropDecorator, allocationType);
         }
 
         @Override
         public Buffer allocateConstChild(Buffer readOnlyConstParent) {
             return manager.allocateConstChild(readOnlyConstParent);
-        }
-
-        @Override
-        public Drop<Buffer> drop() {
-            return manager.drop();
         }
 
         @Override
