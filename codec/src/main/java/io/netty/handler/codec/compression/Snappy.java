@@ -143,7 +143,7 @@ public final class Snappy {
      * @param in The input buffer to read 4 bytes from
      * @param index The index to read at
      * @param shift The shift value, for ensuring that the resulting value is
-     *     withing the range of our hash table size
+     *     within the range of our hash table size
      * @return A 32-bit hash of 4 bytes located at index
      */
     private static int hash(ByteBuf in, int index, int shift) {
