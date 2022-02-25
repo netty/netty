@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -79,8 +79,8 @@
         <configuration>
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
-          <mainClass>io.netty.testsuite.svm.client.DnsNativeClient</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-build-time=io.netty -H:ReflectionConfigurationResources=reflection-config.json</buildArgs>
+          <mainClass>io.netty5.testsuite.svm.client.DnsNativeClient</mainClass>
+          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-build-time=io.netty5 -H:ReflectionConfigurationResources=reflection-config.json</buildArgs>
         </configuration>
       </plugin>
       <plugin>

@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -27,7 +27,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty.transport.epoll</javaModuleName>
+    <javaModuleName>io.netty5.transport.epoll</javaModuleName>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
@@ -181,7 +181,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
+                      <Fragment-Host>io.netty5.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -197,7 +197,7 @@
   
       <dependencies>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>io.netty5</groupId>
           <artifactId>netty-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
@@ -332,7 +332,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_aarch_64.so; osname=Linux; processor=aarch_64,*</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
+                      <Fragment-Host>io.netty5.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -348,7 +348,7 @@
 
       <dependencies>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>io.netty5</groupId>
           <artifactId>netty-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
@@ -364,44 +364,44 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-testsuite</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-transport-native-unix-common-tests</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>

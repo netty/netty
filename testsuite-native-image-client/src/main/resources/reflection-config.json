@@ -1,8 +1,8 @@
 [
     {
-      "name": "io.netty.channel.socket.nio.NioDatagramChannel",
+      "name": "io.netty5.channel.socket.nio.NioDatagramChannel",
       "methods": [
-        { "name": "<init>", "parameterTypes": [ "io.netty.channel.EventLoop"] }
+        { "name": "<init>", "parameterTypes": [ "io.netty5.channel.EventLoop"] }
       ]
     }
 ]

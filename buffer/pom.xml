@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -29,7 +29,7 @@
   <name>Netty/Buffer</name>
 
   <properties>
-    <javaModuleName>io.netty.buffer</javaModuleName>
+    <javaModuleName>io.netty5.buffer</javaModuleName>
   </properties>
 
   <dependencies>

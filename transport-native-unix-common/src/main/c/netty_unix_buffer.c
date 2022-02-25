@@ -18,7 +18,7 @@
 #include "netty_unix_buffer.h"
 #include "netty_jni_util.h"
 
-#define BUFFER_CLASSNAME "io/netty/channel/unix/Buffer"
+#define BUFFER_CLASSNAME "io/netty5/channel/unix/Buffer"
 
 // JNI Registered Methods Begin
 static jlong netty_unix_buffer_memoryAddress0(JNIEnv* env, jclass clazz, jobject buffer) {

@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -73,8 +73,8 @@
         <configuration>
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
-          <mainClass>io.netty.testsuite.svm.client.NativeClientWithNettyInitAtRuntime</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-run-time=io.netty.util.NetUtil</buildArgs>
+          <mainClass>io.netty5.testsuite.svm.client.NativeClientWithNettyInitAtRuntime</mainClass>
+          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-run-time=io.netty5.util.NetUtil</buildArgs>
         </configuration>
       </plugin>
       <plugin>

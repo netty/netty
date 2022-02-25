@@ -58,8 +58,8 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STATICALLY_CLASSNAME "io/netty/channel/epoll/NativeStaticallyReferencedJniMethods"
-#define NATIVE_CLASSNAME "io/netty/channel/epoll/Native"
+#define STATICALLY_CLASSNAME "io/netty5/channel/epoll/NativeStaticallyReferencedJniMethods"
+#define NATIVE_CLASSNAME "io/netty5/channel/epoll/Native"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
@@ -672,21 +672,21 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
     
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendmmsg0";
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvmmsg0";
     dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmmsg0;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;)I", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;)I", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IZL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvmsg0";
     dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmsg0;
@@ -743,7 +743,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     linuxsocketOnLoadCalled = 1;
 
     // Initialize this module
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket", nettyClassName, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket", nettyClassName, done);
     NETTY_JNI_UTIL_FIND_CLASS(env, nativeDatagramPacketCls, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 

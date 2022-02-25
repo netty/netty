@@ -1,0 +1,71 @@
+/*
+ * Copyright 2018 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty5.handler.ipfilter;
+
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.internal.SocketUtils;
+import org.junit.jupiter.api.Test;
+
+import java.net.SocketAddress;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class UniqueIpFilterTest {
+
+    @Test
+    public void testUniqueIpFilterHandler() throws Exception {
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        try {
+            for (int round = 0; round < 10000; round++) {
+                final UniqueIpFilter ipFilter = new UniqueIpFilter();
+                Future<EmbeddedChannel> future1 = newChannelAsync(barrier, executorService, ipFilter);
+                Future<EmbeddedChannel> future2 = newChannelAsync(barrier, executorService, ipFilter);
+                EmbeddedChannel ch1 = future1.get();
+                EmbeddedChannel ch2 = future2.get();
+                assertTrue(ch1.isActive() || ch2.isActive());
+                assertFalse(ch1.isActive() && ch2.isActive());
+
+                barrier.reset();
+                ch1.close().await();
+                ch2.close().await();
+            }
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    private static Future<EmbeddedChannel> newChannelAsync(final CyclicBarrier barrier,
+            ExecutorService executorService,
+            final ChannelHandler... handler) {
+        return executorService.submit(() -> {
+            barrier.await();
+            return new EmbeddedChannel(handler) {
+                @Override
+                protected SocketAddress remoteAddress0() {
+                    return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
+                }
+            };
+        });
+    }
+
+}

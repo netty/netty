@@ -1,0 +1,84 @@
+/*
+ * Copyright 2013 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty5.channel.socket.nio;
+
+import io.netty5.bootstrap.Bootstrap;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.group.DefaultChannelGroup;
+import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.GlobalEventExecutor;
+import org.junit.jupiter.api.Test;
+
+import java.net.InetSocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
+import java.nio.channels.NetworkChannel;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramChannel> {
+
+    /**
+     * Test try to reproduce issue #1335
+     */
+    @Test
+    public void testBindMultiple() throws Exception {
+        DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        try {
+            for (int i = 0; i < 100; i++) {
+                Bootstrap udpBootstrap = new Bootstrap();
+                udpBootstrap.group(group).channel(NioDatagramChannel.class)
+                        .option(ChannelOption.SO_BROADCAST, true)
+                        .handler(new ChannelHandler() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                // Discard
+                                ReferenceCountUtil.release(msg);
+                            }
+                        });
+                DatagramChannel datagramChannel = (DatagramChannel) udpBootstrap
+                        .bind(new InetSocketAddress(0)).get();
+                channelGroup.add(datagramChannel);
+            }
+            assertEquals(100, channelGroup.size());
+        } finally {
+            channelGroup.close().sync();
+            group.shutdownGracefully().sync();
+        }
+    }
+
+    @Override
+    protected NioDatagramChannel newNioChannel(EventLoopGroup group) {
+        return new NioDatagramChannel(group.next());
+    }
+
+    @Override
+    protected NetworkChannel jdkChannel(NioDatagramChannel channel) {
+        return channel.javaChannel();
+    }
+
+    @Override
+    protected SocketOption<?> newInvalidOption() {
+        return StandardSocketOptions.TCP_NODELAY;
+    }
+}

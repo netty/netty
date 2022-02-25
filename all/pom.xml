@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -37,7 +37,7 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>io.netty</groupId>
+        <groupId>io.netty5</groupId>
         <artifactId>netty-bom</artifactId>
         <version>${project.version}</version>
         <type>pom</type>

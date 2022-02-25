@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -27,7 +27,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty.resolver.dns.classes.macos</javaModuleName>
+    <javaModuleName>io.netty5.resolver.dns.classes.macos</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
@@ -39,17 +39,17 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-resolver-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>

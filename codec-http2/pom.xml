@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -29,7 +29,7 @@
   <name>Netty/Codec/HTTP2</name>
 
   <properties>
-    <javaModuleName>io.netty.codec.http2</javaModuleName>
+    <javaModuleName>io.netty5.codec.http2</javaModuleName>
     <!-- Needed for SSL tests as these use the SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>
@@ -84,7 +84,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>

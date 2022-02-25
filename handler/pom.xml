@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -27,7 +27,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty.handler</javaModuleName>
+    <javaModuleName>io.netty5.handler</javaModuleName>
   </properties>
 
   <name>Netty/Handler</name>
@@ -59,11 +59,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>netty-tcnative-classes</artifactId>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <optional>true</optional>

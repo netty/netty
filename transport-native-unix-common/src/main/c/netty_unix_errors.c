@@ -22,7 +22,7 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#define ERRORS_CLASSNAME "io/netty/channel/unix/ErrorsStaticallyReferencedJniMethods"
+#define ERRORS_CLASSNAME "io/netty5/channel/unix/ErrorsStaticallyReferencedJniMethods"
 
 static jclass oomErrorClass = NULL;
 static jclass runtimeExceptionClass = NULL;
@@ -229,7 +229,7 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, runtimeExceptionClass, "java/lang/RuntimeException", error);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/ChannelException", nettyClassName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/ChannelException", nettyClassName, error);
     NETTY_JNI_UTIL_LOAD_CLASS(env, channelExceptionClass, nettyClassName, error);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 

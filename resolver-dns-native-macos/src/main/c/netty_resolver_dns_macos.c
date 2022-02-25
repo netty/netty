@@ -30,7 +30,7 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STREAM_CLASSNAME "io/netty/resolver/dns/macos/MacOSDnsServerAddressStreamProvider"
+#define STREAM_CLASSNAME "io/netty5/resolver/dns/macos/MacOSDnsServerAddressStreamProvider"
 
 static jclass dnsResolverClass = NULL;
 static jclass byteArrayClass = NULL;
@@ -140,7 +140,7 @@ error:
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * 1);
 
-    char* dynamicTypeName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver;");
+    char* dynamicTypeName = netty_jni_util_prepend(packagePrefix, "io/netty5/resolver/dns/macos/DnsResolver;");
     JNINativeMethod* dynamicMethod = &dynamicMethods[0];
     dynamicMethod->name = "resolvers";
     dynamicMethod->signature = netty_jni_util_prepend("()[L", dynamicTypeName);
@@ -182,7 +182,7 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* 
     }
     providerRegistered = 1;
 
-    nettyClassName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver");
+    nettyClassName = netty_jni_util_prepend(packagePrefix, "io/netty5/resolver/dns/macos/DnsResolver");
     NETTY_JNI_UTIL_LOAD_CLASS(env, dnsResolverClass, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 

@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -94,7 +94,7 @@
         <configuration>
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
-          <mainClass>io.netty.testsuite.svm.HttpNativeServer</mainClass>
+          <mainClass>io.netty5.testsuite.svm.HttpNativeServer</mainClass>
           <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath</buildArgs>
         </configuration>
       </plugin>

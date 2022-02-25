@@ -19,7 +19,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -73,14 +73,9 @@
       <artifactId>netty-codec-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-codec-smtp</artifactId>
-      <version>${project.version}</version>
-    </dependency>
 
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
     </dependency>

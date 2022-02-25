@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -78,7 +78,7 @@
         <artifactId>autobahntestsuite-maven-plugin</artifactId>
         <version>0.1.5</version>
         <configuration>
-          <mainClass>io.netty.testsuite.autobahn.AutobahnServer</mainClass>
+          <mainClass>io.netty5.testsuite.autobahn.AutobahnServer</mainClass>
           <cases>
             <case>*</case>
           </cases>
