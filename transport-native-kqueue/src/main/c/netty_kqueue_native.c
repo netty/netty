@@ -43,8 +43,8 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STATICALLY_CLASSNAME "io/netty/channel/kqueue/KQueueStaticallyReferencedJniMethods"
-#define NATIVE_CLASSNAME "io/netty/channel/kqueue/Native"
+#define STATICALLY_CLASSNAME "io/netty5/channel/kqueue/KQueueStaticallyReferencedJniMethods"
+#define NATIVE_CLASSNAME "io/netty5/channel/kqueue/Native"
 
 // Currently only macOS supports EVFILT_SOCK, and it is currently only available in internal APIs.
 // To make compiling easier we redefine the values here if they are not present.

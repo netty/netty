@@ -32,7 +32,7 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#define SOCKET_CLASSNAME "io/netty/channel/unix/Socket"
+#define SOCKET_CLASSNAME "io/netty5/channel/unix/Socket"
 // Define SO_REUSEPORT if not found to fix build issues.
 // See https://github.com/netty/netty/issues/2558
 #ifndef SO_REUSEPORT
@@ -1128,28 +1128,28 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
 
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(ILjava/nio/ByteBuffer;II)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFrom";
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFrom;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IJII)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFromAddress";
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromAddress;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DomainDatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DomainDatagramSocketAddress;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(ILjava/nio/ByteBuffer;II)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFromDomainSocket";
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromDomainSocket;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DomainDatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DomainDatagramSocketAddress;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IJII)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFromAddressDomainSocket";
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromAddressDomainSocket;
@@ -1182,7 +1182,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         goto done;
     }
   
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress", nettyClassName, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DatagramSocketAddress", nettyClassName, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, datagramSocketAddressClass, nettyClassName, done);
 
     // Respect shading...
@@ -1191,7 +1191,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     netty_jni_util_free_dynamic_name(&nettyClassName);
     NETTY_JNI_UTIL_GET_METHOD(env, datagramSocketAddressClass, datagramSocketAddrMethodId, "<init>", parameters, done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DomainDatagramSocketAddress", nettyClassName, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/DomainDatagramSocketAddress", nettyClassName, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, domainDatagramSocketAddressClass, nettyClassName, done);
 
     char parameters1[1024] = {0};

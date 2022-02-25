@@ -24,7 +24,7 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 
-#define EVENT_ARRAY_CLASSNAME "io/netty/channel/kqueue/KQueueEventArray"
+#define EVENT_ARRAY_CLASSNAME "io/netty5/channel/kqueue/KQueueEventArray"
 
 static void netty_kqueue_eventarray_evSet(JNIEnv* env, jclass clzz, jlong keventAddress, jint ident, jshort filter, jshort flags, jint fflags) {
     EV_SET((struct kevent*) keventAddress, ident, filter, flags, fflags, 0, NULL);

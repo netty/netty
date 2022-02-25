@@ -34,23 +34,23 @@ Netty can be used in modular JDK9+ applications as a collection of automatic mod
 reverse-DNS style, and are derived from subproject names rather than root packages due to historical reasons. They
 are listed below:
 
- * `io.netty.all`
- * `io.netty.buffer`
- * `io.netty.codec`
- * `io.netty.codec.dns`
- * `io.netty.codec.http`
- * `io.netty.codec.http2`
- * `io.netty.codec.smtp`
- * `io.netty.codec.xml`
- * `io.netty.common`
- * `io.netty.handler`
- * `io.netty.handler.proxy`
- * `io.netty.resolver`
- * `io.netty.resolver.dns`
- * `io.netty.transport`
- * `io.netty.transport.epoll` (`native` omitted - reserved keyword in Java)
- * `io.netty.transport.kqueue` (`native` omitted - reserved keyword in Java)
- * `io.netty.transport.unix.common` (`native` omitted - reserved keyword in Java)
+ * `io.netty5.all`
+ * `io.netty5.buffer`
+ * `io.netty5.codec`
+ * `io.netty5.codec.dns`
+ * `io.netty5.codec.http`
+ * `io.netty5.codec.http2`
+ * `io.netty5.codec.smtp`
+ * `io.netty5.codec.xml`
+ * `io.netty5.common`
+ * `io.netty5.handler`
+ * `io.netty5.handler.proxy`
+ * `io.netty5.resolver`
+ * `io.netty5.resolver.dns`
+ * `io.netty5.transport`
+ * `io.netty5.transport.epoll` (`native` omitted - reserved keyword in Java)
+ * `io.netty5.transport.kqueue` (`native` omitted - reserved keyword in Java)
+ * `io.netty5.transport.unix.common` (`native` omitted - reserved keyword in Java)
 
 
 

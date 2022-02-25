@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -89,7 +89,7 @@
         <artifactId>h2spec-maven-plugin</artifactId>
         <version>0.6</version>
         <configuration>
-          <mainClass>io.netty.testsuite.http2.Http2Server</mainClass>
+          <mainClass>io.netty5.testsuite.http2.Http2Server</mainClass>
           <excludeSpecs>
             <excludeSpec>4.2 - Sends a dynamic table size update at the end of header block</excludeSpec>
             <excludeSpec>5.1 - idle: Sends a DATA frame</excludeSpec>

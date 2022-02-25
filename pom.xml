@@ -23,7 +23,7 @@
     <version>9</version>
   </parent>
 
-  <groupId>io.netty</groupId>
+  <groupId>io.netty5</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
   <version>5.0.0.Final-SNAPSHOT</version>
@@ -113,27 +113,27 @@
               <groups>
                 <group>
                   <title>Low-level data representation</title>
-                  <packages>io.netty.buffer*</packages>
+                  <packages>io.netty5.buffer*</packages>
                 </group>
                 <group>
                   <title>Central interface for all I/O operations</title>
-                  <packages>io.netty.channel*</packages>
+                  <packages>io.netty5.channel*</packages>
                 </group>
                 <group>
                   <title>Client &amp; Server bootstrapping utilities</title>
-                  <packages>io.netty.bootstrap*</packages>
+                  <packages>io.netty5.bootstrap*</packages>
                 </group>
                 <group>
                   <title>Reusable I/O event interceptors</title>
-                  <packages>io.netty.handler*</packages>
+                  <packages>io.netty5.handler*</packages>
                 </group>
                 <group>
                   <title>DNS / Host resolvers</title>
-                  <packages>io.netty.resolver*</packages>
+                  <packages>io.netty5.resolver*</packages>
                 </group>
                 <group>
                   <title>Utils</title>
-                  <packages>io.netty.util*</packages>
+                  <packages>io.netty5.util*</packages>
                 </group>
               </groups>
               <locale>en_US</locale>
@@ -331,7 +331,7 @@
     <profile>
       <id>unsafeBuffer</id>
       <properties>
-        <argLine.java9>-Dio.netty.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.buffer.api.MemoryManager=Unsafe</argLine.java9>
+        <argLine.java9>-Dio.netty5.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty5.buffer.api.MemoryManager=Unsafe</argLine.java9>
       </properties>
     </profile>
 
@@ -371,7 +371,7 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32 -Dio.netty.buffer.lifecycleTracingEnabled=true</argLine.leak>
+        <argLine.leak>-Dio.netty5.leakDetectionLevel=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
       </properties>
     </profile>
     <profile>
@@ -383,7 +383,7 @@
     <profile>
       <id>noUnsafe</id>
       <properties>
-        <argLine.noUnsafe>-Dio.netty.noUnsafe=true</argLine.noUnsafe>
+        <argLine.noUnsafe>-Dio.netty5.noUnsafe=true</argLine.noUnsafe>
       </properties>
     </profile>
     <profile>
@@ -469,7 +469,7 @@
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
-      -dsa -da -ea:io.netty...
+      -dsa -da -ea:io.netty5...
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
@@ -591,13 +591,13 @@
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-classes</artifactId>
         <version>${tcnative.version}</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>${tcnative.artifactId}</artifactId>
         <version>${tcnative.version}</version>
         <classifier>${tcnative.classifier}</classifier>
@@ -760,7 +760,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-build-common</artifactId>
         <version>${netty.build.version}</version>
         <scope>test</scope>
@@ -888,7 +888,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>netty-build-common</artifactId>
       <scope>test</scope>
     </dependency>
@@ -931,6 +931,9 @@
           </dependency>
         </dependencies>
         <configuration>
+          <oldArtifacts>
+            <artifact>io.netty:${project.artifactId}:RELEASE</artifact>
+          </oldArtifacts>
           <versionFormat>.*\.Final</versionFormat>
           <analysisConfiguration>
             <revapi.versions>
@@ -962,12 +965,12 @@
             <oldVersionPattern>\d+\.\d+\.\d+\.Final</oldVersionPattern>
             <ignoreMissingClassesByRegularExpressions>
               <!-- ignore everything which is not part of netty itself as the plugin can not handle optional dependencies -->
-              <ignoreMissingClassesByRegularExpression>^(?!io\.netty\.).*</ignoreMissingClassesByRegularExpression>
+              <ignoreMissingClassesByRegularExpression>^(?!io\.netty5\.).*</ignoreMissingClassesByRegularExpression>
               <ignoreMissingClassesByRegularExpression>^io\.netty\.internal\.tcnative\..*</ignoreMissingClassesByRegularExpression>
             </ignoreMissingClassesByRegularExpressions>
             <excludes>
-              <exclude>@io.netty.util.internal.UnstableApi</exclude>
-              <exclude>io.netty.util.internal.shaded</exclude>
+              <exclude>@io.netty5.util.internal.UnstableApi</exclude>
+              <exclude>io.netty5.util.internal.shaded</exclude>
             </excludes>
           </parameter>
         </configuration>
@@ -1088,7 +1091,7 @@
             <version>8.29</version>
           </dependency>
           <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>io.netty</groupId>
             <artifactId>netty-build-common</artifactId>
             <version>${netty.build.version}</version>
           </dependency>
@@ -1165,7 +1168,7 @@
           <properties>
             <property>
               <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
+              <value>io.netty5.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
           <skipTests>${skipTests}</skipTests>
@@ -1652,7 +1655,7 @@
           <version>1.5</version>
           <configuration>
             <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+              <resourceBundle>io.netty5:netty-dev-tools:${project.version}</resourceBundle>
             </resourceBundles>
             <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
             <!-- don't include netty-dev-tools in artifacts -->

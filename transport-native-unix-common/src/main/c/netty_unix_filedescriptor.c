@@ -27,7 +27,7 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#define FILEDESCRIPTOR_CLASSNAME "io/netty/channel/unix/FileDescriptor"
+#define FILEDESCRIPTOR_CLASSNAME "io/netty5/channel/unix/FileDescriptor"
 
 static jmethodID posId = NULL;
 static jmethodID limitId = NULL;

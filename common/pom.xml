@@ -19,7 +19,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -30,7 +30,7 @@
   <name>Netty/Common</name>
 
   <properties>
-    <javaModuleName>io.netty.common</javaModuleName>
+    <javaModuleName>io.netty5.common</javaModuleName>
     <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
     <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
     <collection.src.dir>${project.build.directory}/generated-sources/collections/java</collection.src.dir>
@@ -85,7 +85,7 @@
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>io.netty5</groupId>
       <artifactId>netty-dev-tools</artifactId>
       <scope>test</scope>
       <optional>true</optional>
@@ -111,7 +111,7 @@
               <relocations>
                 <relocation>
                   <pattern>org.jctools.</pattern>
-                  <shadedPattern>io.netty.util.internal.shaded.org.jctools.</shadedPattern>
+                  <shadedPattern>io.netty5.util.internal.shaded.org.jctools.</shadedPattern>
                 </relocation>
               </relocations>
               <minimizeJar>true</minimizeJar>

@@ -18,7 +18,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
+    <groupId>io.netty5</groupId>
     <artifactId>netty-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
@@ -36,7 +36,7 @@
     <shadingPrefix>shaded</shadingPrefix>
     <shadingPrefix2>shaded2</shadingPrefix2>
     <skipShadingTestsuite>true</skipShadingTestsuite>
-    <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
+    <shadedPackagePrefix>io.netty5.</shadedPackagePrefix>
     <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
@@ -79,6 +79,11 @@
                   <pattern>${shadedPackagePrefix}</pattern>
                   <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
                 </relocation>
+                <relocation>
+                  <!-- For tcnative -->
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>${shadingPrefix}.io.netty</shadedPattern>
+                </relocation>
               </relocations>
               <finalName>shaded1</finalName>
             </configuration>
@@ -93,12 +98,18 @@
               <artifactSet>
                 <includes>
                   <include>${project.groupId}</include>
+                  <include>io.netty</include>
                 </includes>
               </artifactSet>
               <relocations>
                 <relocation>
                   <pattern>${shadedPackagePrefix}</pattern>
                   <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
+                </relocation>
+                <relocation>
+                  <!-- For tcnative -->
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>${shadingPrefix2}.io.netty</shadedPattern>
                 </relocation>
               </relocations>
               <finalName>shaded2</finalName>
@@ -243,7 +254,7 @@
           <scope>compile</scope>
         </dependency>
         <dependency>
-          <groupId>${project.groupId}</groupId>
+          <groupId>io.netty</groupId>
           <artifactId>${tcnative.artifactId}</artifactId>
           <version>${tcnative.version}</version>
           <classifier>${tcnative.classifier}</classifier>
@@ -286,7 +297,7 @@
           <scope>compile</scope>
         </dependency>
         <dependency>
-          <groupId>${project.groupId}</groupId>
+          <groupId>io.netty</groupId>
           <artifactId>${tcnative.artifactId}</artifactId>
           <version>${tcnative.version}</version>
           <classifier>${tcnative.classifier}</classifier>
@@ -329,7 +340,7 @@
           <scope>compile</scope>
         </dependency>
         <dependency>
-          <groupId>${project.groupId}</groupId>
+          <groupId>io.netty</groupId>
           <artifactId>${tcnative.artifactId}</artifactId>
           <version>${tcnative.version}</version>
           <classifier>${tcnative.classifier}</classifier>

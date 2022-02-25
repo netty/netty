@@ -35,7 +35,7 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
-#define LINUXSOCKET_CLASSNAME "io/netty/channel/epoll/LinuxSocket"
+#define LINUXSOCKET_CLASSNAME "io/netty5/channel/epoll/LinuxSocket"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
@@ -725,14 +725,14 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
   
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/PeerCredentials;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "getPeerCredentials";
     dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_getPeerCredentials;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendFile";
     dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_sendFile;
@@ -767,13 +767,13 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
         goto done;
     }
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/PeerCredentials", nettyClassName, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
     NETTY_JNI_UTIL_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/DefaultFileRegion", nettyClassName, done);
     NETTY_JNI_UTIL_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 

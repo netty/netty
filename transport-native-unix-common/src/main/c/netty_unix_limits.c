@@ -22,7 +22,7 @@
 #include "netty_unix_util.h"
 #include "netty_jni_util.h"
 
-#define LIMITS_CLASSNAME "io/netty/channel/unix/LimitsStaticallyReferencedJniMethods"
+#define LIMITS_CLASSNAME "io/netty5/channel/unix/LimitsStaticallyReferencedJniMethods"
 
 // Define IOV_MAX if not found to limit the iov size on writev calls
 // See https://github.com/netty/netty/issues/2647

@@ -1,0 +1,33 @@
+[
+    {
+      "name": "io.netty5.channel.socket.nio.NioServerSocketChannel",
+      "methods": [
+        { "name": "<init>", "parameterTypes": [ "io.netty5.channel.EventLoop", "io.netty5.channel.EventLoopGroup" ] }
+      ]
+    },
+    {
+      "name": "sun.nio.ch.SelectorImpl",
+      "fields": [
+        { "name": "selectedKeys",  "allowUnsafeAccess" : true},
+        { "name": "publicSelectedKeys",  "allowUnsafeAccess" : true}
+      ]
+    },
+    {
+        "name": "java.lang.management.ManagementFactory",
+        "methods": [
+            {
+                "name": "getRuntimeMXBean",
+                "parameterTypes": []
+            }
+        ]
+    },
+    {
+        "name": "java.lang.management.RuntimeMXBean",
+        "methods": [
+            {
+                "name": "getName",
+                "parameterTypes": []
+            }
+        ]
+    }
+]

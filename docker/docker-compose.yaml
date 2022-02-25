@@ -25,11 +25,11 @@ services:
 
   build-leak:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pleak clean install -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
 
   build:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
+    command: /bin/bash -cl "./mvnw -B -ntp clean install -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
 
   deploy:
     <<: *common
@@ -56,15 +56,15 @@ services:
 
   build-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
   build-leak-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
   build-unsafe-buffer:
     <<: *common
-    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
+    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
 
   shell:
     <<: *common

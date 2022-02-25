@@ -1,0 +1,179 @@
+/*
+ * Copyright 2015 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty5.channel.epoll;
+
+import io.github.artsok.RepeatedIfExceptionsTest;
+import io.netty5.bootstrap.Bootstrap;
+import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.opentest4j.TestAbortedException;
+
+import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.Map;
+import java.util.Random;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+public class EpollSocketChannelConfigTest {
+
+    private static EventLoopGroup group;
+    private static EpollSocketChannel ch;
+    private static Random rand;
+
+    @BeforeAll
+    public static void beforeClass() {
+        rand = new Random();
+        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+    }
+
+    @AfterAll
+    public static void afterClass() {
+        group.shutdownGracefully();
+    }
+
+    @BeforeEach
+    public void setup() throws Exception {
+        Bootstrap bootstrap = new Bootstrap();
+        ch = (EpollSocketChannel) bootstrap.group(group)
+                .channel(EpollSocketChannel.class)
+                .handler(new ChannelHandler() { })
+                .bind(new InetSocketAddress(0)).get();
+    }
+
+    @AfterEach
+    public void teardown() {
+        ch.close().syncUninterruptibly();
+    }
+
+    private static long randLong(long min, long max) {
+        return min + nextLong(max - min + 1);
+    }
+
+    private static long nextLong(long n) {
+        long bits, val;
+        do {
+           bits = rand.nextLong() << 1 >>> 1;
+           val = bits % n;
+        } while (bits - val + n - 1 < 0L);
+        return val;
+     }
+
+    @Test
+    public void testRandomTcpNotSentLowAt() {
+        final long expected = randLong(0, 0xFFFFFFFFL);
+        final long actual;
+        try {
+            ch.config().setTcpNotSentLowAt(expected);
+            actual = ch.config().getTcpNotSentLowAt();
+        } catch (RuntimeException e) {
+            throw new TestAbortedException("assumeNoException", e);
+        }
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testInvalidHighTcpNotSentLowAt() {
+        try {
+            final long value = 0xFFFFFFFFL + 1;
+            ch.config().setTcpNotSentLowAt(value);
+        } catch (IllegalArgumentException e) {
+            return;
+        } catch (RuntimeException e) {
+            throw new TestAbortedException("assumeNoException", e);
+        }
+        fail();
+    }
+
+    @Test
+    public void testInvalidLowTcpNotSentLowAt() {
+        try {
+            final long value = -1;
+            ch.config().setTcpNotSentLowAt(value);
+        } catch (IllegalArgumentException e) {
+            return;
+        } catch (RuntimeException e) {
+            throw new TestAbortedException("assumeNoException", e);
+        }
+        fail();
+    }
+
+    @Test
+    public void testTcpCork() {
+        ch.config().setTcpCork(false);
+        assertFalse(ch.config().isTcpCork());
+        ch.config().setTcpCork(true);
+        assertTrue(ch.config().isTcpCork());
+    }
+
+    @Test
+    public void testTcpQickAck() {
+        ch.config().setTcpQuickAck(false);
+        assertFalse(ch.config().isTcpQuickAck());
+        ch.config().setTcpQuickAck(true);
+        assertTrue(ch.config().isTcpQuickAck());
+    }
+
+    // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
+    // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
+    // want to see a ClosedChannelException for the test to pass.
+    @RepeatedIfExceptionsTest(repeats = 4)
+    public void testSetOptionWhenClosed() {
+        ch.close().syncUninterruptibly();
+        ChannelException e = assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.config().setSoLinger(0);
+            }
+        });
+        assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
+    }
+
+    // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
+    // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
+    // want to see a ClosedChannelException for the test to pass.
+    @RepeatedIfExceptionsTest(repeats = 4)
+    public void testGetOptionWhenClosed() {
+        ch.close().syncUninterruptibly();
+        ChannelException e = assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.config().getSoLinger();
+            }
+        });
+        assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
+    }
+
+    @Test
+    public void getGetOptions() {
+        Map<ChannelOption<?>, Object> map = ch.config().getOptions();
+        assertFalse(map.isEmpty());
+    }
+}
