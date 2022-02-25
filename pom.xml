@@ -70,7 +70,7 @@
     <skipTests>false</skipTests>
     <netty.version>4.1.74.Final</netty.version>
     <netty.build.version>30</netty.build.version>
-    <netty.quic.version>0.0.25.Final</netty.quic.version>
+    <netty.quic.version>0.0.26.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     <junit.version>5.8.2</junit.version>
     <release.gpg.keyname />
