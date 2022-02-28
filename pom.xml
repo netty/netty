@@ -932,9 +932,6 @@
         </dependencies>
         <configuration>
           <skip>true</skip> <!-- Skip this until we've released Netty 5.0.0.Final -->
-          <oldArtifacts>
-            <artifact>io.netty:${project.artifactId}:RELEASE</artifact>
-          </oldArtifacts>
           <versionFormat>.*\.Final</versionFormat>
           <analysisConfiguration>
             <revapi.versions>
