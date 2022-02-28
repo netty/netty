@@ -149,65 +149,66 @@ public final class NetUtil {
         // As a SecurityManager may prevent reading the somaxconn file we wrap this in a privileged block.
         //
         // See https://github.com/netty/netty/issues/3680
-        SOMAXCONN = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                // Determine the default somaxconn (server socket backlog) value of the platform.
-                // The known defaults:
-                // - Windows NT Server 4.0+: 200
-                // - Linux and Mac OS X: 128
-                int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
-                File file = new File("/proc/sys/net/core/somaxconn");
-                BufferedReader in = null;
-                try {
-                    // file.exists() may throw a SecurityException if a SecurityManager is used, so execute it in the
-                    // try / catch block.
-                    // See https://github.com/netty/netty/issues/4936
-                    if (file.exists()) {
-                        in = new BufferedReader(new FileReader(file));
-                        somaxconn = Integer.parseInt(in.readLine());
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("{}: {}", file, somaxconn);
-                        }
-                    } else {
-                        // Try to get from sysctl
-                        Integer tmp = null;
-                        if (SystemPropertyUtil.getBoolean("io.netty.net.somaxconn.trySysctl", false)) {
-                            tmp = sysctlGetInt("kern.ipc.somaxconn");
-                            if (tmp == null) {
-                                tmp = sysctlGetInt("kern.ipc.soacceptqueue");
-                                if (tmp != null) {
-                                    somaxconn = tmp;
-                                }
-                            } else {
-                                somaxconn = tmp;
-                            }
-                        }
-
-                        if (tmp == null) {
-                            logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file,
-                                         somaxconn);
-                        }
-                    }
-                } catch (Exception e) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}",
-                                file, somaxconn, e);
-                    }
-                } finally {
-                    if (in != null) {
-                        try {
-                            in.close();
-                        } catch (Exception e) {
-                            // Ignored.
-                        }
-                    }
-                }
-                return somaxconn;
-            }
-        });
+        SOMAXCONN = AccessController.doPrivileged(new SoMaxConnAction());
     }
 
+    private static final class SoMaxConnAction implements PrivilegedAction<Integer> {
+        @Override
+        public Integer run() {
+            // Determine the default somaxconn (server socket backlog) value of the platform.
+            // The known defaults:
+            // - Windows NT Server 4.0+: 200
+            // - Linux and Mac OS X: 128
+            int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
+            File file = new File("/proc/sys/net/core/somaxconn");
+            BufferedReader in = null;
+            try {
+                // file.exists() may throw a SecurityException if a SecurityManager is used, so execute it in the
+                // try / catch block.
+                // See https://github.com/netty/netty/issues/4936
+                if (file.exists()) {
+                    in = new BufferedReader(new FileReader(file));
+                    somaxconn = Integer.parseInt(in.readLine());
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("{}: {}", file, somaxconn);
+                    }
+                } else {
+                    // Try to get from sysctl
+                    Integer tmp = null;
+                    if (SystemPropertyUtil.getBoolean("io.netty.net.somaxconn.trySysctl", false)) {
+                        tmp = sysctlGetInt("kern.ipc.somaxconn");
+                        if (tmp == null) {
+                            tmp = sysctlGetInt("kern.ipc.soacceptqueue");
+                            if (tmp != null) {
+                                somaxconn = tmp;
+                            }
+                        } else {
+                            somaxconn = tmp;
+                        }
+                    }
+
+                    if (tmp == null) {
+                        logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file,
+                                somaxconn);
+                    }
+                }
+            } catch (Exception e) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}",
+                            file, somaxconn, e);
+                }
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (Exception e) {
+                        // Ignored.
+                    }
+                }
+            }
+            return somaxconn;
+        }
+    }
     /**
      * This will execute <a href ="https://www.freebsd.org/cgi/man.cgi?sysctl(8)">sysctl</a> with the {@code sysctlKey}
      * which is expected to return the numeric value for for {@code sysctlKey}.
