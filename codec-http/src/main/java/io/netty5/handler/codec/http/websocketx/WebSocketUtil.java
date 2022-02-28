@@ -27,21 +27,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 final class WebSocketUtil {
 
-    private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
-        @Override
-        protected MessageDigest initialValue() throws Exception {
-            try {
-                //Try to get a MessageDigest that uses MD5
-                //Suppress a warning about weak hash algorithm
-                //since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
-                return MessageDigest.getInstance("MD5"); // lgtm [java/weak-cryptographic-algorithm]
-            } catch (NoSuchAlgorithmException e) {
-                //This shouldn't happen! How old is the computer?
-                throw new InternalError("MD5 not supported on this platform - Outdated?");
-            }
-        }
-    };
-
     private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
@@ -56,17 +41,6 @@ final class WebSocketUtil {
             }
         }
     };
-
-    /**
-     * Performs a MD5 hash on the specified data
-     *
-     * @param data The data to hash
-     * @return The hashed data
-     */
-    static byte[] md5(byte[] data) {
-        // TODO(normanmaurer): Create md5 method that not need MessageDigest.
-        return digest(MD5, data);
-    }
 
     /**
      * Performs a SHA-1 hash on the specified data
