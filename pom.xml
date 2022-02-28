@@ -23,8 +23,8 @@
     <version>9</version>
   </parent>
 
-  <groupId>io.netty5</groupId>
-  <artifactId>netty-parent</artifactId>
+  <groupId>io.netty</groupId>
+  <artifactId>netty5-parent</artifactId>
   <packaging>pom</packaging>
   <version>5.0.0.Final-SNAPSHOT</version>
 
@@ -555,7 +555,7 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>io.netty</groupId>
+        <groupId>${project.groupId}</groupId>
         <artifactId>netty-jni-util</artifactId>
         <version>0.0.3.Final</version>
         <classifier>sources</classifier>
@@ -564,7 +564,7 @@
 
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>netty-dev-tools</artifactId>
+        <artifactId>netty5-dev-tools</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -591,13 +591,13 @@
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
       <dependency>
-        <groupId>io.netty</groupId>
+        <groupId>${project.groupId}</groupId>
         <artifactId>netty-tcnative-classes</artifactId>
         <version>${tcnative.version}</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
-        <groupId>io.netty</groupId>
+        <groupId>${project.groupId}</groupId>
         <artifactId>${tcnative.artifactId}</artifactId>
         <version>${tcnative.version}</version>
         <classifier>${tcnative.classifier}</classifier>
@@ -931,6 +931,7 @@
           </dependency>
         </dependencies>
         <configuration>
+          <skip>true</skip> <!-- Skip this until we've released Netty 5.0.0.Final -->
           <oldArtifacts>
             <artifact>io.netty:${project.artifactId}:RELEASE</artifact>
           </oldArtifacts>

@@ -17,11 +17,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
-  <artifactId>netty-transport-native-kqueue</artifactId>
+  <artifactId>netty5-transport-native-kqueue</artifactId>
 
   <name>Netty/Transport/Native/KQueue</name>
   <packaging>jar</packaging>
@@ -51,7 +51,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -125,8 +125,8 @@
       </build>
       <dependencies>
         <dependency>
-          <groupId>io.netty5</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <groupId>io.netty</groupId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -160,7 +160,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -232,8 +232,8 @@
       </build>
       <dependencies>
         <dependency>
-          <groupId>io.netty5</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <groupId>io.netty</groupId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -266,7 +266,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -336,8 +336,8 @@
       </build>
       <dependencies>
         <dependency>
-          <groupId>io.netty5</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <groupId>io.netty</groupId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -370,7 +370,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -440,8 +440,8 @@
       </build>
       <dependencies>
         <dependency>
-          <groupId>io.netty5</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <groupId>io.netty</groupId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -489,44 +489,44 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-common</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport-classes-kqueue</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-transport-classes-kqueue</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-testsuite</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport-native-unix-common-tests</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-testsuite</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty5-transport-native-unix-common-tests</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>

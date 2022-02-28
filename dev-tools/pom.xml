@@ -23,8 +23,8 @@
     <relativePath />
   </parent>
 
-  <groupId>io.netty5</groupId>
-  <artifactId>netty-dev-tools</artifactId>
+  <groupId>io.netty</groupId>
+  <artifactId>netty5-dev-tools</artifactId>
   <version>5.0.0.Final-SNAPSHOT</version>
 
   <name>Netty/Dev-Tools</name>

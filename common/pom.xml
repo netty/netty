@@ -19,12 +19,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-common</artifactId>
+  <artifactId>netty5-common</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Common</name>
@@ -85,8 +85,8 @@
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-dev-tools</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-dev-tools</artifactId>
       <scope>test</scope>
       <optional>true</optional>
     </dependency>

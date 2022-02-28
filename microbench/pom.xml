@@ -18,12 +18,12 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-microbench</artifactId>
+  <artifactId>netty5-microbench</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Microbench</name>
@@ -134,28 +134,28 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http2</artifactId>
+      <artifactId>netty5-codec-http2</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
+      <artifactId>netty5-transport-native-epoll</artifactId>
       <version>${project.version}</version>
       <classifier>${epoll.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-native-kqueue</artifactId>
+      <artifactId>netty5-transport-native-kqueue</artifactId>
       <version>${project.version}</version>
       <classifier>${kqueue.classifier}</classifier>
     </dependency>
@@ -196,7 +196,7 @@
       <version>0.5.1</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <optional>false</optional>
