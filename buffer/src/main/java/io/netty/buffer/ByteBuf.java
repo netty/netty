@@ -2404,7 +2404,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @return This {@code ByteBuf} instance.
      */
     @Override
-    public final ByteBuf asByteBuf() {
+    public ByteBuf asByteBuf() {
         return this;
     }
 
