@@ -134,6 +134,10 @@ class Hidden {
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.NetUil$SoMaxConnAction",
+                    "run");
+
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
