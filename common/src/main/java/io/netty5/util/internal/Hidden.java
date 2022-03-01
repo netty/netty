@@ -129,6 +129,10 @@ class Hidden {
                     "io.netty5.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.NetUil$SoMaxConnAction",
+                    "run");
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }

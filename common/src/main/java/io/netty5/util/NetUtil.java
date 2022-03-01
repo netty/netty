@@ -149,7 +149,12 @@ public final class NetUtil {
         // As a SecurityManager may prevent reading the somaxconn file we wrap this in a privileged block.
         //
         // See https://github.com/netty/netty/issues/3680
-        SOMAXCONN = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+        SOMAXCONN = AccessController.doPrivileged(new SoMaxConnAction());
+    }
+
+    private static final class SoMaxConnAction implements PrivilegedAction<Integer> {
+        @Override
+        public Integer run() {
             // Determine the default somaxconn (server socket backlog) value of the platform.
             // The known defaults:
             // - Windows NT Server 4.0+: 200
@@ -184,7 +189,7 @@ public final class NetUtil {
 
                     if (tmp == null) {
                         logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file,
-                                     somaxconn);
+                                somaxconn);
                     }
                 }
             } catch (Exception e) {
@@ -202,7 +207,7 @@ public final class NetUtil {
                 }
             }
             return somaxconn;
-        });
+        }
     }
 
     /**
