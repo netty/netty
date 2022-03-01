@@ -108,7 +108,7 @@ import java.util.Set;
  * {@link #format(String, Object, Object)} and
  * {@link #arrayFormat(String, Object[])} methods for more details.
  */
-final class MessageFormatter {
+public final class MessageFormatter {
     private static final String DELIM_STR = "{}";
     private static final char ESCAPE_CHAR = '\\';
 
