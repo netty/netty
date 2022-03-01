@@ -18,12 +18,12 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport</artifactId>
+  <artifactId>netty5-transport</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Transport</name>
@@ -35,17 +35,17 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-resolver</artifactId>
+      <artifactId>netty5-resolver</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

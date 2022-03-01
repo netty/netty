@@ -18,12 +18,12 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-testsuite</artifactId>
+  <artifactId>netty5-testsuite</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Testsuite</name>
@@ -31,31 +31,31 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <optional>true</optional>

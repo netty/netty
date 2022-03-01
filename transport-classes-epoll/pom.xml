@@ -17,11 +17,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
-  <artifactId>netty-transport-classes-epoll</artifactId>
+  <artifactId>netty5-transport-classes-epoll</artifactId>
 
   <name>Netty/Transport/Classes/Epoll</name>
   <packaging>jar</packaging>
@@ -32,23 +32,23 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-common</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty5</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty5-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>

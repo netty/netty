@@ -18,18 +18,18 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec-http2</artifactId>
+  <artifactId>netty5-codec-http2</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Codec/HTTP2</name>
 
   <properties>
-    <javaModuleName>io.netty5.codec.http2</javaModuleName>
+    <javaModuleName>io.netty.codec.http2</javaModuleName>
     <!-- Needed for SSL tests as these use the SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>
@@ -37,32 +37,32 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec</artifactId>
+      <artifactId>netty5-codec</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -84,7 +84,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>

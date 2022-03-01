@@ -19,12 +19,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.netty5</groupId>
-    <artifactId>netty-parent</artifactId>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-example</artifactId>
+  <artifactId>netty5-example</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Example</name>
@@ -35,47 +35,47 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec</artifactId>
+      <artifactId>netty5-codec</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http2</artifactId>
+      <artifactId>netty5-codec-http2</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-dns</artifactId>
+      <artifactId>netty5-codec-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
     </dependency>
