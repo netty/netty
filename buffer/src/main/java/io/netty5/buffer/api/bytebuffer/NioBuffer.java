@@ -530,6 +530,12 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     @Override
     public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
             throws E {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        if (readableBytes() == 0) {
+            return 0;
+        }
         checkRead(readerOffset(), Math.max(1, readableBytes()));
         return processor.process(initialIndex, this)? 1 : -1;
     }
@@ -537,6 +543,12 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     @Override
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        if (writableBytes() == 0) {
+            return 0;
+        }
         checkWrite(writerOffset(), Math.max(1, writableBytes()));
         return processor.process(initialIndex, this)? 1 : -1;
     }

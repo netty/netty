@@ -927,6 +927,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     @Override
     public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
             throws E {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        if (readableBytes() == 0) {
+            return 0;
+        }
         checkReadBounds(readerOffset(), Math.max(1, readableBytes()));
         int visited = 0;
         for (Buffer buf : bufs) {
@@ -952,6 +958,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     @Override
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        if (writableBytes() == 0) {
+            return 0;
+        }
         checkWriteBounds(writerOffset(), Math.max(1, writableBytes()));
         int visited = 0;
         for (Buffer buf : bufs) {
