@@ -647,10 +647,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
         }
-        if (readableBytes() == 0) {
+        int readableBytes = readableBytes();
+        if (readableBytes == 0) {
             return 0;
         }
-        checkRead(readerOffset(), Math.max(1, readableBytes()));
+        checkRead(readerOffset(), readableBytes);
         return processor.process(initialIndex, this)? 1 : -1;
     }
 
@@ -660,10 +661,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
         }
-        if (writableBytes() == 0) {
+        int writableBytes = writableBytes();
+        if (writableBytes == 0) {
             return 0;
         }
-        checkWrite(writerOffset(), Math.max(1, writableBytes()));
+        checkWrite(writerOffset(), writableBytes);
         return processor.process(initialIndex, this)? 1 : -1;
     }
 

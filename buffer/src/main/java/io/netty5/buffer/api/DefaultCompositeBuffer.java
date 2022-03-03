@@ -930,10 +930,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
         }
-        if (readableBytes() == 0) {
+        int readableBytes = readableBytes();
+        if (readableBytes == 0) {
             return 0;
         }
-        checkReadBounds(readerOffset(), Math.max(1, readableBytes()));
+        checkReadBounds(readerOffset(), readableBytes);
         int visited = 0;
         for (Buffer buf : bufs) {
             if (buf.readableBytes() > 0) {
@@ -961,10 +962,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
         }
-        if (writableBytes() == 0) {
+        int writableBytes = writableBytes();
+        if (writableBytes == 0) {
             return 0;
         }
-        checkWriteBounds(writerOffset(), Math.max(1, writableBytes()));
+        checkWriteBounds(writerOffset(), writableBytes);
         int visited = 0;
         for (Buffer buf : bufs) {
             if (buf.writableBytes() > 0) {
