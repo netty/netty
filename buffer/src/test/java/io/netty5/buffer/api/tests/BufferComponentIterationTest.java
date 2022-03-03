@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class BufferComponentIterationTest extends BufferTestSupport {
     @ParameterizedTest
@@ -249,6 +250,19 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
+    @MethodSource("allocators")
+    public void forEachReadableMustReturnZeroWhenNotReadable(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(0)) {
+            int count = buf.forEachReadable(0, (index, component) -> {
+                fail();
+                return true;
+            });
+            assertEquals(0, count);
+        }
+    }
+
+    @ParameterizedTest
     @MethodSource("nonCompositeAllocators")
     public void forEachWritableMustVisitBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
@@ -318,6 +332,19 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             buf.writerOffset(9);
             assertEquals((byte) 0xFF, buf.readByte());
             assertEquals(0x0102030405060708L, buf.readLong());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void forEachWritableMustReturnZeroWhenNotWritable(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(0)) {
+            int count = buf.forEachWritable(0, (index, component) -> {
+                fail();
+                return true;
+            });
+            assertEquals(0, count);
         }
     }
 

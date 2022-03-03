@@ -494,18 +494,19 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
         }
-        if (readableBytes() == 0) {
+        int readableBytes = readableBytes();
+        if (readableBytes == 0) {
             return 0;
         }
         if (delegate.nioBufferCount() == 1) {
-            ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes()).asReadOnlyBuffer();
+            ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes).asReadOnlyBuffer();
             if (processor.process(initialIndex, new ReadableBufferComponent(byteBuffer, this))) {
                 return 1;
             } else {
                 return -1;
             }
         }
-        ByteBuffer[] byteBuffers = delegate.nioBuffers(readerOffset(), readableBytes());
+        ByteBuffer[] byteBuffers = delegate.nioBuffers(readerOffset(), readableBytes);
         for (int i = 0; i < byteBuffers.length; i++) {
             ReadableBufferComponent component = new ReadableBufferComponent(byteBuffers[i], this);
             if (!processor.process(initialIndex + i, component)) {
@@ -524,18 +525,19 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (readOnly()) {
             throw bufferIsReadOnly(this);
         }
-        if (writableBytes() == 0) {
+        int writableBytes = writableBytes();
+        if (writableBytes == 0) {
             return 0;
         }
         if (delegate.nioBufferCount() == 1) {
-            ByteBuffer byteBuffer = delegate.nioBuffer(writerOffset(), writableBytes());
+            ByteBuffer byteBuffer = delegate.nioBuffer(writerOffset(), writableBytes);
             if (processor.process(initialIndex, new WritableBufferComponent(byteBuffer, this))) {
                 return 1;
             } else {
                 return -1;
             }
         }
-        ByteBuffer[] byteBuffers = delegate.nioBuffers(writerOffset(), writableBytes());
+        ByteBuffer[] byteBuffers = delegate.nioBuffers(writerOffset(), writableBytes);
         for (int i = 0; i < byteBuffers.length; i++) {
             WritableBufferComponent component = new WritableBufferComponent(byteBuffers[i], this);
             if (!processor.process(initialIndex + i, component)) {

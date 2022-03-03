@@ -644,14 +644,28 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
     @Override
     public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
             throws E {
-        checkRead(readerOffset(), Math.max(1, readableBytes()));
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        int readableBytes = readableBytes();
+        if (readableBytes == 0) {
+            return 0;
+        }
+        checkRead(readerOffset(), readableBytes);
         return processor.process(initialIndex, this)? 1 : -1;
     }
 
     @Override
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
-        checkWrite(writerOffset(), Math.max(1, writableBytes()));
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        int writableBytes = writableBytes();
+        if (writableBytes == 0) {
+            return 0;
+        }
+        checkWrite(writerOffset(), writableBytes);
         return processor.process(initialIndex, this)? 1 : -1;
     }
 
