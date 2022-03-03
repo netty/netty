@@ -756,13 +756,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             ByteBuf byteBuf = null;
             boolean close = false;
+            Queue<SpliceInTask> sQueue = null;
             try {
-                Queue<SpliceInTask> sQueue = null;
                 do {
                     if (sQueue != null || (sQueue = spliceQueue) != null) {
                         SpliceInTask spliceTask = sQueue.peek();
                         if (spliceTask != null) {
-                            if (spliceTask.spliceIn(allocHandle)) {
+                            boolean spliceInResult = spliceTask.spliceIn(allocHandle);
+
+                            if (allocHandle.isReceivedRdHup()) {
+                                shutdownInput(true);
+                            }
+                            if (spliceInResult) {
                                 // We need to check if it is still active as if not we removed all SpliceTasks in
                                 // doClose(...)
                                 if (isActive()) {
@@ -820,7 +825,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
-                epollInFinally(config);
+                if (sQueue == null) {
+                    epollInFinally(config);
+                } else {
+                    if (!config.isAutoRead()) {
+                        clearEpollIn();
+                    }
+                }
             }
         }
     }
@@ -856,6 +867,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             for (;;) {
                 // Splicing until there is nothing left to splice.
                 int localSplicedIn = Native.splice(socket.intValue(), -1, pipeOut.intValue(), -1, length);
+                handle.lastBytesRead(localSplicedIn);
                 if (localSplicedIn == 0) {
                     break;
                 }
