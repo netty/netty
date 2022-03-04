@@ -941,7 +941,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 int roffBefore = buf.readerOffset();
                 int count = buf.forEachReadable(visited + initialIndex, processor);
                 int roffAfter = buf.readerOffset();
-                if (roffAfter != roffBefore) { // Check if ReadableComponent.addBytesRead was called.
+                if (roffAfter != roffBefore) { // Check if ReadableComponent.skipReadable was called.
                     buf.readerOffset(roffBefore); // Reset component offset.
                     skipReadable(roffAfter - roffBefore); // Then move *composite* buffer offset.
                 }
@@ -973,7 +973,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 int woffBefore = buf.writerOffset();
                 int count = buf.forEachWritable(visited + initialIndex, processor);
                 int woffAfter = buf.writerOffset();
-                if (woffAfter != woffBefore) { // Check if WritableComponent.addBytesWritten was called.
+                if (woffAfter != woffBefore) { // Check if WritableComponent.skipWritable was called.
                     buf.writerOffset(woffBefore);
                     skipWritable(woffAfter - woffBefore);
                 }
