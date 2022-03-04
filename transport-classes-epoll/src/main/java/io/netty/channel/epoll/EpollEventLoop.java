@@ -276,14 +276,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
         return channels.size();
     }
 
-    private int epollWait(long deadlineNanos) throws IOException {
+    private long epollWait(long deadlineNanos) throws IOException {
         if (deadlineNanos == NONE) {
-            return Native.epollWait(epollFd, events, timerFd, Integer.MAX_VALUE, 0); // disarm timer
+            return Native.epollWait(epollFd, events, timerFd, Integer.MAX_VALUE, 0, false); // disarm timer
         }
         long totalDelay = deadlineToDelayNanos(deadlineNanos);
         int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
         int delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, MAX_SCHEDULED_TIMERFD_NS);
-        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos);
+        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos, false);
     }
 
     private int epollWaitNoTimerChange() throws IOException {
@@ -347,8 +347,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                                     strategy = epollWaitNoTimerChange();
                                 } else {
                                     // Timerfd needs to be re-armed or disarmed
-                                    prevDeadlineNanos = curDeadlineNanos;
-                                    strategy = epollWait(curDeadlineNanos);
+                                    long result = epollWait(curDeadlineNanos);
+                                    // The result contains the actual return value and if a timer was used or not.
+                                    // We need to "unpack" it. Be aware that the same
+                                    strategy = Native.epollReady(result);
+                                    prevDeadlineNanos = Native.epollTimerWasUsed(result) ? curDeadlineNanos : NONE;
                                 }
                             }
                         } finally {
