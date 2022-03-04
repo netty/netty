@@ -595,6 +595,7 @@
         <artifactId>netty-tcnative-classes</artifactId>
         <version>${tcnative.version}</version>
         <scope>compile</scope>
+        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
