@@ -2578,7 +2578,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (local == null || local.length == 0) {
                 return null;
             }
-            return ((java.security.cert.X509Certificate) local[0]).getIssuerX500Principal();
+            return ((java.security.cert.X509Certificate) local[0]).getSubjectX500Principal();
         }
 
         @Override
