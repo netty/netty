@@ -19,6 +19,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +67,7 @@ final class Java8SslUtils {
         }
         List<SNIServerName> sniServerNames = new ArrayList<>(names.size());
         for (String name: names) {
-            sniServerNames.add(new SNIHostName(name));
+            sniServerNames.add(new SNIHostName(name.getBytes(StandardCharsets.UTF_8)));
         }
         return sniServerNames;
     }
