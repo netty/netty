@@ -70,7 +70,7 @@ final class Java8SslUtils {
         }
         List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
         for (String name: names) {
-            sniServerNames.add(new SNIHostName(name.getBytes(StandardCharsets.UTF_8)));
+            sniServerNames.add(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
         }
         return sniServerNames;
     }
