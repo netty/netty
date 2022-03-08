@@ -1446,13 +1446,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void run() {
-            if (isDestroyed()) {
-                // The engine was destroyed in the meantime, just return.
-                return;
-            }
-            // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-            needTask = false;
-            task.run();
+            runAndResetNeedTask(task);
         }
     }
 
@@ -1465,16 +1459,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         public void run(Runnable runnable) {
             if (isDestroyed()) {
                 // The engine was destroyed in the meantime, just return.
-                runnable.run();
                 return;
             }
-            task.runAsync(() -> {
-                // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-                // This needs to be done before we run the completion runnable, since that might
-                // query the handshake status.
-                needTask = false;
-                runnable.run();
-            });
+            task.runAsync(new TaskDecorator<>(runnable));
+        }
+    }
+
+    private synchronized void runAndResetNeedTask(Runnable task) {
+        try {
+            if (isDestroyed()) {
+                // The engine was destroyed in the meantime, just return.
+                return;
+            }
+            task.run();
+        } finally {
+            // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+            needTask = false;
         }
     }
 
