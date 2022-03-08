@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.CharsetUtil;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
