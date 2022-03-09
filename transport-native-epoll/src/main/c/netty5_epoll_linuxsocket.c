@@ -28,12 +28,12 @@
 #include <netinet/udp.h> // SOL_UDP
 #include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
-#include "netty_epoll_linuxsocket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_util.h"
+#include "netty5_epoll_linuxsocket.h"
+#include "netty5_unix_errors.h"
+#include "netty5_unix_filedescriptor.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_socket.h"
+#include "netty5_unix_util.h"
 
 #define LINUXSOCKET_CLASSNAME "io/netty5/channel/epoll/LinuxSocket"
 
@@ -71,21 +71,21 @@ static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
 
 // JNI Registered Methods Begin
-static void netty_epoll_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TTL, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TTL, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
+static void netty5_epoll_linuxsocket_setIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
     if (ipv6 == JNI_TRUE) {
         u_int val = (u_int) optval;
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &val, sizeof(val));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &val, sizeof(val));
     } else {
         u_char val = (u_char) optval;
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val));
     }
 }
 
-static void netty_epoll_linuxsocket_setInterface(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
+static void netty5_epoll_linuxsocket_setInterface(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
     struct sockaddr_storage interfaceAddr;
     socklen_t interfaceAddrSize;
     struct sockaddr_in* interfaceIpAddr;
@@ -94,74 +94,74 @@ static void netty_epoll_linuxsocket_setInterface(JNIEnv* env, jclass clazz, jint
 
     if (ipv6 == JNI_TRUE) {
         if (interfaceIndex == -1) {
-           netty_unix_errors_throwIOException(env, "Unable to find network index");
+           netty5_unix_errors_throwIOException(env, "Unable to find network index");
            return;
         }
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &interfaceIndex, sizeof(interfaceIndex));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &interfaceIndex, sizeof(interfaceIndex));
     } else {
-        if (netty_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
-            netty_unix_errors_throwIOException(env, "Could not init sockaddr");
+        if (netty5_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+            netty5_unix_errors_throwIOException(env, "Could not init sockaddr");
             return;
         }
 
         interfaceIpAddr = (struct sockaddr_in*) &interfaceAddr;
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
     }
 }
 
-static void netty_epoll_linuxsocket_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpQuickAck(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_QUICKACK, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpQuickAck(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_QUICKACK, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpDeferAccept(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpDeferAccept(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setTcpUserTimeout(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setTcpUserTimeout(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_setSoBusyPoll(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setSoBusyPoll(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval));
 }
 
-static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
+static void netty5_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
     struct sockaddr_storage groupAddr;
     socklen_t groupAddrSize;
     struct sockaddr_storage interfaceAddr;
@@ -176,15 +176,15 @@ static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd
     memset(&groupAddr, 0, sizeof(groupAddr));
     memset(&interfaceAddr, 0, sizeof(interfaceAddr));
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
     }
 
     switch (groupAddr.ss_family) {
     case AF_INET:
-        if (netty_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
-            netty_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddr");
+        if (netty5_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+            netty5_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddr");
             return;
         }
 
@@ -193,26 +193,26 @@ static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd
 
         memcpy(&mreq.imr_multiaddr, &groupIpAddr->sin_addr, sizeof(groupIpAddr->sin_addr));
         memcpy(&mreq.imr_interface, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
         if (interfaceIndex == -1) {
-            netty_unix_errors_throwIOException(env, "Unable to find network index");
+            netty5_unix_errors_throwIOException(env, "Unable to find network index");
             return;
         }
         mreq6.ipv6mr_interface = interfaceIndex;
 
         groupIp6Addr = (struct sockaddr_in6*) &groupAddr;
         memcpy(&mreq6.ipv6mr_multiaddr, &groupIp6Addr->sin6_addr, sizeof(groupIp6Addr->sin6_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, sizeof(mreq6));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, sizeof(mreq6));
         break;
     default:
-        netty_unix_errors_throwIOException(env, "Address family not supported");
+        netty5_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
 
-static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex, jbyteArray sourceAddress) {
+static void netty5_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex, jbyteArray sourceAddress) {
     struct sockaddr_storage groupAddr;
     socklen_t groupAddrSize;
     struct sockaddr_storage interfaceAddr;
@@ -230,20 +230,20 @@ static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint
     memset(&sourceAddr, 0, sizeof(sourceAddr));
     memset(&interfaceAddr, 0, sizeof(interfaceAddr));
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
     }
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for sourceAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for sourceAddress");
         return;
     }
 
     switch (groupAddr.ss_family) {
     case AF_INET:
-        if (netty_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
-            netty_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
+        if (netty5_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+            netty5_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
             return;
         }
         interfaceIpAddr = (struct sockaddr_in*) &interfaceAddr;
@@ -252,25 +252,25 @@ static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint
         memcpy(&mreq.imr_multiaddr, &groupIpAddr->sin_addr, sizeof(groupIpAddr->sin_addr));
         memcpy(&mreq.imr_interface, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
         memcpy(&mreq.imr_sourceaddr, &sourceIpAddr->sin_addr, sizeof(sourceIpAddr->sin_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
         if (interfaceIndex == -1) {
-            netty_unix_errors_throwIOException(env, "Unable to find network index");
+            netty5_unix_errors_throwIOException(env, "Unable to find network index");
             return;
         }
         mreq6.gsr_group = groupAddr;
         mreq6.gsr_interface = interfaceIndex;
         mreq6.gsr_source = sourceAddr;
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, MCAST_JOIN_SOURCE_GROUP, &mreq6, sizeof(mreq6));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, MCAST_JOIN_SOURCE_GROUP, &mreq6, sizeof(mreq6));
         break;
     default:
-        netty_unix_errors_throwIOException(env, "Address family not supported");
+        netty5_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
 
-static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
+static void netty5_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex) {
     struct sockaddr_storage groupAddr;
     socklen_t groupAddrSize;
 
@@ -286,15 +286,15 @@ static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint f
     memset(&groupAddr, 0, sizeof(groupAddr));
     memset(&interfaceAddr, 0, sizeof(interfaceAddr));
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
     }
 
     switch (groupAddr.ss_family) {
     case AF_INET:
-        if (netty_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
-            netty_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
+        if (netty5_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+            netty5_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
             return;
         }
         interfaceIpAddr = (struct sockaddr_in*) &interfaceAddr;
@@ -302,26 +302,26 @@ static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint f
 
         memcpy(&mreq.imr_multiaddr, &groupIpAddr->sin_addr, sizeof(groupIpAddr->sin_addr));
         memcpy(&mreq.imr_interface, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
         if (interfaceIndex == -1) {
-            netty_unix_errors_throwIOException(env, "Unable to find network index");
+            netty5_unix_errors_throwIOException(env, "Unable to find network index");
             return;
         }
         mreq6.ipv6mr_interface = interfaceIndex;
 
         groupIp6Addr = (struct sockaddr_in6*) &groupAddr;
         memcpy(&mreq6.ipv6mr_multiaddr, &groupIp6Addr->sin6_addr, sizeof(groupIp6Addr->sin6_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_LEAVE_GROUP, &mreq6, sizeof(mreq6));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_LEAVE_GROUP, &mreq6, sizeof(mreq6));
         break;
     default:
-        netty_unix_errors_throwIOException(env, "Address family not supported");
+        netty5_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
 
-static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex, jbyteArray sourceAddress) {
+static void netty5_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray groupAddress, jbyteArray interfaceAddress, jint scopeId, jint interfaceIndex, jbyteArray sourceAddress) {
     struct sockaddr_storage groupAddr;
     socklen_t groupAddrSize;
     struct sockaddr_storage interfaceAddr;
@@ -340,20 +340,20 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
     memset(&interfaceAddr, 0, sizeof(interfaceAddr));
 
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
     }
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr for sourceAddress");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr for sourceAddress");
         return;
     }
 
     switch (groupAddr.ss_family) {
     case AF_INET:
-        if (netty_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
-            netty_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
+        if (netty5_unix_socket_initSockaddr(env, ipv6, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+            netty5_unix_errors_throwIOException(env, "Could not init sockaddr for interfaceAddress");
             return;
         }
         interfaceIpAddr = (struct sockaddr_in*) &interfaceAddr;
@@ -363,33 +363,33 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
         memcpy(&mreq.imr_multiaddr, &groupIpAddr->sin_addr, sizeof(groupIpAddr->sin_addr));
         memcpy(&mreq.imr_interface, &interfaceIpAddr->sin_addr, sizeof(interfaceIpAddr->sin_addr));
         memcpy(&mreq.imr_sourceaddr, &sourceIpAddr->sin_addr, sizeof(sourceIpAddr->sin_addr));
-        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
         if (interfaceIndex == -1) {
-            netty_unix_errors_throwIOException(env, "Unable to find network index");
+            netty5_unix_errors_throwIOException(env, "Unable to find network index");
             return;
         }
 
         mreq6.gsr_group = groupAddr;
         mreq6.gsr_interface = interfaceIndex;
         mreq6.gsr_source = sourceAddr;
-        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, MCAST_LEAVE_SOURCE_GROUP, &mreq6, sizeof(mreq6));
+        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, MCAST_LEAVE_SOURCE_GROUP, &mreq6, sizeof(mreq6));
         break;
     default:
-        netty_unix_errors_throwIOException(env, "Address family not supported");
+        netty5_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
 
-static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jbyteArray key) {
+static void netty5_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jbyteArray key) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
 
     memset(&addr, 0, sizeof(addr));
 
-    if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, 0, &addr, &addrSize) == -1) {
-        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
+    if (netty5_unix_socket_initSockaddr(env, ipv6, address, scopeId, 0, &addr, &addrSize) == -1) {
+        netty5_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -420,20 +420,20 @@ static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint
     }
 
     if (setsockopt(fd, IPPROTO_TCP, TCP_MD5SIG, &md5sig, sizeof(md5sig)) < 0) {
-        netty_unix_errors_throwIOExceptionErrorNo(env, "setsockopt() failed: ", errno);
+        netty5_unix_errors_throwIOExceptionErrorNo(env, "setsockopt() failed: ", errno);
     }
 }
 
-static int netty_epoll_linuxsocket_getInterface(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
+static int netty5_epoll_linuxsocket_getInterface(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
     if (ipv6 == JNI_TRUE) {
         int optval;
-        if (netty_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &optval, sizeof(optval)) == -1) {
+        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return optval;
     } else {
         struct in_addr optval;
-        if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_IF, &optval, sizeof(optval)) == -1) {
+        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_IF, &optval, sizeof(optval)) == -1) {
             return -1;
         }
 
@@ -441,90 +441,90 @@ static int netty_epoll_linuxsocket_getInterface(JNIEnv* env, jclass clazz, jint 
     }
 }
 
-static jint netty_epoll_linuxsocket_getTimeToLive(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTimeToLive(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_TTL, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_TTL, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
 
-static jint netty_epoll_linuxsocket_getIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
+static jint netty5_epoll_linuxsocket_getIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
     if (ipv6 == JNI_TRUE) {
         u_int optval;
-        if (netty_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
+        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return (jint) optval;
     } else {
         u_char optval;
-        if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
+        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return (jint) optval;
     }
 }
 
-static jint netty_epoll_linuxsocket_getTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_getTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpKeepIntvl(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_getTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpKeepCnt(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static jint netty_epoll_linuxsocket_getTcpUserTimeout(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpUserTimeout(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static jint netty_epoll_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static jint netty_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static jint netty_epoll_linuxsocket_isIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
+static void netty5_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
      struct tcp_info tcp_info;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
          return;
      }
      jlong cArray[32];
@@ -565,49 +565,49 @@ static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint f
      (*env)->SetLongArrayRegion(env, array, 0, 32, cArray);
 }
 
-static jint netty_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_getSoBusyPoll(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getSoBusyPoll(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_getTcpDeferAccept(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpDeferAccept(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_isTcpQuickAck(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isTcpQuickAck(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_QUICKACK, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_QUICKACK, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jint netty_epoll_linuxsocket_getTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_getTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval)) == -1) {
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
 }
 
-static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
+static jobject netty5_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
      struct ucred credentials;
-     if(netty_unix_socket_getOption(env,fd, SOL_SOCKET, SO_PEERCRED, &credentials, sizeof (credentials)) == -1) {
+     if(netty5_unix_socket_getOption(env,fd, SOL_SOCKET, SO_PEERCRED, &credentials, sizeof (credentials)) == -1) {
          return NULL;
      }
      jintArray gids = (*env)->NewIntArray(env, 1);
@@ -615,33 +615,33 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
      return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
 }
 
-static jint netty_epoll_linuxsocket_isUdpGro(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_epoll_linuxsocket_isUdpGro(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, SOL_UDP, UDP_GRO, &optval, sizeof(optval)) == -1) {
+     if (netty5_unix_socket_getOption(env, fd, SOL_UDP, UDP_GRO, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
 }
 
-static void netty_epoll_linuxsocket_setUdpGro(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, SOL_UDP, UDP_GRO, &optval, sizeof(optval));
+static void netty5_epoll_linuxsocket_setUdpGro(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, SOL_UDP, UDP_GRO, &optval, sizeof(optval));
 }
 
 
-static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+static jlong netty5_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
     if (fileDescriptor == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
         return -1;
     }
     jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
     if (srcFd == -1) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
         return -1;
     }
     ssize_t res;
@@ -665,45 +665,45 @@ static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
-  { "setTimeToLive", "(II)V", (void *) netty_epoll_linuxsocket_setTimeToLive },
-  { "getTimeToLive", "(I)I", (void *) netty_epoll_linuxsocket_getTimeToLive },
-  { "setInterface", "(IZ[BII)V", (void *) netty_epoll_linuxsocket_setInterface },
-  { "getInterface", "(IZ)I", (void *) netty_epoll_linuxsocket_getInterface },
-  { "setIpMulticastLoop", "(IZI)V", (void * ) netty_epoll_linuxsocket_setIpMulticastLoop },
-  { "getIpMulticastLoop", "(IZ)I", (void * ) netty_epoll_linuxsocket_getIpMulticastLoop },
-  { "setTcpCork", "(II)V", (void *) netty_epoll_linuxsocket_setTcpCork },
-  { "setSoBusyPoll", "(II)V", (void *) netty_epoll_linuxsocket_setSoBusyPoll },
-  { "setTcpQuickAck", "(II)V", (void *) netty_epoll_linuxsocket_setTcpQuickAck },
-  { "setTcpDeferAccept", "(II)V", (void *) netty_epoll_linuxsocket_setTcpDeferAccept },
-  { "setTcpNotSentLowAt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpNotSentLowAt },
-  { "isTcpCork", "(I)I", (void *) netty_epoll_linuxsocket_isTcpCork },
-  { "getSoBusyPoll", "(I)I", (void *) netty_epoll_linuxsocket_getSoBusyPoll },
-  { "getTcpDeferAccept", "(I)I", (void *) netty_epoll_linuxsocket_getTcpDeferAccept },
-  { "getTcpNotSentLowAt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpNotSentLowAt },
-  { "isTcpQuickAck", "(I)I", (void *) netty_epoll_linuxsocket_isTcpQuickAck },
-  { "setTcpFastOpen", "(II)V", (void *) netty_epoll_linuxsocket_setTcpFastOpen },
-  { "setTcpKeepIdle", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepIdle },
-  { "setTcpKeepIntvl", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepIntvl },
-  { "setTcpKeepCnt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepCnt },
-  { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
-  { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
-  { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
-  { "setIpRecvOrigDestAddr", "(II)V", (void *) netty_epoll_linuxsocket_setIpRecvOrigDestAddr },
-  { "getTcpKeepIdle", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIdle },
-  { "getTcpKeepIntvl", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIntvl },
-  { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
-  { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
-  { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
-  { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
-  { "isIpRecvOrigDestAddr", "(I)I", (void *) netty_epoll_linuxsocket_isIpRecvOrigDestAddr },
-  { "getTcpInfo", "(I[J)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
-  { "setTcpMd5Sig", "(IZ[BI[B)V", (void *) netty_epoll_linuxsocket_setTcpMd5Sig },
-  { "joinGroup", "(IZ[B[BII)V", (void *) netty_epoll_linuxsocket_joinGroup },
-  { "joinSsmGroup", "(IZ[B[BII[B)V", (void *) netty_epoll_linuxsocket_joinSsmGroup },
-  { "leaveGroup", "(IZ[B[BII)V", (void *) netty_epoll_linuxsocket_leaveGroup },
-  { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty_epoll_linuxsocket_leaveSsmGroup },
-  { "isUdpGro", "(I)I", (void *) netty_epoll_linuxsocket_isUdpGro },
-  { "setUdpGro", "(II)V", (void *) netty_epoll_linuxsocket_setUdpGro }
+  { "setTimeToLive", "(II)V", (void *) netty5_epoll_linuxsocket_setTimeToLive },
+  { "getTimeToLive", "(I)I", (void *) netty5_epoll_linuxsocket_getTimeToLive },
+  { "setInterface", "(IZ[BII)V", (void *) netty5_epoll_linuxsocket_setInterface },
+  { "getInterface", "(IZ)I", (void *) netty5_epoll_linuxsocket_getInterface },
+  { "setIpMulticastLoop", "(IZI)V", (void * ) netty5_epoll_linuxsocket_setIpMulticastLoop },
+  { "getIpMulticastLoop", "(IZ)I", (void * ) netty5_epoll_linuxsocket_getIpMulticastLoop },
+  { "setTcpCork", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpCork },
+  { "setSoBusyPoll", "(II)V", (void *) netty5_epoll_linuxsocket_setSoBusyPoll },
+  { "setTcpQuickAck", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpQuickAck },
+  { "setTcpDeferAccept", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpDeferAccept },
+  { "setTcpNotSentLowAt", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpNotSentLowAt },
+  { "isTcpCork", "(I)I", (void *) netty5_epoll_linuxsocket_isTcpCork },
+  { "getSoBusyPoll", "(I)I", (void *) netty5_epoll_linuxsocket_getSoBusyPoll },
+  { "getTcpDeferAccept", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpDeferAccept },
+  { "getTcpNotSentLowAt", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpNotSentLowAt },
+  { "isTcpQuickAck", "(I)I", (void *) netty5_epoll_linuxsocket_isTcpQuickAck },
+  { "setTcpFastOpen", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpFastOpen },
+  { "setTcpKeepIdle", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpKeepIdle },
+  { "setTcpKeepIntvl", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpKeepIntvl },
+  { "setTcpKeepCnt", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpKeepCnt },
+  { "setTcpUserTimeout", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpUserTimeout },
+  { "setIpFreeBind", "(II)V", (void *) netty5_epoll_linuxsocket_setIpFreeBind },
+  { "setIpTransparent", "(II)V", (void *) netty5_epoll_linuxsocket_setIpTransparent },
+  { "setIpRecvOrigDestAddr", "(II)V", (void *) netty5_epoll_linuxsocket_setIpRecvOrigDestAddr },
+  { "getTcpKeepIdle", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpKeepIdle },
+  { "getTcpKeepIntvl", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpKeepIntvl },
+  { "getTcpKeepCnt", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpKeepCnt },
+  { "getTcpUserTimeout", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpUserTimeout },
+  { "isIpFreeBind", "(I)I", (void *) netty5_epoll_linuxsocket_isIpFreeBind },
+  { "isIpTransparent", "(I)I", (void *) netty5_epoll_linuxsocket_isIpTransparent },
+  { "isIpRecvOrigDestAddr", "(I)I", (void *) netty5_epoll_linuxsocket_isIpRecvOrigDestAddr },
+  { "getTcpInfo", "(I[J)V", (void *) netty5_epoll_linuxsocket_getTcpInfo },
+  { "setTcpMd5Sig", "(IZ[BI[B)V", (void *) netty5_epoll_linuxsocket_setTcpMd5Sig },
+  { "joinGroup", "(IZ[B[BII)V", (void *) netty5_epoll_linuxsocket_joinGroup },
+  { "joinSsmGroup", "(IZ[B[BII[B)V", (void *) netty5_epoll_linuxsocket_joinSsmGroup },
+  { "leaveGroup", "(IZ[B[BII)V", (void *) netty5_epoll_linuxsocket_leaveGroup },
+  { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty5_epoll_linuxsocket_leaveSsmGroup },
+  { "isUdpGro", "(I)I", (void *) netty5_epoll_linuxsocket_isUdpGro },
+  { "setUdpGro", "(II)V", (void *) netty5_epoll_linuxsocket_setUdpGro }
 
   // "sendFile" has a dynamic signature
 };
@@ -728,14 +728,14 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/PeerCredentials;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "getPeerCredentials";
-    dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_getPeerCredentials;
+    dynamicMethod->fnPtr = (void *) netty5_epoll_linuxsocket_getPeerCredentials;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendFile";
-    dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_sendFile;
+    dynamicMethod->fnPtr = (void *) netty5_epoll_linuxsocket_sendFile;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
     return dynamicMethods;
 error:
@@ -748,7 +748,7 @@ error:
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Native to reflect that.
-jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
     jclass fileRegionCls = NULL;
@@ -797,7 +797,7 @@ done:
     return ret;
 }
 
-void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, peerCredentialsClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, LINUXSOCKET_CLASSNAME);

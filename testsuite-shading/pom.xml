@@ -271,7 +271,7 @@
         </os>
       </activation>
       <properties>
-        <nativeTransportLib>netty_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
+        <nativeTransportLib>netty5_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
         <nativeTcnativeLib>netty_tcnative_osx_${os.detected.arch}.jnilib</nativeTcnativeLib>
         <skipShadingTestsuite>false</skipShadingTestsuite>
       </properties>
@@ -314,7 +314,7 @@
         </os>
       </activation>
       <properties>
-        <nativeTransportLib>netty_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
+        <nativeTransportLib>netty5_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
         <nativeTcnativeLib>netty_tcnative_linux_${os.detected.arch}.so</nativeTcnativeLib>
         <skipShadingTestsuite>false</skipShadingTestsuite>
       </properties>

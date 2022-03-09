@@ -14,8 +14,8 @@
  * under the License.
  */
 
-#ifndef NETTY_UNIX_UTIL_H_
-#define NETTY_UNIX_UTIL_H_
+#ifndef NETTY5_UNIX_UTIL_H_
+#define NETTY5_UNIX_UTIL_H_
 
 #include <jni.h>
 #include <stdint.h>
@@ -43,27 +43,27 @@ typedef int clockid_t;
  *
  * Returns true is a suitable clock was found.
  */
-jboolean netty_unix_util_initialize_wait_clock(clockid_t* clockId);
+jboolean netty5_unix_util_initialize_wait_clock(clockid_t* clockId);
 
 /**
  * This will delegate to clock_gettime from time.h if the platform supports it.
  *
  * MacOS does not support clock_gettime.
  */
-int netty_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp);
+int netty5_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp);
 
 /**
  * Calculate the number of nano seconds elapsed between begin and end.
  *
  * Returns the number of nano seconds.
  */
-uint64_t netty_unix_util_timespec_elapsed_ns(const struct timespec* begin, const struct timespec* end);
+uint64_t netty5_unix_util_timespec_elapsed_ns(const struct timespec* begin, const struct timespec* end);
 
 /**
  * Subtract <pre>nanos</pre> nano seconds from a <pre>timespec</pre>.
  *
  * Returns true if there is underflow.
  */
-jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos);
+jboolean netty5_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos);
 
-#endif /* NETTY_UNIX_UTIL_H_ */
+#endif /* NETTY5_UNIX_UTIL_H_ */

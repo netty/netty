@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#ifndef NETTY_KQUEUE_EVENTARRAY_H_
-#define NETTY_KQUEUE_EVENTARRAY_H_
+#ifndef NETTY5_KQUEUE_BSDSOCKET_H_
+#define NETTY5_KQUEUE_BSDSOCKET_H_
 
 #include <jni.h>
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
-jint netty_kqueue_eventarray_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
-void netty_kqueue_eventarray_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix);
+jint netty5_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
+void netty5_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix);
 
-#endif /* NETTY_KQUEUE_EVENTARRAY_H_ */
+#endif /* NETTY5_KQUEUE_BSDSOCKET_H_ */
