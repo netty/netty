@@ -404,7 +404,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
-     * Default maximum order - System Property: io.netty5.allocator.maxOrder - default 11
+     * Default maximum order - System Property: io.netty5.allocator.maxOrder - default 9
      */
     public static int defaultMaxOrder() {
         return DEFAULT_MAX_ORDER;
