@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "netty_unix_util.h"
+#include "netty5_unix_util.h"
 
 static const uint64_t NETTY_BILLION = 1000000000L;
 
@@ -29,11 +29,11 @@ static const uint64_t NETTY_BILLION = 1000000000L;
 #endif /* NETTY_USE_MACH_INSTEAD_OF_CLOCK */
 
 // util methods
-uint64_t netty_unix_util_timespec_elapsed_ns(const struct timespec* begin, const struct timespec* end) {
+uint64_t netty5_unix_util_timespec_elapsed_ns(const struct timespec* begin, const struct timespec* end) {
   return NETTY_BILLION * (end->tv_sec - begin->tv_sec) + (end->tv_nsec - begin->tv_nsec);
 }
 
-jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos) {
+jboolean netty5_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos) {
   const uint64_t seconds = nanos / NETTY_BILLION;
   nanos -= seconds * NETTY_BILLION;
   // If there are too many nanos we steal from seconds to avoid underflow on nanos. This way we
@@ -48,7 +48,7 @@ jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nano
   return underflow;
 }
 
-int netty_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp) {
+int netty5_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp) {
 #ifdef NETTY_USE_MACH_INSTEAD_OF_CLOCK
   uint64_t timeNs;
   switch (clockId) {
@@ -71,25 +71,25 @@ int netty_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp) {
 #endif /* NETTY_USE_MACH_INSTEAD_OF_CLOCK */
 }
 
-jboolean netty_unix_util_initialize_wait_clock(clockid_t* clockId) {
+jboolean netty5_unix_util_initialize_wait_clock(clockid_t* clockId) {
   struct timespec ts;
   // First try to get a monotonic clock, as we effectively measure execution time and don't want the underlying clock
   // moving unexpectedly/abruptly.
 #ifdef CLOCK_MONOTONIC_COARSE
   *clockId = CLOCK_MONOTONIC_COARSE;
-  if (netty_unix_util_clock_gettime(*clockId, &ts) == 0) {
+  if (netty5_unix_util_clock_gettime(*clockId, &ts) == 0) {
     return JNI_TRUE;
   }
 #endif
 #ifdef CLOCK_MONOTONIC_RAW
   *clockId = CLOCK_MONOTONIC_RAW;
-  if (netty_unix_util_clock_gettime(*clockId, &ts) == 0) {
+  if (netty5_unix_util_clock_gettime(*clockId, &ts) == 0) {
     return JNI_TRUE;
   }
 #endif
 #ifdef CLOCK_MONOTONIC
   *clockId = CLOCK_MONOTONIC;
-  if (netty_unix_util_clock_gettime(*clockId, &ts) == 0) {
+  if (netty5_unix_util_clock_gettime(*clockId, &ts) == 0) {
     return JNI_TRUE;
   }
 #endif
@@ -97,13 +97,13 @@ jboolean netty_unix_util_initialize_wait_clock(clockid_t* clockId) {
   // Fallback to realtime ... in this case we are subject to clock movements on the system.
 #ifdef CLOCK_REALTIME_COARSE
   *clockId = CLOCK_REALTIME_COARSE;
-  if (netty_unix_util_clock_gettime(*clockId, &ts) == 0) {
+  if (netty5_unix_util_clock_gettime(*clockId, &ts) == 0) {
     return JNI_TRUE;
   }
 #endif
 #ifdef CLOCK_REALTIME
   *clockId = CLOCK_REALTIME;
-  if (netty_unix_util_clock_gettime(*clockId, &ts) == 0) {
+  if (netty5_unix_util_clock_gettime(*clockId, &ts) == 0) {
     return JNI_TRUE;
   }
 #endif

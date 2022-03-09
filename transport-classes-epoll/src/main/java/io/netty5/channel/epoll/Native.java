@@ -278,7 +278,7 @@ public final class Native {
         if (!"linux".equals(name)) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        String staticLibName = "netty_transport_native_epoll";
+        String staticLibName = "netty5_transport_native_epoll";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
         try {

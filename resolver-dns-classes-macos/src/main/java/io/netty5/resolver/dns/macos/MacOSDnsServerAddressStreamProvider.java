@@ -85,7 +85,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         if (!PlatformDependent.isOsx()) {
             throw new IllegalStateException("Only supported on MacOS/OSX");
         }
-        String staticLibName = "netty_resolver_dns_native_macos";
+        String staticLibName = "netty5_resolver_dns_native_macos";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(MacOSDnsServerAddressStreamProvider.class);
         try {

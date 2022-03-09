@@ -20,10 +20,10 @@
 #include <sys/socket.h>
 #include <stdlib.h>
 #include "dnsinfo.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_util.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_util.h"
+#include "netty5_unix_socket.h"
+#include "netty5_unix_errors.h"
 
 // Add define if NETTY_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
 #ifdef NETTY_BUILD_STATIC
@@ -44,7 +44,7 @@ static char* staticPackagePrefix = NULL;
 // See:
 //     https://src.chromium.org/viewvc/chrome?revision=218617&view=revision
 //     https://opensource.apple.com/tarballs/mDNSResponder/
-static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz) {
+static jobjectArray netty5_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz) {
     dns_config_t* config = dns_configuration_copy();
     if (config == NULL) {
         goto error;
@@ -78,9 +78,9 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
             if (addr == NULL) {
                 goto error;
             }
-            jbyteArray address = netty_unix_socket_createInetSocketAddressArray(env, addr);
+            jbyteArray address = netty5_unix_socket_createInetSocketAddressArray(env, addr);
             if (address == NULL) {
-                netty_unix_errors_throwOutOfMemoryError(env);
+                netty5_unix_errors_throwOutOfMemoryError(env);
                 goto error;
             }
             (*env)->SetObjectArrayElement(env, addressArray, a, address);
@@ -144,14 +144,14 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     JNINativeMethod* dynamicMethod = &dynamicMethods[0];
     dynamicMethod->name = "resolvers";
     dynamicMethod->signature = netty_jni_util_prepend("()[L", dynamicTypeName);
-    dynamicMethod->fnPtr = (void *) netty_resolver_dns_macos_resolvers;
+    dynamicMethod->fnPtr = (void *) netty5_resolver_dns_macos_resolvers;
     free(dynamicTypeName);
     return dynamicMethods;
 }
 
 // JNI Method Registration Table End
 
-static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
+static void netty5_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STREAM_CLASSNAME);
@@ -164,7 +164,7 @@ static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            MacOSDnsServerAddressStreamProvider to reflect that.
-static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+static jint netty5_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     int providerRegistered = 0;
     char* nettyClassName = NULL;
@@ -211,21 +211,21 @@ done:
 // https://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
 
 // Invoked by the JVM when statically linked
-JNIEXPORT jint JNI_OnLoad_netty_resolver_dns_native_macos(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
+JNIEXPORT jint JNI_OnLoad_netty5_resolver_dns_native_macos(JavaVM* vm, void* reserved) {
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty5_resolver_dns_native_macos", netty5_resolver_dns_native_macos_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
-JNIEXPORT void JNI_OnUnload_netty_resolver_dns_native_macos(JavaVM* vm, void* reserved) {
-    netty_jni_util_JNI_OnUnload(vm, reserved, netty_resolver_dns_native_macos_JNI_OnUnLoad);
+JNIEXPORT void JNI_OnUnload_netty5_resolver_dns_native_macos(JavaVM* vm, void* reserved) {
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty5_resolver_dns_native_macos_JNI_OnUnLoad);
 }
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_macos", netty_resolver_dns_native_macos_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty5_resolver_dns_native_macos", netty5_resolver_dns_native_macos_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    netty_jni_util_JNI_OnUnload(vm, reserved, netty_resolver_dns_native_macos_JNI_OnUnLoad);
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty5_resolver_dns_native_macos_JNI_OnUnLoad);
 }
 #endif /* NETTY_BUILD_STATIC */

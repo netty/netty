@@ -21,10 +21,10 @@
 #include <sys/uio.h>
 #include <limits.h>
 
-#include "netty_unix_errors.h"
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_util.h"
+#include "netty5_unix_errors.h"
+#include "netty5_unix_filedescriptor.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_util.h"
 #include "netty_jni_util.h"
 
 #define FILEDESCRIPTOR_CLASSNAME "io/netty5/channel/unix/FileDescriptor"
@@ -80,7 +80,7 @@ static jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, ji
 }
 
 // JNI Registered Methods Begin
-static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
        // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and "assume"
        // everything is fine == we closed the file descriptor.
@@ -95,7 +95,7 @@ static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) 
    return 0;
 }
 
-static jint netty_unix_filedescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
+static jint netty5_unix_filedescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
 
     int res = open(f_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -107,22 +107,22 @@ static jint netty_unix_filedescriptor_open(JNIEnv* env, jclass clazz, jstring pa
     return res;
 }
 
-static jint netty_unix_filedescriptor_write(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+static jint netty5_unix_filedescriptor_write(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     // We check that GetDirectBufferAddress will not return NULL in OnLoad
     return _write(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
 }
 
-static jint netty_unix_filedescriptor_writeAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+static jint netty5_unix_filedescriptor_writeAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
     return _write(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
 }
 
 
-static jlong netty_unix_filedescriptor_writevAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
+static jlong netty5_unix_filedescriptor_writevAddresses(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length) {
     struct iovec* iov = (struct iovec*) (intptr_t) memoryAddress;
     return _writev(env, clazz, fd, iov, length);
 }
 
-static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, const jint offset, jint length, jlong maxBytesToWrite) {
+static jlong netty5_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, const jint offset, jint length, jlong maxBytesToWrite) {
     struct iovec iov[length];
     struct iovec* iovptr = iov;
     int i;
@@ -223,16 +223,16 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
     return _writev(env, clazz, fd, iov, length);
 }
 
-static jint netty_unix_filedescriptor_read(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+static jint netty5_unix_filedescriptor_read(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
     // We check that GetDirectBufferAddress will not return NULL in OnLoad
     return _read(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
 }
 
-static jint netty_unix_filedescriptor_readAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+static jint netty5_unix_filedescriptor_readAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
     return _read(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
 }
 
-static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
+static jlong netty5_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
     int fd[2];
     if (pipe2) {
         // we can just use pipe2 and so save extra syscalls;
@@ -265,22 +265,22 @@ static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod method_table[] = {
-  { "close", "(I)I", (void *) netty_unix_filedescriptor_close },
-  { "open", "(Ljava/lang/String;)I", (void *) netty_unix_filedescriptor_open },
-  { "write", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_filedescriptor_write },
-  { "writeAddress", "(IJII)I", (void *) netty_unix_filedescriptor_writeAddress },
-  { "writevAddresses", "(IJI)J", (void *) netty_unix_filedescriptor_writevAddresses },
-  { "writev", "(I[Ljava/nio/ByteBuffer;IIJ)J", (void *) netty_unix_filedescriptor_writev },
-  { "read", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_filedescriptor_read },
-  { "readAddress", "(IJII)I", (void *) netty_unix_filedescriptor_readAddress },
-  { "newPipe", "()J", (void *) netty_unix_filedescriptor_newPipe }
+  { "close", "(I)I", (void *) netty5_unix_filedescriptor_close },
+  { "open", "(Ljava/lang/String;)I", (void *) netty5_unix_filedescriptor_open },
+  { "write", "(ILjava/nio/ByteBuffer;II)I", (void *) netty5_unix_filedescriptor_write },
+  { "writeAddress", "(IJII)I", (void *) netty5_unix_filedescriptor_writeAddress },
+  { "writevAddresses", "(IJI)J", (void *) netty5_unix_filedescriptor_writevAddresses },
+  { "writev", "(I[Ljava/nio/ByteBuffer;IIJ)J", (void *) netty5_unix_filedescriptor_writev },
+  { "read", "(ILjava/nio/ByteBuffer;II)I", (void *) netty5_unix_filedescriptor_read },
+  { "readAddress", "(IJII)I", (void *) netty5_unix_filedescriptor_readAddress },
+  { "newPipe", "()J", (void *) netty5_unix_filedescriptor_newPipe }
 };
 static const jint method_table_size = sizeof(method_table) / sizeof(method_table[0]);
 // JNI Method Registration Table End
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Unix to reflect that.
-jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     void* mem = NULL;
     if (netty_jni_util_register_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME, method_table, method_table_size) != 0) {
@@ -318,6 +318,6 @@ done:
     return ret;
 }
 
-void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     netty_jni_util_unregister_natives(env, packagePrefix, FILEDESCRIPTOR_CLASSNAME);
 }

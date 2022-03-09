@@ -19,20 +19,20 @@
 #include <sys/event.h>
 #include <sys/time.h>
 
-#include "netty_kqueue_eventarray.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_util.h"
+#include "netty5_kqueue_eventarray.h"
+#include "netty5_unix_errors.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_util.h"
 
 #define EVENT_ARRAY_CLASSNAME "io/netty5/channel/kqueue/KQueueEventArray"
 
-static void netty_kqueue_eventarray_evSet(JNIEnv* env, jclass clzz, jlong keventAddress, jint ident, jshort filter, jshort flags, jint fflags) {
+static void netty5_kqueue_eventarray_evSet(JNIEnv* env, jclass clzz, jlong keventAddress, jint ident, jshort filter, jshort flags, jint fflags) {
     EV_SET((struct kevent*) keventAddress, ident, filter, flags, fflags, 0, NULL);
 }
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
-  { "evSet", "(JISSI)V", (void *) netty_kqueue_eventarray_evSet }
+  { "evSet", "(JISSI)V", (void *) netty5_kqueue_eventarray_evSet }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
@@ -40,7 +40,7 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Native to reflect that.
-jint netty_kqueue_eventarray_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_kqueue_eventarray_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     if (netty_jni_util_register_natives(env,
             packagePrefix,
             EVENT_ARRAY_CLASSNAME,
@@ -51,6 +51,6 @@ jint netty_kqueue_eventarray_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     return NETTY_JNI_UTIL_JNI_VERSION;
 }
 
-void netty_kqueue_eventarray_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_kqueue_eventarray_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     netty_jni_util_unregister_natives(env, packagePrefix, EVENT_ARRAY_CLASSNAME);
 }

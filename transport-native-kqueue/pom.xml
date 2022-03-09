@@ -69,7 +69,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_kqueue_${os.detected.arch}</name>
+                  <name>netty5_transport_native_kqueue_${os.detected.arch}</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -109,7 +109,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Fragment-Host>io.netty5.transport-classes-kqueue</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
@@ -178,7 +178,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_kqueue_aarch_64</name>
+                  <name>netty5_transport_native_kqueue_aarch_64</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -216,7 +216,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch_64</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch_64</Bundle-NativeCode>
                       <Fragment-Host>io.netty5.transport-classes-kqueue</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
@@ -284,7 +284,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_kqueue_${os.detected.arch}</name>
+                  <name>netty5_transport_native_kqueue_${os.detected.arch}</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -321,7 +321,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=OpenBSD; processor=${os.detected.arch}</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_${os.detected.arch}.jnilib; osname=OpenBSD; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Fragment-Host>io.netty5.transport-classes-kqueue</Fragment-Host>
                     </manifestEntries>
                     <index>true</index>
@@ -388,7 +388,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_kqueue_${os.detected.arch}</name>
+                  <name>netty5_transport_native_kqueue_${os.detected.arch}</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -425,7 +425,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=FreeBSD; processor=${os.detected.arch}</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_${os.detected.arch}.jnilib; osname=FreeBSD; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Fragment-Host>io.netty5.transport-classes-kqueue</Fragment-Host>
                     </manifestEntries>
                     <index>true</index>

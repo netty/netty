@@ -148,7 +148,7 @@ final class Native {
         if (!"osx".equals(name) && !name.contains("bsd")) {
             throw new IllegalStateException("Only supported on OSX/BSD");
         }
-        String staticLibName = "netty_transport_native_kqueue";
+        String staticLibName = "netty5_transport_native_kqueue";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
         try {

@@ -17,9 +17,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <jni.h>
-#include "netty_unix_errors.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_util.h"
+#include "netty5_unix_errors.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_util.h"
 #include "netty_jni_util.h"
 
 #define ERRORS_CLASSNAME "io/netty5/channel/unix/ErrorsStaticallyReferencedJniMethods"
@@ -88,11 +88,11 @@ static char* exceptionMessage(char* msg, int error) {
 }
 
 // Exported C methods
-void netty_unix_errors_throwRuntimeException(JNIEnv* env, char* message) {
+void netty5_unix_errors_throwRuntimeException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, runtimeExceptionClass, message);
 }
 
-void netty_unix_errors_throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+void netty5_unix_errors_throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
     char* allocatedMessage = exceptionMessage(message, errorNumber);
     if (allocatedMessage == NULL) {
         return;
@@ -101,7 +101,7 @@ void netty_unix_errors_throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, 
     free(allocatedMessage);
 }
 
-void netty_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+void netty5_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
     char* allocatedMessage = exceptionMessage(message, errorNumber);
     if (allocatedMessage == NULL) {
         return;
@@ -110,15 +110,15 @@ void netty_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, 
     free(allocatedMessage);
 }
 
-void netty_unix_errors_throwIOException(JNIEnv* env, char* message) {
+void netty5_unix_errors_throwIOException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, ioExceptionClass, message);
 }
 
-void netty_unix_errors_throwPortUnreachableException(JNIEnv* env, char* message) {
+void netty5_unix_errors_throwPortUnreachableException(JNIEnv* env, char* message) {
     (*env)->ThrowNew(env, portUnreachableExceptionClass, message);
 }
 
-void netty_unix_errors_throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+void netty5_unix_errors_throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
     char* allocatedMessage = exceptionMessage(message, errorNumber);
     if (allocatedMessage == NULL) {
         return;
@@ -127,7 +127,7 @@ void netty_unix_errors_throwIOExceptionErrorNo(JNIEnv* env, char* message, int e
     free(allocatedMessage);
 }
 
-void netty_unix_errors_throwClosedChannelException(JNIEnv* env) {
+void netty5_unix_errors_throwClosedChannelException(JNIEnv* env) {
     jobject exception = (*env)->NewObject(env, closedChannelExceptionClass, closedChannelExceptionMethodId);
     if (exception == NULL) {
         return;
@@ -135,86 +135,86 @@ void netty_unix_errors_throwClosedChannelException(JNIEnv* env) {
     (*env)->Throw(env, exception);
 }
 
-void netty_unix_errors_throwOutOfMemoryError(JNIEnv* env) {
+void netty5_unix_errors_throwOutOfMemoryError(JNIEnv* env) {
     (*env)->ThrowNew(env, oomErrorClass, "");
 }
 
 // JNI Registered Methods Begin
-static jint netty_unix_errors_errnoENOENT(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoENOENT(JNIEnv* env, jclass clazz) {
     return ENOENT;
 }
 
-static jint netty_unix_errors_errnoENOTCONN(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoENOTCONN(JNIEnv* env, jclass clazz) {
     return ENOTCONN;
 }
 
-static jint netty_unix_errors_errnoEBADF(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoEBADF(JNIEnv* env, jclass clazz) {
     return EBADF;
 }
 
-static jint netty_unix_errors_errnoEPIPE(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoEPIPE(JNIEnv* env, jclass clazz) {
     return EPIPE;
 }
 
-static jint netty_unix_errors_errnoECONNRESET(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoECONNRESET(JNIEnv* env, jclass clazz) {
     return ECONNRESET;
 }
 
-static jint netty_unix_errors_errnoEAGAIN(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoEAGAIN(JNIEnv* env, jclass clazz) {
     return EAGAIN;
 }
 
-static jint netty_unix_errors_errnoEWOULDBLOCK(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoEWOULDBLOCK(JNIEnv* env, jclass clazz) {
     return EWOULDBLOCK;
 }
 
-static jint netty_unix_errors_errnoEINPROGRESS(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errnoEINPROGRESS(JNIEnv* env, jclass clazz) {
     return EINPROGRESS;
 }
 
-static jint netty_unix_errors_errorECONNREFUSED(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errorECONNREFUSED(JNIEnv* env, jclass clazz) {
     return ECONNREFUSED;
 }
 
-static jint netty_unix_errors_errorEISCONN(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errorEISCONN(JNIEnv* env, jclass clazz) {
     return EISCONN;
 }
 
-static jint netty_unix_errors_errorEALREADY(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errorEALREADY(JNIEnv* env, jclass clazz) {
     return EALREADY;
 }
 
-static jint netty_unix_errors_errorENETUNREACH(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_errors_errorENETUNREACH(JNIEnv* env, jclass clazz) {
     return ENETUNREACH;
 }
 
-static jstring netty_unix_errors_strError(JNIEnv* env, jclass clazz, jint error) {
+static jstring netty5_unix_errors_strError(JNIEnv* env, jclass clazz, jint error) {
     return (*env)->NewStringUTF(env, strerror(error));
 }
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
-  { "errnoENOENT", "()I", (void *) netty_unix_errors_errnoENOENT },
-  { "errnoENOTCONN", "()I", (void *) netty_unix_errors_errnoENOTCONN },
-  { "errnoEBADF", "()I", (void *) netty_unix_errors_errnoEBADF },
-  { "errnoEPIPE", "()I", (void *) netty_unix_errors_errnoEPIPE },
-  { "errnoECONNRESET", "()I", (void *) netty_unix_errors_errnoECONNRESET },
-  { "errnoEAGAIN", "()I", (void *) netty_unix_errors_errnoEAGAIN },
-  { "errnoEWOULDBLOCK", "()I", (void *) netty_unix_errors_errnoEWOULDBLOCK },
-  { "errnoEINPROGRESS", "()I", (void *) netty_unix_errors_errnoEINPROGRESS },
-  { "errorECONNREFUSED", "()I", (void *) netty_unix_errors_errorECONNREFUSED },
-  { "errorEISCONN", "()I", (void *) netty_unix_errors_errorEISCONN },
-  { "errorEALREADY", "()I", (void *) netty_unix_errors_errorEALREADY },
-  { "errorENETUNREACH", "()I", (void *) netty_unix_errors_errorENETUNREACH },
-  { "strError", "(I)Ljava/lang/String;", (void *) netty_unix_errors_strError }
+  { "errnoENOENT", "()I", (void *) netty5_unix_errors_errnoENOENT },
+  { "errnoENOTCONN", "()I", (void *) netty5_unix_errors_errnoENOTCONN },
+  { "errnoEBADF", "()I", (void *) netty5_unix_errors_errnoEBADF },
+  { "errnoEPIPE", "()I", (void *) netty5_unix_errors_errnoEPIPE },
+  { "errnoECONNRESET", "()I", (void *) netty5_unix_errors_errnoECONNRESET },
+  { "errnoEAGAIN", "()I", (void *) netty5_unix_errors_errnoEAGAIN },
+  { "errnoEWOULDBLOCK", "()I", (void *) netty5_unix_errors_errnoEWOULDBLOCK },
+  { "errnoEINPROGRESS", "()I", (void *) netty5_unix_errors_errnoEINPROGRESS },
+  { "errorECONNREFUSED", "()I", (void *) netty5_unix_errors_errorECONNREFUSED },
+  { "errorEISCONN", "()I", (void *) netty5_unix_errors_errorEISCONN },
+  { "errorEALREADY", "()I", (void *) netty5_unix_errors_errorEALREADY },
+  { "errorENETUNREACH", "()I", (void *) netty5_unix_errors_errorENETUNREACH },
+  { "strError", "(I)Ljava/lang/String;", (void *) netty5_unix_errors_strError }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 // JNI Method Registration Table End
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Unix to reflect that.
-jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     char* nettyClassName = NULL;
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -246,7 +246,7 @@ error:
     return JNI_ERR;
 }
 
-void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_unix_errors_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     // delete global references so the GC can collect them
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, oomErrorClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, runtimeExceptionClass);

@@ -17,9 +17,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include "netty_unix_jni.h"
-#include "netty_unix_limits.h"
-#include "netty_unix_util.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_limits.h"
+#include "netty5_unix_util.h"
 #include "netty_jni_util.h"
 
 #define LIMITS_CLASSNAME "io/netty5/channel/unix/LimitsStaticallyReferencedJniMethods"
@@ -36,23 +36,23 @@
 #endif /* UIO_MAXIOV */
 
 // JNI Registered Methods Begin
-static jlong netty_unix_limits_ssizeMax(JNIEnv* env, jclass clazz) {
+static jlong netty5_unix_limits_ssizeMax(JNIEnv* env, jclass clazz) {
     return SSIZE_MAX;
 }
 
-static jint netty_unix_limits_iovMax(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_limits_iovMax(JNIEnv* env, jclass clazz) {
     return IOV_MAX;
 }
 
-static jint netty_unix_limits_uioMaxIov(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_limits_uioMaxIov(JNIEnv* env, jclass clazz) {
     return UIO_MAXIOV;
 }
 
-static jint netty_unix_limits_sizeOfjlong(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_limits_sizeOfjlong(JNIEnv* env, jclass clazz) {
     return sizeof(jlong);
 }
 
-static jint netty_unix_limits_udsSunPathSize(JNIEnv* env, jclass clazz) {
+static jint netty5_unix_limits_udsSunPathSize(JNIEnv* env, jclass clazz) {
     struct sockaddr_un udsAddr;
     return sizeof(udsAddr.sun_path) / sizeof(udsAddr.sun_path[0]);
 }
@@ -60,18 +60,18 @@ static jint netty_unix_limits_udsSunPathSize(JNIEnv* env, jclass clazz) {
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
-  { "ssizeMax", "()J", (void *) netty_unix_limits_ssizeMax },
-  { "iovMax", "()I", (void *) netty_unix_limits_iovMax },
-  { "uioMaxIov", "()I", (void *) netty_unix_limits_uioMaxIov },
-  { "sizeOfjlong", "()I", (void *) netty_unix_limits_sizeOfjlong },
-  { "udsSunPathSize", "()I", (void *) netty_unix_limits_udsSunPathSize }
+  { "ssizeMax", "()J", (void *) netty5_unix_limits_ssizeMax },
+  { "iovMax", "()I", (void *) netty5_unix_limits_iovMax },
+  { "uioMaxIov", "()I", (void *) netty5_unix_limits_uioMaxIov },
+  { "sizeOfjlong", "()I", (void *) netty5_unix_limits_sizeOfjlong },
+  { "udsSunPathSize", "()I", (void *) netty5_unix_limits_udsSunPathSize }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 // JNI Method Registration Table End
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Unix to reflect that.
-jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
             packagePrefix,
@@ -84,6 +84,6 @@ jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     return NETTY_JNI_UTIL_JNI_VERSION;
 }
 
-void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_unix_limits_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     netty_jni_util_unregister_natives(env, packagePrefix, LIMITS_CLASSNAME);
 }

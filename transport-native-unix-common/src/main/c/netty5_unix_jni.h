@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#ifndef NETTY_UNIX_JNI_H_
-#define NETTY_UNIX_JNI_H_
+#ifndef NETTY5_UNIX_JNI_H_
+#define NETTY5_UNIX_JNI_H_
 
 #include <jni.h>
 
-#endif /* NETTY_UNIX_JNI_H_ */
+#endif /* NETTY5_UNIX_JNI_H_ */

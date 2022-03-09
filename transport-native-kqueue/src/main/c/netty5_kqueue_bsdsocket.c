@@ -26,12 +26,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-#include "netty_kqueue_bsdsocket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_jni.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_util.h"
+#include "netty5_kqueue_bsdsocket.h"
+#include "netty5_unix_errors.h"
+#include "netty5_unix_filedescriptor.h"
+#include "netty5_unix_jni.h"
+#include "netty5_unix_socket.h"
+#include "netty5_unix_util.h"
 
 #define BSDSOCKET_CLASSNAME "io/netty5/channel/kqueue/BsdSocket"
 
@@ -45,20 +45,20 @@ static jfieldID fileDescriptorFieldId = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
 // JNI Registered Methods Begin
-static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint socketFd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+static jlong netty5_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint socketFd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
     if (fileDescriptor == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
         return -1;
     }
     jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
     if (srcFd == -1) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
+        netty5_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
         return -1;
     }
     const jlong lenBefore = len;
@@ -84,7 +84,7 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
     return res < 0 ? -err : 0;
 }
 
-static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
+static jint netty5_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
         jint socketFd,
         jint socketInterface,
         jboolean sourceIPv6, jbyteArray sourceAddress, jint sourceScopeId, jint sourcePort,
@@ -105,9 +105,9 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
     socklen_t dstaddrlen;
 
     if (NULL != sourceAddress) {
-        if (-1 == netty_unix_socket_initSockaddr(env,
+        if (-1 == netty5_unix_socket_initSockaddr(env,
                 sourceIPv6, sourceAddress, sourceScopeId, sourcePort, &srcaddr, &srcaddrlen)) {
-            netty_unix_errors_throwIOException(env,
+            netty5_unix_errors_throwIOException(env,
                 "Source address specified, but could not be converted to sockaddr.");
             return -EINVAL;
         }
@@ -116,9 +116,9 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
     }
 
     assert(destinationAddress != NULL); // Java side will ensure destination is never null.
-    if (-1 == netty_unix_socket_initSockaddr(env,
+    if (-1 == netty5_unix_socket_initSockaddr(env,
             destinationIPv6, destinationAddress, destinationScopeId, destinationPort, &dstaddr, &dstaddrlen)) {
-        netty_unix_errors_throwIOException(env, "Destination address could not be converted to sockaddr.");
+        netty5_unix_errors_throwIOException(env, "Destination address could not be converted to sockaddr.");
         return -EINVAL;
     }
     endpoints.sae_dstaddr = (const struct sockaddr*) &dstaddr;
@@ -138,7 +138,7 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
 #endif
 }
 
-static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
+static void netty5_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
 #ifdef SO_ACCEPTFILTER
     struct accept_filter_arg af;
     const char* tmpString = NULL;
@@ -152,17 +152,17 @@ static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, ji
     strncat(af.af_arg, tmpString, sizeof(af.af_arg) / sizeof(af.af_arg[0]));
     (*env)->ReleaseStringUTFChars(env, afArg, tmpString);
 
-    netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af));
+    netty5_unix_socket_setOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af));
 #else // No know replacement on MacOS
-    netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EINVAL);
+    netty5_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EINVAL);
 #endif
 }
 
-static jobjectArray netty_kqueue_bsdsocket_getAcceptFilter(JNIEnv* env, jclass clazz, jint fd) {
+static jobjectArray netty5_kqueue_bsdsocket_getAcceptFilter(JNIEnv* env, jclass clazz, jint fd) {
 #ifdef SO_ACCEPTFILTER
     struct accept_filter_arg af;
-    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", errno);
+    if (netty5_unix_socket_getOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
+        netty5_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", errno);
         return NULL;
     }
     jobjectArray resultArray = (*env)->NewObjectArray(env, 2, stringClass, NULL);
@@ -186,48 +186,48 @@ static jobjectArray netty_kqueue_bsdsocket_getAcceptFilter(JNIEnv* env, jclass c
 #endif
 }
 
-static void netty_kqueue_bsdsocket_setTcpNoPush(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval));
+static void netty5_kqueue_bsdsocket_setTcpNoPush(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval));
 }
 
-static void netty_kqueue_bsdsocket_setSndLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval));
+static void netty5_kqueue_bsdsocket_setSndLowAt(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval));
 }
 
-static void netty_kqueue_bsdsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+static void netty5_kqueue_bsdsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
 }
 
-static jint netty_kqueue_bsdsocket_getTcpNoPush(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_kqueue_bsdsocket_getTcpNoPush(JNIEnv* env, jclass clazz, jint fd) {
   int optval;
-  if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
+  if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
     return -1;
   }
   return optval;
 }
 
-static jint netty_kqueue_bsdsocket_getSndLowAt(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_kqueue_bsdsocket_getSndLowAt(JNIEnv* env, jclass clazz, jint fd) {
   int optval;
-  if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval)) == -1) {
+  if (netty5_unix_socket_getOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval)) == -1) {
     return -1;
   }
   return optval;
 }
 
-static jint netty_kqueue_bsdsocket_isTcpFastOpen(JNIEnv* env, jclass clazz, jint fd) {
+static jint netty5_kqueue_bsdsocket_isTcpFastOpen(JNIEnv* env, jclass clazz, jint fd) {
     int optval = 0;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval)) == -1) {
-        netty_unix_socket_getOptionHandleError(env, errno);
+    if (netty5_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval)) == -1) {
+        netty5_unix_socket_getOptionHandleError(env, errno);
         return 0;
     }
     return optval;
 }
 
-static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
+static jobject netty5_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
     struct xucred credentials;
     // It has been observed on MacOS that this method can complete successfully but not set all fields of xucred.
     credentials.cr_ngroups = 0;
-    if(netty_unix_socket_getOption(env,fd, SOL_SOCKET, LOCAL_PEERCRED, &credentials, sizeof (credentials)) == -1) {
+    if(netty5_unix_socket_getOption(env,fd, SOL_SOCKET, LOCAL_PEERCRED, &credentials, sizeof (credentials)) == -1) {
         return NULL;
     }
     jintArray gids = NULL;
@@ -248,7 +248,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 #ifdef LOCAL_PEERPID
     socklen_t len = sizeof(pid);
     // Getting the LOCAL_PEERPID is expected to return error in some cases (e.g. server socket FDs) - just return 0.
-    if (netty_unix_socket_getOption0(fd, SOCK_STREAM, LOCAL_PEERPID, &pid, len) < 0) {
+    if (netty5_unix_socket_getOption0(fd, SOCK_STREAM, LOCAL_PEERPID, &pid, len) < 0) {
         pid = 0;
     }
 #endif
@@ -259,15 +259,15 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
-  { "setAcceptFilter", "(ILjava/lang/String;Ljava/lang/String;)V", (void *) netty_kqueue_bsdsocket_setAcceptFilter },
-  { "setTcpNoPush", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpNoPush },
-  { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
-  { "setTcpFastOpen", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpFastOpen },
-  { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
-  { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
-  { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
-  { "isTcpFastOpen", "(I)I", (void *) netty_kqueue_bsdsocket_isTcpFastOpen },
-  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
+  { "setAcceptFilter", "(ILjava/lang/String;Ljava/lang/String;)V", (void *) netty5_kqueue_bsdsocket_setAcceptFilter },
+  { "setTcpNoPush", "(II)V", (void *) netty5_kqueue_bsdsocket_setTcpNoPush },
+  { "setSndLowAt", "(II)V", (void *) netty5_kqueue_bsdsocket_setSndLowAt },
+  { "setTcpFastOpen", "(II)V", (void *) netty5_kqueue_bsdsocket_setTcpFastOpen },
+  { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty5_kqueue_bsdsocket_getAcceptFilter },
+  { "getTcpNoPush", "(I)I", (void *) netty5_kqueue_bsdsocket_getTcpNoPush },
+  { "getSndLowAt", "(I)I", (void *) netty5_kqueue_bsdsocket_getSndLowAt },
+  { "isTcpFastOpen", "(I)I", (void *) netty5_kqueue_bsdsocket_isTcpFastOpen },
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty5_kqueue_bsdsocket_connectx }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
@@ -290,14 +290,14 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendFile";
-    dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_sendFile;
+    dynamicMethod->fnPtr = (void *) netty5_kqueue_bsdsocket_sendFile;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty5/channel/unix/PeerCredentials;", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "getPeerCredentials";
-    dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_getPeerCredentials;
+    dynamicMethod->fnPtr = (void *) netty5_kqueue_bsdsocket_getPeerCredentials;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     return dynamicMethods;
@@ -311,7 +311,7 @@ error:
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Native to reflect that.
-jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+jint netty5_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
     jclass fileRegionCls = NULL;
@@ -359,7 +359,7 @@ done:
     return ret;
 }
 
-void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
+void netty5_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, peerCredentialsClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
 
