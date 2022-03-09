@@ -442,16 +442,21 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             final PoolArena arena = leastUsedArena(arenas);
 
             final Thread current = Thread.currentThread();
-            if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
+            final EventExecutor executor = ThreadExecutorMap.currentExecutor();
+            if (useCacheForAllThreads ||
+                // If the current thread is a FastThreadLocalThread we will always use the cache
+                current instanceof FastThreadLocalThread ||
+                // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
+                // will allocate a lot!
+                executor != null) {
                 final PoolThreadCache cache = new PoolThreadCache(
                         arena, smallCacheSize, normalCacheSize,
                         DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
 
                 if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {
-                    final EventExecutor executor = ThreadExecutorMap.currentExecutor();
                     if (executor != null) {
                         executor.scheduleAtFixedRate(trimTask, DEFAULT_CACHE_TRIM_INTERVAL_MILLIS,
-                                DEFAULT_CACHE_TRIM_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
+                                                     DEFAULT_CACHE_TRIM_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
                     }
                 }
                 return cache;
