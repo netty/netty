@@ -272,14 +272,14 @@ static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, j
     // only reschedule the timer if there is a newer event.
     // -1 is a special value used by EpollEventLoop.
     if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
-    	struct itimerspec ts;
-    	memset(&ts.it_interval, 0, sizeof(struct timespec));
-    	ts.it_value.tv_sec = tvSec;
-    	ts.it_value.tv_nsec = tvNsec;
-    	if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-    		netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
-    		return -1;
-    	}
+        struct itimerspec ts;
+        memset(&ts.it_interval, 0, sizeof(struct timespec));
+        ts.it_value.tv_sec = tvSec;
+        ts.it_value.tv_nsec = tvNsec;
+        if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+            return -1;
+        }
     }
     return netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
 }
