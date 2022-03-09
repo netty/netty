@@ -830,7 +830,7 @@ static void netty5_epoll_native_JNI_OnUnload(JNIEnv* env) {
 
 // Invoked by the JVM when statically linked
 JNIEXPORT jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty5_epoll_native_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty5_transport_native_epoll", netty5_epoll_native_JNI_OnLoad);
 }
 
 // Invoked by the JVM when statically linked
@@ -840,7 +840,7 @@ JNIEXPORT void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reser
 
 #ifndef NETTY_BUILD_STATIC
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_transport_native_epoll", netty5_epoll_native_JNI_OnLoad);
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty5_transport_native_epoll", netty5_epoll_native_JNI_OnLoad);
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
