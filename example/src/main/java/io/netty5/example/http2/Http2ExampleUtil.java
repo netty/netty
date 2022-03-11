@@ -16,8 +16,8 @@ package io.netty5.example.http2;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;

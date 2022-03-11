@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an

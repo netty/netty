@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;

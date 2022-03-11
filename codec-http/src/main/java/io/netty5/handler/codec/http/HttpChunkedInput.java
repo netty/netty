@@ -15,9 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Send;
 import io.netty5.handler.stream.ChunkedInput;
 
 /**

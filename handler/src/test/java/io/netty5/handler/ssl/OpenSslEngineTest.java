@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;

@@ -14,16 +14,15 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.PooledByteBufAllocator;
-import io.netty5.buffer.Unpooled;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -40,8 +39,8 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.Unpooled.directBuffer;
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_BYTE;

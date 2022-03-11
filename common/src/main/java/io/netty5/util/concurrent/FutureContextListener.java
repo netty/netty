@@ -15,8 +15,6 @@
  */
 package io.netty5.util.concurrent;
 
-import java.util.EventListener;
-
 /**
  * Listens to the result of a {@link Future}.  The result of the asynchronous operation is notified once this listener
  * is added by calling {@link Future#addListener(Object, FutureContextListener)}.

@@ -15,7 +15,7 @@
  */
 package io.netty5.example.qotm;
 
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;

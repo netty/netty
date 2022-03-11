@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.ning.compress.lzf.LZFEncoder;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 

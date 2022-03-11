@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.util.ByteProcessor;
+import io.netty.buffer.ByteBuf;
 
 import static io.netty5.handler.codec.compression.Bzip2Constants.*;
 
@@ -33,7 +32,7 @@ import static io.netty5.handler.codec.compression.Bzip2Constants.*;
  * 7. Huffman encode and write data - {@link #close(ByteBuf)} (through {@link Bzip2HuffmanStageEncoder})
  */
 final class Bzip2BlockCompressor {
-    private final ByteProcessor writeProcessor = this::write;
+    private final io.netty.util.ByteProcessor writeProcessor = this::write;
 
     /**
      * A writer that provides bit-level writes.

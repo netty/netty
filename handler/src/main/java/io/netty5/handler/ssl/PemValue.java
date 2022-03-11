@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.IllegalReferenceCountException;
 

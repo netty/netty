@@ -15,7 +15,7 @@
  */
 package io.netty5.buffer.api.tests.adaptor;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.MemoryManager;

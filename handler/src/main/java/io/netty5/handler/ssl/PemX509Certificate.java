@@ -27,9 +27,9 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.IllegalReferenceCountException;
 

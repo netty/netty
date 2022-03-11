@@ -65,7 +65,7 @@ public class AbstractReferenceCountedTest {
         try {
             referenceCounted.release(1);
             fail("IllegalReferenceCountException didn't occur");
-        } catch (IllegalReferenceCountException e) {
+        } catch (IllegalReferenceCountException | io.netty.util.IllegalReferenceCountException e) {
             assertEquals("refCnt: 0, decrement: 1", e.getMessage());
         }
     }
@@ -107,7 +107,7 @@ public class AbstractReferenceCountedTest {
                             retainLatch.await();
                             try {
                                 referenceCounted.retain(retainCnt);
-                            } catch (IllegalReferenceCountException e) {
+                            } catch (IllegalReferenceCountException | io.netty.util.IllegalReferenceCountException e) {
                                 refCountExceptions.incrementAndGet();
                             }
                         } catch (InterruptedException e) {
@@ -156,7 +156,7 @@ public class AbstractReferenceCountedTest {
                                 if (referenceCounted.release(releaseCnt.incrementAndGet())) {
                                     releasedCount.incrementAndGet();
                                 }
-                            } catch (IllegalReferenceCountException e) {
+                            } catch (IllegalReferenceCountException | io.netty.util.IllegalReferenceCountException e) {
                                 refCountExceptions.incrementAndGet();
                             }
                         } catch (InterruptedException e) {

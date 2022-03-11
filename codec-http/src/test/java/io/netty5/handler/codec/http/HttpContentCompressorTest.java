@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.ByteBufUtil.hexDump;
+import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;

@@ -22,7 +22,7 @@ import static io.netty5.util.ByteProcessorUtils.SPACE;
 /**
  * Provides a mechanism to iterate over a collection of bytes.
  */
-public interface ByteProcessor {
+public interface ByteProcessor extends io.netty.util.ByteProcessor {
     /**
      * A {@link ByteProcessor} which finds the first appearance of a specific byte.
      */

@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
 
 /**
@@ -90,9 +91,8 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
             } catch (Exception e) {
                 throw new RuntimeException("Exception from closing object", e);
             }
-        } else if (obj instanceof ReferenceCounted) {
-            ReferenceCounted rc = (ReferenceCounted) obj;
-            rc.release();
+        } else if (ReferenceCountUtil.isReferenceCounted(obj)) {
+            ReferenceCountUtil.release(obj);
         }
     }
 }

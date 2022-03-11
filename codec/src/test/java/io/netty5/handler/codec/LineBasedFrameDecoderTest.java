@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;

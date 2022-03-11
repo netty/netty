@@ -15,8 +15,6 @@
  */
 package io.netty5.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -33,6 +31,16 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Tests whether the given object implements the {@link ReferenceCounted} interface.
+     *
+     * @param obj The object to test.
+     * @return {@code true} if the given object is reference counted.
+     */
+    public static boolean isReferenceCounted(Object obj) {
+        return obj instanceof io.netty.util.ReferenceCounted || obj instanceof ReferenceCounted;
+    }
+
+    /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
@@ -40,6 +48,9 @@ public final class ReferenceCountUtil {
     public static <T> T retain(T msg) {
         if (msg instanceof ReferenceCounted) {
             return (T) ((ReferenceCounted) msg).retain();
+        }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return (T) ((io.netty.util.ReferenceCounted) msg).retain();
         }
         return msg;
     }
@@ -54,6 +65,9 @@ public final class ReferenceCountUtil {
         if (msg instanceof ReferenceCounted) {
             return (T) ((ReferenceCounted) msg).retain(increment);
         }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return (T) ((io.netty.util.ReferenceCounted) msg).retain(increment);
+        }
         return msg;
     }
 
@@ -65,6 +79,9 @@ public final class ReferenceCountUtil {
     public static <T> T touch(T msg) {
         if (msg instanceof ReferenceCounted) {
             return (T) ((ReferenceCounted) msg).touch();
+        }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return (T) ((io.netty.util.ReferenceCounted) msg).touch();
         }
         return msg;
     }
@@ -79,6 +96,9 @@ public final class ReferenceCountUtil {
         if (msg instanceof ReferenceCounted) {
             return (T) ((ReferenceCounted) msg).touch(hint);
         }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return (T) ((io.netty.util.ReferenceCounted) msg).touch(hint);
+        }
         return msg;
     }
 
@@ -89,6 +109,9 @@ public final class ReferenceCountUtil {
     public static boolean release(Object msg) {
         if (msg instanceof ReferenceCounted) {
             return ((ReferenceCounted) msg).release();
+        }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return ((io.netty.util.ReferenceCounted) msg).release();
         }
         return false;
     }
@@ -101,6 +124,9 @@ public final class ReferenceCountUtil {
         ObjectUtil.checkPositive(decrement, "decrement");
         if (msg instanceof ReferenceCounted) {
             return ((ReferenceCounted) msg).release(decrement);
+        }
+        if (msg instanceof io.netty.util.ReferenceCounted) {
+            return ((io.netty.util.ReferenceCounted) msg).release(decrement);
         }
         return false;
     }
@@ -143,7 +169,10 @@ public final class ReferenceCountUtil {
      * {@link ReferenceCounted}, {@code -1} is returned.
      */
     public static int refCnt(Object msg) {
-        return msg instanceof ReferenceCounted ? ((ReferenceCounted) msg).refCnt() : -1;
+        return msg instanceof ReferenceCounted ?
+                ((ReferenceCounted) msg).refCnt() :
+                msg instanceof io.netty.util.ReferenceCounted ?
+                        ((io.netty.util.ReferenceCounted) msg).refCnt() : -1;
     }
 
     private ReferenceCountUtil() { }

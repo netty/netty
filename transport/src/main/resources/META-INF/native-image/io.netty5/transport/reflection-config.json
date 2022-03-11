@@ -29,5 +29,18 @@
                 "parameterTypes": []
             }
         ]
+    },
+    {
+        "name": "io.netty.buffer.AbstractByteBufAllocator",
+        "methods": [
+            {
+                "name": "toLeakAwareBuffer",
+                "parameterTypes": ["io.netty.buffer.CompositeByteBuf"]
+            },
+            {
+                "name": "toLeakAwareBuffer",
+                "parameterTypes": ["io.netty.buffer.ByteBuf"]
+            }
+        ]
     }
 ]

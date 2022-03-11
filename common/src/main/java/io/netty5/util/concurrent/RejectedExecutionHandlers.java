@@ -17,8 +17,6 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.ObjectUtil;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;

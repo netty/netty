@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.example.http2.tiles;
 
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.example.http2.Http2ExampleUtil.toByteBuf;
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty5.example.http2.Http2ExampleUtil.toByteBuf;
 
 /**
  * Caches the images to avoid reading them every time from the disk.

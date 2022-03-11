@@ -15,10 +15,10 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBufHolder;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Resource;
 import io.netty5.util.concurrent.FastThreadLocal;

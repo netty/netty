@@ -15,9 +15,7 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
-import io.netty5.channel.DefaultAddressedEnvelope;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.DefaultByteBufAddressedEnvelope;
 
 import java.net.InetSocketAddress;

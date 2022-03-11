@@ -15,11 +15,11 @@
  */
 package io.netty5.microbench.search;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.search.AbstractMultiSearchProcessorFactory;
-import io.netty5.buffer.search.AbstractSearchProcessorFactory;
-import io.netty5.buffer.search.SearchProcessor;
-import io.netty5.buffer.search.SearchProcessorFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.search.AbstractMultiSearchProcessorFactory;
+import io.netty.buffer.search.AbstractSearchProcessorFactory;
+import io.netty.buffer.search.SearchProcessor;
+import io.netty.buffer.search.SearchProcessorFactory;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.internal.ResourcesUtil;
 import org.openjdk.jmh.annotations.Benchmark;

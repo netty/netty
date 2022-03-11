@@ -18,7 +18,6 @@ package io.netty5.buffer;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Send;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.UnstableApi;
 
 import java.io.DataInput;
 import java.io.DataInputStream;

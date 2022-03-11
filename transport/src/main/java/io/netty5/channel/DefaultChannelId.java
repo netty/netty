@@ -16,7 +16,7 @@
 
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.MacAddressUtil;
 import io.netty5.util.internal.PlatformDependent;

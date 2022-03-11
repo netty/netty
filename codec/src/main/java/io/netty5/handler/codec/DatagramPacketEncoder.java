@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;

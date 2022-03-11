@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -35,7 +35,7 @@ import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty5.buffer.ByteBufUtil.writeAscii;
+import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;

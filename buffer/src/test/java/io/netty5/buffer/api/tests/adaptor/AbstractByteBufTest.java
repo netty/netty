@@ -15,8 +15,8 @@
  */
 package io.netty5.buffer.api.tests.adaptor;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.util.ByteProcessor;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.IllegalReferenceCountException;
@@ -54,12 +54,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.buffer.Unpooled.LITTLE_ENDIAN;
-import static io.netty5.buffer.Unpooled.buffer;
-import static io.netty5.buffer.Unpooled.copiedBuffer;
-import static io.netty5.buffer.Unpooled.directBuffer;
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.buffer.Unpooled.wrappedBuffer;
+import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty5.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

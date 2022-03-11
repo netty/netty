@@ -14,10 +14,11 @@
  */
 package io.netty5.microbench.channel;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.Future;
 
@@ -45,8 +46,8 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> write(Object msg) {
         try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
+            if (ReferenceCountUtil.isReferenceCounted(msg)) {
+                ReferenceCountUtil.release(msg);
                 return channel().newSucceededFuture();
             }
             return channel().write(msg);
@@ -59,8 +60,8 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
         try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
+            if (ReferenceCountUtil.isReferenceCounted(msg)) {
+                ReferenceCountUtil.release(msg);
                 return channel().newSucceededFuture();
             }
             return channel().writeAndFlush(msg);

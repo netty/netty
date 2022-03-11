@@ -19,8 +19,8 @@ import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import java.nio.ByteBuffer;

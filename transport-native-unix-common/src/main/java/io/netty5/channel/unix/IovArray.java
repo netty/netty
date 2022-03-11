@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.ReadableComponent;
 import io.netty5.buffer.api.ReadableComponentProcessor;
 import io.netty5.buffer.api.WritableComponent;

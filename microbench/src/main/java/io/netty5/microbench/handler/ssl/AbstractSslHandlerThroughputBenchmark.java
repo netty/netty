@@ -14,9 +14,9 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;

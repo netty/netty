@@ -15,8 +15,9 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty5.util.ReferenceCounted;
 
 import java.net.SocketAddress;
 
@@ -27,7 +28,7 @@ import java.net.SocketAddress;
  */
 public class DefaultByteBufAddressedEnvelope<A extends SocketAddress>
         extends DefaultAddressedEnvelope<ByteBuf, A>
-        implements ByteBufHolder {
+        implements ByteBufHolder, ReferenceCounted {
     /**
      * Creates a new instance with the specified {@code message}, {@code recipient} address, and
      * {@code sender} address.

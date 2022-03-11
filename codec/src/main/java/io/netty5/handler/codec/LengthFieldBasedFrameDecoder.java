@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteOrder;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 
 /**

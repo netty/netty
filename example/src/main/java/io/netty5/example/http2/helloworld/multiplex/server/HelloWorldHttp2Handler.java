@@ -15,11 +15,11 @@
 
 package io.netty5.example.http2.helloworld.multiplex.server;
 
-import static io.netty5.buffer.Unpooled.copiedBuffer;
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;

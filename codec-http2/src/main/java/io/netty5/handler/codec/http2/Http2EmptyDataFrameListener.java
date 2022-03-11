@@ -14,11 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ObjectUtil;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * Enforce a limit on the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed

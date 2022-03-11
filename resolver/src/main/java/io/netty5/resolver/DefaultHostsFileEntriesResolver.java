@@ -16,7 +16,6 @@
 package io.netty5.resolver;
 
 import io.netty5.util.CharsetUtil;
-import static java.util.Objects.requireNonNull;
 
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.PlatformDependent;

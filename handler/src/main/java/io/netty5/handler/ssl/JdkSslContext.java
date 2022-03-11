@@ -16,7 +16,7 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.logging.InternalLogger;

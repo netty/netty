@@ -15,7 +15,7 @@
  */
 package io.netty5.example.portunification;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.example.factorial.BigIntegerDecoder;

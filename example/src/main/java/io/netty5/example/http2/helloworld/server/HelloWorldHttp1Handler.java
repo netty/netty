@@ -24,8 +24,6 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpUtil;
 
-import java.nio.charset.StandardCharsets;
-
 import static io.netty5.example.http2.helloworld.server.HelloWorldHttp2Handler.RESPONSE_BYTES;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;

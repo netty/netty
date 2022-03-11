@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.timeout;
 
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.Unpooled;
 
 public class ByteBufIdleStateHandlerTest extends AbstractIdleStateHandlerTest {
     @Override

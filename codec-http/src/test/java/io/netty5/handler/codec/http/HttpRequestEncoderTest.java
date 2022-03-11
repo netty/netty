@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
@@ -138,7 +138,9 @@ public class HttpRequestEncoderTest {
         final ByteBuf buf = Unpooled.buffer();
         buf.release();
         ExecutionException e = assertThrows(ExecutionException.class, () -> channel.writeAndFlush(buf).get());
-        assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        Throwable cause = e.getCause().getCause();
+        assertTrue(cause instanceof IllegalReferenceCountException ||
+                   cause instanceof io.netty.util.IllegalReferenceCountException);
 
         channel.finishAndReleaseAll();
     }

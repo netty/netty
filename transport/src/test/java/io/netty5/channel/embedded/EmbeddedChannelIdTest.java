@@ -17,10 +17,10 @@ package io.netty5.channel.embedded;
 
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufInputStream;
-import io.netty5.buffer.ByteBufOutputStream;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelId;

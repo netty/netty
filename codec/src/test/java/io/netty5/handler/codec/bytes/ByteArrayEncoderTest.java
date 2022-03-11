@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 

@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ByteProcessor;
+import io.netty.util.ByteProcessor;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s on line endings.

@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;

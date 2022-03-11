@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.CompositeByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.AbstractCoalescingBufferQueue;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -62,7 +62,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static io.netty5.buffer.ByteBufUtil.ensureWritableSuccess;
+import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;

@@ -16,8 +16,8 @@
 
 package io.netty5.handler.codec.dns;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.util.CharsetUtil;
 

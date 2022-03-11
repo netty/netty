@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.ConstantTimeUtils;
