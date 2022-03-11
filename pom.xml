@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty5-parent</artifactId>
   <packaging>pom</packaging>
-  <version>5.0.0.Final-SNAPSHOT</version>
+  <version>5.0.0.Alpha1-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -1654,7 +1654,7 @@
           <version>1.5</version>
           <configuration>
             <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+              <resourceBundle>io.netty:netty5-dev-tools:${project.version}</resourceBundle>
             </resourceBundles>
             <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
             <!-- don't include netty-dev-tools in artifacts -->
