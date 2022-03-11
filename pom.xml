@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty5-parent</artifactId>
   <packaging>pom</packaging>
-  <version>5.0.0.Alpha1-SNAPSHOT</version>
+  <version>5.0.0.Alpha1</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-5.0.0.Alpha1</tag>
   </scm>
 
   <developers>
@@ -178,7 +178,7 @@
       <properties>
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <testJvm/>
+        <testJvm />
       </properties>
     </profile>
     <profile>
