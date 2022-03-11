@@ -19,8 +19,8 @@ import java.net.IDN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty5.handler.codec.dns.DnsRawRecord;
 import io.netty5.handler.codec.dns.DnsRecord;
 

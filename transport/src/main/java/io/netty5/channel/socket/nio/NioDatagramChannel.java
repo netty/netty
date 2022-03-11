@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.socket.nio;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Resource;
 import io.netty5.buffer.api.WritableComponent;

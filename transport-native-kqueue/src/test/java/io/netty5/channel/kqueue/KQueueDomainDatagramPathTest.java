@@ -16,7 +16,7 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.unix.DomainDatagramPacket;

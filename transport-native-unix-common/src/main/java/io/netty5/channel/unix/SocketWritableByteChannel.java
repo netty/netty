@@ -17,7 +17,7 @@ package io.netty5.channel.unix;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import java.nio.channels.WritableByteChannel;
 
 public abstract class SocketWritableByteChannel implements WritableByteChannel {
@@ -36,18 +36,18 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
             written = fd.write(src, position, src.limit());
         } else {
             final int readableBytes = limit - position;
-            io.netty5.buffer.ByteBuf buffer = null;
+            io.netty.buffer.ByteBuf buffer = null;
             try {
                 if (readableBytes == 0) {
-                    buffer = io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+                    buffer = io.netty.buffer.Unpooled.EMPTY_BUFFER;
                 } else {
                     final ByteBufAllocator alloc = alloc();
                     if (alloc.isDirectBufferPooled()) {
                         buffer = alloc.directBuffer(readableBytes);
                     } else {
-                        buffer = io.netty5.buffer.ByteBufUtil.threadLocalDirectBuffer();
+                        buffer = io.netty.buffer.ByteBufUtil.threadLocalDirectBuffer();
                         if (buffer == null) {
-                            buffer = io.netty5.buffer.Unpooled.directBuffer(readableBytes);
+                            buffer = io.netty.buffer.Unpooled.directBuffer(readableBytes);
                         }
                     }
                 }

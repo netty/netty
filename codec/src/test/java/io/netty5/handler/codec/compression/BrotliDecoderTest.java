@@ -17,9 +17,9 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.CompositeByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;

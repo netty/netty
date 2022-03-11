@@ -17,7 +17,6 @@ package io.netty5.resolver;
 
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 
 import java.util.Arrays;

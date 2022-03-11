@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.CompositeByteBuf;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
@@ -33,10 +33,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import static io.netty5.buffer.Unpooled.buffer;
-import static io.netty5.buffer.Unpooled.compositeBuffer;
-import static io.netty5.buffer.Unpooled.copiedBuffer;
-import static io.netty5.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.compositeBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

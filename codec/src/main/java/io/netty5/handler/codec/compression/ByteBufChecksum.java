@@ -17,8 +17,7 @@ package io.netty5.handler.codec.compression;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.util.ByteProcessor;
+import io.netty.buffer.ByteBuf;
 
 import java.nio.ByteBuffer;
 import java.util.zip.Adler32;
@@ -33,7 +32,7 @@ import java.util.zip.Checksum;
  */
 abstract class ByteBufChecksum implements Checksum {
 
-    private final ByteProcessor updateProcessor = value -> {
+    private final io.netty.util.ByteProcessor updateProcessor = value -> {
         update(value);
         return true;
     };

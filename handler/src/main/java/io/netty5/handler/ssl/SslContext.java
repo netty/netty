@@ -16,9 +16,9 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;

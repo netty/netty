@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufInputStream;
-import io.netty5.buffer.CompositeByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;

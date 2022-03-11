@@ -339,8 +339,8 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     private void clear(int section) {
         final Object recordOrList = sectionAt(section);
         setSection(section, null);
-        if (recordOrList instanceof ReferenceCounted) {
-            ((ReferenceCounted) recordOrList).release();
+        if (ReferenceCountUtil.isReferenceCounted(recordOrList)) {
+            ReferenceCountUtil.release(recordOrList);
         } else if (recordOrList instanceof List) {
             @SuppressWarnings("unchecked")
             List<DnsRecord> list = (List<DnsRecord>) recordOrList;

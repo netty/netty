@@ -17,8 +17,6 @@ package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.ObjectUtil;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;

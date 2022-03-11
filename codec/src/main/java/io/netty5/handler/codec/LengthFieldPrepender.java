@@ -18,7 +18,7 @@ package io.netty5.handler.codec;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 

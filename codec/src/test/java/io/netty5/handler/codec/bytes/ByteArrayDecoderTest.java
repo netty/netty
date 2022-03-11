@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 

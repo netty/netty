@@ -16,8 +16,8 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;

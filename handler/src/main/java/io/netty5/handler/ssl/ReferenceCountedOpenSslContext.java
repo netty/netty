@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;

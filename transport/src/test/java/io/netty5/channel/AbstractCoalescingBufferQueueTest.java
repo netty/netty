@@ -15,9 +15,9 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;

@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBufUtil;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 

@@ -18,10 +18,10 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -88,7 +88,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.buffer.Unpooled.wrappedBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -535,7 +535,8 @@ public class SslHandlerTest {
                         if (cause instanceof CodecException) {
                             cause = cause.getCause();
                         }
-                        if (cause instanceof IllegalReferenceCountException) {
+                        if (cause instanceof IllegalReferenceCountException ||
+                            cause instanceof io.netty.util.IllegalReferenceCountException) {
                             promise.setFailure(cause);
                         }
                         cause.printStackTrace();

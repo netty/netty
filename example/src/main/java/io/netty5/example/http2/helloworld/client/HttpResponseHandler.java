@@ -14,7 +14,6 @@
  */
 package io.netty5.example.http2.helloworld.client;
 
-import io.netty5.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;

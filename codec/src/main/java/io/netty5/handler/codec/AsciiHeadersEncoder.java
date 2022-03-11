@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.ByteBufUtil;
 import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;

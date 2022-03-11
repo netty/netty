@@ -14,9 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -33,8 +33,8 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.ByteBufUtil.hexDump;
-import static io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.ByteBufUtil.hexDump;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;

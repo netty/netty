@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 
 /**
  * An bit reader that allows the reading of single bit booleans, bit strings of

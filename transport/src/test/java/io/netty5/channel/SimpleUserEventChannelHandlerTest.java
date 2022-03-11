@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.DefaultByteBufHolder;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

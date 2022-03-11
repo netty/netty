@@ -15,9 +15,9 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.util.AsciiString;
@@ -27,8 +27,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty5.buffer.Unpooled.directBuffer;
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.handler.codec.http2.Http2Exception.headerListSizeError;

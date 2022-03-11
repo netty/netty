@@ -19,9 +19,9 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.util.ByteProcessor;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ByteProcessor;
 
 import java.nio.ByteOrder;
 

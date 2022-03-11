@@ -16,7 +16,7 @@
 package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;

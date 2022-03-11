@@ -17,9 +17,9 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
@@ -618,7 +618,9 @@ public class Http2ConnectionRoundtripTest {
                 promise.asFuture().get();
             }
         });
-        assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        Throwable cause = e.getCause();
+        assertTrue(cause instanceof IllegalReferenceCountException ||
+                   cause instanceof io.netty.util.IllegalReferenceCountException);
     }
 
     @Test

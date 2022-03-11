@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import static io.netty5.buffer.ByteBufUtil.writeAscii;
-import static io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.ByteBufUtil.writeAscii;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;

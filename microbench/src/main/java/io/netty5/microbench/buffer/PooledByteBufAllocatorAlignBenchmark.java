@@ -15,8 +15,8 @@
  */
 package io.netty5.microbench.buffer;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 
 import java.util.Random;

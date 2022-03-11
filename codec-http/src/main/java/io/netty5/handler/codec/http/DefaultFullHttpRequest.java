@@ -110,7 +110,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
             if (payload.isAccessible()) {
                 try {
                     hash = 31 + payload.hashCode();
-                } catch (IllegalReferenceCountException ignored) {
+                } catch (IllegalReferenceCountException | io.netty.util.IllegalReferenceCountException ignored) {
                     // Handle race condition between checking refCnt() == 0 and using the object.
                     hash = 31;
                 }

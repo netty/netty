@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
-import io.netty5.buffer.DefaultByteBufHolder;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;

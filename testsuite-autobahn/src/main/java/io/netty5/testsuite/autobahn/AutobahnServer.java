@@ -16,7 +16,7 @@
 package io.netty5.testsuite.autobahn;
 
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.PooledByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;

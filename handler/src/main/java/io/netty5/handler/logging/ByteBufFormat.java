@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.logging;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 
 /**
  * Used to control the format and verbosity of logging for {@link ByteBuf}s and {@link ByteBufHolder}s.

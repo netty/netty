@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.rtsp;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.handler.codec.http.HttpContent;

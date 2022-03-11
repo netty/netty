@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Different modes of reading from a {@link DomainSocketChannel}.

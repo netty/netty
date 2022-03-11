@@ -18,8 +18,8 @@ package io.netty5.handler.stream;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.nio.ByteBuffer;

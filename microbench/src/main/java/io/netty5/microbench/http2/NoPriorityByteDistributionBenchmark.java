@@ -14,7 +14,7 @@
  */
 package io.netty5.microbench.http2;
 
-import io.netty5.buffer.PooledByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.DefaultHttp2Connection;
 import io.netty5.handler.codec.http2.DefaultHttp2RemoteFlowController;

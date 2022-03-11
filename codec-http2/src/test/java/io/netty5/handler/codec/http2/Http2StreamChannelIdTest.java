@@ -17,10 +17,10 @@ package io.netty5.handler.codec.http2;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufInputStream;
-import io.netty5.buffer.ByteBufOutputStream;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.DefaultChannelId;
 import org.junit.jupiter.api.Test;

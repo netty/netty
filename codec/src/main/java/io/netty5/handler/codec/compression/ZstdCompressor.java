@@ -16,13 +16,12 @@
 package io.netty5.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.util.internal.ObjectUtil;
 
-import static java.util.Objects.requireNonNull;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 

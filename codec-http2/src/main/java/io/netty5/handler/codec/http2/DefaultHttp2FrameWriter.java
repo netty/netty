@@ -15,7 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty5.handler.codec.http2.Http2FrameWriter.Configuration;
@@ -23,8 +23,8 @@ import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty5.buffer.Unpooled.directBuffer;
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;

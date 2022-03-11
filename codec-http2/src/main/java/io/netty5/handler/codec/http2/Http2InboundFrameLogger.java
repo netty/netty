@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http2;
 import static io.netty5.handler.codec.http2.Http2FrameLogger.Direction.INBOUND;
 import static java.util.Objects.requireNonNull;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 

@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.group;
 
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufHolder;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ServerChannel;

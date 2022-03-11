@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;

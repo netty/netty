@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.CompositeByteBuf;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;

@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.RecvBufferAllocator;

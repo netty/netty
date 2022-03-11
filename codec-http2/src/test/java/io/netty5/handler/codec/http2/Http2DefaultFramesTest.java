@@ -15,8 +15,8 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.DefaultByteBufHolder;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;

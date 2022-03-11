@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.DefaultByteBufHolder;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 

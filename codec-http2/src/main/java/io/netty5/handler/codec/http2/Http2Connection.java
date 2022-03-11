@@ -15,8 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.util.concurrent.Future;
+import io.netty.buffer.ByteBuf;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 

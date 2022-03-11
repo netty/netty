@@ -15,8 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.util.concurrent.EventExecutor;
+import io.netty.buffer.ByteBuf;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;

@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -24,7 +24,7 @@ import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty5.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static java.util.Objects.requireNonNull;

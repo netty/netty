@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandlerContext;

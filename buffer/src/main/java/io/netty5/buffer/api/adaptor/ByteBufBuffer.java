@@ -15,9 +15,9 @@
  */
 package io.netty5.buffer.api.adaptor;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.AllocationType;
 import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
@@ -26,7 +26,6 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
 import io.netty5.buffer.api.Drop;
-import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.ReadableComponent;
 import io.netty5.buffer.api.ReadableComponentProcessor;
@@ -50,7 +49,6 @@ import java.util.function.Supplier;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
-import static io.netty5.buffer.api.internal.Statics.convert;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressOfDirectByteBuffer;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 
@@ -1049,7 +1047,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     private RuntimeException accessException(RuntimeException e, boolean isWrite) {
-        if (e instanceof IllegalReferenceCountException) {
+        if (e instanceof IllegalReferenceCountException || e instanceof io.netty.util.IllegalReferenceCountException) {
             BufferClosedException closed = attachTrace(bufferIsClosed(this));
             closed.addSuppressed(e);
             return closed;

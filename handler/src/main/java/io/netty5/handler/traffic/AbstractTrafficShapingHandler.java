@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufHolder;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;

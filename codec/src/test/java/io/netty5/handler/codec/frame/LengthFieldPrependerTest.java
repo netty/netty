@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.frame;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.LengthFieldPrepender;
@@ -23,7 +23,7 @@ import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.*;
 import java.nio.ByteOrder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

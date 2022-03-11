@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;

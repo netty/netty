@@ -15,9 +15,9 @@
 */
 package io.netty5.microbench.buffer;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.UnpooledByteBufAllocator;
-import io.netty5.buffer.UnpooledUnsafeDirectByteBuf;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Setup;

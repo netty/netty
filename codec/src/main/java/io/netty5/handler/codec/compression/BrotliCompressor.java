@@ -16,10 +16,10 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;

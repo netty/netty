@@ -14,10 +14,10 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.CompositeByteBuf;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;

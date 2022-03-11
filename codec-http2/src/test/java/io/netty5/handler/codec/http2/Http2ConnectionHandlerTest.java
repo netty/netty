@@ -15,9 +15,9 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.Unpooled;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
@@ -44,7 +44,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty5.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;

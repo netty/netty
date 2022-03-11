@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 
 import java.security.cert.Certificate;
 import java.util.Map;

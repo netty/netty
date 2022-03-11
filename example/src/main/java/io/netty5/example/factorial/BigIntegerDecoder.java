@@ -15,7 +15,7 @@
  */
 package io.netty5.example.factorial;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.CorruptedFrameException;

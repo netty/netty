@@ -19,9 +19,9 @@ import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkDecoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.util.function.Supplier;
 

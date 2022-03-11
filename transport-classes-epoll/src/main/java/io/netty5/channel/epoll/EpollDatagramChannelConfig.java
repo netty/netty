@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -26,8 +26,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.socket.DatagramChannelConfig;
 import io.netty5.util.internal.ObjectUtil;
-
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;

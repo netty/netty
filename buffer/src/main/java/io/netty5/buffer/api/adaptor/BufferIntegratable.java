@@ -15,7 +15,7 @@
  */
 package io.netty5.buffer.api.adaptor;
 
-import io.netty5.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty5.util.ReferenceCounted;
 
 /**

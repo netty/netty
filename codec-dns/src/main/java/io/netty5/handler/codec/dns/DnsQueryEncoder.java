@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 
 import java.util.Objects;
 

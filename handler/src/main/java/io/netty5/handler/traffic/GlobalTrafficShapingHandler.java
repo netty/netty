@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty5.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -26,7 +26,6 @@ import io.netty5.util.concurrent.Promise;
 import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 

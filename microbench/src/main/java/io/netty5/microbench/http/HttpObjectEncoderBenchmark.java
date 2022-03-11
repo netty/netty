@@ -15,8 +15,8 @@
  */
 package io.netty5.microbench.http;
 
-import io.netty5.buffer.PooledByteBufAllocator;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;

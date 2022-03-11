@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;

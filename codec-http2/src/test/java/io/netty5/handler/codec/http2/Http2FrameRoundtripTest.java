@@ -15,11 +15,11 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.CompositeByteBuf;
-import io.netty5.buffer.EmptyByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
@@ -40,7 +40,7 @@ import org.mockito.stubbing.Answer;
 import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestDecoder;

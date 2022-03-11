@@ -15,14 +15,14 @@
  */
 package io.netty5.buffer.api.adaptor;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBufUtil;
-import io.netty5.buffer.DuplicatedByteBuf;
-import io.netty5.buffer.SlicedByteBuf;
-import io.netty5.buffer.SwappedByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.DuplicatedByteBuf;
+import io.netty.buffer.SlicedByteBuf;
+import io.netty.buffer.SwappedByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.internal.ResourceSupport;
@@ -280,6 +280,33 @@ public final class ByteBufAdaptor extends ByteBuf {
     @Override
     public ByteBuf clear() {
         return setIndex(0, 0);
+    }
+
+    private int markedReaderIndex;
+    private int markedWriterIndex;
+
+    @Override
+    public ByteBuf markReaderIndex() {
+        markedReaderIndex = readerIndex();
+        return this;
+    }
+
+    @Override
+    public ByteBuf resetReaderIndex() {
+        readerIndex(markedReaderIndex);
+        return this;
+    }
+
+    @Override
+    public ByteBuf markWriterIndex() {
+        markedWriterIndex = writerIndex();
+        return this;
+    }
+
+    @Override
+    public ByteBuf resetWriterIndex() {
+        writerIndex(markedWriterIndex);
+        return this;
     }
 
     @Override
@@ -1362,6 +1389,48 @@ public final class ByteBufAdaptor extends ByteBuf {
     }
 
     @Override
+    public int forEachByte(io.netty.util.ByteProcessor byteProcessor) {
+        return forEachByte(wrap(byteProcessor));
+    }
+
+    @Override
+    public int forEachByte(int index, int length, io.netty.util.ByteProcessor byteProcessor) {
+        return forEachByte(index, length, wrap(byteProcessor));
+    }
+
+    @Override
+    public int forEachByteDesc(io.netty.util.ByteProcessor byteProcessor) {
+        return forEachByteDesc(wrap(byteProcessor));
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, io.netty.util.ByteProcessor byteProcessor) {
+        return forEachByteDesc(index, length, wrap(byteProcessor));
+    }
+
+    private static ByteProcessor wrap(io.netty.util.ByteProcessor byteProcessor) {
+        return new ByteProcessor() {
+            @Override
+            public boolean process(byte value) {
+                try {
+                    return byteProcessor.process(value);
+                } catch (RuntimeException | Error re) {
+                    throw re;
+                } catch (Exception e) {
+                    throw new ByteProcessingException(e);
+                }
+            }
+        };
+    }
+
+    private static final class ByteProcessingException extends RuntimeException {
+        private static final long serialVersionUID = -2078372351162685991L;
+
+        ByteProcessingException(Throwable cause) {
+            super(cause);
+        }
+    }
+
     public int forEachByte(ByteProcessor processor) {
         checkAccess();
         int index = readerIndex();
@@ -1369,14 +1438,12 @@ public final class ByteBufAdaptor extends ByteBuf {
         return bytes == -1 ? -1 : index + bytes;
     }
 
-    @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
         checkAccess();
         int bytes = buffer.openCursor(index, length).process(processor);
         return bytes == -1 ? -1 : index + bytes;
     }
 
-    @Override
     public int forEachByteDesc(ByteProcessor processor) {
         checkAccess();
         int index = readerIndex();
@@ -1384,7 +1451,6 @@ public final class ByteBufAdaptor extends ByteBuf {
         return bytes == -1 ? -1 : index - bytes;
     }
 
-    @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         checkAccess();
         int bytes = buffer.openReverseCursor(index + length - 1, length).process(processor);

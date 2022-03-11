@@ -29,7 +29,7 @@ package io.netty5.util;
  * reference count becomes 0.
  * </p>
  */
-public interface ReferenceCounted {
+public interface ReferenceCounted extends io.netty.util.ReferenceCounted {
     /**
      * Returns the reference count of this object.  If {@code 0}, it means this object has been deallocated.
      */

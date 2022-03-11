@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.adaptor;
 
-import io.netty5.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.buffer.api.adaptor.ByteBufBuffer;

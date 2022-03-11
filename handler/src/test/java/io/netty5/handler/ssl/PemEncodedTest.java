@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
 
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.ReferenceCountUtil;

@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 

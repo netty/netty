@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.buffer.ByteBufConvertible;
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Resource;

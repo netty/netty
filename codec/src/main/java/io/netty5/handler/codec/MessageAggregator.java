@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufHolder;
-import io.netty5.buffer.CompositeByteBuf;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -26,7 +26,7 @@ import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 
-import static io.netty5.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**

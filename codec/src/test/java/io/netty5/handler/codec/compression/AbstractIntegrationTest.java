@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.CompositeByteBuf;
-import io.netty5.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCountUtil;
