@@ -37,7 +37,7 @@ API_DIR=target/site/apidocs/
 XREF_DIR=target/site/xref/
 
 git checkout "$TAG"
-JAVA_HOME=$JAVA8_HOME ./mvnw -Paggregate clean package javadoc:aggregate jxr:aggregate -DskipTests=true
+JAVA_HOME=$JAVA11_HOME ./mvnw -Paggregate clean package javadoc:aggregate jxr:aggregate -DskipTests=true
 
 echo "Delete old javadocs and xref files"
 rm -rf "$WEBSITE_API_DIR"/*
