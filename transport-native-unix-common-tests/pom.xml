@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty5-parent</artifactId>
-    <version>5.0.0.Alpha1</version>
+    <version>5.0.1.Alpha1-SNAPSHOT</version>
   </parent>
   <artifactId>netty5-transport-native-unix-common-tests</artifactId>
 
