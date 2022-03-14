@@ -87,7 +87,7 @@ public class WebSocketClientExtensionHandlerTest {
         assertEquals("main", resExts.get(0).name());
         assertTrue(resExts.get(0).parameters().isEmpty());
         assertNotNull(ch.pipeline().get(DummyDecoder.class));
-        assertNotNull(ch.pipeline().get(DummyEncoder.class) != null);
+        assertNotNull(ch.pipeline().get(DummyEncoder.class));
 
         verify(mainHandshakerMock).newRequestData();
         verify(mainHandshakerMock).handshakeExtension(any(WebSocketExtensionData.class));
