@@ -152,8 +152,8 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             ByteBuf _buf = buf.componentAtOffset(index++);
             assertNotNull(_buf);
             assertTrue(_buf.capacity() > 0);
-            assertNotNull(_buf.getByte(0));
-            assertNotNull(_buf.getByte(_buf.readableBytes() - 1));
+            assertTrue(_buf.getByte(0) > 0);
+            assertTrue(_buf.getByte(_buf.readableBytes() - 1) > 0);
         }
 
         buf.release();
