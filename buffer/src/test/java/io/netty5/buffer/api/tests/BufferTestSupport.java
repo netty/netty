@@ -408,6 +408,7 @@ public abstract class BufferTestSupport {
     }
 
     public static void verifyReadInaccessible(Buffer buf) {
+        assertThrows(BufferClosedException.class, () -> buf.readBoolean());
         assertThrows(BufferClosedException.class, () -> buf.readByte());
         assertThrows(BufferClosedException.class, () -> buf.readUnsignedByte());
         assertThrows(BufferClosedException.class, () -> buf.readChar());
@@ -421,6 +422,7 @@ public abstract class BufferTestSupport {
         assertThrows(BufferClosedException.class, () -> buf.readLong());
         assertThrows(BufferClosedException.class, () -> buf.readDouble());
 
+        assertThrows(BufferClosedException.class, () -> buf.getBoolean(0));
         assertThrows(BufferClosedException.class, () -> buf.getByte(0));
         assertThrows(BufferClosedException.class, () -> buf.getUnsignedByte(0));
         assertThrows(BufferClosedException.class, () -> buf.getChar(0));
