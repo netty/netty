@@ -25,7 +25,10 @@ public interface BufferAccessor {
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors interface.">
     /**
      * Read the boolean value at the current {@link Buffer#readerOffset()},
-     * and increases the reader offset by {@link Byte#BYTES}.
+     * and increases the reader offset by {@link Byte#BYTES}. A boolean gets
+     * read as a byte from this buffer. All byte values which are not equal
+     * to zero are considered as the boolean value {@code true}, zero represents
+     * {@code false}.
      *
      * @return The boolean value at the current reader offset.
      * @throws IndexOutOfBoundsException If {@link Buffer#readableBytes} is less than {@link Byte#BYTES}.
@@ -37,6 +40,10 @@ public interface BufferAccessor {
     /**
      * Get the boolean value at the given reader offset.
      * The {@link Buffer#readerOffset()} is not modified.
+     * A boolean gets read as a byte from this buffer. All
+     * byte values which are not equal to zero are considered
+     * as the boolean value {@code true}, zero represents
+     * {@code false}.
      *
      * @param roff The read offset, an absolute offset into this buffer, to read from.
      * @return The boolean value at the given offset.
@@ -49,7 +56,10 @@ public interface BufferAccessor {
 
     /**
      * Write the given boolean value at the current {@link Buffer#writerOffset()},
-     * and increase the writer offset by {@link Byte#BYTES}.
+     * and increase the writer offset by {@link Byte#BYTES}. A boolean gets
+     * written as a byte to this buffer. All byte values which are not equal
+     * to zero are considered as the boolean value {@code true}, zero represents
+     * {@code false}.
      *
      * @param value The boolean value to write.
      * @return This Buffer.
@@ -60,7 +70,12 @@ public interface BufferAccessor {
     }
 
     /**
-     * Set the given boolean value at the given write offset. The {@link Buffer#writerOffset()} is not modified.
+     * Set the given boolean value at the given write offset.
+     * The {@link Buffer#writerOffset()} is not modified.
+     * A boolean gets written as a byte to this buffer. All
+     * byte values which are not equal to zero are considered
+     * as the boolean value {@code true}, zero represents
+     * {@code false}.
      *
      * @param woff The write offset, an absolute offset into this buffer to write to.
      * @param value The boolean value to write.
