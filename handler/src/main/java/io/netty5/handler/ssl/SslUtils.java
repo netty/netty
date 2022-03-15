@@ -109,7 +109,7 @@ final class SslUtils {
 
     private static final boolean TLSV1_3_JDK_SUPPORTED;
     private static final boolean TLSV1_3_JDK_DEFAULT_ENABLED;
-    public static final TrustManager[] EMPTY_TRUST_MANAGERS = new TrustManager[0];
+   static final TrustManager[] EMPTY_TRUST_MANAGERS = new TrustManager[0];
 
     static {
         TLSV1_3_JDK_SUPPORTED = isTLSv13SupportedByJDK0(null);
