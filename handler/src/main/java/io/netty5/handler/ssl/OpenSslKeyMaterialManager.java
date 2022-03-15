@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-
 /**
  * Manages key material for {@link OpenSslEngine}s and so set the right {@link PrivateKey}s and
  * {@link X509Certificate}s.

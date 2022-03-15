@@ -19,7 +19,6 @@ import io.netty5.util.AbstractConstant;
 import io.netty5.util.ConstantPool;
 import static java.util.Objects.requireNonNull;
 
-
 /**
  * A {@link SslContextOption} allows to configure a {@link SslContext} in a type-safe
  * way. Which {@link SslContextOption} is supported depends on the actual implementation

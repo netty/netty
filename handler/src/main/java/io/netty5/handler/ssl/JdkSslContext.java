@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -90,7 +89,9 @@ public class JdkSslContext extends SslContext {
         DEFAULT_CIPHERS_NON_TLSV13 = Collections.unmodifiableList(ciphersNonTLSv13);
 
         Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<>(SUPPORTED_CIPHERS);
-        suppertedCiphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
+        for (String defaultTlsv13CipherSuite : SslUtils.DEFAULT_TLSV13_CIPHER_SUITES) {
+            suppertedCiphersNonTLSv13.remove(defaultTlsv13CipherSuite);
+        }
         SUPPORTED_CIPHERS_NON_TLSV13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
 
         if (logger.isDebugEnabled()) {
@@ -120,8 +121,7 @@ public class JdkSslContext extends SslContext {
         // Choose the sensible default list of cipher suites.
         final String[] supportedCiphers = engine.getSupportedCipherSuites();
         Set<String> supportedCiphersSet = new LinkedHashSet<>(supportedCiphers.length);
-        for (int i = 0; i < supportedCiphers.length; ++i) {
-            String supportedCipher = supportedCiphers[i];
+        for (String supportedCipher : supportedCiphers) {
             supportedCiphersSet.add(supportedCipher);
             // IBM's J9 JVM utilizes a custom naming scheme for ciphers and only returns ciphers with the "SSL_"
             // prefix instead of the "TLS_" prefix (as defined in the JSSE cipher suite names [1]). According to IBM's
@@ -135,7 +135,7 @@ public class JdkSslContext extends SslContext {
             if (supportedCipher.startsWith("SSL_")) {
                 final String tlsPrefixedCipherName = "TLS_" + supportedCipher.substring("SSL_".length());
                 try {
-                    engine.setEnabledCipherSuites(new String[]{tlsPrefixedCipherName});
+                    engine.setEnabledCipherSuites(new String[] { tlsPrefixedCipherName });
                     supportedCiphersSet.add(tlsPrefixedCipherName);
                 } catch (IllegalArgumentException ignored) {
                     // The cipher is not supported ... move on to the next cipher.

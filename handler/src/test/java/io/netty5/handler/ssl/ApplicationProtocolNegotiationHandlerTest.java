@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -30,6 +29,7 @@ import javax.net.ssl.SSLHandshakeException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static io.netty5.handler.ssl.CloseNotifyTest.assertCloseNotify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -125,7 +125,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         // Should produce the close_notify messages
         channel.releaseOutbound();
         channel.close();
-        assertCloseNotify((ByteBuf) channel.readOutbound());
+        assertCloseNotify(channel.readOutbound());
         channel.finishAndReleaseAll();
         assertTrue(configureCalled.get());
     }
@@ -156,27 +156,16 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testBufferMessagesUntilHandshakeCompleteWithClose() throws Exception {
-        testBufferMessagesUntilHandshakeComplete(
-                new ApplicationProtocolNegotiationHandlerTest.Consumer<ChannelHandlerContext>() {
-                    @Override
-                    public void consume(ChannelHandlerContext ctx) {
-                        ctx.channel().close();
-                    }
-                });
+        testBufferMessagesUntilHandshakeComplete(ctx -> ctx.channel().close());
     }
 
     @Test
     public void testBufferMessagesUntilHandshakeCompleteWithInputShutdown() throws Exception {
-        testBufferMessagesUntilHandshakeComplete(
-                new ApplicationProtocolNegotiationHandlerTest.Consumer<ChannelHandlerContext>() {
-                    @Override
-                    public void consume(ChannelHandlerContext ctx) {
-                        ctx.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                    }
-                });
+        testBufferMessagesUntilHandshakeComplete(ctx -> ctx.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE));
     }
 
-    private void testBufferMessagesUntilHandshakeComplete(final Consumer<ChannelHandlerContext> pipelineConfigurator)
+    private static void testBufferMessagesUntilHandshakeComplete(
+            final Consumer<ChannelHandlerContext> pipelineConfigurator)
             throws Exception {
         final AtomicReference<byte[]> channelReadData = new AtomicReference<byte[]>();
         final AtomicBoolean channelReadCompleteCalled = new AtomicBoolean(false);
@@ -196,7 +185,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
                     }
                 });
                 if (pipelineConfigurator != null) {
-                    pipelineConfigurator.consume(ctx);
+                    pipelineConfigurator.accept(ctx);
                 }
             }
         };
@@ -223,9 +212,5 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertTrue(channelReadCompleteCalled.get());
         assertNull(channel.readInbound());
         assertTrue(channel.finishAndReleaseAll());
-    }
-
-    private interface Consumer<T> {
-        void consume(T t);
     }
 }

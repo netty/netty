@@ -96,7 +96,7 @@ public class CloseNotifyTest {
             // send data:
             clientChannel.writeOutbound(writeAscii(ALLOC, "request_msg"));
             forwardData(clientChannel, serverChannel);
-            assertThat(serverEventQueue.poll(), equalTo((Object) "request_msg"));
+            assertThat(serverEventQueue.poll(), equalTo("request_msg"));
 
             // respond with data and close_notify:
             serverChannel.writeOutbound(writeAscii(ALLOC, "response_msg"));
@@ -106,7 +106,7 @@ public class CloseNotifyTest {
 
             // consume server response with close_notify:
             forwardAllWithCloseNotify(serverChannel, clientChannel);
-            assertThat(clientEventQueue.poll(), equalTo((Object) "response_msg"));
+            assertThat(clientEventQueue.poll(), equalTo("response_msg"));
             assertThat(clientEventQueue.poll(), instanceOf(SslCloseCompletionEvent.class));
 
             // make sure client automatically responds with close_notify:
@@ -114,7 +114,7 @@ public class CloseNotifyTest {
                 // JDK impl of TLSv1.3 does not automatically generate "close_notify" in response to the received
                 // "close_notify" alert. This is a legit behavior according to the spec:
                 // https://tools.ietf.org/html/rfc8446#section-6.1. Handle it differently:
-                assertCloseNotify((ByteBuf) clientChannel.readOutbound());
+                assertCloseNotify(clientChannel.readOutbound());
             }
         } finally {
             try {
@@ -125,7 +125,7 @@ public class CloseNotifyTest {
         }
 
         if (jdkTls13(provider, protocol)) {
-            assertCloseNotify((ByteBuf) clientChannel.readOutbound());
+            assertCloseNotify(clientChannel.readOutbound());
         } else {
             discardEmptyOutboundBuffers(clientChannel);
         }

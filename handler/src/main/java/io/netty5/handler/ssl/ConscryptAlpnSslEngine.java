@@ -31,6 +31,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
+import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.conscrypt.AllocatedBuffer;
 import org.conscrypt.BufferAllocator;
@@ -71,7 +72,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         }
 
         // Set the list of supported ALPN protocols on the engine.
-        Conscrypt.setApplicationProtocols(engine, protocols.toArray(new String[0]));
+        Conscrypt.setApplicationProtocols(engine, protocols.toArray(EmptyArrays.EMPTY_STRINGS));
     }
 
     /**
@@ -183,8 +184,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
         @Override
         public AllocatedBuffer retain() {
-            nettyBuffer.retain();
-            return this;
+            throw new UnsupportedOperationException("This method is not supposed to be used.");
         }
 
         @Override

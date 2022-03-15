@@ -33,8 +33,8 @@ interface OpenSslSession extends SSLSession {
     OpenSslSessionId sessionId();
 
     /**
-     * Set the local certificate chain that is used. It is not expected that this array will be changed at all
-     * and so its ok to not copy the array.
+     * Set the local certificate chain that is used. It is unexpected this array will be changed at all,
+     * and so it's ok to not copy the array.
      */
     void setLocalCertificate(Certificate[] localCertificate);
 

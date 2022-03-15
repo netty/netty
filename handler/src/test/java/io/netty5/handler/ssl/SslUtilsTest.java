@@ -35,7 +35,7 @@ public class SslUtilsTest {
 
     @SuppressWarnings("deprecation")
     @Test
-    public void testPacketLength() throws SSLException, NoSuchAlgorithmException {
+    public void testPacketLength() throws Exception {
         SSLEngine engineLE = newEngine();
         SSLEngine engineBE = newEngine();
 

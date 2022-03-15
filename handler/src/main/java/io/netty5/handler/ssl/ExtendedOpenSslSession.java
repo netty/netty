@@ -18,6 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty5.util.internal.EmptyArrays;
 
 import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSessionBindingEvent;
@@ -49,12 +50,10 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
         this.wrapped = wrapped;
     }
 
-    // Use rawtypes an unchecked override to be able to also work on java7.
     @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public abstract List getRequestedServerNames();
+    public abstract List<SNIServerName> getRequestedServerNames();
 
-    // Do not mark as override so we can compile on java8.
+    @Override
     public List<byte[]> getStatusResponses() {
         // Just return an empty list for now until we support it as otherwise we will fail in java9
         // because of their sun.security.ssl.X509TrustManagerImpl class.

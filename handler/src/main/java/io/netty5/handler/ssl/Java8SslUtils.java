@@ -61,7 +61,7 @@ final class Java8SslUtils {
         }
     }
 
-    static List getSniHostNames(List<String> names) {
+    static List<SNIServerName> getSniHostNames(List<String> names) {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
         }
@@ -69,10 +69,10 @@ final class Java8SslUtils {
         for (String name: names) {
             sniServerNames.add(new SNIHostName(name.getBytes(StandardCharsets.UTF_8)));
         }
-        return sniServerNames;
+        return Collections.unmodifiableList(sniServerNames);
     }
 
-    static List getSniHostName(byte[] hostname) {
+    static List<SNIServerName> getSniHostName(byte[] hostname) {
         if (hostname == null || hostname.length == 0) {
             return Collections.emptyList();
         }

@@ -20,7 +20,6 @@ import io.netty.internal.tcnative.SSLContext;
 
 import java.util.concurrent.locks.Lock;
 
-
 /**
  * {@link OpenSslSessionContext} implementation which offers extra methods which are only useful for the server-side.
  */

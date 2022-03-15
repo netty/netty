@@ -29,8 +29,7 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
     /**
      * If enabled heavy-operations may be offloaded from the {@link io.netty5.channel.EventLoop} if possible.
      */
-    public static final OpenSslContextOption<Boolean> USE_TASKS =
-            new OpenSslContextOption<Boolean>("USE_TASKS");
+    public static final OpenSslContextOption<Boolean> USE_TASKS = new OpenSslContextOption<>("USE_TASKS");
     /**
      * If enabled <a href="https://tools.ietf.org/html/rfc7918">TLS false start</a> will be enabled if supported.
      * When TLS false start is enabled the flow of {@link SslHandshakeCompletionEvent}s may be different compared when,
@@ -38,8 +37,7 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      *
      * This is currently only supported when {@code BoringSSL} and ALPN is used.
      */
-    public static final OpenSslContextOption<Boolean> TLS_FALSE_START =
-            new OpenSslContextOption<Boolean>("TLS_FALSE_START");
+    public static final OpenSslContextOption<Boolean> TLS_FALSE_START = new OpenSslContextOption<>("TLS_FALSE_START");
 
     /**
      * Set the {@link OpenSslPrivateKeyMethod} to use. This allows to offload private-key operations
@@ -48,7 +46,7 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * This is currently only supported when {@code BoringSSL} is used.
      */
     public static final OpenSslContextOption<OpenSslPrivateKeyMethod> PRIVATE_KEY_METHOD =
-            new OpenSslContextOption<OpenSslPrivateKeyMethod>("PRIVATE_KEY_METHOD");
+            new OpenSslContextOption<>("PRIVATE_KEY_METHOD");
 
     /**
      * Set the {@link OpenSslAsyncPrivateKeyMethod} to use. This allows to offload private-key operations
@@ -57,7 +55,7 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * This is currently only supported when {@code BoringSSL} is used.
      */
     public static final OpenSslContextOption<OpenSslAsyncPrivateKeyMethod> ASYNC_PRIVATE_KEY_METHOD =
-            new OpenSslContextOption<OpenSslAsyncPrivateKeyMethod>("ASYNC_PRIVATE_KEY_METHOD");
+            new OpenSslContextOption<>("ASYNC_PRIVATE_KEY_METHOD");
 
     /**
      * Set the {@link OpenSslCertificateCompressionConfig} to use. This allows for the configuration of certificate
@@ -67,5 +65,5 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * This is currently only supported when {@code BoringSSL} is used.
      */
     public static final OpenSslContextOption<OpenSslCertificateCompressionConfig> CERTIFICATE_COMPRESSION_ALGORITHMS =
-            new OpenSslContextOption<OpenSslCertificateCompressionConfig>("CERTIFICATE_COMPRESSION_ALGORITHMS");
+            new OpenSslContextOption<>("CERTIFICATE_COMPRESSION_ALGORITHMS");
 }

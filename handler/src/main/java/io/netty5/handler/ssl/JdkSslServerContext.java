@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import java.io.File;
@@ -112,5 +111,4 @@ final class JdkSslServerContext extends JdkSslContext {
             throw new SSLException("failed to initialize the server-side SSL context", e);
         }
     }
-
 }

@@ -16,12 +16,10 @@
 
 package io.netty5.handler.ssl.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.concurrent.FastThreadLocal;
+import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.StringUtil;
 
 import javax.net.ssl.ManagerFactoryParameters;
@@ -37,8 +35,9 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Pattern;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * An {@link TrustManagerFactory} that trusts an X.509 certificate whose hash matches.
@@ -148,8 +147,8 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
      * @param fingerprints a list of fingerprints
      */
     FingerprintTrustManagerFactory(final String algorithm, byte[][] fingerprints) {
-        Objects.requireNonNull(algorithm, "algorithm");
-        Objects.requireNonNull(fingerprints, "fingerprints");
+        requireNonNull(algorithm, "algorithm");
+        requireNonNull(fingerprints, "fingerprints");
 
         if (fingerprints.length == 0) {
             throw new IllegalArgumentException("No fingerprints provided");
@@ -191,7 +190,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             }
         };
 
-        this.fingerprints = list.toArray(new byte[0][]);
+        this.fingerprints = list.toArray(EmptyArrays.EMPTY_BYTES_BYTES);
     }
 
     static byte[][] toFingerprintArray(Iterable<String> fingerprints) {
@@ -211,7 +210,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             list.add(StringUtil.decodeHexDump(f));
         }
 
-        return list.toArray(new byte[0][]);
+        return list.toArray(EmptyArrays.EMPTY_BYTES_BYTES);
     }
 
     @Override

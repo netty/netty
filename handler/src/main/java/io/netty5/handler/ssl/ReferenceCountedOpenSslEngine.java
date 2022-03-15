@@ -36,6 +36,7 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -59,6 +60,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
@@ -231,10 +233,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         clientMode = context.isClient();
         session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
             private String[] peerSupportedSignatureAlgorithms;
-            private List requestedServerNames;
+            private List<SNIServerName> requestedServerNames;
 
             @Override
-            public List getRequestedServerNames() {
+            public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
                     return Java8SslUtils.getSniHostNames(sniHostNames);
                 } else {
@@ -255,6 +257,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 }
                             }
                         }
+                        //noinspection AssignmentOrReturnOfFieldWithMutableType -- This list is already unmodifiable.
                         return requestedServerNames;
                     }
                 }
@@ -279,7 +282,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                         algorithmList.add(converted);
                                     }
                                 }
-                                peerSupportedSignatureAlgorithms = algorithmList.toArray(new String[0]);
+                                peerSupportedSignatureAlgorithms = algorithmList.toArray(EmptyArrays.EMPTY_STRINGS);
                             }
                         }
                     }
@@ -328,7 +331,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (context.protocols != null) {
                     setEnabledProtocols0(context.protocols, true);
                 } else {
-                    this.explicitlyEnabledProtocols = getEnabledProtocols();
+                    explicitlyEnabledProtocols = getEnabledProtocols();
                 }
 
                 // Use SNI if peerHost was specified and a valid hostname
@@ -509,14 +512,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return refCnt.release(decrement);
     }
 
-    // These method will override the method defined by Java 8u251 and later. As we may compile with an earlier
-    // java8 version we don't use @Override annotations here.
+    @Override
     public String getApplicationProtocol() {
         return applicationProtocol;
     }
 
-    // These method will override the method defined by Java 8u251 and later. As we may compile with an earlier
-    // java8 version we don't use @Override annotations here.
+    @Override
     public String getHandshakeApplicationProtocol() {
         return applicationProtocol;
     }
@@ -1171,9 +1172,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // [1] https://tools.ietf.org/html/rfc5246#section-6.2.1
                         throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
                                                 session.getApplicationBufferSize());
-                    } else {
-                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                     }
+                    session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                     return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
                 }
 
@@ -1575,7 +1575,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedCipherSuites() {
-        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(new String[0]);
+        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     @Override
@@ -1603,9 +1603,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         } else {
             Set<String> enabledSet = new LinkedHashSet<>(enabled.length + extraCiphers.length);
             synchronized (this) {
-                for (int i = 0; i < enabled.length; i++) {
-                    String mapped = toJavaCipherSuite(enabled[i]);
-                    final String cipher = mapped == null ? enabled[i] : mapped;
+                for (String cipher : enabled) {
+                    String mapped = toJavaCipherSuite(cipher);
+                    cipher = mapped == null? cipher : mapped;
                     if ((!tls13Enabled || !OpenSsl.isTlsv13Supported()) && SslUtils.isTLSv13Cipher(cipher)) {
                         continue;
                     }
@@ -1613,7 +1613,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 Collections.addAll(enabledSet, extraCiphers);
             }
-            return enabledSet.toArray(new String[0]);
+            return enabledSet.toArray(EmptyArrays.EMPTY_STRINGS);
         }
     }
 
@@ -1643,18 +1643,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(explicitlyEnabledProtocols.length);
+                    Set<String> protocols = new HashSet<>(explicitlyEnabledProtocols.length);
                     Collections.addAll(protocols, explicitlyEnabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
                     if (cipherSuiteSpec.isEmpty()) {
-                        protocols.remove(SslProtocols.TLS_v1);
-                        protocols.remove(SslProtocols.TLS_v1_1);
-                        protocols.remove(SslProtocols.TLS_v1_2);
-                        protocols.remove(SslProtocols.SSL_v3);
-                        protocols.remove(SslProtocols.SSL_v2);
-                        protocols.remove(SslProtocols.SSL_v2_HELLO);
+                        removeDeprecatedCiphers(protocols);
                     }
                     // We have no ciphers that are compatible with TLSv1.3, let us explicit disable it.
                     if (cipherSuiteSpecTLSv13.isEmpty()) {
@@ -1672,11 +1667,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    @Override
-    public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(new String[0]);
+    @SuppressWarnings("deprecation")
+    private static void removeDeprecatedCiphers(Set<String> protocols) {
+        protocols.remove(SslProtocols.TLS_v1);
+        protocols.remove(SslProtocols.TLS_v1_1);
+        protocols.remove(SslProtocols.TLS_v1_2);
+        protocols.remove(SslProtocols.SSL_v3);
+        protocols.remove(SslProtocols.SSL_v2);
+        protocols.remove(SslProtocols.SSL_v2_HELLO);
     }
 
+    @Override
+    public final String[] getSupportedProtocols() {
+        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EmptyArrays.EMPTY_STRINGS);
+    }
+
+    @SuppressWarnings("deprecation")
     @Override
     public final String[] getEnabledProtocols() {
         List<String> enabled = new ArrayList<>(6);
@@ -1688,7 +1694,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (!isDestroyed()) {
                 opts = SSL.getOptions(ssl);
             } else {
-                return enabled.toArray(new String[0]);
+                return enabled.toArray(EmptyArrays.EMPTY_STRINGS);
             }
         }
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, SslProtocols.TLS_v1)) {
@@ -1709,7 +1715,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, SslProtocols.SSL_v3)) {
             enabled.add(SslProtocols.SSL_v3);
         }
-        return enabled.toArray(new String[0]);
+        return enabled.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1732,6 +1738,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         setEnabledProtocols0(protocols, true);
     }
 
+    @SuppressWarnings("deprecation")
     private void setEnabledProtocols0(String[] protocols, boolean cache) {
         // This is correct from the API docs
         checkNotNullWithIAE(protocols, "protocols");
@@ -1794,7 +1801,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             if (cache) {
-                this.explicitlyEnabledProtocols = protocols;
+                explicitlyEnabledProtocols = protocols;
             }
             if (!isDestroyed()) {
                 // Clear out options which disable protocols
@@ -2240,14 +2247,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             case ALPN:
                 applicationProtocol = SSL.getAlpnSelected(ssl);
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
             case NPN:
                 applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
@@ -2257,7 +2264,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 }
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
@@ -2266,9 +2273,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private String selectApplicationProtocol(List<String> protocols,
-                                             ApplicationProtocolConfig.SelectedListenerFailureBehavior behavior,
-                                             String applicationProtocol) throws SSLException {
+    private static String selectApplicationProtocol(List<String> protocols,
+                                                    ApplicationProtocolConfig.SelectedListenerFailureBehavior behavior,
+                                                    String applicationProtocol) throws SSLException {
         if (behavior == ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT) {
             return applicationProtocol;
         } else {
@@ -2319,8 +2326,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public void setSessionId(OpenSslSessionId sessionId) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (this.id == OpenSslSessionId.NULL_ID) {
-                    this.id = sessionId;
+                if (id == OpenSslSessionId.NULL_ID) {
+                    id = sessionId;
                     creationTime = System.currentTimeMillis();
                 }
             }
@@ -2329,7 +2336,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public OpenSslSessionId sessionId() {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (this.id == OpenSslSessionId.NULL_ID && !isDestroyed()) {
+                if (id == OpenSslSessionId.NULL_ID && !isDestroyed()) {
                     byte[] sessionId = SSL.getSessionId(ssl);
                     if (sessionId != null) {
                         id = new OpenSslSessionId(sessionId);
@@ -2342,7 +2349,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void setLocalCertificate(Certificate[] localCertificate) {
-            this.localCertificateChain = localCertificate;
+            //noinspection AssignmentOrReturnOfFieldWithMutableType -- Javadoc says it's okay to not clone array here.
+            localCertificateChain = localCertificate;
         }
 
         @Override
@@ -2434,19 +2442,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
-        public String[] getValueNames() {
-            synchronized (this) {
-                Map<String, Object> values = this.values;
-                if (values == null || values.isEmpty()) {
-                    return EmptyArrays.EMPTY_STRINGS;
-                }
-                return values.keySet().toArray(new String[0]);
+        public synchronized String[] getValueNames() {
+            Map<String, Object> values = this.values;
+            if (values == null || values.isEmpty()) {
+                return EmptyArrays.EMPTY_STRINGS;
             }
+            return values.keySet().toArray(EmptyArrays.EMPTY_STRINGS);
         }
 
         private void notifyUnbound(Object value, String name) {
             if (value instanceof SSLSessionBindingListener) {
-                // Use newSSLSessionBindingEvent so we always use the wrapper if needed.
+                // Use newSSLSessionBindingEvent, so we always use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueUnbound(newSSLSessionBindingEvent(name));
             }
         }
@@ -2529,7 +2535,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Certificate[] getLocalCertificates() {
-            Certificate[] localCerts = this.localCertificateChain;
+            Certificate[] localCerts = localCertificateChain;
             if (localCerts == null) {
                 return null;
             }
@@ -2556,7 +2562,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Principal getLocalPrincipal() {
-            Certificate[] local = this.localCertificateChain;
+            Certificate[] local = localCertificateChain;
             if (local == null || local.length == 0) {
                 return null;
             }
@@ -2566,10 +2572,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public String getCipherSuite() {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (cipher == null) {
-                    return SslUtils.INVALID_CIPHER;
-                }
-                return cipher;
+                return Objects.requireNonNullElse(cipher, SslUtils.INVALID_CIPHER);
             }
         }
 

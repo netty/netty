@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
@@ -95,7 +94,7 @@ final class PemReader {
             throw new CertificateException("found no certificates in input stream");
         }
 
-        return certs.toArray(new ByteBuf[0]);
+        return certs.toArray(ByteBuf[]::new);
     }
 
     static ByteBuf readPrivateKey(File file) throws KeyException {

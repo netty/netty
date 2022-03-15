@@ -31,9 +31,10 @@ final class OpenSslSessionId {
 
     OpenSslSessionId(byte[] id) {
         // We take ownership if the byte[] and so there is no need to clone it.
+        //noinspection AssignmentOrReturnOfFieldWithMutableType
         this.id = id;
         // cache the hashCode as the byte[] array will never change
-        this.hashCode = Arrays.hashCode(id);
+        hashCode = Arrays.hashCode(id);
     }
 
     @Override

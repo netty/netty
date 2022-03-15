@@ -26,6 +26,7 @@ public final class EmptyArrays {
 
     public static final int[] EMPTY_INTS = {};
     public static final byte[] EMPTY_BYTES = {};
+    public static final byte[][] EMPTY_BYTES_BYTES = {};
     public static final char[] EMPTY_CHARS = {};
     public static final Object[] EMPTY_OBJECTS = {};
     public static final Class<?>[] EMPTY_CLASSES = {};
