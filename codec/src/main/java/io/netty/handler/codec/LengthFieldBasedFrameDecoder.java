@@ -396,7 +396,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         long frameLength = 0;
-        if(frameLengthInt == -1) { // new frame
+        if (frameLengthInt == -1) { // new frame
 
             if (discardingTooLongFrame) {
                 discardingTooLongFrame(in);
