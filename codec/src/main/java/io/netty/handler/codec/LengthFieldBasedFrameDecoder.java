@@ -197,7 +197,6 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     private boolean discardingTooLongFrame;
     private long tooLongFrameLength;
     private long bytesToDiscard;
-
     private int frameLengthInt = -1;
 
     /**
