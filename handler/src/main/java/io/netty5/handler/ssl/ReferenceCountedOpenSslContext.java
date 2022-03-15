@@ -846,8 +846,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try {
             // Only encode one time
             encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, keyCertChain);
-            keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
-            keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+            keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded);
+            keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded);
 
             if (key != null) {
                 keyBio = toBIO(ByteBufAllocator.DEFAULT, key);
@@ -889,7 +889,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         PemEncoded pem = PemPrivateKey.toPEM(allocator, true, key);
         try {
-            return toBIO(allocator, pem.retain());
+            return toBIO(allocator, pem);
         } finally {
             pem.release();
         }
@@ -908,54 +908,53 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
         try {
-            return toBIO(allocator, pem.retain());
+            return toBIO(allocator, pem);
         } finally {
             pem.release();
         }
     }
 
+    /**
+     * Copies the contents of the {@link PemEncoded} value into a new
+     * <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>, and returns the reference
+     * to the BIO, or {@code 0} if the buffer is {@code null}.
+     * <p>
+     * The {@link PemEncoded} buffer is not released.
+     */
     static long toBIO(ByteBufAllocator allocator, PemEncoded pem) throws Exception {
+        // We can turn direct buffers straight into BIOs. No need to
+        // make a yet another copy.
+        ByteBuf content = pem.content();
+
+        if (content.isDirect()) {
+            return newBIO(content);
+        }
+
+        ByteBuf buffer = allocator.directBuffer(content.readableBytes());
         try {
-            // We can turn direct buffers straight into BIOs. No need to
-            // make a yet another copy.
-            ByteBuf content = pem.content();
-
-            if (content.isDirect()) {
-                return newBIO(content.retainedSlice());
-            }
-
-            ByteBuf buffer = allocator.directBuffer(content.readableBytes());
-            try {
-                buffer.writeBytes(content, content.readerIndex(), content.readableBytes());
-                return newBIO(buffer.retainedSlice());
-            } finally {
-                try {
-                    // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we
-                    // need to zero out the bytes of the copy before we're releasing it.
-                    if (pem.isSensitive()) {
-                        SslUtils.zeroout(buffer);
-                    }
-                } finally {
-                    buffer.release();
-                }
-            }
+            buffer.writeBytes(content, content.readerIndex(), content.readableBytes());
+            return newBIO(buffer);
         } finally {
-            pem.release();
+            try {
+                // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we
+                // need to zero out the bytes of the copy before we're releasing it.
+                if (pem.isSensitive()) {
+                    SslUtils.zeroout(buffer);
+                }
+            } finally {
+                buffer.release();
+            }
         }
     }
 
     private static long newBIO(ByteBuf buffer) throws Exception {
-        try {
-            long bio = SSL.newMemBIO();
-            int readable = buffer.readableBytes();
-            if (SSL.bioWrite(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
-                SSL.freeBIO(bio);
-                throw new IllegalStateException("Could not write data to memory BIO");
-            }
-            return bio;
-        } finally {
-            buffer.release();
+        long bio = SSL.newMemBIO();
+        int readable = buffer.readableBytes();
+        if (SSL.bioWrite(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
+            SSL.freeBIO(bio);
+            throw new IllegalStateException("Could not write data to memory BIO");
         }
+        return bio;
     }
 
     /**
