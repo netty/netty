@@ -15,13 +15,15 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import java.nio.ByteOrder;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
