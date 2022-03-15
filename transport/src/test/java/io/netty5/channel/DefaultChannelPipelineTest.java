@@ -493,20 +493,22 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testChannelHandlerContextOrder() {
+    public void testChannelHandlerContextOrder() throws InterruptedException {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
+        CountDownLatch latch = new CountDownLatch(8);
 
-        pipeline.addFirst("1", newHandler());
-        pipeline.addLast("10", newHandler());
+        pipeline.addFirst("1", newHandler(latch));
+        pipeline.addLast("10", newHandler(latch));
 
-        pipeline.addBefore("10", "5", newHandler());
-        pipeline.addAfter("1", "3", newHandler());
-        pipeline.addBefore("5", "4", newHandler());
-        pipeline.addAfter("5", "6", newHandler());
+        pipeline.addBefore("10", "5", newHandler(latch));
+        pipeline.addAfter("1", "3", newHandler(latch));
+        pipeline.addBefore("5", "4", newHandler(latch));
+        pipeline.addAfter("5", "6", newHandler(latch));
 
-        pipeline.addBefore("1", "0", newHandler());
-        pipeline.addAfter("10", "11", newHandler());
+        pipeline.addBefore("1", "0", newHandler(latch));
+        pipeline.addAfter("10", "11", newHandler(latch));
 
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
         assertNotNull(ctx);
         while (ctx != null) {
@@ -1683,11 +1685,29 @@ public class DefaultChannelPipelineTest {
     }
 
     private static ChannelHandler newHandler() {
-        return new TestHandler();
+        return new TestHandler(null);
+    }
+
+    private static ChannelHandler newHandler(CountDownLatch latch) {
+        return new TestHandler(latch);
     }
 
     @Sharable
-    private static class TestHandler implements ChannelHandler { }
+    private static class TestHandler implements ChannelHandler {
+        private final CountDownLatch latch;
+
+        TestHandler(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            ChannelHandler.super.handlerAdded(ctx);
+            if (latch != null) {
+                latch.countDown();
+            }
+        }
+    }
 
     private static class BufferedTestHandler implements ChannelHandler {
         final Queue<Object> inboundBuffer = new ArrayDeque<>();
