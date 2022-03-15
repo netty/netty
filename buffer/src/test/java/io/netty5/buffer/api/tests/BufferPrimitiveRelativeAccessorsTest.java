@@ -20,9 +20,61 @@ import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void relativeReadOfBooleanMustNotBoundsCheckWhenReadOffsetAndSizeIsEqualToWriteOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+            Buffer buf = allocator.allocate(8)) {
+            assertEquals(0, buf.readableBytes());
+            assertEquals(Long.BYTES, buf.writableBytes());
+            boolean value = true;
+            buf.writeBoolean(value);
+            assertEquals(1, buf.readableBytes());
+            assertEquals(7, buf.writableBytes());
+            assertTrue(buf.readBoolean());
+            assertEquals(0, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void relativeReadOfBooleanMustReadWithDefaultEndianByteOrder(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+            Buffer buf = allocator.allocate(8)) {
+            assertEquals(0, buf.readableBytes());
+            assertEquals(Long.BYTES, buf.writableBytes());
+            boolean value = true;
+            buf.writeBoolean(value);
+            buf.setBoolean(0, false);
+            assertEquals(1, buf.readableBytes());
+            assertEquals(7, buf.writableBytes());
+            assertFalse(buf.readBoolean());
+            assertEquals(0, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void relativeReadOfBooleanMustBoundsCheckWhenReadOffsetAndSizeIsBeyondWriteOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+            Buffer buf = allocator.allocate(8)) {
+            assertEquals(0, buf.readableBytes());
+            assertEquals(Long.BYTES, buf.writableBytes());
+            boolean value = true;
+            buf.writeBoolean(value);
+            buf.readerOffset(1);
+            assertEquals(0, buf.readableBytes());
+            assertEquals(7, buf.writableBytes());
+            assertThrows(IndexOutOfBoundsException.class, buf::readBoolean);
+            assertEquals(0, buf.readableBytes());
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("allocators")

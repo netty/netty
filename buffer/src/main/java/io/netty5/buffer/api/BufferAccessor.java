@@ -24,6 +24,70 @@ package io.netty5.buffer.api;
 public interface BufferAccessor {
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors interface.">
     /**
+     * Read the boolean value at the current {@link Buffer#readerOffset()},
+     * and increases the reader offset by {@link Byte#BYTES}. A boolean gets
+     * read as a byte from this buffer. All byte values which are not equal
+     * to zero are considered as the boolean value {@code true}, zero represents
+     * {@code false}.
+     *
+     * @return The boolean value at the current reader offset.
+     * @throws IndexOutOfBoundsException If {@link Buffer#readableBytes} is less than {@link Byte#BYTES}.
+     */
+    default boolean readBoolean() {
+        return readByte() != 0;
+    }
+
+    /**
+     * Get the boolean value at the given reader offset.
+     * The {@link Buffer#readerOffset()} is not modified.
+     * A boolean gets read as a byte from this buffer. All
+     * byte values which are not equal to zero are considered
+     * as the boolean value {@code true}, zero represents
+     * {@code false}.
+     *
+     * @param roff The read offset, an absolute offset into this buffer, to read from.
+     * @return The boolean value at the given offset.
+     * @throws IndexOutOfBoundsException if the given offset is out of bounds of the buffer, that is, less than 0 or
+     *                                   greater than {@link Buffer#capacity()} minus {@link Byte#BYTES}.
+     */
+    default boolean getBoolean(int roff) {
+        return getByte(roff) != 0;
+    }
+
+    /**
+     * Write the given boolean value at the current {@link Buffer#writerOffset()},
+     * and increase the writer offset by {@link Byte#BYTES}. A boolean gets
+     * written as a byte to this buffer. All byte values which are not equal
+     * to zero are considered as the boolean value {@code true}, zero represents
+     * {@code false}.
+     *
+     * @param value The boolean value to write.
+     * @return This Buffer.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES}.
+     */
+    default Buffer writeBoolean(boolean value) {
+        return writeByte((byte) (value ? 1 :0));
+    }
+
+    /**
+     * Set the given boolean value at the given write offset.
+     * The {@link Buffer#writerOffset()} is not modified.
+     * A boolean gets written as a byte to this buffer. All
+     * byte values which are not equal to zero are considered
+     * as the boolean value {@code true}, zero represents
+     * {@code false}.
+     *
+     * @param woff The write offset, an absolute offset into this buffer to write to.
+     * @param value The boolean value to write.
+     * @return This Buffer.
+     * @throws IndexOutOfBoundsException if the given offset is out of bounds of the buffer, that is, less than 0 or
+     *                                   greater than {@link Buffer#capacity()} minus {@link Byte#BYTES}.
+     */
+    default Buffer setBoolean(int woff, boolean value) {
+        return setByte(woff, (byte) (value ? 1 : 0));
+    }
+
+    /**
      * Read the byte value at the current {@link Buffer#readerOffset()},
      * and increases the reader offset by {@link Byte#BYTES}.
      * The value is read using a two's complement 8-bit encoding,
