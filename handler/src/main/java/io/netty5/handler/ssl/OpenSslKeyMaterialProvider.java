@@ -76,7 +76,7 @@ class OpenSslKeyMaterialProvider {
         PemEncoded encoded = null;
         try {
             encoded = PemX509Certificate.toPEM(UnpooledByteBufAllocator.DEFAULT, true, certificates);
-            chainBio = toBIO(UnpooledByteBufAllocator.DEFAULT, encoded.retain());
+            chainBio = toBIO(UnpooledByteBufAllocator.DEFAULT, encoded);
             chain = SSL.parseX509Chain(chainBio);
         } catch (Exception e) {
             throw new SSLException("Certificate type not supported", e);
