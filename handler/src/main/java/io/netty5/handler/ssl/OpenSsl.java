@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
@@ -185,7 +184,6 @@ public final class OpenSsl {
             final List<String> defaultCiphers = new ArrayList<>();
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<>(128);
             boolean supportsKeyManagerFactory = false;
-            boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
             String[] defaultConvertedNamedGroups = new String[namedGroups.length];
@@ -201,7 +199,7 @@ public final class OpenSsl {
 
                 StringBuilder ciphersBuilder = new StringBuilder(128);
                 for (String cipher: EXTRA_SUPPORTED_TLS_1_3_CIPHERS) {
-                    ciphersBuilder.append(cipher).append(":");
+                    ciphersBuilder.append(cipher).append(':');
                 }
                 ciphersBuilder.setLength(ciphersBuilder.length() - 1);
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = ciphersBuilder.toString();
@@ -453,7 +451,7 @@ public final class OpenSsl {
                 if (logger.isInfoEnabled()) {
                     StringBuilder javaCiphers = new StringBuilder(128);
                     for (String cipher : ciphers.split(":")) {
-                        javaCiphers.append(CipherSuiteConverter.toJava(cipher, "TLS")).append(":");
+                        javaCiphers.append(CipherSuiteConverter.toJava(cipher, "TLS")).append(':');
                     }
                     javaCiphers.setLength(javaCiphers.length() - 1);
                     logger.info(
@@ -657,23 +655,23 @@ public final class OpenSsl {
         if ("linux".equals(os)) {
             Set<String> classifiers = PlatformDependent.normalizedLinuxClassifiers();
             for (String classifier : classifiers) {
-                libNames.add(staticLibName + "_" + os + '_' + arch + "_" + classifier);
+                libNames.add(staticLibName + '_' + os + '_' + arch + '_' + classifier);
             }
             // generic arch-dependent library
-            libNames.add(staticLibName + "_" + os + '_' + arch);
+            libNames.add(staticLibName + '_' + os + '_' + arch);
 
             // Fedora SSL lib so naming (libssl.so.10 vs libssl.so.1.0.0).
             // note: should already be included from the classifiers but if not, we use this as an
             //       additional fallback option here
-            libNames.add(staticLibName + "_" + os + '_' + arch + "_fedora");
+            libNames.add(staticLibName + '_' + os + '_' + arch + "_fedora");
         } else {
-            libNames.add(staticLibName + "_" + os + '_' + arch);
+            libNames.add(staticLibName + '_' + os + '_' + arch);
         }
-        libNames.add(staticLibName + "_" + arch);
+        libNames.add(staticLibName + '_' + arch);
         libNames.add(staticLibName);
 
         NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(SSLContext.class),
-            libNames.toArray(new String[0]));
+            libNames.toArray(EmptyArrays.EMPTY_STRINGS));
     }
 
     private static boolean initializeTcNative(String engine) throws Exception {

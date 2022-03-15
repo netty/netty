@@ -27,7 +27,7 @@ import java.util.Map;
 final class OpenSslClientSessionCache extends OpenSslSessionCache {
     // TODO: Should we support to have a List of OpenSslSessions for a Host/Port key and so be able to
     // support sessions for different protocols / ciphers to the same remote peer ?
-    private final Map<HostPort, NativeSslSession> sessions = new HashMap<HostPort, NativeSslSession>();
+    private final Map<HostPort, NativeSslSession> sessions = new HashMap<>();
 
     OpenSslClientSessionCache(OpenSslEngineMap engineMap) {
         super(engineMap);
@@ -110,7 +110,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             this.host = host;
             this.port = port;
             // Calculate a hashCode that does ignore case.
-            this.hash = 31 * AsciiString.hashCode(host) + port;
+            hash = 31 * AsciiString.hashCode(host) + port;
         }
 
         @Override

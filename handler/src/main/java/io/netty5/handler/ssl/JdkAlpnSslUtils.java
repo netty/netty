@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -81,7 +80,7 @@ final class JdkAlpnSslUtils {
                     AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                             lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocolSelector",
                                     MethodType.methodType(BiFunction.class)));
-            // Invoke and specify the return type so the compiler doesnt try to use void
+            // Invoke and specify the return type so the compiler doesn't try to use void
             @SuppressWarnings("unchecked")
             BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelectorRes =
                     (BiFunction<SSLEngine, List<String>, String>)

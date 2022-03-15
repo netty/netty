@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl.util;
 
 import org.bouncycastle.asn1.x500.X500Name;
@@ -52,7 +51,7 @@ final class BouncyCastleSelfSignedCertGenerator {
                 owner, new BigInteger(64, random), notBefore, notAfter, owner, keypair.getPublic());
 
         ContentSigner signer = new JcaContentSignerBuilder(
-                algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);
+                "EC".equalsIgnoreCase(algorithm) ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);
         X509CertificateHolder certHolder = builder.build(signer);
         X509Certificate cert = new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certHolder);
         cert.verify(keypair.getPublic());

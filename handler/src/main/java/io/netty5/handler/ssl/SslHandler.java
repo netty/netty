@@ -1045,7 +1045,7 @@ public class SslHandler extends ByteToMessageDecoder {
             ctx.fireExceptionCaught(cause);
 
             if (cause instanceof SSLException ||
-                    ((cause instanceof DecoderException) && cause.getCause() instanceof SSLException)) {
+                cause instanceof DecoderException && cause.getCause() instanceof SSLException) {
                 ctx.close();
             }
         }
@@ -1349,8 +1349,9 @@ public class SslHandler extends ByteToMessageDecoder {
 
                 if (status == Status.BUFFER_UNDERFLOW ||
                         // If we processed NEED_TASK we should try again even we did not consume or produce anything.
-                        handshakeStatus != HandshakeStatus.NEED_TASK && (consumed == 0 && produced == 0 ||
-                                (length == 0 && handshakeStatus == HandshakeStatus.NOT_HANDSHAKING))) {
+                        handshakeStatus != HandshakeStatus.NEED_TASK &&
+                        (consumed == 0 && produced == 0 || length == 0 &&
+                                                           handshakeStatus == HandshakeStatus.NOT_HANDSHAKING)) {
                     if (handshakeStatus == HandshakeStatus.NEED_UNWRAP) {
                         // The underlying engine is starving so we need to feed it with more data.
                         // See https://github.com/netty/netty/pull/5039

@@ -21,7 +21,7 @@ import io.netty5.util.internal.UnstableApi;
 import javax.net.ssl.SSLEngine;
 
 /**
- * Allow to customize private key signing / decrypting (when using RSA). Only supported when using BoringSSL atm.
+ * Allow customization of private key signing / decrypting (when using RSA). Only supported when using BoringSSL atm.
  */
 @UnstableApi
 public interface OpenSslPrivateKeyMethod {

@@ -86,7 +86,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     /**
      * Cumulate {@link Buffer}s by add them to a {@link CompositeBuffer} and so do no memory copy whenever possible.
      * Be aware that {@link CompositeBuffer} use a more complex indexing implementation so depending on your use-case
-     * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
+     * and the decoder implementation this may be slower than just use the {@link #MERGE_CUMULATOR}.
      */
     public static final Cumulator COMPOSITE_CUMULATOR = new CompositeBufferCumulator();
 
@@ -399,23 +399,6 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
         }
     }
 
-    private static Buffer expandCumulationAndWrite(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
-        final int newSize = safeFindNextPositivePowerOfTwo(oldCumulation.readableBytes() + in.readableBytes());
-        Buffer newCumulation = oldCumulation.readOnly() ? alloc.allocate(newSize) :
-                oldCumulation.ensureWritable(newSize);
-        try {
-            if (newCumulation != oldCumulation) {
-                newCumulation.writeBytes(oldCumulation);
-            }
-            newCumulation.writeBytes(in);
-            return newCumulation;
-        } finally {
-            if (newCumulation != oldCumulation) {
-                oldCumulation.close();
-            }
-        }
-    }
-
     /**
      * Cumulate {@link ByteBuf}s.
      */
@@ -675,6 +658,23 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 }
                 cumulation.writeBytes(in);
                 return cumulation;
+            }
+        }
+
+        private static Buffer expandCumulationAndWrite(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
+            final int newSize = safeFindNextPositivePowerOfTwo(oldCumulation.readableBytes() + in.readableBytes());
+            Buffer newCumulation = oldCumulation.readOnly() ? alloc.allocate(newSize) :
+                    oldCumulation.ensureWritable(newSize);
+            try {
+                if (newCumulation != oldCumulation) {
+                    newCumulation.writeBytes(oldCumulation);
+                }
+                newCumulation.writeBytes(in);
+                return newCumulation;
+            } finally {
+                if (newCumulation != oldCumulation) {
+                    oldCumulation.close();
+                }
             }
         }
 

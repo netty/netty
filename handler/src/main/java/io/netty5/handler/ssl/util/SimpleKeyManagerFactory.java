@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl.util;
 
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -36,7 +35,7 @@ import java.util.Objects;
  */
 public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
 
-    private static final Provider PROVIDER = new Provider("", 0.0, "") {
+    private static final Provider PROVIDER = new Provider("", "0.0", "") {
         private static final long serialVersionUID = -2680540247105807895L;
     };
 

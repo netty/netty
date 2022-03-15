@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-
 /**
  * Event that is fired once the SSL handshake is complete, which may be because it was successful or there
  * was an error.

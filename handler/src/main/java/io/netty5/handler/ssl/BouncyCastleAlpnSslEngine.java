@@ -40,18 +40,22 @@ final class BouncyCastleAlpnSslEngine extends JdkAlpnSslEngine {
                 });
     }
 
+    @Override
     public String getApplicationProtocol() {
         return BouncyCastleAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
     }
 
+    @Override
     public String getHandshakeApplicationProtocol() {
         return BouncyCastleAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
     }
 
+    @Override
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         BouncyCastleAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
     }
 
+    @Override
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         return BouncyCastleAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
     }

@@ -197,7 +197,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Throwable wrapped;
-        if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
+        if (cause instanceof DecoderException && (wrapped = cause.getCause()) instanceof SSLException) {
             try {
                 handshakeFailure(ctx, wrapped);
                 return;

@@ -18,6 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
+import io.netty5.util.internal.EmptyArrays;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -246,7 +247,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
             }
             try {
                 final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);
-                final String[] keyTypes = keyTypesSet.toArray(new String[0]);
+                final String[] keyTypes = keyTypesSet.toArray(EmptyArrays.EMPTY_STRINGS);
                 final X500Principal[] issuers;
                 if (asn1DerEncodedPrincipals == null) {
                     issuers = null;

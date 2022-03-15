@@ -82,7 +82,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                 if (readableBytes < packetLength) {
                                     // client hello incomplete; try again to decode once more data is ready.
                                     return;
-                                } else if (packetLength == SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                                }
+                                if (packetLength == SslUtils.SSL_RECORD_HEADER_LENGTH) {
                                     select(ctx, null);
                                     return;
                                 }

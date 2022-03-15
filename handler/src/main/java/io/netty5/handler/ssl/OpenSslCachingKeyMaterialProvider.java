@@ -43,7 +43,7 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
         if (material == null) {
             material = super.chooseKeyMaterial(allocator, alias);
             if (material == null) {
-                // No keymaterial should be used.
+                // No key material should be used.
                 return null;
             }
 

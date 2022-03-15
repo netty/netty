@@ -109,6 +109,7 @@ final class SslUtils {
 
     private static final boolean TLSV1_3_JDK_SUPPORTED;
     private static final boolean TLSV1_3_JDK_DEFAULT_ENABLED;
+   static final TrustManager[] EMPTY_TRUST_MANAGERS = new TrustManager[0];
 
     static {
         TLSV1_3_JDK_SUPPORTED = isTLSv13SupportedByJDK0(null);
@@ -189,7 +190,7 @@ final class SslUtils {
         } else {
             context = SSLContext.getInstance("TLS", provider);
         }
-        context.init(null, new TrustManager[0], null);
+        context.init(null, EMPTY_TRUST_MANAGERS, null);
         return context;
     }
 
@@ -201,7 +202,7 @@ final class SslUtils {
         } else {
             context = SSLContext.getInstance(getTlsVersion(), provider);
         }
-        context.init(null, new TrustManager[0], null);
+        context.init(null, EMPTY_TRUST_MANAGERS, null);
         return context;
     }
 
@@ -256,11 +257,11 @@ final class SslUtils {
     }
 
     /**
-     * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
+     * Return how many bytes can be read out of the encrypted data. Be aware this method will not increase
      * the readerIndex of the given {@link ByteBuf}.
      *
      * @param   buffer
-     *                  The {@link ByteBuf} to read from. Be aware that it must have at least
+     *                  The {@link ByteBuf} to read from. Be aware it must have at least
      *                  {@link #SSL_RECORD_HEADER_LENGTH} bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
      * @return length
@@ -367,7 +368,7 @@ final class SslUtils {
             return getEncryptedPacketLength(buffer);
         }
 
-        // We need to copy 5 bytes into a temporary buffer so we can parse out the packet length easily.
+        // We need to copy 5 bytes into a temporary buffer, so we can parse out the packet length easily.
         ByteBuffer tmp = ByteBuffer.allocate(5);
 
         do {

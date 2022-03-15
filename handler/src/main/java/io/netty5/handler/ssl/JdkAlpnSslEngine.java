@@ -185,20 +185,22 @@ class JdkAlpnSslEngine extends JdkSslEngine {
         return null;
     }
 
-    // These methods will override the methods defined by Java 8u251 and later. As we may compile with an earlier
-    // java8 version we don't use @Override annotations here.
+    @Override
     public String getApplicationProtocol() {
         return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
     }
 
+    @Override
     public String getHandshakeApplicationProtocol() {
         return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
     }
 
+    @Override
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
     }
 
+    @Override
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
     }

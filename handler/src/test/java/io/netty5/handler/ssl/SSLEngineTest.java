@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.bootstrap.Bootstrap;
-import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.bootstrap.Bootstrap;
+import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -69,7 +69,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -128,7 +127,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty5.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty5.handler.ssl.SslUtils.isValidHostNameForSNI;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -256,6 +254,15 @@ public abstract class SSLEngineTest {
 
         final List<String> ciphers() {
             return Collections.singletonList(protocolCipherCombo.cipher);
+        }
+
+        @Override
+        public String toString() {
+            return "SSLEngineTestParam{" +
+                   "type=" + type +
+                   ", protocolCipherCombo=" + protocolCipherCombo +
+                   ", delegate=" + delegate +
+                   '}';
         }
     }
 
@@ -3040,7 +3047,7 @@ public abstract class SSLEngineTest {
         SSLParameters sslParameters = client.getSSLParameters();
         sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
         if (useSNI) {
-            sslParameters.setServerNames(Collections.<SNIServerName>singletonList(new SNIHostName(fqdn)));
+            sslParameters.setServerNames(Collections.singletonList(new SNIHostName(fqdn)));
         }
         client.setSSLParameters(sslParameters);
 
@@ -3191,10 +3198,10 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             int clientSessions = currentSessionCacheSize(clientSslCtx.sessionContext());
             int serverSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
-            int nCSessions = clientSessions;
-            int nSSessions = serverSessions;
-            boolean clientSessionReused = false;
-            boolean serverSessionReused = false;
+            int nCSessions;
+            int nSSessions;
+            boolean clientSessionReused;
+            boolean serverSessionReused;
             if (param.protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
                 // Allocate something which is big enough for sure
                 ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
@@ -3236,10 +3243,10 @@ public abstract class SSLEngineTest {
                     nSSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
                     clientSessionReused = isSessionMaybeReused(clientEngine);
                     serverSessionReused = isSessionMaybeReused(serverEngine);
-                } while ((reuse && (!clientSessionReused || !serverSessionReused))
-                        || (!reuse && (nCSessions < clientSessions ||
-                        // server may use multiple sessions
-                        nSSessions < serverSessions)));
+                } while (reuse && (!clientSessionReused || !serverSessionReused)
+                         || !reuse && (nCSessions < clientSessions ||
+                                       // server may use multiple sessions
+                        nSSessions < serverSessions));
             }
 
             assertSessionReusedForEngine(clientEngine, serverEngine, reuse);

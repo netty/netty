@@ -31,7 +31,7 @@ public final class OpenSslCertificateCompressionConfig implements
     private final List<AlgorithmConfig> pairList;
 
     private OpenSslCertificateCompressionConfig(AlgorithmConfig... pairs) {
-        pairList = Collections.unmodifiableList(Arrays.asList(pairs));
+        pairList = List.of(pairs);
     }
 
     @Override
@@ -42,7 +42,7 @@ public final class OpenSslCertificateCompressionConfig implements
     /**
      * Creates a new {@link Builder} for a config.
      *
-     * @return a bulder
+     * @return a builder
      */
     public static Builder newBuilder() {
         return new Builder();
@@ -52,7 +52,7 @@ public final class OpenSslCertificateCompressionConfig implements
      * Builder for an {@link OpenSslCertificateCompressionAlgorithm}.
      */
     public static final class Builder {
-        private final List<AlgorithmConfig> algorithmList = new ArrayList<AlgorithmConfig>();
+        private final List<AlgorithmConfig> algorithmList = new ArrayList<>();
 
         private Builder() { }
 
@@ -80,12 +80,12 @@ public final class OpenSslCertificateCompressionConfig implements
          * @return a new config.
          */
         public OpenSslCertificateCompressionConfig build() {
-            return new OpenSslCertificateCompressionConfig(algorithmList.toArray(new AlgorithmConfig[0]));
+            return new OpenSslCertificateCompressionConfig(algorithmList.toArray(AlgorithmConfig[]::new));
         }
     }
 
     /**
-     * The configuration for algorithm.
+     * The configuration for the algorithm.
      */
     public static final class AlgorithmConfig {
         private final OpenSslCertificateCompressionAlgorithm algorithm;
@@ -120,17 +120,17 @@ public final class OpenSslCertificateCompressionConfig implements
      */
     public enum AlgorithmMode {
         /**
-         * Compression supported and should be advertized.
+         * Compression supported and should be advertised.
          */
         Compress,
 
         /**
-         * Decompression supported and should be advertized.
+         * Decompression supported and should be advertised.
          */
         Decompress,
 
         /**
-         * Compression and Decompression are supported and both should be advertized.
+         * Compression and Decompression are supported and both should be advertised.
          */
         Both
     }

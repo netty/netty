@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
@@ -28,6 +27,7 @@ import io.netty5.util.AttributeMap;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.internal.EmptyArrays;
 
+import java.io.UncheckedIOException;
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -1206,16 +1206,11 @@ public abstract class SslContext {
 
         try {
             for (int i = 0; i < certs.length; i++) {
-                InputStream is = new ByteBufInputStream(certs[i], false);
-                try {
+                try (InputStream is = new ByteBufInputStream(certs[i], false)) {
                     x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
-                } finally {
-                    try {
-                        is.close();
-                    } catch (IOException e) {
-                        // This is not expected to happen, but re-throw in case it does.
-                        throw new RuntimeException(e);
-                    }
+                } catch (IOException e) {
+                    // This is thrown from is.close(). It's not expected to happen, but re-throw in case it does.
+                    throw new UncheckedIOException(e);
                 }
             }
         } finally {

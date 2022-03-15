@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl.util;
 
 import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
@@ -36,7 +35,7 @@ public final class FingerprintTrustManagerFactoryBuilder {
     /**
      * A list of fingerprints.
      */
-    private final List<String> fingerprints = new ArrayList<String>();
+    private final List<String> fingerprints = new ArrayList<>();
 
     /**
      * Creates a builder.
@@ -81,7 +80,7 @@ public final class FingerprintTrustManagerFactoryBuilder {
         if (fingerprints.isEmpty()) {
             throw new IllegalStateException("No fingerprints provided");
         }
-        return new FingerprintTrustManagerFactory(this.algorithm,
-                                                  FingerprintTrustManagerFactory.toFingerprintArray(this.fingerprints));
+        byte[][] fingerprints = FingerprintTrustManagerFactory.toFingerprintArray(this.fingerprints);
+        return new FingerprintTrustManagerFactory(algorithm, fingerprints);
     }
 }

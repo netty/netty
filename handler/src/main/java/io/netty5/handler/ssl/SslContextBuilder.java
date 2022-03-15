@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
 import io.netty5.handler.ssl.util.KeyManagerFactoryWrapper;
@@ -310,7 +309,7 @@ public final class SslContextBuilder {
      * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
      */
     public SslContextBuilder trustManager(TrustManager trustManager) {
-        this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
         trustCertCollection = null;
         return this;
     }
@@ -494,9 +493,9 @@ public final class SslContextBuilder {
             requireNonNull(keyManager, "keyManager required for servers");
         }
         if (keyManager != null) {
-            this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
+            keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
         } else {
-            this.keyManagerFactory = null;
+            keyManagerFactory = null;
         }
         keyCertChain = null;
         key = null;

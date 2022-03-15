@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl.util;
 
 import static java.util.Objects.requireNonNull;
@@ -36,7 +35,7 @@ import java.security.Provider;
  */
 public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
 
-    private static final Provider PROVIDER = new Provider("", 0.0, "") {
+    private static final Provider PROVIDER = new Provider("", "0.0", "") {
         private static final long serialVersionUID = -2680540247105807895L;
     };
 
