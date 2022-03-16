@@ -1194,7 +1194,7 @@
                 <supportedProjectType>bundle</supportedProjectType>
               </supportedProjectTypes>
               <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
+                <Export-Package>io.netty5.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
                 <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->

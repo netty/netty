@@ -244,7 +244,7 @@
                 <supportedProjectType>bundle</supportedProjectType>
               </supportedProjectTypes>
               <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
+                <Export-Package>io.netty5.*</Export-Package>
                 <Export-Package>!*.generated.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
                 <Import-Package>sun.nio.ch;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
