@@ -50,7 +50,7 @@ jobs:
         run: ./.github/scripts/check_bom_dependencies.sh
 
   build-pr-windows:
-    runs-on: windows-2016
+    runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     steps:
