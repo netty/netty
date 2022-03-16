@@ -112,7 +112,7 @@ jobs:
             **/hs_err*.log
 
   build-pr-windows:
-    runs-on: windows-2016
+    runs-on: windows-2019
     name: windows-x86_64 build
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw

@@ -165,7 +165,7 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty-incubator-codec-quic main
 
   stage-release-windows-x86_64:
-    runs-on: windows-2016
+    runs-on: windows-2019
     name: stage-release-windows-x86_64
     needs: prepare-release
     env:

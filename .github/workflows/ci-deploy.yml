@@ -89,7 +89,7 @@ jobs:
           if-no-files-found: error
 
   stage-snapshot-windows-x86_64:
-    runs-on: windows-2016
+    runs-on: windows-2019
     name: stage-snapshot-windows-x86_64
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
