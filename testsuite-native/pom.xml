@@ -33,6 +33,7 @@
     <skipNativeTestsuite>false</skipNativeTestsuite>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty5.testsuite_native</javaModuleName>
   </properties>
 
   <dependencies>

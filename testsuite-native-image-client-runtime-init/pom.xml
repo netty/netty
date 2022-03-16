@@ -32,6 +32,7 @@
     <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty5.testsuite_native_image_client_runtime_init</javaModuleName>
   </properties>
 
   <dependencies>

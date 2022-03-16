@@ -78,7 +78,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
+            <version>3.3.2</version>
             <executions>
               <execution>
                 <id>aggregate</id>
@@ -88,6 +88,21 @@
               </execution>
             </executions>
             <configuration>
+              <skippedModules>
+                netty5-all,netty5-bom,netty-testsuite,netty5-testsuite-autobahn,netty5-testsuite-http2,
+                netty5-testsuite-native,netty5-testsuite-native-image,netty5-testsuite-native-image-client,
+                netty5-testsuite-native-image-client-runtime-init,netty5-testsuite-osgi,netty5-testsuite-shading,
+                netty5-transport-blockhound-tests,netty5-transport-native-unix-common-tests,netty5-microbench,
+                netty5-dev-tools,netty5-example
+              </skippedModules>
+              <additionalOptions>
+                <!--
+                 All of our modules are Automatic Modules, so they read everything on the module path.
+                 So we need to add these JDK modules to the module path, because we have dependencies on them.
+                -->
+                <option>--add-modules</option>
+                <option>jdk.unsupported,java.logging,java.naming</option>
+              </additionalOptions>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
                 <exclude>**/example/**/*.java</exclude>
@@ -106,7 +121,7 @@
               <windowtitle>Netty API Reference (${project.version})</windowtitle>
               <detectJavaApiLink>false</detectJavaApiLink>
               <links>
-                <link>https://docs.oracle.com/javase/8/docs/api/</link>
+                <link>https://docs.oracle.com/en/java/javase/11/docs/api/</link>
                 <link>https://developers.google.com/protocol-buffers/docs/reference/java/</link>
                 <link>https://www.slf4j.org/apidocs/</link>
               </links>
@@ -1257,7 +1272,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
+        <version>3.3.2</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
