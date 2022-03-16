@@ -115,7 +115,7 @@ class OpenSslKeyMaterialProvider {
         long chain = 0;
         long pkey = 0;
         try {
-            chainBio = toBIO(allocator, encoded.retain());
+            chainBio = toBIO(allocator, encoded);
             chain = SSL.parseX509Chain(chainBio);
 
             OpenSslKeyMaterial keyMaterial;

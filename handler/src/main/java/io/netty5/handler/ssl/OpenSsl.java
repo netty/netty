@@ -274,7 +274,7 @@ public final class OpenSsl {
                             cert = SSL.parseX509Chain(certBio);
 
                             keyBio = ReferenceCountedOpenSslContext.toBIO(
-                                    UnpooledByteBufAllocator.DEFAULT, privateKey.retain());
+                                    UnpooledByteBufAllocator.DEFAULT, privateKey);
                             key = SSL.parsePrivateKey(keyBio, null);
 
                             SSL.setKeyMaterial(ssl, cert, key);
