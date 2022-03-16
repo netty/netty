@@ -148,7 +148,7 @@ public class OpenSslKeyMaterialProviderTest {
         OpenSslPrivateKey sslPrivateKey;
         try {
             pemKey = PemPrivateKey.toPEM(ByteBufAllocator.DEFAULT, true, privateKey);
-            pkeyBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, pemKey.retain());
+            pkeyBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, pemKey);
             sslPrivateKey = new OpenSslPrivateKey(SSL.parsePrivateKey(pkeyBio, null));
         } finally {
             ReferenceCountUtil.safeRelease(pemKey);
