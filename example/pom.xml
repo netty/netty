@@ -31,7 +31,9 @@
 
   <properties>
     <japicmp.skip>true</japicmp.skip>
+    <javaModuleName>io.netty5.example</javaModuleName>
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

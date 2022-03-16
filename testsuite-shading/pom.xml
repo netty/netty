@@ -40,6 +40,7 @@
     <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty5.testsuite_shading</javaModuleName>
   </properties>
 
   <build>

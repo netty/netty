@@ -29,6 +29,10 @@
     Tests for the static library which contains common unix utilities.
   </description>
 
+  <properties>
+    <javaModuleName>io.netty5.transport_native_unix_common_tests</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>

@@ -39,6 +39,7 @@
          code -->
     <kqueue.classifier />
     <japicmp.skip>true</japicmp.skip>
+    <javaModuleName>io.netty5.microbench</javaModuleName>
   </properties>
   <profiles>
     <profile>
