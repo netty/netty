@@ -260,7 +260,7 @@ static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jl
 static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jboolean alwaysUseTimer) {
     // only reschedule the timer if there is a newer event.
     // -1 is a special value used by EpollEventLoop.
-    uint32_t armTimer = alwaysUseTimer == JNI_FALSE ? 1 : 0;
+    uint32_t armTimer = alwaysUseTimer == JNI_TRUE ? 1 : 0;
     if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
         if (alwaysUseTimer == JNI_FALSE && (tvSec != 0 || tvNsec != 0)) {
             // Let's try to reduce the syscalls as much as possible as timerfd_settime(...) can be expensive:
