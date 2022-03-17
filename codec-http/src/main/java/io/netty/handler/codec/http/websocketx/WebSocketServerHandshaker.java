@@ -15,6 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import java.nio.channels.ClosedChannelException;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -24,25 +30,25 @@ import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -268,13 +274,14 @@ public abstract class WebSocketServerHandshaker {
      */
     public final ChannelFuture handshake(final Channel channel, HttpRequest req,
                                          final HttpHeaders responseHeaders, final ChannelPromise promise) {
-
         if (req instanceof FullHttpRequest) {
             return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
         }
+
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
         }
+
         ChannelPipeline p = channel.pipeline();
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         if (ctx == null) {
@@ -286,18 +293,42 @@ public abstract class WebSocketServerHandshaker {
                 return promise;
             }
         }
-        // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
-        // enough for the websockets handshake payload.
-        //
-        // TODO: Make handshake work without HttpObjectAggregator at all.
-        String aggregatorName = "httpAggregator";
-        p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
-        p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpRequest>() {
+
+        String aggregatorCtx = ctx.name();
+        if (HttpUtil.isContentLengthSet(req) || HttpUtil.isTransferEncodingChunked(req) || version == WebSocketVersion.V00) {
+            // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
+            // enough for the websockets handshake payload.
+            aggregatorCtx = "httpAggregator";
+            p.addAfter(ctx.name(), aggregatorCtx, new HttpObjectAggregator(8192));
+        }
+
+        p.addAfter(aggregatorCtx, "handshaker", new SimpleChannelInboundHandler<HttpObject>() {
+
+            private FullHttpRequest fullHttpRequest;
+
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
-                // Remove ourself and do the actual handshake
-                ctx.pipeline().remove(this);
-                handshake(channel, msg, responseHeaders, promise);
+            protected void channelRead0(final ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+                if (msg instanceof FullHttpRequest) {
+                    fullHttpRequest = (FullHttpRequest) msg;
+                }
+
+                if (msg instanceof LastHttpContent) {
+                    assert fullHttpRequest != null;
+                    // Remove ourself and do the actual handshake
+                    ctx.pipeline().remove(this);
+                    handshake(channel, fullHttpRequest, responseHeaders, promise);
+                    fullHttpRequest = null;
+                    return;
+                }
+
+                if (msg instanceof HttpRequest) {
+                    HttpRequest httpRequest = (HttpRequest) msg;
+                    fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(), httpRequest.uri(),
+                        Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
+                    if (httpRequest.decoderResult().isFailure()) {
+                        fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
+                    }
+                }
             }
 
             @Override
