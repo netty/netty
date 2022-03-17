@@ -187,12 +187,12 @@ public final class Native {
         return result;
     }
 
-    // IMPORTANT: This needs to be consistent with what is used iin netty_epoll_native.c
+    // IMPORTANT: This needs to be consistent with what is used in netty_epoll_native.c
     static int epollReady(long result) {
         return (int) (result >> 32);
     }
 
-    // IMPORTANT: This needs to be consistent with what is used iin netty_epoll_native.c
+    // IMPORTANT: This needs to be consistent with what is used in netty_epoll_native.c
     static boolean epollTimerWasUsed(long result) {
         return (result & 0xff) != 0;
     }
