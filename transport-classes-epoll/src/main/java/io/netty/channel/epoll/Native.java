@@ -184,7 +184,7 @@ public final class Native {
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
-        return ready;
+        return result;
     }
 
     // IMPORTANT: This needs to be consistent with what is used iin netty_epoll_native.c
