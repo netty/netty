@@ -349,7 +349,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                                     // Timerfd needs to be re-armed or disarmed
                                     long result = epollWait(curDeadlineNanos);
                                     // The result contains the actual return value and if a timer was used or not.
-                                    // We need to "unpack" it. Be aware that the same
+                                    // We need to "unpack" using the helper methods exposed in Native.
                                     strategy = Native.epollReady(result);
                                     prevDeadlineNanos = Native.epollTimerWasUsed(result) ? curDeadlineNanos : NONE;
                                 }
