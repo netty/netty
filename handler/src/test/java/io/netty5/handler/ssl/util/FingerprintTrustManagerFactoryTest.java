@@ -24,7 +24,7 @@ import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-import static io.netty5.handler.ssl.Java8SslTestUtils.loadCertCollection;
+import static io.netty5.handler.ssl.SslTestUtils.loadCertCollection;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -23,7 +23,6 @@ import io.netty.internal.tcnative.AsyncTask;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty5.util.AbstractReferenceCounted;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.ResourceLeakDetectorFactory;
@@ -36,6 +35,8 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -49,6 +50,8 @@ import javax.net.ssl.SSLSessionBindingListener;
 import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.nio.charset.StandardCharsets;
+import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
@@ -57,6 +60,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -186,13 +190,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile long lastAccessed = -1;
 
     private String endPointIdentificationAlgorithm;
-    // Store as object as AlgorithmConstraints only exists since java 7.
-    private Object algorithmConstraints;
-    private List<String> sniHostNames;
+    private AlgorithmConstraints algorithmConstraints;
+    private List<SNIServerName> sniHostNames;
 
-    // Mark as volatile as accessed by checkSniHostnameMatch(...) and also not specify the SNIMatcher type to allow us
-    // using it with java7.
-    private volatile Collection<?> matchers;
+    private volatile Collection<SNIMatcher> matchers;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -238,7 +239,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return Java8SslUtils.getSniHostNames(sniHostNames);
+                    return sniHostNames;
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -251,9 +252,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 } else {
                                     // Convert to bytes as we do not want to do any strict validation of the
                                     // SNIHostName while creating it.
-                                    requestedServerNames =
-                                            Java8SslUtils.getSniHostName(
-                                                    SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8));
+                                    requestedServerNames = Collections.singletonList(
+                                            new SNIHostName(name.getBytes(StandardCharsets.UTF_8)));
                                 }
                             }
                         }
@@ -337,11 +337,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
                 if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
-                    // Since we are on Java 8+, we should do some extra validation to ensure we can construct the
-                    // SNIHostName later again.
-                    if (Java8SslUtils.isValidHostNameForSNI(peerHost)) {
+                    try {
+                        sniHostNames = Collections.singletonList(new SNIHostName(peerHost));
                         SSL.setTlsExtHostName(ssl, peerHost);
-                        sniHostNames = Collections.singletonList(peerHost);
+                    } catch (IllegalArgumentException ignored) {
+                        // Just ignore
                     }
                 }
 
@@ -2158,16 +2158,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         SSLParameters sslParameters = super.getSSLParameters();
 
         sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
-        Java7SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
+        sslParameters.setAlgorithmConstraints(algorithmConstraints);
+
         if (sniHostNames != null) {
-            Java8SslUtils.setSniHostNames(sslParameters, sniHostNames);
+            sslParameters.setServerNames(sniHostNames);
         }
         if (!isDestroyed()) {
-            Java8SslUtils.setUseCipherSuitesOrder(
-                    sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
+            sslParameters.setUseCipherSuitesOrder((SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
         }
 
-        Java8SslUtils.setSNIMatchers(sslParameters, matchers);
+        sslParameters.setSNIMatchers(matchers);
         return sslParameters;
     }
 
@@ -2180,13 +2180,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         boolean isDestroyed = isDestroyed();
         if (!isDestroyed) {
             if (clientMode) {
-                final List<String> sniHostNames = Java8SslUtils.getSniHostNames(sslParameters);
-                for (String name: sniHostNames) {
-                    SSL.setTlsExtHostName(ssl, name);
+                final List<SNIServerName> sniHostNames = sslParameters.getServerNames();
+                if (!sniHostNames.isEmpty()) {
+                    for (SNIServerName serverName: sniHostNames) {
+                        if (!(serverName instanceof SNIHostName)) {
+                            throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                    + " instances are supported, but found: " + serverName);
+                        }
+                    }
+                    for (SNIServerName serverName: sniHostNames) {
+                        SSL.setTlsExtHostName(ssl, ((SNIHostName) serverName).getAsciiName());
+                    }
                 }
                 this.sniHostNames = sniHostNames;
             }
-            if (Java8SslUtils.getUseCipherSuitesOrder(sslParameters)) {
+            if (sslParameters.getUseCipherSuitesOrder()) {
                 SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
             } else {
                 SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -2216,7 +2224,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     final boolean checkSniHostnameMatch(byte[] hostname) {
-        return Java8SslUtils.checkSniHostnameMatch(matchers, hostname);
+        if (matchers != null && !matchers.isEmpty()) {
+            SNIHostName name = new SNIHostName(hostname);
+            Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();
+            while (matcherIt.hasNext()) {
+                SNIMatcher matcher = matcherIt.next();
+                // type 0 is for hostname
+                if (matcher.getType() == 0 && matcher.matches(name)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     @Override
