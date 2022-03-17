@@ -295,7 +295,8 @@ public abstract class WebSocketServerHandshaker {
         }
 
         String aggregatorCtx = ctx.name();
-        if (HttpUtil.isContentLengthSet(req) || HttpUtil.isTransferEncodingChunked(req) || version == WebSocketVersion.V00) {
+        if (HttpUtil.isContentLengthSet(req) || HttpUtil.isTransferEncodingChunked(req) ||
+            version == WebSocketVersion.V00) {
             // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
             // enough for the websockets handshake payload.
             aggregatorCtx = "httpAggregator";
@@ -323,8 +324,8 @@ public abstract class WebSocketServerHandshaker {
 
                 if (msg instanceof HttpRequest) {
                     HttpRequest httpRequest = (HttpRequest) msg;
-                    fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(), httpRequest.uri(),
-                        Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
+                    fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(),
+                        httpRequest.uri(), Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
                     if (httpRequest.decoderResult().isFailure()) {
                         fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
                     }
