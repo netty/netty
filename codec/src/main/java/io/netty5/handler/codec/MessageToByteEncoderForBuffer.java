@@ -24,8 +24,7 @@ import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.TypeParameterMatcher;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link ChannelHandler} which encodes message in a stream-like fashion from one message to a {@link Buffer}.
@@ -45,43 +44,21 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
-    private final boolean preferDirect;
-
-    /**
-     * see {@link #MessageToByteEncoderForBuffer(boolean)} with {@code true} as boolean parameter.
-     */
-    protected MessageToByteEncoderForBuffer() {
-        this(true);
-    }
-
-    /**
-     * see {@link #MessageToByteEncoderForBuffer(Class, boolean)} with {@code true} as boolean value.
-     */
-    protected MessageToByteEncoderForBuffer(Class<? extends I> outboundMessageType) {
-        this(outboundMessageType, true);
-    }
 
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
-     *
-     * @param preferDirect {@code true} if a direct {@link Buffer} should be tried to be used as target for
-     *                     the encoded messages. If {@code false} is used it will allocate a heap {@link Buffer}.
      */
-    protected MessageToByteEncoderForBuffer(boolean preferDirect) {
+    protected MessageToByteEncoderForBuffer() {
         matcher = TypeParameterMatcher.find(this, MessageToByteEncoderForBuffer.class, "I");
-        this.preferDirect = preferDirect;
     }
 
     /**
      * Create a new instance.
      *
      * @param outboundMessageType The type of messages to match.
-     * @param preferDirect        {@code true} if a direct {@link Buffer} should be tried to be used as target for
-     *                            the encoded messages. If {@code false} is used it will allocate a heap {@link Buffer}.
      */
-    protected MessageToByteEncoderForBuffer(Class<? extends I> outboundMessageType, boolean preferDirect) {
-        matcher = TypeParameterMatcher.get(outboundMessageType);
-        this.preferDirect = preferDirect;
+    protected MessageToByteEncoderForBuffer(Class<? extends I> outboundMessageType) {
+        matcher = TypeParameterMatcher.get(requireNonNull(outboundMessageType, "outboundMessageType"));
     }
 
     /**
@@ -99,7 +76,7 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
             if (acceptOutboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
-                buf = allocateBuffer(ctx, cast, preferDirect);
+                buf = allocateBuffer(ctx, cast);
                 try {
                     encode(ctx, cast, buf);
                 } finally {
@@ -127,16 +104,11 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
 
     /**
      * Allocate a {@link Buffer} which will be used as argument of {@link #encode(ChannelHandlerContext, I, Buffer)}.
-     * Sub-classes may override this method to return {@link Buffer} with a perfect matching {@code size}.
+     *
+     * @param ctx the {@link ChannelHandlerContext} which this {@link MessageToByteEncoderForBuffer} belongs to
+     * @param msg the message to be encoded
      */
-    protected Buffer allocateBuffer(@SuppressWarnings("unused") ChannelHandlerContext ctx,
-                                    @SuppressWarnings("unused") I msg, boolean preferDirect) throws Exception {
-        if (preferDirect) {
-            return offHeapAllocator().allocate(256);
-        } else {
-            return onHeapAllocator().allocate(256);
-        }
-    }
+    protected abstract Buffer allocateBuffer(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
      * Encode a message into a {@link Buffer}. This method will be called for each written message that can be handled
@@ -148,8 +120,4 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
      * @throws Exception is thrown if an error occurs
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, Buffer out) throws Exception;
-
-    protected boolean isPreferDirect() {
-        return preferDirect;
-    }
 }

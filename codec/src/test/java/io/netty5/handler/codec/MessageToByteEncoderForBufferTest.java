@@ -40,20 +40,14 @@ class MessageToByteEncoderForBufferTest {
     }
 
     @Test
-    void testAllocateBuffer() throws Exception {
-        TestEncoder encoder = new TestEncoder();
-        try (Buffer buffer = encoder.allocateBuffer(null, null, true)) {
-            assertTrue(buffer.isDirect());
-        }
-
-        try (Buffer buffer = encoder.allocateBuffer(null, null, false)) {
-            assertFalse(buffer.isDirect());
-        }
-    }
-
-    @Test
     void testEncoderException() {
         EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoderForBuffer<String>() {
+
+            @Override
+            protected Buffer allocateBuffer(ChannelHandlerContext ctx, String msg) {
+                return ctx.bufferAllocator().allocate(0);
+            }
+
             @Override
             protected void encode(ChannelHandlerContext ctx, String msg, Buffer out) {
                 throw new EncoderException();
@@ -65,21 +59,18 @@ class MessageToByteEncoderForBufferTest {
     @Test
     void testException() {
         EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoderForBuffer<String>() {
+
+            @Override
+            protected Buffer allocateBuffer(ChannelHandlerContext ctx, String msg) {
+                return ctx.bufferAllocator().allocate(0);
+            }
+
             @Override
             protected void encode(ChannelHandlerContext ctx, String msg, Buffer out) throws Exception {
                 throw new Exception();
             }
         });
         assertThrows(EncoderException.class, () -> channel.writeOutbound("test"));
-    }
-
-    @Test
-    void testIsPreferDirect() {
-        TestEncoder encoder = new TestEncoder();
-        assertTrue(encoder.isPreferDirect());
-
-        encoder = new TestEncoder(false);
-        assertFalse(encoder.isPreferDirect());
     }
 
     @Test
@@ -106,8 +97,9 @@ class MessageToByteEncoderForBufferTest {
             super();
         }
 
-        TestEncoder(boolean preferDirect) {
-            super(preferDirect);
+        @Override
+        protected Buffer allocateBuffer(ChannelHandlerContext ctx, String msg) {
+            return ctx.bufferAllocator().allocate(16);
         }
 
         @Override
