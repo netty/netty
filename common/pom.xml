@@ -27,7 +27,7 @@
   <artifactId>netty5-common</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Common</name>
+  <name>Netty5/Common</name>
 
   <properties>
     <javaModuleName>io.netty5.common</javaModuleName>

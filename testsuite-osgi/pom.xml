@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-osgi</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/OSGI</name>
+  <name>Netty5/Testsuite/OSGI</name>
 
   <properties>
     <exam.version>4.13.0</exam.version>

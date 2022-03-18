@@ -26,7 +26,7 @@
   <artifactId>netty5-codec-http</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Codec/HTTP</name>
+  <name>Netty5/Codec/HTTP</name>
 
   <properties>
     <javaModuleName>io.netty5.codec.http</javaModuleName>

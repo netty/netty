@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-http2</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/Http2</name>
+  <name>Netty5/Testsuite/Http2</name>
 
   <properties>
     <japicmp.skip>true</japicmp.skip>

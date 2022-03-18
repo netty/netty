@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-transport-native-unix-common</artifactId>
 
-  <name>Netty/Transport/Native/Unix/Common</name>
+  <name>Netty5/Transport/Native/Unix/Common</name>
   <packaging>jar</packaging>
   <description>
     Static library which contains common unix utilities.

@@ -29,7 +29,7 @@
     Tests for the BlockHound integration.
   </description>
 
-  <name>Netty/Transport/BlockHound/Tests</name>
+  <name>Netty5/Transport/BlockHound/Tests</name>
 
   <profiles>
     <profile>

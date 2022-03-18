@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite</name>
+  <name>Netty5/Testsuite</name>
 
   <dependencies>
     <dependency>

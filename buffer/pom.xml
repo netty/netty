@@ -26,7 +26,7 @@
   <artifactId>netty5-buffer</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Buffer</name>
+  <name>Netty5/Buffer</name>
 
   <properties>
     <javaModuleName>io.netty5.buffer</javaModuleName>

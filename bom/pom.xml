@@ -28,7 +28,7 @@
   <version>5.0.1.Alpha1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>Netty/BOM</name>
+  <name>Netty5/BOM</name>
   <description>Netty (Bill of Materials)</description>
   <url>https://netty.io/</url>
 

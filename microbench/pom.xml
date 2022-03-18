@@ -26,7 +26,7 @@
   <artifactId>netty5-microbench</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Microbench</name>
+  <name>Netty5/Microbench</name>
 
   <properties>
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->

@@ -26,7 +26,7 @@
   <artifactId>netty5-all</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/All-in-One</name>
+  <name>Netty5/All-in-One</name>
 
   <properties>
     <javaModuleName>io.netty5.all</javaModuleName>

@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-native-image-client</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/NativeImage/Client</name>
+  <name>Netty5/Testsuite/NativeImage/Client</name>
 
   <properties>
     <japicmp.skip>true</japicmp.skip>

@@ -30,7 +30,7 @@
     <javaModuleName>io.netty5.handler</javaModuleName>
   </properties>
 
-  <name>Netty/Handler</name>
+  <name>Netty5/Handler</name>
 
   <dependencies>
     <dependency>

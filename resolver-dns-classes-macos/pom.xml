@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-resolver-dns-classes-macos</artifactId>
 
-  <name>Netty/Resolver/DNS/Classes/MacOS</name>
+  <name>Netty5/Resolver/DNS/Classes/MacOS</name>
   <packaging>jar</packaging>
 
   <properties>

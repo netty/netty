@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-transport-classes-epoll</artifactId>
 
-  <name>Netty/Transport/Classes/Epoll</name>
+  <name>Netty5/Transport/Classes/Epoll</name>
   <packaging>jar</packaging>
 
   <properties>
