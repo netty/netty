@@ -28,7 +28,7 @@
   <packaging>pom</packaging>
   <version>5.0.1.Alpha1-SNAPSHOT</version>
 
-  <name>Netty</name>
+  <name>Netty 5 Parent</name>
   <url>https://netty.io/</url>
   <description>
     Netty is an asynchronous event-driven network application framework for

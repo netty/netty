@@ -26,7 +26,7 @@
   <artifactId>netty5-transport</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Transport</name>
+  <name>Netty5/Transport</name>
 
   <properties>
     <javaModuleName>io.netty5.transport</javaModuleName>

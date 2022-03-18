@@ -26,7 +26,7 @@
   <artifactId>netty5-codec</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Codec</name>
+  <name>Netty5/Codec</name>
 
   <properties>
     <javaModuleName>io.netty5.codec</javaModuleName>

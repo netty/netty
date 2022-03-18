@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-native-image-client-runtime-init</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/NativeImage/ClientRuntimeInit</name>
+  <name>Netty5/Testsuite/NativeImage/ClientRuntimeInit</name>
 
   <properties>
     <japicmp.skip>true</japicmp.skip>

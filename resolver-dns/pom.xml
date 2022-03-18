@@ -26,7 +26,7 @@
   <artifactId>netty5-resolver-dns</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Resolver/DNS</name>
+  <name>Netty5/Resolver/DNS</name>
 
   <properties>
     <javaModuleName>io.netty5.resolver.dns</javaModuleName>

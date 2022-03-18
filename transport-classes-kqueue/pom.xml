@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-transport-classes-kqueue</artifactId>
 
-  <name>Netty/Transport/Classes/KQueue</name>
+  <name>Netty5/Transport/Classes/KQueue</name>
   <packaging>jar</packaging>
 
   <properties>

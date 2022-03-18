@@ -26,7 +26,7 @@
   <artifactId>netty5-resolver</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Resolver</name>
+  <name>Netty5/Resolver</name>
 
   <properties>
     <javaModuleName>io.netty5.resolver</javaModuleName>

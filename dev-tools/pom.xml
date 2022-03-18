@@ -27,7 +27,7 @@
   <artifactId>netty5-dev-tools</artifactId>
   <version>5.0.1.Alpha1-SNAPSHOT</version>
 
-  <name>Netty/Dev-Tools</name>
+  <name>Netty5/Dev-Tools</name>
 
   <build>
     <plugins>

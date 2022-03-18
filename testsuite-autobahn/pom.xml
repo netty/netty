@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-autobahn</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/Autobahn</name>
+  <name>Netty5/Testsuite/Autobahn</name>
 
   <properties>
     <japicmp.skip>true</japicmp.skip>

@@ -26,7 +26,7 @@
   <artifactId>netty5-testsuite-native</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Testsuite/Native</name>
+  <name>Netty5/Testsuite/Native</name>
 
   <properties>
     <japicmp.skip>true</japicmp.skip>

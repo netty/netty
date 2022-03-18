@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-transport-native-kqueue</artifactId>
 
-  <name>Netty/Transport/Native/KQueue</name>
+  <name>Netty5/Transport/Native/KQueue</name>
   <packaging>jar</packaging>
 
   <profiles>

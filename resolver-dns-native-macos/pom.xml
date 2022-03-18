@@ -23,7 +23,7 @@
   </parent>
   <artifactId>netty5-resolver-dns-native-macos</artifactId>
 
-  <name>Netty/Resolver/DNS/Native/MacOS</name>
+  <name>Netty5/Resolver/DNS/Native/MacOS</name>
   <packaging>jar</packaging>
 
   <profiles>
