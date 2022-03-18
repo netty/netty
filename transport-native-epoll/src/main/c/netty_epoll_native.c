@@ -258,12 +258,12 @@ static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jl
 // This needs to be consistent with Native.java
 #define EPOLL_WAIT_RESULT(V, ARM_TIMER)  ((jlong) ((uint64_t) ((uint32_t) V) << 32 | ARM_TIMER))
 
-static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jboolean alwaysUseTimer) {
+static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jlong millisThreshold) {
     // only reschedule the timer if there is a newer event.
     // -1 is a special value used by EpollEventLoop.
-    uint32_t armTimer = alwaysUseTimer == JNI_TRUE ? 1 : 0;
+    uint32_t armTimer = millisThreshold <= 0 ? 1 : 0;
     if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
-        if (alwaysUseTimer == JNI_FALSE && (tvSec != 0 || tvNsec != 0)) {
+        if (millisThreshold > 0 && (tvSec != 0 || tvNsec != 0)) {
             // Let's try to reduce the syscalls as much as possible as timerfd_settime(...) can be expensive:
             // See https://github.com/netty/netty/issues/11695
 
@@ -286,9 +286,9 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
             // Check if we can reduce the syscall overhead by just use epoll_wait. This is done in cases when we can
             // tolerate some "drift".
             if (tvNsec == 0 ||
-                    // Let's just use 10 milliseconds and anything bigger then 1 second as a threshold to accept that
-                    // we may be not 100 % accurate and ignore anything that is smaller then 1 ms.
-                    millis > 10 ||
+                    // Let's use the threshold to accept that we may be not 100 % accurate and ignore anything that
+                    // is smaller then 1 ms.
+                    millis >= millisThreshold ||
                     tvSec > 0) {
                 millis += tvSec * 1000;
                 int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, millis);
@@ -686,7 +686,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
   { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
-  { "epollWait0", "(IJIIIIZ)J", (void *) netty_epoll_native_epollWait0 },
+  { "epollWait0", "(IJIIIIJ)J", (void *) netty_epoll_native_epollWait0 },
   { "epollWait", "(IJII)I", (void *) netty_epoll_native_epollWait },
   { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
