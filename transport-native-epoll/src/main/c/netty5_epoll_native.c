@@ -84,6 +84,7 @@
 
 // optional
 extern int epoll_create1(int flags) __attribute__((weak));
+extern int epoll_pwait2(int epfd, struct epoll_event *events, int maxevents, const struct timespec *timeout, const sigset_t *sigmask) __attribute__((weak));
 
 #ifndef __USE_GNU
 struct mmsghdr {
@@ -204,24 +205,6 @@ static void netty5_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd,
     }
 }
 
-static void netty5_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
-    uint64_t eventfd_t;
-
-    if (eventfd_read(fd, &eventfd_t) != 0) {
-        // something is serious wrong
-        netty5_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
-    }
-}
-
-static void netty5_epoll_native_timerFdRead(JNIEnv* env, jclass clazz, jint fd) {
-    uint64_t timerFireCount;
-
-    if (read(fd, &timerFireCount, sizeof(uint64_t)) < 0) {
-        // it is expected that this is only called where there is known to be activity, so this is an error.
-        netty5_unix_errors_throwChannelExceptionErrorNo(env, "read() failed: ", errno);
-    }
-}
-
 static jint netty5_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     jint efd;
     if (epoll_create1) {
@@ -262,26 +245,58 @@ static jint netty5_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, j
     } while((err = errno) == EINTR);
     return -err;
 }
+// This needs to be consistent with Native.java
+#define EPOLL_WAIT_RESULT(V, ARM_TIMER)  ((jlong) ((uint64_t) ((uint32_t) V) << 32 | ARM_TIMER))
 
-// This method is deprecated!
-static jint netty5_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
-    if (tvSec == 0 && tvNsec == 0) {
-        // Zeros = poll (aka return immediately).
-    	return netty5_epoll_native_epollWait(env, clazz, efd, address, len, 0);
-    }
+static jlong netty5_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jlong millisThreshold) {
     // only reschedule the timer if there is a newer event.
     // -1 is a special value used by EpollEventLoop.
+    uint32_t armTimer = millisThreshold <= 0 ? 1 : 0;
     if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
+        if (millisThreshold > 0 && (tvSec != 0 || tvNsec != 0)) {
+            // Let's try to reduce the syscalls as much as possible as timerfd_settime(...) can be expensive:
+            // See https://github.com/netty/netty/issues/11695
+
+            if (epoll_pwait2) {
+                // We have epoll_pwait2(...), this means we can just pass in the itimerspec directly and not need an
+                // extra syscall even for very small timeouts.
+                struct timespec ts = { tvSec, tvNsec };
+                struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
+                int result, err;
+                do {
+                    result = epoll_pwait2(efd, ev, len, &ts, NULL);
+                    if (result >= 0) {
+                        return EPOLL_WAIT_RESULT(result, armTimer);
+                    }
+                } while((err = errno) == EINTR);
+                return EPOLL_WAIT_RESULT(-err, armTimer);
+            }
+
+            int millis = tvNsec / 1000000;
+            // Check if we can reduce the syscall overhead by just use epoll_wait. This is done in cases when we can
+            // tolerate some "drift".
+            if (tvNsec == 0 ||
+                    // Let's use the threshold to accept that we may be not 100 % accurate and ignore anything that
+                    // is smaller then 1 ms.
+                    millis >= millisThreshold ||
+                    tvSec > 0) {
+                millis += tvSec * 1000;
+                int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, millis);
+                return EPOLL_WAIT_RESULT(result, armTimer);
+            }
+        }
         struct itimerspec ts;
         memset(&ts.it_interval, 0, sizeof(struct timespec));
         ts.it_value.tv_sec = tvSec;
         ts.it_value.tv_nsec = tvNsec;
         if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-            netty5_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
             return -1;
         }
+        armTimer = 1;
     }
-    return netty5_epoll_native_epollWait(env, clazz, efd, address, len, -1);
+    int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
+    return EPOLL_WAIT_RESULT(result, armTimer);
 }
 
 static inline void cpu_relax() {
@@ -640,10 +655,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFd", "()I", (void *) netty5_epoll_native_eventFd },
   { "timerFd", "()I", (void *) netty5_epoll_native_timerFd },
   { "eventFdWrite", "(IJ)V", (void *) netty5_epoll_native_eventFdWrite },
-  { "eventFdRead", "(I)V", (void *) netty5_epoll_native_eventFdRead },
-  { "timerFdRead", "(I)V", (void *) netty5_epoll_native_timerFdRead },
   { "epollCreate", "()I", (void *) netty5_epoll_native_epollCreate },
-  { "epollWait0", "(IJIIII)I", (void *) netty5_epoll_native_epollWait0 }, // This method is deprecated!
+  { "epollWait0", "(IJIIIIJ)J", (void *) netty5_epoll_native_epollWait0 },
   { "epollWait", "(IJII)I", (void *) netty5_epoll_native_epollWait },
   { "epollBusyWait0", "(IJI)I", (void *) netty5_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty5_epoll_native_epollCtlAdd0 },

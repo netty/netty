@@ -29,6 +29,7 @@ import io.netty5.util.IntSupplier;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -44,6 +45,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class EpollHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollHandler.class);
+    private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
+            SystemPropertyUtil.getLong("io.netty5.channel.epoll.epollWaitThreshold", 10);
 
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
@@ -258,7 +261,7 @@ public class EpollHandler implements IoHandler {
         }
     }
 
-    private int epollWait(IoExecutionContext context) throws IOException {
+    private long epollWait(IoExecutionContext context) throws IOException {
         int delaySeconds;
         int delayNanos;
         long curDeadlineNanos = context.deadlineNanos();
@@ -271,7 +274,7 @@ public class EpollHandler implements IoHandler {
             delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
             delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, MAX_SCHEDULED_TIMERFD_NS);
         }
-        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos);
+        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos, EPOLL_WAIT_MILLIS_THRESHOLD);
     }
 
     private int epollWaitNow() throws IOException {
@@ -321,7 +324,8 @@ public class EpollHandler implements IoHandler {
                     wakenUp.set(0);
                     try {
                         if (context.canBlock()) {
-                            strategy = epollWait(context);
+                            long result = epollWait(context);
+                            strategy = Native.epollReady(result);
                         }
                     } finally {
                         // Try get() first to avoid much more expensive CAS in the case we
