@@ -87,6 +87,7 @@
     <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty.transport_blockhound_tests</javaModuleName>
   </properties>
 
   <dependencies>
