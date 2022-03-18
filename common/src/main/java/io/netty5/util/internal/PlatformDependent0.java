@@ -26,10 +26,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
 
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
@@ -223,54 +226,53 @@ final class PlatformDependent0 {
             try {
                 final Object maybeDirectBufferConstructorHandle =
                         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                            if (javaVersion() >= 17) {
-                                try {
-                                    final Constructor<?> constructor =
-                                        direct.getClass().getDeclaredConstructor(long.class, int.class, Object.class,
-                                            java.lang.Class.forName("jdk.internal.access.foreign.MemorySegmentProxy"));
-                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
-                                    if (cause != null) {
-                                        return cause;
-                                    }
-                                    return MethodHandles.lookup().unreflectConstructor(constructor);
-                                } catch (ClassNotFoundException | NoSuchMethodException | SecurityException
-                                    | IllegalAccessException e) {
-                                    return e;
-                                }
-                            } else {
-                                try {
-                                    final Constructor<?> constructor =
-                                        direct.getClass().getDeclaredConstructor(long.class, int.class, Object.class);
-                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
-                                    if (cause != null) {
-                                        return cause;
-                                    }
-                                    return MethodHandles.lookup().unreflectConstructor(constructor);
-                                } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
-                                    return e;
-                                }
+                            try {
+                                return Arrays
+                                        .stream(direct.getClass().getDeclaredConstructors())
+                                        .filter(declaredConstructor -> {
+                                            int parameterCount = declaredConstructor.getParameterCount();
+                                            if (parameterCount != 3 && parameterCount != 4) {
+                                                return false;
+                                            }
+                                            Parameter[] parameters = declaredConstructor.getParameters();
+                                            return parameters[0].getType() == long.class
+                                                    && parameters[1].getType() == int.class
+                                                    && parameters[2].getType() == Object.class;
+                                        })
+                                        .findFirst()
+                                        .map(constructor -> {
+                                            try {
+                                                Throwable cause = ReflectionUtil
+                                                        .trySetAccessible(constructor, true);
+                                                if (cause != null) {
+                                                    return cause;
+                                                }
+                                                MethodHandle constructorHandle = MethodHandles.lookup()
+                                                        .unreflectConstructor(constructor);
+                                                if (constructor.getParameterCount() == 4) {
+                                                    Object[] nullArgs = new Object[] { null };
+                                                    MethodHandles.insertArguments(constructorHandle, 3, nullArgs);
+                                                }
+                                                return constructorHandle;
+                                            } catch (SecurityException | IllegalAccessException e) {
+                                                return e;
+                                            }
+                                        })
+                                        .orElseThrow();
+                            } catch (SecurityException | NoSuchElementException e) {
+                                return e;
                             }
                         });
 
                 if (maybeDirectBufferConstructorHandle instanceof MethodHandle) {
                     address = UNSAFE.allocateMemory(1);
                     // try to use the constructor now
-                    if (javaVersion() >= 17) {
-                        try {
-                            directBufferConstructorHandle = (MethodHandle) maybeDirectBufferConstructorHandle;
-                            directBufferConstructorHandle.invoke(address, 1, null, null);
-                            logger.debug("direct buffer constructor: available");
-                        } catch (Throwable ignore) {
-                            directBufferConstructorHandle = null;
-                        }
-                    } else {
-                        try {
-                            directBufferConstructorHandle = (MethodHandle) maybeDirectBufferConstructorHandle;
-                            directBufferConstructorHandle.invoke(address, 1, null);
-                            logger.debug("direct buffer constructor: available");
-                        } catch (Throwable ignore) {
-                            directBufferConstructorHandle = null;
-                        }
+                    try {
+                        directBufferConstructorHandle = (MethodHandle) maybeDirectBufferConstructorHandle;
+                        directBufferConstructorHandle.invokeExact(address, 1, null);
+                        logger.debug("direct buffer constructor: available");
+                    } catch (Throwable ignore) {
+                        directBufferConstructorHandle = null;
                     }
                 } else {
                     if (logger.isTraceEnabled()) {
@@ -514,11 +516,7 @@ final class PlatformDependent0 {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
-            if (javaVersion() >= 17) {
-                return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invoke(address, capacity, attachment, null);
-            } else {
-                return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invoke(address, capacity, attachment);
-            }
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invokeExact(address, capacity, attachment);
         } catch (Throwable cause) {
             // Not expected to ever throw!
             if (cause instanceof Error) {
