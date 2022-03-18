@@ -178,6 +178,7 @@ public abstract class WebSocketServerHandshakerTest {
             assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
         } else {
             assertEquals("8jKS'y:G*Co,Wxa-", lastHttpContent.content().toString(CharsetUtil.US_ASCII));
+            assertTrue(lastHttpContent.release());
         }
 
         assertFalse(channel.finish());
