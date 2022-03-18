@@ -150,8 +150,6 @@ public final class Native {
     private static native int timerFd();
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
-    static native void timerFdRead(int fd);
-    static native void timerFdSetTime(int fd, int sec, int nsec) throws IOException;
 
     public static FileDescriptor newEpollCreate() {
         return new FileDescriptor(epollCreate());
@@ -165,6 +163,12 @@ public final class Native {
     @Deprecated
     public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
                                 int timeoutSec, int timeoutNs) throws IOException {
+        long result = epollWait(epollFd, events, timerFd, timeoutSec, timeoutNs, -1);
+        return epollReady(result);
+    }
+
+    static long epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
+                                int timeoutSec, int timeoutNs, long millisThreshold) throws IOException {
         if (timeoutSec == 0 && timeoutNs == 0) {
             // Zero timeout => poll (aka return immediately)
             return epollWait(epollFd, events, 0);
@@ -174,12 +178,23 @@ public final class Native {
             timeoutSec = 0;
             timeoutNs = 0;
         }
-        int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
-                               timeoutSec, timeoutNs);
+        long result = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
+                timeoutSec, timeoutNs, millisThreshold);
+        int ready = epollReady(result);
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
-        return ready;
+        return result;
+    }
+
+    // IMPORTANT: This needs to be consistent with what is used in netty_epoll_native.c
+    static int epollReady(long result) {
+        return (int) (result >> 32);
+    }
+
+    // IMPORTANT: This needs to be consistent with what is used in netty_epoll_native.c
+    static boolean epollTimerWasUsed(long result) {
+        return (result & 0xff) != 0;
     }
 
     static int epollWait(FileDescriptor epollFd, EpollEventArray events, boolean immediatePoll) throws IOException {
@@ -210,7 +225,8 @@ public final class Native {
         return ready;
     }
 
-    private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
+    private static native long epollWait0(
+            int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs, long millisThreshold);
     private static native int epollWait(int efd, long address, int len, int timeout);
     private static native int epollBusyWait0(int efd, long address, int len);
 
