@@ -281,7 +281,7 @@ static jlong netty5_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd,
                     millis >= millisThreshold ||
                     tvSec > 0) {
                 millis += tvSec * 1000;
-                int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, millis);
+                int result = netty5_epoll_native_epollWait(env, clazz, efd, address, len, millis);
                 return EPOLL_WAIT_RESULT(result, armTimer);
             }
         }
@@ -290,12 +290,12 @@ static jlong netty5_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd,
         ts.it_value.tv_sec = tvSec;
         ts.it_value.tv_nsec = tvNsec;
         if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-            netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+            netty5_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
             return -1;
         }
         armTimer = 1;
     }
-    int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
+    int result = netty5_epoll_native_epollWait(env, clazz, efd, address, len, -1);
     return EPOLL_WAIT_RESULT(result, armTimer);
 }
 
