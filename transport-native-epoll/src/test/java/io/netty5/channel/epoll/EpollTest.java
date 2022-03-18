@@ -48,7 +48,8 @@ public class EpollTest {
             final AtomicReference<Throwable> ref = new AtomicReference<>();
             Thread t = new Thread(() -> {
                 try {
-                    assertEquals(1, Native.epollWait(epoll, eventArray, timerFd, -1, -1));
+                    assertEquals(1, Native.epollReady(
+                            Native.epollWait(epoll, eventArray, timerFd, -1, -1, -1)));
                     // This should have been woken up because of eventfd_write.
                     assertEquals(eventfd.intValue(), eventArray.fd(0));
                 } catch (Throwable cause) {

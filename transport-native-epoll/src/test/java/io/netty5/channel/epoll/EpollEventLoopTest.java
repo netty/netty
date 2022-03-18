@@ -81,7 +81,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             final Thread t = new Thread(() -> {
                 try {
                     for (int i = 0; i < 2; i++) {
-                        long ready = Native.epollWait(epoll, array, timerFd, -1, -1, 0);
+                        long ready = Native.epollWait(epoll, array, timerFd, -1, -1, -1);
                         assertEquals(1, Native.epollReady(ready));
                         assertEquals(eventFd.intValue(), array.fd(0));
                         integer.incrementAndGet();
