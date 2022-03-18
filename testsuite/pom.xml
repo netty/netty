@@ -130,6 +130,7 @@
     <!-- Needed for SSL tests as these use the SelfSignedCertificate --> 
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <japicmp.skip>true</japicmp.skip>
+    <javaModuleName>io.netty.testsuite</javaModuleName>
   </properties>
 
   <build>
