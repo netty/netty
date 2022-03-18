@@ -60,7 +60,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -2226,9 +2225,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     final boolean checkSniHostnameMatch(byte[] hostname) {
         if (matchers != null && !matchers.isEmpty()) {
             SNIHostName name = new SNIHostName(hostname);
-            Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();
-            while (matcherIt.hasNext()) {
-                SNIMatcher matcher = matcherIt.next();
+            for (SNIMatcher matcher: matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {
                     return true;
