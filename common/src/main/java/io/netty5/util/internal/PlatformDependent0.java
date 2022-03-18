@@ -251,7 +251,8 @@ final class PlatformDependent0 {
                                                         .unreflectConstructor(constructor);
                                                 if (constructor.getParameterCount() == 4) {
                                                     Object[] nullArgs = new Object[] { null };
-                                                    MethodHandles.insertArguments(constructorHandle, 3, nullArgs);
+                                                    constructorHandle = MethodHandles
+                                                            .insertArguments(constructorHandle, 3, nullArgs);
                                                 }
                                                 return constructorHandle;
                                             } catch (SecurityException | IllegalAccessException e) {
