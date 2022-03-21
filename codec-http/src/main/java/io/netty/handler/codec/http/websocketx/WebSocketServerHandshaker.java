@@ -297,8 +297,8 @@ public abstract class WebSocketServerHandshaker {
         String aggregatorCtx = ctx.name();
         if (HttpUtil.isContentLengthSet(req) || HttpUtil.isTransferEncodingChunked(req) ||
             version == WebSocketVersion.V00) {
-            // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit of 8192 should be more then
-            // enough for the websockets handshake payload.
+            // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit of 8192 should be
+            // more then enough for the websockets handshake payload.
             aggregatorCtx = "httpAggregator";
             p.addAfter(ctx.name(), aggregatorCtx, new HttpObjectAggregator(8192));
         }
