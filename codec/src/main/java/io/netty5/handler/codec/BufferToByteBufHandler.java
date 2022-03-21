@@ -25,8 +25,8 @@ import io.netty5.util.concurrent.Future;
 import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 
 /**
- * A {@link ChannelHandler} that converts {@link ByteBuf} read or written from/to a {@link ChannelPipeline} to a
- * {@link Buffer}.
+ * A {@link ChannelHandler} that converts {@link Buffer} read or written from/to a {@link ChannelPipeline} to a
+ * {@link ByteBuf}.
  */
 public final class BufferToByteBufHandler extends ChannelHandlerAdapter {
     public static final ChannelHandler BUFFER_TO_BYTEBUF_HANDLER = new BufferToByteBufHandler();
