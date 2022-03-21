@@ -2180,7 +2180,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (!isDestroyed) {
             if (clientMode) {
                 final List<SNIServerName> sniHostNames = sslParameters.getServerNames();
-                if (!sniHostNames.isEmpty()) {
+                if (sniHostNames != null && !sniHostNames.isEmpty()) {
                     for (SNIServerName serverName: sniHostNames) {
                         if (!(serverName instanceof SNIHostName)) {
                             throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
