@@ -238,7 +238,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return sniHostNames;
+                    return sniHostNames == null ? Collections.emptyList() : sniHostNames;
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
