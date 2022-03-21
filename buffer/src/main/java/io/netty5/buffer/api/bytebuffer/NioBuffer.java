@@ -168,13 +168,25 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     }
 
     @Override
-    public Buffer copy(int offset, int length) {
+    public Buffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGet(offset, length);
+        if (readOnly && readOnly()) {
+            // If both this buffer and the copy are read-only, they can safely share the memory.
+            NioBuffer copy = newConstChild();
+            if (offset > 0 || length < capacity()) {
+                copy.rmem = bbslice(copy.rmem, offset, length);
+            }
+            copy.roff = 0;
+            copy.woff = length;
+        }
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
             copy.writerOffset(length);
+            if (readOnly) {
+                copy.makeReadOnly();
+            }
             return copy;
         } catch (Throwable e) {
             copy.close();
@@ -1103,7 +1115,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
         return base;
     }
 
-    Buffer newConstChild() {
+    NioBuffer newConstChild() {
         assert readOnly();
         Drop<NioBuffer> drop = unsafeGetDrop().fork();
         NioBuffer child = new NioBuffer(this, drop);

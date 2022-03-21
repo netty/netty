@@ -414,11 +414,14 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     @Override
-    public Buffer copy(int offset, int length) {
+    public Buffer copy(int offset, int length, boolean readOnly) {
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
             copy.skipWritable(length);
+            if (readOnly) {
+                copy.makeReadOnly();
+            }
             return copy;
         } catch (Throwable e) {
             copy.close();

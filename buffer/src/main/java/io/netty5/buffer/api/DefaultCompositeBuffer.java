@@ -372,7 +372,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public CompositeBuffer copy(int offset, int length) {
+    public CompositeBuffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGetBounds(offset, length);
         if (closed) {
@@ -390,7 +390,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             for (i = searchOffsets(offset); cap > 0; i++) {
                 var buf = bufs[i];
                 int avail = buf.capacity() - off;
-                copies[j++] = buf.copy(off, Math.min(cap, avail));
+                copies[j++] = buf.copy(off, Math.min(cap, avail), readOnly);
                 cap -= avail;
                 off = 0;
             }
