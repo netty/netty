@@ -34,6 +34,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SNIMatcher;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -52,6 +54,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -1077,7 +1080,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         try {
             SSLParameters parameters = new SSLParameters();
-            Java8SslTestUtils.setSNIMatcher(parameters, EmptyArrays.EMPTY_BYTES);
+            parameters.setSNIMatchers(Collections.singletonList(new SimpleSNIMatcher(EmptyArrays.EMPTY_BYTES)));
             engine.setSSLParameters(parameters);
         } finally {
             cleanupServerSslEngine(engine);
@@ -1099,12 +1102,26 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         try {
             SSLParameters parameters = new SSLParameters();
-            Java8SslTestUtils.setSNIMatcher(parameters, name);
+            parameters.setSNIMatchers(Collections.singletonList(new SimpleSNIMatcher(name)));
             engine.setSSLParameters(parameters);
             assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(CharsetUtil.UTF_8)));
         } finally {
             cleanupServerSslEngine(engine);
             ssc.delete();
+        }
+    }
+
+    private static final class SimpleSNIMatcher extends SNIMatcher {
+        private final byte[] expected;
+
+        SimpleSNIMatcher(byte[] expected) {
+            super(0);
+            this.expected = expected.clone();
+        }
+
+        @Override
+        public boolean matches(SNIServerName sniServerName) {
+            return Arrays.equals(expected, sniServerName.getEncoded());
         }
     }
 
@@ -1492,7 +1509,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
-        return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+        return SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
     ReferenceCountedOpenSslEngine unwrapEngine(SSLEngine engine) {

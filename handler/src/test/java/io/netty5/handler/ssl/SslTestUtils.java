@@ -31,19 +31,9 @@ import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public final class Java8SslTestUtils {
+public final class SslTestUtils {
 
-    private Java8SslTestUtils() { }
-
-    static void setSNIMatcher(SSLParameters parameters, final byte[] match) {
-        SNIMatcher matcher = new SNIMatcher(0) {
-            @Override
-            public boolean matches(SNIServerName sniServerName) {
-                return Arrays.equals(match, sniServerName.getEncoded());
-            }
-        };
-        parameters.setSNIMatchers(Collections.singleton(matcher));
-    }
+    private SslTestUtils() { }
 
     static Provider conscryptProvider() {
         return new OpenSSLProvider();

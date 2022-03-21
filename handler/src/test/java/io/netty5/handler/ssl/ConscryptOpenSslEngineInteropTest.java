@@ -201,7 +201,7 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
-        return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+        return SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
     @SuppressWarnings("deprecation")

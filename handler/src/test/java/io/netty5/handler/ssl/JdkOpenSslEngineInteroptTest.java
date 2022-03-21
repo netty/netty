@@ -239,7 +239,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
-        return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+        return SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
     @SuppressWarnings("deprecation")

@@ -48,7 +48,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     protected Provider clientSslContextProvider() {
-        return Java8SslTestUtils.conscryptProvider();
+        return SslTestUtils.conscryptProvider();
     }
 
     @MethodSource("newTestParams")

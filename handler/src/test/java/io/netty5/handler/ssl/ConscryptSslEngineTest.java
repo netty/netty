@@ -47,12 +47,12 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
 
     @Override
     protected Provider clientSslContextProvider() {
-        return Java8SslTestUtils.conscryptProvider();
+        return SslTestUtils.conscryptProvider();
     }
 
     @Override
     protected Provider serverSslContextProvider() {
-        return Java8SslTestUtils.conscryptProvider();
+        return SslTestUtils.conscryptProvider();
     }
 
     @MethodSource("newTestParams")
