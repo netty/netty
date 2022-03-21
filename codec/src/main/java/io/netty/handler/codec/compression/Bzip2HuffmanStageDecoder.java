@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_DECODE_MAX_CODE_LENGTH;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_GROUP_RUN_LENGTH;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
 
 /**
  * A decoder for the Bzip2 Huffman coding stage.
