@@ -56,7 +56,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
      * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.1">RFC 7540, 8.1.2.1</a>.
      * @param validateHeaders {@code true} will run validation on each header name/value pair to ensure protocol
      *                        compliance.
-     * @param otherHeaders A an array of key:value pairs. Must not contain any
+     * @param otherHeaders An array of key:value pairs. Must not contain any
      *                     <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.1">pseudo headers</a>
      *                     or {@code null} names/values.
      *                     A copy will <strong>NOT</strong> be made of this array. If the contents of this array
@@ -99,7 +99,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
      * @param validateHeaders {@code true} will run validation on each header name/value pair to ensure protocol
      *                        compliance.
      * @param status The value for {@link PseudoHeaderName#STATUS}.
-     * @param otherHeaders A an array of key:value pairs. Must not contain any
+     * @param otherHeaders An array of key:value pairs. Must not contain any
      *                     <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.1">pseudo headers</a>
      *                     or {@code null} names/values.
      *                     A copy will <strong>NOT</strong> be made of this array. If the contents of this array

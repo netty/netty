@@ -807,7 +807,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Close the remote endpoint with with a {@code GO_AWAY} frame. Does <strong>not</strong> flush
+     * Close the remote endpoint with a {@code GO_AWAY} frame. Does <strong>not</strong> flush
      * immediately, this is the responsibility of the caller.
      */
     private Future<Void> goAway(ChannelHandlerContext ctx, Http2Exception cause) {

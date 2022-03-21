@@ -238,7 +238,7 @@ public final class ObjectUtil {
      */
     public static <T extends Collection<?>> T checkNonEmpty(T collection, String name) {
         //No String concatenation for check
-        if (requireNonNull(collection, name).size() == 0) {
+        if (requireNonNull(collection, name).isEmpty()) {
             throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return collection;
