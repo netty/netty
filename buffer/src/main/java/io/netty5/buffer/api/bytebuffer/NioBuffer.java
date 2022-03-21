@@ -66,7 +66,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     private NioBuffer(NioBuffer parent, Drop<NioBuffer> drop) {
         super(drop, parent.control);
         base = parent.base;
-        rmem = parent.rmem;
+        rmem = parent.rmem.duplicate();
         wmem = CLOSED_BUFFER;
         roff = parent.roff;
         woff = parent.woff;
