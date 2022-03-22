@@ -1759,7 +1759,8 @@ public final class ByteBufAdaptor extends ByteBuf {
     public boolean release(int decrement) {
         int refCount = 1 + Statics.countBorrows((ResourceSupport<?, ?>) buffer);
         if (!buffer.isAccessible() || decrement > refCount) {
-            throw new IllegalReferenceCountException(refCount, -decrement);
+            throw Statics.attachTrace((ResourceSupport<?, ?>) buffer,
+                                      new IllegalReferenceCountException(refCount, -decrement));
         }
         for (int i = 0; i < decrement; i++) {
             try {
