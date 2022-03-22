@@ -460,7 +460,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         BufferAllocator bufferAllocator = bufferAllocator();
-        if (bufferAllocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+        if (!bufferAllocator.getAllocationType().isDirect()) {
             bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
         }
         if (bufferAllocator.isPooling()) {
@@ -481,7 +481,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
         try (holder) {
             BufferAllocator bufferAllocator = bufferAllocator();
-            if (bufferAllocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            if (!bufferAllocator.getAllocationType().isDirect()) {
                 bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
             }
             if (bufferAllocator.isPooling()) {

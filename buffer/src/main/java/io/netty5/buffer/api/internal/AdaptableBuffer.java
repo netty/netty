@@ -49,12 +49,12 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
             BufferAllocator allocator = control.getAllocator();
             final BufferAllocator onHeap;
             final BufferAllocator offHeap;
-            if (allocator.getAllocationType() == StandardAllocationTypes.ON_HEAP) {
-                onHeap = allocator;
-                offHeap = allocator.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
-            } else {
+            if (allocator.getAllocationType().isDirect()) {
                 onHeap = allocator.isPooling() ? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled();
                 offHeap = allocator;
+            } else {
+                onHeap = allocator;
+                offHeap = allocator.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
             }
             ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(onHeap, offHeap);
             return adaptor = new ByteBufAdaptor(alloc, this, Integer.MAX_VALUE);
