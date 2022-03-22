@@ -28,6 +28,8 @@ final class JniBufferAccess {
     static final boolean IS_AVAILABLE;
     static final MethodHandle MEMORY_ADDRESS;
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JniBufferAccess.class);
+
     static {
         boolean isAvailable = false;
         MethodHandle memoryAddress = null;
@@ -39,8 +41,19 @@ final class JniBufferAccess {
             memoryAddress = lookup.findStatic(bufferAccess, "memoryAddress", type);
             isAvailable = true;
         } catch (Throwable e) {
-            InternalLogger logger = InternalLoggerFactory.getInstance(JniBufferAccess.class);
-            logger.debug("JNI bypass for accessing native address of DirectByteBuffer is unavailable.", e);
+            logger.debug("JNI unix bypass for accessing native address of DirectByteBuffer is unavailable.", e);
+        }
+        if (!isAvailable) {
+            try {
+                Class<?> bufferAccess = Class.forName("io.netty.internal.tcnative.Buffer");
+                Lookup lookup = MethodHandles.lookup();
+                bufferAccess = lookup.accessClass(bufferAccess);
+                MethodType type = MethodType.methodType(long.class, ByteBuffer.class);
+                memoryAddress = lookup.findStatic(bufferAccess, "address", type);
+                isAvailable = true;
+            } catch (Throwable e) {
+                logger.debug("JNI tcnative bypass for accessing native address of DirectByteBuffer is unavailable.", e);
+            }
         }
         IS_AVAILABLE = isAvailable;
         MEMORY_ADDRESS = memoryAddress;
