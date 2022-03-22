@@ -349,7 +349,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
         private Throwable doReadBuffer(KQueueRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
             BufferAllocator allocator = config().getBufferAllocator();
-            if (allocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            if (!allocator.getAllocationType().isDirect()) {
                 allocator = DefaultBufferAllocators.offHeapAllocator();
             }
             Buffer buf = null;

@@ -22,4 +22,9 @@ package io.netty5.buffer.api;
  * Standard implementations of this interface can be found in {@link StandardAllocationTypes}.
  */
 public interface AllocationType {
+    /**
+     * @return {@code true} if this allocation type produces off-heap, or direct buffers.
+     * Otherwise {@code false}, if the buffers are on-heap.
+     */
+    boolean isDirect();
 }

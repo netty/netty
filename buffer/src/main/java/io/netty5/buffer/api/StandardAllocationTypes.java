@@ -27,5 +27,10 @@ public enum StandardAllocationTypes implements AllocationType {
     /**
      * The allocation should use native (non-heap) memory.
      */
-    OFF_HEAP
+    OFF_HEAP;
+
+    @Override
+    public boolean isDirect() {
+        return this == OFF_HEAP;
+    }
 }

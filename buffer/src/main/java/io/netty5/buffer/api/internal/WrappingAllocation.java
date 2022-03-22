@@ -33,4 +33,9 @@ public final class WrappingAllocation implements AllocationType {
     public byte[] getArray() {
         return array;
     }
+
+    @Override
+    public boolean isDirect() {
+        return false;
+    }
 }

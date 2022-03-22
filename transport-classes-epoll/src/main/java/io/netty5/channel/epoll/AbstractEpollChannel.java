@@ -343,7 +343,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      */
     protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
         BufferAllocator allocator = bufferAllocator();
-        if (allocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+        if (!allocator.getAllocationType().isDirect()) {
             allocator = DefaultBufferAllocators.offHeapAllocator();
         }
         try (holder) {

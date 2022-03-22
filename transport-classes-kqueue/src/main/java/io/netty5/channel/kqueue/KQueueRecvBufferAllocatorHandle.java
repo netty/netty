@@ -65,7 +65,7 @@ final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     @Override
     public Buffer allocate(BufferAllocator alloc) {
         // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
-        if (alloc.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+        if (!alloc.getAllocationType().isDirect()) {
             alloc = DefaultBufferAllocators.offHeapAllocator();
         }
         if (overrideGuess) {

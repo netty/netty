@@ -400,7 +400,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
         private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
             BufferAllocator allocator = config().getBufferAllocator();
-            if (allocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            if (!allocator.getAllocationType().isDirect()) {
                 allocator = DefaultBufferAllocators.offHeapAllocator();
             }
             Buffer buf = null;
