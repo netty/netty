@@ -15,18 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WebSocketUtf8FrameValidatorTest {
 
@@ -40,24 +34,41 @@ public class WebSocketUtf8FrameValidatorTest {
         assertCorruptedFrameExceptionHandling(new byte[]{-8, -120, -128, -128, -128});
     }
 
+    @Test
+    void testNotCloseOnProtocolViolation() {
+        EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
+        TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(new byte[]{-50}));
+        try {
+            channel.writeInbound(frame);
+            fail();
+        } catch (CorruptedFrameException expected) {
+            // expected exception
+        }
+
+        assertTrue(channel.isActive());
+        assertFalse(channel.finish());
+        assertEquals(0, frame.refCnt());
+    }
+
     private void assertCorruptedFrameExceptionHandling(byte[] data) {
         EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
         TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
         try {
             channel.writeInbound(frame);
             fail();
-        } catch (CorruptedFrameException e) {
+        } catch (CorruptedFrameException expected) {
             // expected exception
         }
-        assertTrue(channel.finish());
-        ByteBuf buf = channel.readOutbound();
-        assertNotNull(buf);
-        try {
-            assertFalse(buf.isReadable());
-        } finally {
-            buf.release();
-        }
-        assertNull(channel.readOutbound());
+        assertFalse(channel.isActive());
+
+        CloseWebSocketFrame closeFrame = channel.readOutbound();
+        assertNotNull(closeFrame);
+        assertEquals("bytes are not UTF-8", closeFrame.reasonText());
+        assertEquals(1007, closeFrame.statusCode());
+        assertTrue(closeFrame.release());
+
         assertEquals(0, frame.refCnt());
+        assertFalse(channel.finish());
     }
+
 }
