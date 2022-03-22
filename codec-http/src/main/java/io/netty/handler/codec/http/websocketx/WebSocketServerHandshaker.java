@@ -26,10 +26,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -303,32 +303,20 @@ public abstract class WebSocketServerHandshaker {
             p.addAfter(ctx.name(), aggregatorCtx, new HttpObjectAggregator(8192));
         }
 
-        p.addAfter(aggregatorCtx, "handshaker", new SimpleChannelInboundHandler<HttpObject>() {
+        p.addAfter(aggregatorCtx, "handshaker", new ChannelInboundHandlerAdapter() {
 
             private FullHttpRequest fullHttpRequest;
 
             @Override
-            protected void channelRead0(final ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-                if (msg instanceof FullHttpRequest) {
-                    fullHttpRequest = (FullHttpRequest) msg;
-                }
-
-                if (msg instanceof LastHttpContent) {
-                    assert fullHttpRequest != null;
-                    // Remove ourself and do the actual handshake
-                    ctx.pipeline().remove(this);
-                    handshake(channel, fullHttpRequest, responseHeaders, promise);
-                    fullHttpRequest = null;
-                    return;
-                }
-
-                if (msg instanceof HttpRequest) {
-                    HttpRequest httpRequest = (HttpRequest) msg;
-                    fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(),
-                        httpRequest.uri(), Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
-                    if (httpRequest.decoderResult().isFailure()) {
-                        fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (msg instanceof HttpObject) {
+                    try {
+                        handleHandshakeRequest(ctx, (HttpObject) msg);
+                    } finally {
+                        ReferenceCountUtil.release(msg);
                     }
+                } else {
+                    super.channelRead(ctx, msg);
                 }
             }
 
@@ -342,11 +330,57 @@ public abstract class WebSocketServerHandshaker {
 
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                // Fail promise if Channel was closed
-                if (!promise.isDone()) {
-                    promise.tryFailure(new ClosedChannelException());
+                try {
+                    // Fail promise if Channel was closed
+                    if (!promise.isDone()) {
+                        promise.tryFailure(new ClosedChannelException());
+                    }
+                    ctx.fireChannelInactive();
+                } finally {
+                    releaseFullHttpRequest();
                 }
-                ctx.fireChannelInactive();
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                releaseFullHttpRequest();
+            }
+
+            private void handleHandshakeRequest(ChannelHandlerContext ctx, HttpObject httpObject) {
+                if (httpObject instanceof FullHttpRequest) {
+                    ctx.pipeline().remove(this);
+                    handshake(channel, (FullHttpRequest) httpObject, responseHeaders, promise);
+                    return;
+                }
+
+                if (httpObject instanceof LastHttpContent) {
+                    assert fullHttpRequest != null;
+                    FullHttpRequest handshakeRequest = fullHttpRequest;
+                    fullHttpRequest = null;
+                    try {
+                        ctx.pipeline().remove(this);
+                        handshake(channel, handshakeRequest, responseHeaders, promise);
+                    } finally {
+                        handshakeRequest.release();
+                    }
+                    return;
+                }
+
+                if (httpObject instanceof HttpRequest) {
+                    HttpRequest httpRequest = (HttpRequest) httpObject;
+                    fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(),
+                        httpRequest.uri(), Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
+                    if (httpRequest.decoderResult().isFailure()) {
+                        fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
+                    }
+                }
+            }
+
+            private void releaseFullHttpRequest() {
+                if (fullHttpRequest != null) {
+                    fullHttpRequest.release();
+                    fullHttpRequest = null;
+                }
             }
         });
         try {
