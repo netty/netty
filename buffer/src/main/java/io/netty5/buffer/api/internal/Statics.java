@@ -236,6 +236,10 @@ public interface Statics {
         return ResourceSupport.countBorrows(obj);
     }
 
+    static <E extends Throwable> E attachTrace(ResourceSupport<?, ?> obj, E throwable) {
+        return ResourceSupport.getTracer(obj).attachTrace(throwable);
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     static void unsafeSetDrop(ResourceSupport<?, ?> obj, Drop<?> replacement) {
         obj.unsafeSetDrop((Drop) replacement);
