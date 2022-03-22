@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 
 import java.util.function.Supplier;
 
-import static io.netty5.handler.codec.compression.Snappy.*;
+import static io.netty5.handler.codec.compression.Snappy.calculateChecksum;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.

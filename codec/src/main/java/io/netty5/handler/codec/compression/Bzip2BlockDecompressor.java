@@ -15,7 +15,10 @@
  */
 package io.netty5.handler.codec.compression;
 
-import static io.netty5.handler.codec.compression.Bzip2Constants.*;
+import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_DECODE_MAX_CODE_LENGTH;
+import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNA;
+import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNB;
+import static io.netty5.handler.codec.compression.Bzip2Constants.MAX_BLOCK_LENGTH;
 
 /**
  * Reads and decompresses a single Bzip2 block.<br><br>

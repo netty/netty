@@ -25,7 +25,14 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 import java.util.function.Supplier;
 import java.util.zip.Checksum;
 
-import static io.netty5.handler.codec.compression.Lz4Constants.*;
+import static io.netty5.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
+import static io.netty5.handler.codec.compression.Lz4Constants.BLOCK_TYPE_NON_COMPRESSED;
+import static io.netty5.handler.codec.compression.Lz4Constants.COMPRESSION_LEVEL_BASE;
+import static io.netty5.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
+import static io.netty5.handler.codec.compression.Lz4Constants.HEADER_LENGTH;
+import static io.netty5.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
+import static io.netty5.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
+
 import static java.util.Objects.requireNonNull;
 
 /**
