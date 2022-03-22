@@ -203,7 +203,12 @@ public interface CompositeBuffer extends Buffer {
     }
 
     @Override
-    CompositeBuffer copy(int offset, int length);
+    default CompositeBuffer copy(int offset, int length) {
+        return (CompositeBuffer) Buffer.super.copy(offset, length);
+    }
+
+    @Override
+    CompositeBuffer copy(int offset, int length, boolean readOnly);
 
     @Override
     default CompositeBuffer split() {

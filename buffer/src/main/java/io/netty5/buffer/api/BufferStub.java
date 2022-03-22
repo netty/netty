@@ -186,8 +186,8 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public Buffer copy(int offset, int length) {
-        return delegate.copy(offset, length);
+    public Buffer copy(int offset, int length, boolean readOnly) {
+        return delegate.copy(offset, length, readOnly);
     }
 
     @Override

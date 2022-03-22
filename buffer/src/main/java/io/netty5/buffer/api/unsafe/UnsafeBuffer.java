@@ -180,13 +180,25 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
     }
 
     @Override
-    public Buffer copy(int offset, int length) {
+    public Buffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGet(offset, length);
+        if (readOnly && readOnly()) {
+            // If both this buffer and the copy are read-only, they can safely share the memory.
+            UnsafeBuffer copy = newConstChild();
+            copy.baseOffset += offset;
+            copy.address += offset;
+            copy.rsize = length;
+            copy.roff = 0;
+            copy.woff = length;
+        }
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
             copy.writerOffset(length);
+            if (readOnly) {
+                copy.makeReadOnly();
+            }
             return copy;
         } catch (Throwable e) {
             copy.close();
@@ -1517,7 +1529,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
         return memory;
     }
 
-    Buffer newConstChild() {
+    UnsafeBuffer newConstChild() {
         assert readOnly();
         Drop<UnsafeBuffer> drop = unsafeGetDrop().fork();
         UnsafeBuffer child = new UnsafeBuffer(this, drop);

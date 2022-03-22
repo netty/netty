@@ -135,6 +135,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             assertEquals(0x01, buf.readByte());
             buf.writerOffset(buf.writerOffset() - 1);
             try (Buffer copy = buf.copy()) {
+                assertFalse(copy.readOnly());
                 assertThat(toByteArray(copy)).containsExactly(0x02, 0x03, 0x04, 0x05, 0x06, 0x07);
                 assertEquals(0, copy.readerOffset());
                 assertEquals(6, copy.readableBytes());
@@ -153,6 +154,37 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void copyOfReadOnlyBufferNotBeReadOnly(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeInt(42).makeReadOnly();
+            try (Buffer copy = buf.copy()) {
+                assertFalse(copy.readOnly());
+                assertThat(copy.readInt()).isEqualTo(42);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfBufferMustBeReadOnlyWhenRequested(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeInt(42);
+            try (Buffer copy = buf.copy(0, 4, true)) {
+                assertTrue(copy.readOnly());
+                assertThat(copy.readInt()).isEqualTo(42);
+            }
+            buf.makeReadOnly();
+            try (Buffer copy = buf.copy(0, 4, true)) {
+                assertTrue(copy.readOnly());
+                assertThat(copy.readInt()).isEqualTo(42);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     void copyWithOffsetAndSizeMustReturnGivenRegion(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
@@ -162,6 +194,63 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             buf.readerOffset(3); // Reader and writer offsets must be ignored.
             buf.writerOffset(6);
             try (Buffer copy = buf.copy(1, 6)) {
+                assertFalse(copy.readOnly());
+                assertThat(toByteArray(copy)).containsExactly(0x02, 0x03, 0x04, 0x05, 0x06, 0x07);
+                assertEquals(0, copy.readerOffset());
+                assertEquals(6, copy.readableBytes());
+                assertEquals(6, copy.writerOffset());
+                assertEquals(6, copy.capacity());
+                assertEquals(0x02, copy.readByte());
+                assertEquals(0x03, copy.readByte());
+                assertEquals(0x04, copy.readByte());
+                assertEquals(0x05, copy.readByte());
+                assertEquals(0x06, copy.readByte());
+                assertEquals(0x07, copy.readByte());
+                assertThrows(IndexOutOfBoundsException.class, copy::readByte);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void copyWithOffsetAndSizeAndReadOnlyStateTrueMustReturnGivenRegion(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            for (byte b : new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }) {
+                buf.writeByte(b);
+            }
+            buf.readerOffset(3); // Reader and writer offsets must be ignored.
+            buf.writerOffset(6);
+            try (Buffer copy = buf.copy(1, 6, true)) {
+                assertTrue(copy.readOnly());
+                assertThat(toByteArray(copy)).containsExactly(0x02, 0x03, 0x04, 0x05, 0x06, 0x07);
+                assertEquals(0, copy.readerOffset());
+                assertEquals(6, copy.readableBytes());
+                assertEquals(6, copy.writerOffset());
+                assertEquals(6, copy.capacity());
+                assertEquals(0x02, copy.readByte());
+                assertEquals(0x03, copy.readByte());
+                assertEquals(0x04, copy.readByte());
+                assertEquals(0x05, copy.readByte());
+                assertEquals(0x06, copy.readByte());
+                assertEquals(0x07, copy.readByte());
+                assertThrows(IndexOutOfBoundsException.class, copy::readByte);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void copyWithOffsetAndSizeAndReadOnlyStateFalseMustReturnGivenRegion(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            for (byte b : new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }) {
+                buf.writeByte(b);
+            }
+            buf.readerOffset(3); // Reader and writer offsets must be ignored.
+            buf.writerOffset(6);
+            try (Buffer copy = buf.copy(1, 6, false)) {
+                assertFalse(copy.readOnly());
                 assertThat(toByteArray(copy)).containsExactly(0x02, 0x03, 0x04, 0x05, 0x06, 0x07);
                 assertEquals(0, copy.readerOffset());
                 assertEquals(6, copy.readableBytes());
@@ -199,6 +288,36 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                assertTrue(isOwned((ResourceSupport<?, ?>) copy));
+                copy.send().close();
+            }
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+            buf.send().close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void copyOfWritableWithOffsetAndSizeAndReadOnlyMustNotInfluenceOwnership(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            try (Buffer copy = buf.copy(0, 8, true)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                assertTrue(isOwned((ResourceSupport<?, ?>) copy));
+                copy.send().close();
+            }
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+            buf.send().close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void copyOfReadOnlyWithOffsetAndSizeAndReadOnlyMustNotInfluenceOwnership(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).makeReadOnly()) {
+            try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
                 copy.send().close();
@@ -249,10 +368,38 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void sendOnCopyWithOffsetAndSizeMustThrow(Fixture fixture) {
+    void sendOnCopyWithOffsetAndSizeMustNotThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                copy.send().close();
+            }
+            // Verify that the copy is closed properly afterwards.
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void sendOnCopyOfWritableWithOffsetAndSizeAndReadOnlyMustNotThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            try (Buffer copy = buf.copy(0, 8, true)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                copy.send().close();
+            }
+            // Verify that the copy is closed properly afterwards.
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void sendOnCopyOfReadOnlyWithOffsetAndSizeAndReadOnlyMustNotThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).makeReadOnly()) {
+            try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 copy.send().close();
             }
@@ -267,6 +414,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(-1, 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(-1, 1, true));
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
         }
@@ -279,6 +427,8 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             assertThrows(IllegalArgumentException.class, () -> buf.copy(0, -1));
             assertThrows(IllegalArgumentException.class, () -> buf.copy(2, -1));
+            assertThrows(IllegalArgumentException.class, () -> buf.copy(0, -1, true));
+            assertThrows(IllegalArgumentException.class, () -> buf.copy(2, -1, true));
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
         }
@@ -290,8 +440,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(0, 9));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(0, 9, true));
             buf.copy(0, 8).close(); // This is still fine.
             assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(1, 8));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(1, 8, true));
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
         }
@@ -303,6 +455,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.copy(0, 0).close(); // This is fine.
+            buf.copy(0, 0, true).close(); // This is fine.
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
         }
