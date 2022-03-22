@@ -15,26 +15,31 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -433,22 +438,30 @@ public abstract class WebSocketClientHandshaker {
                             "an HttpResponseDecoder or HttpClientCodec"));
                 }
             }
-            // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more
-            // then enough for the websockets handshake payload.
-            //
-            // TODO: Make handshake work without HttpObjectAggregator at all.
-            String aggregatorName = "httpAggregator";
-            p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
-            p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
+
+            String aggregatorCtx = ctx.name();
+            // Content-Length and Transfer-Encoding must not be sent in any response with a status code of 1xx or 204.
+            if (version == WebSocketVersion.V00) {
+                // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be
+                // more then enough for the websockets handshake payload.
+                aggregatorCtx = "httpAggregator";
+                p.addAfter(ctx.name(), aggregatorCtx, new HttpObjectAggregator(8192));
+            }
+
+            p.addAfter(aggregatorCtx, "handshaker", new ChannelInboundHandlerAdapter() {
+
+                private FullHttpResponse fullHttpResponse;
+
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-                    // Remove ourself and do the actual handshake
-                    ctx.pipeline().remove(this);
-                    try {
-                        finishHandshake(channel, msg);
-                        promise.setSuccess();
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    if (msg instanceof HttpObject) {
+                        try {
+                            handleHandshakeResponse(ctx, (HttpObject) msg);
+                        } finally {
+                            ReferenceCountUtil.release(msg);
+                        }
+                    } else {
+                        super.channelRead(ctx, msg);
                     }
                 }
 
@@ -461,11 +474,67 @@ public abstract class WebSocketClientHandshaker {
 
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                    // Fail promise if Channel was closed
-                    if (!promise.isDone()) {
-                        promise.tryFailure(new ClosedChannelException());
+                    try {
+                        // Fail promise if Channel was closed
+                        if (!promise.isDone()) {
+                            promise.tryFailure(new ClosedChannelException());
+                        }
+                        ctx.fireChannelInactive();
+                    } finally {
+                        releaseFullHttpResponse();
                     }
-                    ctx.fireChannelInactive();
+                }
+
+                @Override
+                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                    releaseFullHttpResponse();
+                }
+
+                private void handleHandshakeResponse(ChannelHandlerContext ctx, HttpObject response) {
+                    if (response instanceof FullHttpResponse) {
+                        ctx.pipeline().remove(this);
+                        tryFinishHandshake((FullHttpResponse) response);
+                        return;
+                    }
+
+                    if (response instanceof LastHttpContent) {
+                        assert fullHttpResponse != null;
+                        FullHttpResponse handshakeResponse = fullHttpResponse;
+                        fullHttpResponse = null;
+                        try {
+                            ctx.pipeline().remove(this);
+                            tryFinishHandshake(handshakeResponse);
+                        } finally {
+                            handshakeResponse.release();
+                        }
+                        return;
+                    }
+
+                    if (response instanceof HttpResponse) {
+                        HttpResponse httpResponse = (HttpResponse) response;
+                        fullHttpResponse = new DefaultFullHttpResponse(httpResponse.protocolVersion(),
+                            httpResponse.status(), Unpooled.EMPTY_BUFFER, httpResponse.headers(),
+                            EmptyHttpHeaders.INSTANCE);
+                        if (httpResponse.decoderResult().isFailure()) {
+                            fullHttpResponse.setDecoderResult(httpResponse.decoderResult());
+                        }
+                    }
+                }
+
+                private void tryFinishHandshake(FullHttpResponse fullHttpResponse) {
+                    try {
+                        finishHandshake(channel, fullHttpResponse);
+                        promise.setSuccess();
+                    } catch (Throwable cause) {
+                        promise.setFailure(cause);
+                    }
+                }
+
+                private void releaseFullHttpResponse() {
+                    if (fullHttpResponse != null) {
+                        fullHttpResponse.release();
+                        fullHttpResponse = null;
+                    }
                 }
             });
             try {

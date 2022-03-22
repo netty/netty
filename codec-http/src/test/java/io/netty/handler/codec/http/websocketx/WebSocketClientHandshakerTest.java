@@ -18,22 +18,28 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -41,9 +47,9 @@ import org.junit.jupiter.api.Timeout;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker13.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -311,7 +317,8 @@ public abstract class WebSocketClientHandshakerTest {
                 socketServerHandshaker.newWebsocketDecoder());
         assertTrue(websocketChannel.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data))));
 
-        byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\nContent-Length: 0\r\n\r\n".getBytes(CharsetUtil.US_ASCII);
+        byte[] bytes = ("HTTP/1.1 101 Switching Protocols\r\nSec-Websocket-Accept: not-verify\r\n" +
+                        "Upgrade: websocket\r\n\r\n").getBytes(CharsetUtil.US_ASCII);
 
         CompositeByteBuf compositeByteBuf = Unpooled.compositeBuffer();
         compositeByteBuf.addComponent(true, Unpooled.wrappedBuffer(bytes));
@@ -405,6 +412,7 @@ public abstract class WebSocketClientHandshakerTest {
 
         try {
             handshaker.finishHandshake(null, response);
+            fail("Expected WebSocketClientHandshakeException");
         } catch (WebSocketClientHandshakeException exception) {
             assertEquals("Invalid handshake response getStatus: 401 Unauthorized", exception.getMessage());
             assertEquals(HttpResponseStatus.UNAUTHORIZED, exception.response().status());
@@ -414,5 +422,44 @@ public abstract class WebSocketClientHandshakerTest {
             response.release();
         }
     }
-}
 
+    @Test
+    public void testHandshakeForHttpResponseWithoutAggregator() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder(), new HttpResponseDecoder());
+        URI uri = URI.create("ws://localhost:9999/chat");
+        WebSocketClientHandshaker clientHandshaker = newHandshaker(uri);
+        FullHttpRequest handshakeRequest = clientHandshaker.newHandshakeRequest();
+        handshakeRequest.release();
+
+        String accept = "";
+        if (clientHandshaker.version() != WebSocketVersion.V00) {
+            String acceptSeed = handshakeRequest.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                                + WEBSOCKET_13_ACCEPT_GUID;
+            byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+            accept = WebSocketUtil.base64(sha1);
+        }
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, SWITCHING_PROTOCOLS);
+        response.headers()
+                .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+
+        ChannelFuture handshakeFuture = clientHandshaker.processHandshake(channel, response);
+        assertFalse(handshakeFuture.isDone());
+        assertNotNull(channel.pipeline().get("handshaker"));
+
+        if (clientHandshaker.version() != WebSocketVersion.V00) {
+            assertNull(channel.pipeline().get("httpAggregator"));
+            channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT);
+        } else {
+            assertNotNull(channel.pipeline().get("httpAggregator"));
+            channel.writeInbound(new DefaultLastHttpContent(
+                    Unpooled.copiedBuffer("8jKS'y:G*Co,Wxa-", CharsetUtil.US_ASCII)));
+        }
+
+        assertTrue(handshakeFuture.isDone());
+        assertNull(channel.pipeline().get("handshaker"));
+        assertFalse(channel.finish());
+    }
+}
