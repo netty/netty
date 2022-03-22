@@ -27,6 +27,7 @@ import io.netty5.buffer.api.ReadableComponentProcessor;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
+import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -44,7 +45,8 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements ReadableComponent, WritableComponent {
+final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
+        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
@@ -599,13 +601,18 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer> implements Readab
 
     @Override
     public ByteBuffer readableBuffer() {
+        return mutableReadableBuffer().asReadOnlyBuffer();
+    }
+
+    @Override
+    public ByteBuffer mutableReadableBuffer() {
         final ByteBuffer buf;
         if (hasReadableArray()) {
             buf = bbslice(ByteBuffer.wrap(readableArray()), readableArrayOffset(), readableArrayLength());
         } else {
             buf = PlatformDependent.directBuffer(address + roff, readableBytes(), memory);
         }
-        return buf.asReadOnlyBuffer();
+        return buf;
     }
 
     @Override

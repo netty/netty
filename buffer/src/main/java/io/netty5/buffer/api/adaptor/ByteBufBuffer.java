@@ -32,6 +32,7 @@ import io.netty5.buffer.api.ReadableComponentProcessor;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
+import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.IllegalReferenceCountException;
@@ -500,7 +501,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             return 0;
         }
         if (delegate.nioBufferCount() == 1) {
-            ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes).asReadOnlyBuffer();
+            ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes);
             if (processor.process(initialIndex, new ReadableBufferComponent(byteBuffer, this))) {
                 return 1;
             } else {
@@ -1082,7 +1083,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
     }
 
-    private static final class ReadableBufferComponent implements ReadableComponent {
+    private static final class ReadableBufferComponent implements ReadableComponent, NotReadOnlyReadableComponent {
         private final ByteBuffer byteBuffer;
         private final Buffer buffer;
         private final int startByteBufferPosition;
@@ -1122,7 +1123,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
         @Override
         public ByteBuffer readableBuffer() {
-            return byteBuffer;
+            return byteBuffer.asReadOnlyBuffer();
         }
 
         @Override
@@ -1140,6 +1141,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             buffer.skipReadable(byteCount);
             int delta = buffer.readerOffset() - startBufferReaderOffset;
             byteBuffer.position(startByteBufferPosition + delta);
+        }
+
+        @Override
+        public ByteBuffer mutableReadableBuffer() {
+            return byteBuffer;
         }
     }
 

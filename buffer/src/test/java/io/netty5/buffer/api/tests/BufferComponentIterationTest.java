@@ -21,6 +21,7 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
 import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.internal.Statics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -129,9 +130,19 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             int count = composite.forEachReadable(0, (index, component) -> {
                 var buffer = component.readableBuffer();
                 int bufferValue = buffer.getInt();
-                assertEquals(list.pollFirst().intValue(), bufferValue);
+                int expectedValue = list.pollFirst().intValue();
+                assertEquals(expectedValue, bufferValue);
                 assertEquals(bufferValue, index + 1);
                 assertThrows(ReadOnlyBufferException.class, () -> buffer.put(0, (byte) 0xFF));
+                var writableBuffer = Statics.tryGetWritableBufferFromReadableComponent(component);
+                if (writableBuffer != null) {
+                    int pos = writableBuffer.position();
+                    bufferValue = writableBuffer.getInt();
+                    assertEquals(expectedValue, bufferValue);
+                    assertEquals(bufferValue, index + 1);
+                    writableBuffer.put(pos, (byte) 0xFF);
+                    assertEquals((byte) 0xFF, writableBuffer.get(pos));
+                }
                 return true;
             });
             assertEquals(3, count);
