@@ -55,6 +55,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
+    private static final int NEVER_USE = 0;
+
     private final Runnable trimTask = new Runnable() {
         @Override
         public void run() {
@@ -546,6 +548,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
 
             PoolArena<T> minArena = arenas[0];
+            //optimized
+            //If it is the first execution, directly return minarena and reduce the number of for loop comparisons below
+            if (minArena.numThreadCaches.get() == NEVER_USE){
+                return minArena;
+            }
             for (int i = 1; i < arenas.length; i++) {
                 PoolArena<T> arena = arenas[i];
                 if (arena.numThreadCaches.get() < minArena.numThreadCaches.get()) {
