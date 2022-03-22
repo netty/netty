@@ -115,7 +115,6 @@ final class Bzip2BlockCompressor {
             for (int j = 0, k = i << 4; j < HUFFMAN_SYMBOL_RANGE_SIZE; j++, k++) {
                 if (blockValuesPresent[k]) {
                     condensedInUse[i] = true;
-                    break;
                 }
             }
         }
