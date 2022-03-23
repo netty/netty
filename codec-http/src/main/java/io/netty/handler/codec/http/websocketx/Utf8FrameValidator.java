@@ -112,4 +112,9 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
 
         throw ex;
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+    }
 }
