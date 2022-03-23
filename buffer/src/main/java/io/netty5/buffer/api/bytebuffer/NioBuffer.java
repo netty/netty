@@ -27,6 +27,7 @@ import io.netty5.buffer.api.ReadableComponentProcessor;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
+import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.Statics;
 
 import java.io.IOException;
@@ -43,7 +44,8 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 
-final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComponent, WritableComponent {
+final class NioBuffer extends AdaptableBuffer<NioBuffer>
+        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
     private ByteBuffer base;
@@ -506,6 +508,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer> implements ReadableComp
     @Override
     public ByteBuffer readableBuffer() {
         return bbslice(rmem.asReadOnlyBuffer(), readerOffset(), readableBytes());
+    }
+
+    @Override
+    public ByteBuffer mutableReadableBuffer() {
+        return bbslice(rmem, readerOffset(), readableBytes());
     }
 
     @Override
