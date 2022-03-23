@@ -15,47 +15,56 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WebSocketUtf8FrameValidatorTest {
 
     @Test
     public void testCorruptedFrameExceptionInFinish() {
-        assertCorruptedFrameExceptionHandling(new byte[]{-50});
+        assertCorruptedFrameExceptionHandling(new byte[]{-50}, true);
     }
 
     @Test
     public void testCorruptedFrameExceptionInCheck() {
-        assertCorruptedFrameExceptionHandling(new byte[]{-8, -120, -128, -128, -128});
+        assertCorruptedFrameExceptionHandling(new byte[]{-8, -120, -128, -128, -128}, true);
     }
 
-    private void assertCorruptedFrameExceptionHandling(byte[] data) {
-        EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
-        TextWebSocketFrame frame = new TextWebSocketFrame(channel.bufferAllocator().copyOf(data));
-        try {
-            channel.writeInbound(frame);
-            fail();
-        } catch (CorruptedFrameException e) {
-            // expected exception
+    @Test
+    void testNotCloseOnProtocolViolation() {
+        assertCorruptedFrameExceptionHandling(new byte[] { -50 }, false);
+    }
+
+    private void assertCorruptedFrameExceptionHandling(byte[] data, boolean close) {
+        final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(close));
+        final TextWebSocketFrame frame = new TextWebSocketFrame(channel.bufferAllocator().copyOf(data));
+        assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(frame);
+            }
+        }, "bytes are not UTF-8");
+
+        assertEquals(!close, channel.isActive());
+
+        if (close) {
+            CloseWebSocketFrame closeFrame = channel.readOutbound();
+            assertNotNull(closeFrame);
+            assertEquals("bytes are not UTF-8", closeFrame.reasonText());
+            assertEquals(1007, closeFrame.statusCode());
+            closeFrame.close();
+        } else {
+            assertNull(channel.readOutbound());
         }
-        assertTrue(channel.finish());
-        ByteBuf buf = channel.readOutbound();
-        assertNotNull(buf);
-        try {
-            assertFalse(buf.isReadable());
-        } finally {
-            buf.release();
-        }
-        assertNull(channel.readOutbound());
+
         assertFalse(frame.isAccessible());
+        assertFalse(channel.finish());
     }
 }

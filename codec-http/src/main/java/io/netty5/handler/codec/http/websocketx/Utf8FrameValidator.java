@@ -15,20 +15,28 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.CorruptedFrameException;
 
 /**
  *
  */
 public class Utf8FrameValidator implements ChannelHandler {
 
+    private final boolean closeOnProtocolViolation;
+
     private int fragmentedFramesCount;
     private Utf8Validator utf8Validator;
+
+    public Utf8FrameValidator() {
+        this(true);
+    }
+
+    public Utf8FrameValidator(boolean closeOnProtocolViolation) {
+        this.closeOnProtocolViolation = closeOnProtocolViolation;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -74,8 +82,7 @@ public class Utf8FrameValidator implements ChannelHandler {
                     fragmentedFramesCount++;
                 }
             } catch (CorruptedWebSocketFrameException e) {
-                frame.close();
-                throw e;
+                protocolViolation(ctx, frame, e);
             }
         }
 
@@ -89,11 +96,21 @@ public class Utf8FrameValidator implements ChannelHandler {
         utf8Validator.check(buffer);
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof CorruptedFrameException && ctx.channel().isOpen()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx, ChannelFutureListeners.CLOSE);
+    private void protocolViolation(ChannelHandlerContext ctx, WebSocketFrame frame,
+                                   CorruptedWebSocketFrameException ex) {
+        frame.close();
+        if (closeOnProtocolViolation && ctx.channel().isOpen()) {
+            WebSocketCloseStatus closeStatus = ex.closeStatus();
+            String reasonText = ex.getMessage();
+            if (reasonText == null) {
+                reasonText = closeStatus.reasonText();
+            }
+
+            CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(
+                    ctx.bufferAllocator(), closeStatus.code(), reasonText);
+            ctx.writeAndFlush(closeFrame).addListener(ctx, ChannelFutureListeners.CLOSE);
         }
-        ctx.fireExceptionCaught(cause);
+
+        throw ex;
     }
 }
