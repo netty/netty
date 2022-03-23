@@ -52,9 +52,7 @@ public abstract class WebSocketServerHandshakerTest {
                .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
-               .set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, "http://example.com")
                .set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat, superchat")
-               .set(HttpHeaderNames.WEBSOCKET_PROTOCOL, "chat, superchat")
                .set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, webSocketVersion().toAsciiString());
         HttpHeaders customResponseHeaders = new DefaultHttpHeaders();
         // set duplicate required headers and one custom
@@ -62,7 +60,6 @@ public abstract class WebSocketServerHandshakerTest {
                 .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                 .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                 .set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat")
-                .set(HttpHeaderNames.WEBSOCKET_PROTOCOL, "superchat")
                 .set("custom", "header");
 
         customResponseHeaders.set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345");

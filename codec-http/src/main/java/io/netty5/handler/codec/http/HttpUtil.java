@@ -153,14 +153,6 @@ public final class HttpUtil {
             return Long.parseLong(value);
         }
 
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
         throw new NumberFormatException("header not found: " + HttpHeaderNames.CONTENT_LENGTH);
     }
 
@@ -180,14 +172,6 @@ public final class HttpUtil {
             return Long.parseLong(value);
         }
 
-        // We know the content length if it's a Web Socket message even if
-        // Content-Length header is missing.
-        long webSocketContentLength = getWebSocketContentLength(message);
-        if (webSocketContentLength >= 0) {
-            return webSocketContentLength;
-        }
-
-        // Otherwise we don't.
         return defaultValue;
     }
 
@@ -201,33 +185,6 @@ public final class HttpUtil {
      */
     public static int getContentLength(HttpMessage message, int defaultValue) {
         return (int) Math.min(Integer.MAX_VALUE, getContentLength(message, (long) defaultValue));
-    }
-
-    /**
-     * Returns the content length of the specified web socket message. If the
-     * specified message is not a web socket message, {@code -1} is returned.
-     */
-    private static int getWebSocketContentLength(HttpMessage message) {
-        // WebSocket messages have constant content-lengths.
-        HttpHeaders h = message.headers();
-        if (message instanceof HttpRequest) {
-            HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.method()) &&
-                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_KEY1) &&
-                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_KEY2)) {
-                return 8;
-            }
-        } else if (message instanceof HttpResponse) {
-            HttpResponse res = (HttpResponse) message;
-            if (res.status().code() == 101 &&
-                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN) &&
-                    h.contains(HttpHeaderNames.SEC_WEBSOCKET_LOCATION)) {
-                return 16;
-            }
-        }
-
-        // Not a web socket message
-        return -1;
     }
 
     /**
