@@ -182,48 +182,49 @@ public class BufferOffsetsTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void skipReadable(Fixture fixture) {
-        skipReadable(fixture, 32, 16, 8, 8);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(32)) {
+            writeRandomBytes(buf, 16);
+
+            for (int i = 0; i < 8; i++) {
+                buf.readByte();
+            }
+
+            buf.skipReadable(8);
+            assertEquals(8 + 8, buf.readerOffset());
+        }
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void skipReadableNegative(Fixture fixture) {
-        skipReadable(fixture, 16, 8, 4, -2);
-    }
-
-    private void skipReadable(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+    void skipReadableNegativeMustThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(capacity)) {
-            writeRandomBytes(buf, writeBytes);
-
-            for (int i = 0; i < readBytes; i++) {
-                buf.readByte();
-            }
-
-            buf.skipReadable(offset);
-            assertEquals(readBytes + offset, buf.readerOffset());
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeLong(1);
+            buf.readInt();
+            assertThrows(IllegalArgumentException.class, () -> buf.skipReadable(-1));
         }
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void skipWritable(Fixture fixture) {
-        skipWritable(fixture, 32, 16, 8);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(32)) {
+            writeRandomBytes(buf, 16);
+
+            buf.skipWritable(8);
+            assertEquals(16 + 8, buf.writerOffset());
+        }
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void skipWritableNegative(Fixture fixture) {
-        skipWritable(fixture, 16, 8, -2);
-    }
-
-    private void skipWritable(Fixture fixture, int capacity, int writeBytes, int offset) {
+    void skipWritableNegativeMustThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(capacity)) {
-            writeRandomBytes(buf, writeBytes);
-
-            buf.skipWritable(offset);
-            assertEquals(writeBytes + offset, buf.writerOffset());
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeInt(1);
+            assertThrows(IllegalArgumentException.class, () -> buf.skipWritable(-1));
         }
     }
 }

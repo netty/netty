@@ -52,7 +52,7 @@ public class BufferStub implements Buffer {
 
     @Override
     public void skipReadable(int delta) {
-        readerOffset(readerOffset() + delta);
+        delegate.skipReadable(delta);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class BufferStub implements Buffer {
 
     @Override
     public void skipWritable(int delta) {
-        writerOffset(writerOffset() + delta);
+        delegate.skipWritable(delta);
     }
 
     @Override

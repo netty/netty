@@ -128,11 +128,17 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public void skipReadable(int delta) {
+        if (delta < 0) {
+            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
+        }
         readerOffset(readerOffset() + delta);
     }
 
     @Override
     public void skipWritable(int delta) {
+        if (delta < 0) {
+            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
+        }
         writerOffset(writerOffset() + delta);
     }
 

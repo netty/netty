@@ -153,6 +153,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void skipReadable(int delta) {
+        if (delta < 0) {
+            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
+        }
         delegate.readerIndex(delegate.readerIndex() + delta);
     }
 
@@ -169,6 +172,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void skipWritable(int delta) {
+        if (delta < 0) {
+            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
+        }
         delegate.writerIndex(delegate.writerIndex() + delta);
     }
 

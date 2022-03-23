@@ -125,7 +125,7 @@ public class PerMessageDeflateDecoderTest {
         BinaryWebSocketFrame compressedFrame1;
         ContinuationWebSocketFrame compressedFrame2;
         ContinuationWebSocketFrame compressedFrame3;
-        compressedPayload.skipWritable(-4);
+        compressedPayload.writerOffset(compressedPayload.writerOffset() - 4);
 
         int oneThird = compressedPayload.readableBytes() / 3;
         compressedFrame1 = new BinaryWebSocketFrame(false, RSV1 | RSV3, compressedPayload.readSplit(oneThird));
@@ -185,7 +185,7 @@ public class PerMessageDeflateDecoderTest {
         Buffer compressedFrameData = encoderChannel.bufferAllocator()
                 .allocate(compressedPayload1.readableBytes() + compressedPayload2.readableBytes() - 4);
         compressedFrameData.writeBytes(compressedPayload1);
-        compressedPayload2.skipWritable(-4);
+        compressedPayload2.writerOffset(compressedPayload2.writerOffset() - 4);
         compressedFrameData.writeBytes(compressedPayload2);
         BinaryWebSocketFrame compressedFrame = new BinaryWebSocketFrame(true, RSV1 | RSV3, compressedFrameData);
         compressedPayload1.close();
@@ -360,7 +360,7 @@ public class PerMessageDeflateDecoderTest {
         ContinuationWebSocketFrame compressedFrame3;
         ContinuationWebSocketFrame compressedFrameWithExtraData;
 
-        compressedPayload.skipWritable(-4);
+        compressedPayload.writerOffset(compressedPayload.writerOffset() - 4);
         int oneThird = compressedPayload.readableBytes() / 3;
         compressedFrame1 = new TextWebSocketFrame(false, RSV1, compressedPayload.readSplit(oneThird));
         compressedFrame2 = new ContinuationWebSocketFrame(false, RSV3, compressedPayload.readSplit(oneThird));

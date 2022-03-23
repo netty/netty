@@ -119,7 +119,8 @@ public class BufferSearchTest extends BufferTestSupport {
             byte needle = (byte) 0xA5;
             int offset = buf.capacity() - 1;
             buf.setByte(offset, needle);
-            buf.skipWritable(-1); // Pull the write-offset down by one, leaving needle just outside readable range.
+            // Pull the write-offset down by one, leaving needle just outside readable range.
+            buf.writerOffset(buf.writerOffset() - 1);
             while (buf.readableBytes() > 1) {
                 assertThat(buf.bytesBefore(needle))
                         .as("bytesBefore(%X)", needle)
