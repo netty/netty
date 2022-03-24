@@ -41,7 +41,7 @@ final class PcapHeaders {
     /**
      * Write Pcap Global Header
      *
-     * @param byteBuf byteBuf ByteBuf where we'll write header data
+     * @param byteBuf byteBuf where we'll write header data
      */
     public static void writeGlobalHeader(ByteBuf byteBuf) {
         byteBuf.writeBytes(GLOBAL_HEADER);
