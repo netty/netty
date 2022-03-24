@@ -644,24 +644,25 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     Buffer copy(int offset, int length, boolean readOnly);
 
     /**
-     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #readerOffset()} reader offset}
-     * position.
+     * Splits the buffer into two, at {@code length} number of bytes from the current
+     * {@linkplain #readerOffset()} reader offset} position.
      * <p>
-     * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
-     * captured and returned in a new buffer, that will hold its own ownership of that region. This allows the returned
-     * buffer to be independently {@linkplain #send() sent} to other threads.
+     * The region of this buffer that contain the previously read and readable bytes till the
+     * {@code readerOffset() + length} position, will be captured and returned in a new buffer,
+     * that will hold its own ownership of that region.
+     * This allows the returned buffer to be independently {@linkplain #send() sent} to other threads.
      * <p>
-     * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + offset}, and have its
-     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code offset}.
+     * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + length}, and have its
+     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code readerOffset() + length} position.
      * <p>
      * The memory region in the returned buffer will become inaccessible through this buffer. This buffer will have its
      * capacity reduced by the capacity of the returned buffer, read offset will become zero and relative position of
-     * write offset will be preserved from the provided {@code offset}, even though their position in memory remain
-     * unchanged.
+     * write offset will be preserved from the provided {@code readerOffset() + length} position,
+     * even though their position in memory remain unchanged.
      * <p>
      * Effectively, the following transformation takes place:
      * <pre>{@code
-     *         This buffer:
+     *         This buffer, where offset = readerOffset() + length:
      *          +------------------------------------------+
      *         0|   |r/o    offset        |w/o             |cap
      *          +---+---------+-----------+----------------+
@@ -690,29 +691,30 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return A new buffer with independent and exclusive ownership over the previously read and readable bytes from
      * this buffer.
      */
-    default Buffer readSplit(int offset) {
-        return split(readerOffset() + offset);
+    default Buffer readSplit(int length) {
+        return split(readerOffset() + length);
     }
 
     /**
-     * Splits the buffer into two, at the {@code offset} from the current {@linkplain #writerOffset()} writer offset}
-     * position.
+     * Splits the buffer into two, at {@code length} number of bytes from the current
+     * {@linkplain #writerOffset()} writer offset} position.
      * <p>
-     * The region of this buffer that contain the previously read and readable bytes till the {@code offset}, will be
-     * captured and returned in a new buffer, that will hold its own ownership of that region. This allows the returned
-     * buffer to be independently {@linkplain #send() sent} to other threads.
+     * The region of this buffer that contain the previously read and readable bytes till the
+     * {@code writerOffset() + length} position, will be captured and returned in a new buffer,
+     * that will hold its own ownership of that region.
+     * This allows the returned buffer to be independently {@linkplain #send() sent} to other threads.
      * <p>
-     * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + offset}, and have its
-     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code offset}.
+     * The returned buffer will change its {@link #writerOffset()} to {@code writerOffset() + length}, and have its
+     * {@link #writerOffset()} and {@link #capacity()} both set to the {@code writerOffset() + length}.
      * <p>
      * The memory region in the returned buffer will become inaccessible through this buffer. This buffer will have its
      * capacity reduced by the capacity of the returned buffer, read offset will become zero and relative position of
-     * write offset will be preserved from the provided {@code offset}, even though their position in memory remain
-     * unchanged.
+     * write offset will be preserved from the provided {@code writerOffset() + length} position,
+     * even though their position in memory remain unchanged.
      * <p>
      * Effectively, the following transformation takes place:
      * <pre>{@code
-     *         This buffer:
+     *         This buffer, where offset = writerOffset() + length:
      *          +------------------------------------------+
      *         0|   |r/o  |w/o  offset                     |cap
      *          +---+----+-------+-------------------------+
@@ -741,8 +743,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return A new buffer with independent and exclusive ownership over the previously read and readable bytes from
      * this buffer.
      */
-    default Buffer writeSplit(int offset) {
-        return split(writerOffset() + offset);
+    default Buffer writeSplit(int length) {
+        return split(writerOffset() + length);
     }
 
     /**
