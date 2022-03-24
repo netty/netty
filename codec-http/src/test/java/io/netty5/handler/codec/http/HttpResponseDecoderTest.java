@@ -509,55 +509,58 @@ public class HttpResponseDecoderTest {
 
     @Test
     public void testWebSocketResponse() {
-        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
-                "Upgrade: WebSocket\r\n" +
-                "Connection: Upgrade\r\n" +
-                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
-                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
-                "\r\n" +
-                "1234567812345678").getBytes();
+        byte[] data = ("HTTP/1.1 101 Switching Protocols\r\n" +
+                       "Upgrade: websocket\r\n" +
+                       "Connection: Upgrade\r\n" +
+                       "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
+                       "Sec-WebSocket-Protocol: chat\r\n\r\n")
+                .getBytes(CharsetUtil.US_ASCII);
+
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-        try (HttpContent<?> content = ch.readInbound()) {
-            assertThat(content.payload().readableBytes(), is(16));
-        }
+        assertThat(res.status(), sameInstance(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        assertEquals(4, res.headers().size());
+        assertTrue(res.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true));
+        assertTrue(res.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true));
+        assertTrue(res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+                                          false));
+        assertTrue(res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat", false));
 
-        assertThat(ch.finish(), is(false));
+        LastHttpContent<?> lastHttpContent = ch.readInbound();
+        assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), lastHttpContent);
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
     }
 
     // See https://github.com/netty/netty/issues/2173
     @Test
     public void testWebSocketResponseWithDataFollowing() {
-        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
-                "Upgrade: WebSocket\r\n" +
-                "Connection: Upgrade\r\n" +
-                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
-                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
-                "\r\n" +
-                "1234567812345678").getBytes();
-        byte[] otherData = {1, 2, 3, 4};
+        byte[] data = ("HTTP/1.1 101 Switching Protocols\r\n" +
+                       "Upgrade: websocket\r\n" +
+                       "Connection: Upgrade\r\n" +
+                       "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
+                       "Sec-WebSocket-Protocol: chat\r\n\r\n")
+                .getBytes(CharsetUtil.US_ASCII);
+        byte[] otherData = { 1, 2, 3, 4 };
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), data));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), otherData));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(otherData)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        assertThat(res.status(), sameInstance(HttpResponseStatus.SWITCHING_PROTOCOLS));
+
         try (HttpContent<?> content = ch.readInbound()) {
-            assertThat(content.payload().readableBytes(), is(16));
+            assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), content);
         }
 
-        assertThat(ch.finish(), is(true));
+        assertTrue(ch.finish());
 
-        try (Buffer expected = copiedBuffer(ch.bufferAllocator(), otherData);
-             Buffer buffer = ch.readInbound()) {
+        try (Buffer expected = copiedBuffer(ch.bufferAllocator(), otherData); Buffer buffer = ch.readInbound()) {
             assertEquals(expected, buffer);
         }
     }

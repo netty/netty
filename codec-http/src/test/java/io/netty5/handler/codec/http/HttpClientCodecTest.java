@@ -44,14 +44,13 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty5.util.ReferenceCountUtil.release;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -322,27 +321,24 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testWebSocket00Response() {
-        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
-                "Upgrade: WebSocket\r\n" +
-                "Connection: Upgrade\r\n" +
-                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
-                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
-                "\r\n" +
-                "1234567812345678").getBytes();
+    public void testWebSocketResponse() {
+        byte[] data = ("HTTP/1.1 101 Switching Protocols\r\n" +
+                       "Upgrade: websocket\r\n" +
+                       "Connection: Upgrade\r\n" +
+                       "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
+                       "Sec-WebSocket-Protocol: chat\r\n\r\n")
+                .getBytes(CharsetUtil.US_ASCII);
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
         assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-        HttpContent<?> content = ch.readInbound();
-        assertThat(content.payload().readableBytes(), is(16));
-        content.close();
+        assertThat(res.status(), sameInstance(HttpResponseStatus.SWITCHING_PROTOCOLS));
 
-        assertThat(ch.finish(), is(false));
+        LastHttpContent<?> lastHttpContent = ch.readInbound();
+        assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), lastHttpContent);
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
     }
 
     @Test
