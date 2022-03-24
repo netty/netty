@@ -618,19 +618,12 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
             CompositeBuffer composite;
             try (in) {
                 if (CompositeBuffer.isComposite(cumulation)) {
-                    CompositeBuffer tmp = (CompositeBuffer) cumulation;
-                    // Since we are extending the composite buffer below, we have to make sure there is no space to
-                    // write in the existing cumulation.
-                    if (tmp.writerOffset() < tmp.capacity()) {
-                        composite = tmp.split();
-                        tmp.close();
-                    } else {
-                        composite = tmp;
-                    }
+                    composite = (CompositeBuffer) cumulation;
                 } else {
                     composite = CompositeBuffer.compose(alloc, cumulation.send());
                 }
-                composite.extendWith((in.readOnly() ? in.copy() : in).send());
+                // Using split() even on the writable buffer, in order to prevent gaps in the composite buffer.
+                composite.extendWith((in.readOnly() ? in.copy() : in.split()).send());
                 return composite;
             }
         }
