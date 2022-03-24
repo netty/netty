@@ -18,7 +18,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferStub;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -458,31 +457,12 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void releaseWhenCompositeCumulateThrows(BufferAllocator allocator) {
         this.allocator = allocator;
-        final Error error = new Error();
-        try (CompositeBuffer cumulation = compose(allocator, newBufferWithRandomBytes(allocator).send())) {
-            Buffer in = new BufferStub(newBufferWithRandomBytes(allocator, 12)) {
-                @Override
-                public Send<Buffer> send() {
-                    return new Send<>() {
-                        @Override
-                        public Buffer receive() {
-                            throw error;
-                        }
+        Buffer buffer = newBufferWithRandomBytes(allocator);
+        try (CompositeBuffer cumulation = compose(allocator, buffer.send())) {
+            Buffer in = newBufferWithRandomBytes(allocator, 12);
+            in.readByte(); // This causes the offsets to no longer line up, and makes extendWith() throw.
 
-                        @Override
-                        public void close() {
-                        }
-
-                        @Override
-                        public boolean referentIsInstanceOf(Class<?> cls) {
-                            return Buffer.class.isAssignableFrom(cls);
-                        }
-                    };
-                }
-            };
-
-            final Error err = assertThrows(Error.class, () -> COMPOSITE_CUMULATOR.cumulate(allocator, cumulation, in));
-            assertSame(error, err);
+            assertThrows(Exception.class, () -> COMPOSITE_CUMULATOR.cumulate(allocator, cumulation, in));
             assertFalse(in.isAccessible());
         }
     }
