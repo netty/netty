@@ -14,51 +14,38 @@
  */
 package io.netty5.microbench.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.util.concurrent.Future;
 
 import static java.util.Objects.requireNonNull;
 
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
-    private ByteBuf cumulation;
-    private final ByteToMessageDecoder.Cumulator cumulator;
+    private Buffer cumulation;
+    private final ByteToMessageDecoderForBuffer.Cumulator cumulator;
 
-    protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoder.Cumulator writeCumulator) {
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
+                                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator) {
         this(alloc, handler, writeCumulator, new EmbeddedChannel());
     }
 
-    protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoder.Cumulator writeCumulator,
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
+                                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator,
                                                              EmbeddedChannel channel) {
         super(alloc, handler, channel);
         cumulator = requireNonNull(writeCumulator, "writeCumulator");
     }
 
-    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoder.Cumulator writeCumulator) {
-        this(alloc, handler, writeCumulator, new EmbeddedChannel());
-    }
-
-    protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoder.Cumulator writeCumulator,
-                                                             EmbeddedChannel channel) {
-        super(alloc, handler, channel);
-        cumulator = requireNonNull(writeCumulator, "writeCumulator");
-    }
-
-    public final ByteBuf cumulation() {
+    public final Buffer cumulation() {
         return cumulation;
     }
 
     public final void releaseCumulation() {
         if (cumulation != null) {
-            cumulation.release();
+            cumulation.close();
             cumulation = null;
         }
     }
@@ -66,11 +53,11 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
     @Override
     public final Future<Void> write(Object msg) {
         try {
-            if (msg instanceof ByteBuf) {
+            if (msg instanceof Buffer) {
                 if (cumulation == null) {
-                    cumulation = (ByteBuf) msg;
+                    cumulation = (Buffer) msg;
                 } else {
-                    cumulation = cumulator.cumulate(alloc(), cumulation, (ByteBuf) msg);
+                    cumulation = cumulator.cumulate(bufferAllocator(), cumulation, (Buffer) msg);
                 }
                 return channel().newSucceededFuture();
             }
@@ -84,12 +71,12 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
         try {
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
+            if (msg instanceof Buffer) {
+                Buffer buf = (Buffer) msg;
                 if (cumulation == null) {
                     cumulation = buf;
                 } else {
-                    cumulation = cumulator.cumulate(alloc(), cumulation, buf);
+                    cumulation = cumulator.cumulate(bufferAllocator(), cumulation, buf);
                 }
                 return channel().newSucceededFuture();
             } else {

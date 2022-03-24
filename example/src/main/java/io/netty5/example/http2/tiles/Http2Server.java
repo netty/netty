@@ -61,7 +61,7 @@ public class Http2Server {
         b.group(group).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
+                ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()), new Http2OrHttpHandler());
             }
         });
 

@@ -388,7 +388,7 @@ public class OpenSslCertificateCompressionTest {
         @Override
         protected void initChannel(Channel ch) {
             ChannelPipeline pipeline = ch.pipeline();
-            pipeline.addLast(sslContext.newHandler(ch.alloc()));
+            pipeline.addLast(sslContext.newHandler(ch.bufferAllocator()));
             pipeline.addLast(new SimpleChannelInboundHandler<>() {
 
                 @Override

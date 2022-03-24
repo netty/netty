@@ -15,28 +15,25 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.BufferHolder;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.util.AbstractReferenceCounted;
-import io.netty5.util.IllegalReferenceCountException;
+import java.security.cert.X509Certificate;
 
 /**
  * A PEM encoded value.
  *
  * @see PemEncoded
- * @see PemPrivateKey#toPEM(ByteBufAllocator, boolean, java.security.PrivateKey)
- * @see PemX509Certificate#toPEM(ByteBufAllocator, boolean, java.security.cert.X509Certificate[])
+ * @see PemPrivateKey#toPEM(BufferAllocator, java.security.PrivateKey)
+ * @see PemX509Certificate#toPEM(BufferAllocator, X509Certificate...)
  */
-class PemValue extends AbstractReferenceCounted implements PemEncoded {
-
-    private final ByteBuf content;
+class PemValue extends BufferHolder<PemValue> implements PemEncoded {
 
     private final boolean sensitive;
 
-    PemValue(ByteBuf content, boolean sensitive) {
-        this.content = requireNonNull(content, "content");
+    PemValue(Buffer content, boolean sensitive) {
+        super(content.makeReadOnly());
         this.sensitive = sensitive;
     }
 
@@ -46,61 +43,31 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
     }
 
     @Override
-    public ByteBuf content() {
-        int count = refCnt();
-        if (count <= 0) {
-            throw new IllegalReferenceCountException(count);
+    public Buffer content() {
+        if (!isAccessible()) {
+            throw new IllegalStateException("PemValue is closed.");
         }
 
-        return content;
+        return getBuffer();
     }
 
     @Override
     public PemValue copy() {
-        return replace(content.copy());
+        Buffer buffer = getBuffer();
+        return new PemValue(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true), sensitive);
     }
 
     @Override
-    public PemValue duplicate() {
-        return replace(content.duplicate());
-    }
-
-    @Override
-    public PemValue retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemValue replace(ByteBuf content) {
-        return new PemValue(content, sensitive);
-    }
-
-    @Override
-    public PemValue touch() {
-        return (PemValue) super.touch();
-    }
-
-    @Override
-    public PemValue touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public PemValue retain() {
-        return (PemValue) super.retain();
-    }
-
-    @Override
-    public PemValue retain(int increment) {
-        return (PemValue) super.retain(increment);
-    }
-
-    @Override
-    protected void deallocate() {
+    public void close() {
         if (sensitive) {
-            SslUtils.zeroout(content);
+            // TODO cannot do this when the buffer is read-only
+//            SslUtils.zeroout(getBuffer());
         }
-        content.release();
+        super.close();
+    }
+
+    @Override
+    protected PemValue receive(Buffer buf) {
+        return new PemValue(buf, sensitive);
     }
 }

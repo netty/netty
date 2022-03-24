@@ -13,19 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelId;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -38,7 +37,7 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
@@ -86,7 +85,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -129,25 +128,23 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                 try {
-                     if (msg instanceof ByteBuf) {
-                         if (((ByteBuf) msg).isReadable()) {
-                             Promise<Void> promise = ctx.newPromise();
-                             writesToFail.add(promise);
-                             return promise.asFuture();
-                         }
-                     }
-                     return ctx.newSucceededFuture();
-                 } finally {
-                     ReferenceCountUtil.release(msg);
-                 }
+                if (msg instanceof Buffer) {
+                    try (Buffer buf = (Buffer) msg) {
+                        if (buf.readableBytes() > 0) {
+                            Promise<Void> promise = ctx.newPromise();
+                            writesToFail.add(promise);
+                            return promise.asFuture();
+                        }
+                    }
+                }
+                return ctx.newSucceededFuture();
             }
         }, handler);
 
         try {
             final CountDownLatch writeCauseLatch = new CountDownLatch(1);
             final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
-            ch.write(wrappedBuffer(new byte[]{1})).addListener(future -> {
+            ch.write(offHeapAllocator().copyOf(new byte[]{1})).addListener(future -> {
                 failureRef.compareAndSet(null, future.cause());
                 writeCauseLatch.countDown();
             });
@@ -318,7 +315,7 @@ public class SslHandlerTest {
         final EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         // Push the first part of a 5-byte handshake message.
-        ch.writeInbound(wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
+        ch.writeInbound(offHeapAllocator().copyOf(new byte[] { 22, 3, 1, 0, 5 }));
 
         // Should decode nothing yet.
         assertThat(ch.readInbound(), is(nullValue()));
@@ -327,7 +324,7 @@ public class SslHandlerTest {
             @Override
             public void execute() throws Throwable {
                 // Push the second part of the 5-byte handshake message.
-                ch.writeInbound(wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
+                ch.writeInbound(offHeapAllocator().copyOf(new byte[]{2, 0, 0, 1, 0}));
             }
         });
         // Be sure we cleanup the channel and release any pending messages that may have been generated because
@@ -385,7 +382,7 @@ public class SslHandlerTest {
         SSLEngine engine = newServerModeSSLEngine();
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        ByteBuf buf = Unpooled.buffer(10).writeZero(10);
+        Buffer buf = offHeapAllocator().allocate(10).writerOffset(10);
         Future<Void> future = ch.writeAndFlush(buf);
         assertFalse(future.isDone());
         assertTrue(ch.finishAndReleaseAll());
@@ -404,7 +401,7 @@ public class SslHandlerTest {
                 .build();
             try {
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
-                SSLEngine sslEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+                SSLEngine sslEngine = sslContext.newEngine(offHeapAllocator());
                 EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(sslEngine));
 
                 assertEquals(2, ((ReferenceCounted) sslContext).refCnt());
@@ -456,7 +453,7 @@ public class SslHandlerTest {
             assertTrue(readIssued);
             readIssued = false;
 
-            assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
+            assertTrue(ch.writeOutbound(offHeapAllocator().allocate(0)));
             assertTrue(readIssued);
             assertTrue(ch.finishAndReleaseAll());
        }
@@ -515,7 +512,7 @@ public class SslHandlerTest {
         return new ChannelInitializer<>() {
             @Override
             protected void initChannel(final Channel ch) {
-                final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
+                final SslHandler sslHandler = sslCtx.newHandler(ch.bufferAllocator());
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
                 sslHandler.handshakeFuture().addListener(future -> {
@@ -557,9 +554,9 @@ public class SslHandlerTest {
         ch.close();
 
         // When the channel is closed the SslHandler will write an empty buffer to the channel.
-        ByteBuf buf = ch.readOutbound();
-        assertFalse(buf.isReadable());
-        buf.release();
+        try (Buffer buf = ch.readOutbound()) {
+            assertEquals(0, buf.readableBytes());
+        }
 
         assertFalse(ch.finishAndReleaseAll());
 
@@ -607,16 +604,17 @@ public class SslHandlerTest {
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group)
-                .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInitializer<Channel>() {
+              .channel(LocalServerChannel.class)
+              .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
+              .childHandler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) {
-                      ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                      ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                       ch.pipeline().addLast(new ChannelHandler() {
                           @Override
                           public void channelActive(ChannelHandlerContext ctx) {
-                              ByteBuf buf = ctx.alloc().buffer(10);
-                              buf.writeZero(buf.capacity());
+                              Buffer buf = ctx.bufferAllocator().allocate(10);
+                              buf.skipWritable(buf.capacity());
                               ctx.writeAndFlush(buf).addListener(future -> {
                                   events.add(future);
                                   latch.countDown();
@@ -633,24 +631,25 @@ public class SslHandlerTest {
                           }
                       });
                   }
-                });
+              });
 
             Bootstrap cb = new Bootstrap();
             cb.group(group)
-                .channel(LocalChannel.class)
-                .handler(new ChannelInitializer<Channel>() {
-                    @Override
-                    protected void initChannel(Channel ch) {
-                        ch.pipeline().addFirst(new ChannelHandler() {
-                            @Override
-                            public void channelActive(ChannelHandlerContext ctx) {
-                                ByteBuf buf = ctx.alloc().buffer(1000);
-                                buf.writeZero(buf.capacity());
-                                ctx.writeAndFlush(buf);
-                            }
-                        });
-                    }
-                });
+              .channel(LocalChannel.class)
+              .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
+              .handler(new ChannelInitializer<Channel>() {
+                  @Override
+                  protected void initChannel(Channel ch) {
+                      ch.pipeline().addFirst(new ChannelHandler() {
+                          @Override
+                          public void channelActive(ChannelHandlerContext ctx) {
+                              Buffer buf = ctx.bufferAllocator().allocate(1000);
+                              buf.skipWritable(buf.capacity());
+                              ctx.writeAndFlush(buf);
+                          }
+                      });
+                  }
+              });
 
             serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).get();
             clientChannel = cb.connect(serverChannel.localAddress()).get();
@@ -703,15 +702,15 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
+                            ch.pipeline().addLast(new SimpleChannelInboundHandler<Buffer>() {
                                 private int readBytes;
                                 @Override
-                                protected void messageReceived(ChannelHandlerContext ctx,
-                                        ByteBuf msg) throws Exception {
+                                protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
                                     readBytes += msg.readableBytes();
                                     if (readBytes >= expectedBytes) {
                                         serverReceiveLatch.countDown();
@@ -724,21 +723,22 @@ public class SslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
                         }
                     }).connect(sc.localAddress()).get();
 
             // We first write a ReadOnlyBuffer because SslHandler will attempt to take the first buffer and append to it
             // until there is no room, or the aggregation size threshold is exceeded. We want to verify that we don't
             // throw when a ReadOnlyBuffer is used and just verify that we don't aggregate in this case.
-            ByteBuf firstBuffer = Unpooled.buffer(10);
-            firstBuffer.writeByte(0);
-            firstBuffer = firstBuffer.asReadOnly();
-            ByteBuf secondBuffer = Unpooled.buffer(10);
-            secondBuffer.writeZero(secondBuffer.capacity());
+            Buffer firstBuffer = offHeapAllocator().allocate(10);
+            firstBuffer.writeByte((byte) 0);
+            firstBuffer = firstBuffer.makeReadOnly();
+            Buffer secondBuffer = offHeapAllocator().allocate(10);
+            secondBuffer.skipWritable(secondBuffer.capacity());
             cc.write(firstBuffer);
             cc.writeAndFlush(secondBuffer).syncUninterruptibly();
             serverReceiveLatch.countDown();
@@ -777,7 +777,7 @@ public class SslHandlerTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                         }
                     });
             sc = sb.bind(address).get();
@@ -789,7 +789,7 @@ public class SslHandlerTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            SslHandler handler = sslClientCtx.newHandler(ch.alloc());
+                            SslHandler handler = sslClientCtx.newHandler(ch.bufferAllocator());
 
                             // We propagate the SslHandler via an AtomicReference to the outer-scope as using
                             // pipeline.get(...) may return null if the pipeline was teared down by the time we call it.
@@ -821,7 +821,7 @@ public class SslHandlerTest {
     @Test
     public void testOutboundClosedAfterChannelInactive() throws Exception {
         SslContext context = SslContextBuilder.forClient().build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
 
         EmbeddedChannel channel = new EmbeddedChannel();
         assertFalse(channel.finish());
@@ -845,7 +845,7 @@ public class SslHandlerTest {
         Channel cc = null;
         final CountDownLatch activeLatch = new CountDownLatch(1);
         final AtomicReference<AssertionError> errorRef = new AtomicReference<>();
-        final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler sslHandler = sslClientCtx.newHandler(offHeapAllocator());
         try {
             sc = new ServerBootstrap()
                     .group(group)
@@ -877,7 +877,7 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress()).addListener(future -> {
                         // Write something to trigger the handshake before fireChannelActive is called.
-                        future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                        future.get().writeAndFlush(offHeapAllocator().copyOf(new byte[] { 1, 2, 3, 4 }));
                     }).get();
 
             // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
@@ -923,7 +923,7 @@ public class SslHandlerTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
-        final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler sslHandler = sslClientCtx.newHandler(offHeapAllocator());
         sslHandler.setHandshakeTimeout(500, TimeUnit.MILLISECONDS);
 
         try {
@@ -944,7 +944,7 @@ public class SslHandlerTest {
                                 ch.pipeline().addLast(new ChannelHandler() {
                                     @Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                        ctx.writeAndFlush(wrappedBuffer(new byte[] { 1, 2, 3, 4 }));
+                                        ctx.writeAndFlush(offHeapAllocator().copyOf(new byte[] { 1, 2, 3, 4 }));
                                     }
                                 });
                             }
@@ -953,7 +953,7 @@ public class SslHandlerTest {
             if (!startTls) {
                 future.addListener(future1 -> {
                     // Write something to trigger the handshake before fireChannelActive is called.
-                    future1.getNow().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                    future1.getNow().writeAndFlush(offHeapAllocator().copyOf(new byte[] { 1, 2, 3, 4 }));
                 });
             }
             cc = future.get();
@@ -1107,15 +1107,16 @@ public class SslHandlerTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
-        final SslHandler clientSslHandler = new SslHandler(
-                sslClientCtx.newEngine(UnpooledByteBufAllocator.DEFAULT), executor);
-        final SslHandler serverSslHandler = new SslHandler(
-                sslServerCtx.newEngine(UnpooledByteBufAllocator.DEFAULT), executor);
+        BufferAllocator allocator = SslProvider.JDK == provider?
+                DefaultBufferAllocators.onHeapAllocator() : offHeapAllocator();
+        final SslHandler clientSslHandler = new SslHandler(sslClientCtx.newEngine(allocator), executor);
+        final SslHandler serverSslHandler = new SslHandler(sslServerCtx.newEngine(allocator), executor);
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
         try {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1133,6 +1134,7 @@ public class SslHandlerTest {
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1187,7 +1189,7 @@ public class SslHandlerTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
-        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, command -> {
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator(), command -> {
             if (!client) {
                 command.run();
             }
@@ -1196,7 +1198,7 @@ public class SslHandlerTest {
         if (client) {
             clientSslHandler.setHandshakeTimeout(100, TimeUnit.MILLISECONDS);
         }
-        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, command -> {
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(offHeapAllocator(), command -> {
             if (client) {
                 command.run();
             }
@@ -1209,12 +1211,14 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(serverSslHandler)
                     .bind(new InetSocketAddress(0)).get();
 
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1279,8 +1283,7 @@ public class SslHandlerTest {
                 .build();
 
         // Explicit enable session cache as it's disabled by default atm.
-        ((OpenSslContext) sslClientCtx).sessionContext()
-                .setSessionCacheEnabled(true);
+        ((OpenSslContext) sslClientCtx).sessionContext().setSessionCacheEnabled(true);
 
         final SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
@@ -1307,11 +1310,12 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            final SslHandler sslHandler = sslServerCtx.newHandler(ch.alloc());
-                            ch.pipeline().addLast(sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT));
+                            final SslHandler sslHandler = sslServerCtx.newHandler(ch.bufferAllocator());
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                             ch.pipeline().addLast(new ChannelHandler() {
 
                                 private int handshakeCount;
@@ -1335,7 +1339,7 @@ public class SslHandlerTest {
                                             }
                                         }
 
-                                        ctx.writeAndFlush(wrappedBuffer(bytes));
+                                        ctx.writeAndFlush(offHeapAllocator().copyOf(bytes));
                                     }
                                 }
                             });
@@ -1365,22 +1369,23 @@ public class SslHandlerTest {
         Channel cc = null;
         final BlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
         try {
-            final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT,
+            final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator(),
                     serverAddress.getAddress().getHostAddress(), serverAddress.getPort());
 
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
-                            ch.pipeline().addLast(new ByteToMessageDecoder() {
+                            ch.pipeline().addLast(new ByteToMessageDecoderForBuffer() {
 
                                 @Override
-                                protected void decode(ChannelHandlerContext ctx, ByteBuf in) {
+                                protected void decode(ChannelHandlerContext ctx, Buffer in) {
                                     if (in.readableBytes() == bytes.length) {
-                                        queue.add(in.readBytes(bytes.length));
+                                        queue.add(in.readSplit(bytes.length));
                                     }
                                 }
 
@@ -1403,14 +1408,10 @@ public class SslHandlerTest {
                 assertEquals(isReused, engine.isSessionReused());
             }
             Object obj = queue.take();
-            if (obj instanceof ByteBuf) {
-                ByteBuf buffer = (ByteBuf) obj;
-                ByteBuf expected = wrappedBuffer(bytes);
-                try {
+            if (obj instanceof Buffer) {
+                try (Buffer buffer = (Buffer) obj;
+                     Buffer expected = offHeapAllocator().copyOf(bytes)) {
                     assertEquals(expected, buffer);
-                } finally {
-                    expected.release();
-                    buffer.release();
                 }
             } else {
                 throw (Throwable) obj;
@@ -1480,8 +1481,8 @@ public class SslHandlerTest {
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
-        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(DefaultBufferAllocators.onHeapAllocator());
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(DefaultBufferAllocators.onHeapAllocator());
 
         try {
             final Object terminalEvent = new Object();
@@ -1489,6 +1490,7 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1510,6 +1512,7 @@ public class SslHandlerTest {
             Channel channel = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1590,8 +1593,8 @@ public class SslHandlerTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc;
         Channel cc;
-        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator());
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(offHeapAllocator());
 
         class SslEventHandler implements ChannelHandler {
             private final AtomicReference<SslHandshakeCompletionEvent> ref;
@@ -1616,6 +1619,7 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -1628,6 +1632,7 @@ public class SslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1706,10 +1711,11 @@ public class SslHandlerTest {
             Channel sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT));
+                            ch.pipeline().addLast(sslServerCtx.newHandler(offHeapAllocator()));
                             ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(serverCompletionEvents));
                         }
                     })
@@ -1718,11 +1724,12 @@ public class SslHandlerTest {
             Bootstrap bs = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslClientCtx.newHandler(
-                                    UnpooledByteBufAllocator.DEFAULT, "netty.io", 9999));
+                                    offHeapAllocator(), "netty.io", 9999));
                             ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(clientCompletionEvents));
                         }
                     })

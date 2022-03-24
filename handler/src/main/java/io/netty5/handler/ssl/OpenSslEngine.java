@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 
 import javax.net.ssl.SSLEngine;
 
@@ -27,7 +27,7 @@ import javax.net.ssl.SSLEngine;
  * and manually release the native memory see {@link ReferenceCountedOpenSslEngine}.
  */
 public final class OpenSslEngine extends ReferenceCountedOpenSslEngine {
-    OpenSslEngine(OpenSslContext context, ByteBufAllocator alloc, String peerHost, int peerPort,
+    OpenSslEngine(OpenSslContext context, BufferAllocator alloc, String peerHost, int peerPort,
                   boolean jdkCompatibilityMode) {
         super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false);
     }

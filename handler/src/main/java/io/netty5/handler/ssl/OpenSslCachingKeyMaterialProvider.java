@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 
 import javax.net.ssl.X509KeyManager;
 import java.util.Iterator;
@@ -38,7 +38,7 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
     }
 
     @Override
-    OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
+    OpenSslKeyMaterial chooseKeyMaterial(BufferAllocator allocator, String alias) throws Exception {
         OpenSslKeyMaterial material = cache.get(alias);
         if (material == null) {
             material = super.chooseKeyMaterial(allocator, alias);

@@ -16,14 +16,9 @@
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty5.buffer.api.AllocationType;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.StandardAllocationTypes;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.base64.Base64Dialect;
@@ -43,7 +38,6 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -265,22 +259,22 @@ final class SslUtils {
 
     /**
      * Return how many bytes can be read out of the encrypted data. Be aware this method will not increase
-     * the readerIndex of the given {@link ByteBuf}.
+     * the readerIndex of the given {@link Buffer}.
      *
      * @param   buffer
-     *                  The {@link ByteBuf} to read from. Be aware it must have at least
+     *                  The {@link Buffer} to read from. Be aware it must have at least
      *                  {@link #SSL_RECORD_HEADER_LENGTH} bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
      * @return length
      *                  The length of the encrypted packet that is included in the buffer or
      *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
-     *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
-     *                  the given {@link ByteBuf} is not encrypted at all.
+     *                  {@link Buffer}. This will return {@link SslUtils#NOT_ENCRYPTED} if
+     *                  the given {@link Buffer} is not encrypted at all.
      * @throws IllegalArgumentException
-     *                  Is thrown if the given {@link ByteBuf} has not at least {@link #SSL_RECORD_HEADER_LENGTH}
+     *                  Is thrown if the given {@link Buffer} has not at least {@link #SSL_RECORD_HEADER_LENGTH}
      *                  bytes to read.
      */
-    static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
+    static int getEncryptedPacketLength(Buffer buffer, int offset) {
         int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
@@ -303,7 +297,7 @@ final class SslUtils {
             int majorVersion = buffer.getUnsignedByte(offset + 1);
             if (majorVersion == 3 || buffer.getShort(offset + 1) == GMSSL_PROTOCOL_VERSION) {
                 // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1
-                packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
+                packetLength = buffer.getUnsignedShort(offset + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -321,7 +315,7 @@ final class SslUtils {
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 packetLength = headerLength == 2 ?
-                        (shortBE(buffer, offset) & 0x7FFF) + 2 : (shortBE(buffer, offset) & 0x3FFF) + 3;
+                        (buffer.getShort(offset) & 0x7FFF) + 2 : (buffer.getShort(offset) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
                     return NOT_ENOUGH_DATA;
                 }
@@ -330,26 +324,6 @@ final class SslUtils {
             }
         }
         return packetLength;
-    }
-
-    // Reads a big-endian unsigned short integer from the buffer
-    @SuppressWarnings("deprecation")
-    private static int unsignedShortBE(ByteBuf buffer, int offset) {
-        int value = buffer.getUnsignedShort(offset);
-        if (buffer.order() == ByteOrder.LITTLE_ENDIAN) {
-            value = Integer.reverseBytes(value) >>> Short.SIZE;
-        }
-        return value;
-    }
-
-    // Reads a big-endian short integer from the buffer
-    @SuppressWarnings("deprecation")
-    private static short shortBE(ByteBuf buffer, int offset) {
-        short value = buffer.getShort(offset);
-        if (buffer.order() == ByteOrder.LITTLE_ENDIAN) {
-            value = Short.reverseBytes(value);
-        }
-        return value;
     }
 
     private static short unsignedByte(byte b) {
@@ -462,6 +436,15 @@ final class SslUtils {
     }
 
     /**
+     * Fills the {@link Buffer} with zero bytes.
+     */
+    static void zeroout(Buffer buffer) {
+        if (!buffer.readOnly()) {
+            buffer.fill((byte) 0);
+        }
+    }
+
+    /**
      * Fills the {@link ByteBuf} with zero bytes and releases it.
      */
     static void zerooutAndRelease(ByteBuf buffer) {
@@ -470,18 +453,16 @@ final class SslUtils {
     }
 
     /**
-     * Same as {@link Base64#encode(Buffer, boolean)} but allows the use of a custom {@link ByteBufAllocator}.
+     * Same as {@link Base64#encode(Buffer, boolean)} but uses {@link Buffer}
+     * and allows the use of a custom {@link BufferAllocator}.
      *
      * @see Base64#encode(Buffer, boolean)
      */
-    static ByteBuf toBase64(ByteBufAllocator allocator, ByteBuf src) {
-        try (Buffer dst = Base64.encode(ByteBufBuffer.wrap(src), src.readerIndex(),
-                                    src.readableBytes(), true, Base64Dialect.STANDARD)) {
-            src.readerIndex(src.writerIndex());
-            ByteBuf result = allocator.buffer(dst.readableBytes()); // TODO temporary copy until we port this class.
-            result.writeBytes(ByteBufAdaptor.intoByteBuf(dst));
-            return result;
-        }
+    static Buffer toBase64(BufferAllocator allocator, Buffer src) {
+        Buffer dst = Base64.encode(src, src.readerOffset(),
+                src.readableBytes(), true, Base64Dialect.STANDARD, allocator);
+        src.readerOffset(src.writerOffset());
+        return dst;
     }
 
     /**

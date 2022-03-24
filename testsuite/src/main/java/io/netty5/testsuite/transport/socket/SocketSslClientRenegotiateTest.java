@@ -18,7 +18,7 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -141,7 +141,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         run(testInfo, (sb, cb) -> testSslRenegotiationRejected(sb, cb, serverCtx, clientCtx, delegate));
     }
 
-    private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
+    private static SslHandler newSslHandler(SslContext sslCtx, BufferAllocator allocator, Executor executor) {
         if (executor == null) {
             return sslCtx.newHandler(allocator);
         } else {
@@ -160,7 +160,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     serverChannel = sch;
-                    serverSslHandler = newSslHandler(serverCtx, sch.alloc(), executorService);
+                    serverSslHandler = newSslHandler(serverCtx, sch.bufferAllocator(), executorService);
                     // As we test renegotiation we should use a protocol that support it.
                     serverSslHandler.engine().setEnabledProtocols(new String[]{"TLSv1.2"});
                     sch.pipeline().addLast("ssl", serverSslHandler);
@@ -172,7 +172,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     clientChannel = sch;
-                    clientSslHandler = newSslHandler(clientCtx, sch.alloc(), executorService);
+                    clientSslHandler = newSslHandler(clientCtx, sch.bufferAllocator(), executorService);
                     // As we test renegotiation we should use a protocol that support it.
                     clientSslHandler.engine().setEnabledProtocols(new String[]{"TLSv1.2"});
                     sch.pipeline().addLast("ssl", clientSslHandler);

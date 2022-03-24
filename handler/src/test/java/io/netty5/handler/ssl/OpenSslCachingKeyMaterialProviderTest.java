@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,13 +49,13 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
     public void testMaterialCached() throws Exception {
         OpenSslKeyMaterialProvider provider = newMaterialProvider(newKeyManagerFactory(), PASSWORD);
 
-        OpenSslKeyMaterial material = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, EXISTING_ALIAS);
+        OpenSslKeyMaterial material = provider.chooseKeyMaterial(offHeapAllocator(), EXISTING_ALIAS);
         assertNotNull(material);
         assertNotEquals(0, material.certificateChainAddress());
         assertNotEquals(0, material.privateKeyAddress());
         assertEquals(2, material.refCnt());
 
-        OpenSslKeyMaterial material2 = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, EXISTING_ALIAS);
+        OpenSslKeyMaterial material2 = provider.chooseKeyMaterial(offHeapAllocator(), EXISTING_ALIAS);
         assertNotNull(material2);
         assertEquals(material.certificateChainAddress(), material2.certificateChainAddress());
         assertEquals(material.privateKeyAddress(), material2.privateKeyAddress());

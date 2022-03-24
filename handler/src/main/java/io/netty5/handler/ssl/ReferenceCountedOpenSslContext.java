@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
@@ -67,6 +67,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty5.handler.ssl.OpenSsl.availableJavaCipherSuites;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
@@ -446,32 +447,32 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
+    public final SSLEngine newEngine(BufferAllocator alloc, String peerHost, int peerPort) {
         return newEngine0(alloc, peerHost, peerPort, true);
     }
 
     @Override
-    protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+    protected final SslHandler newHandler(BufferAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine0(alloc, null, -1, false), startTls);
     }
 
     @Override
-    protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+    protected final SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
     }
 
     @Override
-    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+    protected SslHandler newHandler(BufferAllocator alloc, boolean startTls, Executor executor) {
         return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor);
     }
 
     @Override
-    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+    protected SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
         return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), executor);
     }
 
-    SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
+    SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
     }
 
@@ -479,7 +480,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Returns a new server-side {@link SSLEngine} with the current configuration.
      */
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc) {
+    public final SSLEngine newEngine(BufferAllocator alloc) {
         return newEngine(alloc, null, -1);
     }
 
@@ -842,21 +843,18 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         long keyBio = 0;
         long keyCertChainBio = 0;
         long keyCertChainBio2 = 0;
-        PemEncoded encoded = null;
-        try {
-            // Only encode one time
-            encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, keyCertChain);
-            keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded);
-            keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded);
+        try (PemEncoded encoded = PemX509Certificate.toPEM(offHeapAllocator(), keyCertChain)) {
+            keyCertChainBio = toBIO(offHeapAllocator(), encoded);
+            keyCertChainBio2 = toBIO(offHeapAllocator(), encoded);
 
             if (key != null) {
-                keyBio = toBIO(ByteBufAllocator.DEFAULT, key);
+                keyBio = toBIO(offHeapAllocator(), key);
             }
 
             SSLContext.setCertificateBio(
                     ctx, keyCertChainBio, keyBio,
                     keyPassword == null ? StringUtil.EMPTY_STRING : keyPassword);
-            // We may have more then one cert in the chain so add all of them now.
+            // We may have more than one cert in the chain so add all of them now.
             SSLContext.setCertificateChainBio(ctx, keyCertChainBio2, true);
         } catch (SSLException e) {
             throw e;
@@ -866,9 +864,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             freeBio(keyBio);
             freeBio(keyCertChainBio);
             freeBio(keyCertChainBio2);
-            if (encoded != null) {
-                encoded.release();
-            }
         }
     }
 
@@ -882,16 +877,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code key} is {@code null}. The BIO contains the content of the {@code key}.
      */
-    static long toBIO(ByteBufAllocator allocator, PrivateKey key) throws Exception {
+    static long toBIO(BufferAllocator allocator, PrivateKey key) throws Exception {
         if (key == null) {
             return 0;
         }
 
-        PemEncoded pem = PemPrivateKey.toPEM(allocator, true, key);
-        try {
+        try (PemEncoded pem = PemPrivateKey.toPEM(allocator, key)) {
             return toBIO(allocator, pem);
-        } finally {
-            pem.release();
         }
     }
 
@@ -899,18 +891,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code certChain} is {@code null}. The BIO contains the content of the {@code certChain}.
      */
-    static long toBIO(ByteBufAllocator allocator, X509Certificate... certChain) throws Exception {
+    static long toBIO(BufferAllocator allocator, X509Certificate... certChain) throws Exception {
         if (certChain == null) {
             return 0;
         }
 
         checkNonEmpty(certChain, "certChain");
 
-        PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
-        try {
+        try (PemEncoded pem = PemX509Certificate.toPEM(allocator, certChain)) {
             return toBIO(allocator, pem);
-        } finally {
-            pem.release();
         }
     }
 
@@ -921,39 +910,54 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * <p>
      * The {@link PemEncoded} buffer is not released.
      */
-    static long toBIO(ByteBufAllocator allocator, PemEncoded pem) throws Exception {
+    static long toBIO(BufferAllocator allocator, PemEncoded pem) throws Exception {
+        if (pem == null) {
+            return 0;
+        }
         // We can turn direct buffers straight into BIOs. No need to
         // make a yet another copy.
-        ByteBuf content = pem.content();
-
+        Buffer content = pem.content();
         if (content.isDirect()) {
             return newBIO(content);
         }
 
-        ByteBuf buffer = allocator.directBuffer(content.readableBytes());
-        try {
-            buffer.writeBytes(content, content.readerIndex(), content.readableBytes());
-            return newBIO(buffer);
-        } finally {
+        int readableBytes = content.readableBytes();
+        try (Buffer buffer = allocator.allocate(readableBytes)) {
+            content.copyInto(content.readerOffset(), buffer, 0, readableBytes);
+            buffer.skipWritable(readableBytes);
             try {
+                return newBIO(buffer);
+            } finally {
                 // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we
                 // need to zero out the bytes of the copy before we're releasing it.
                 if (pem.isSensitive()) {
                     SslUtils.zeroout(buffer);
                 }
-            } finally {
-                buffer.release();
             }
         }
     }
 
-    private static long newBIO(ByteBuf buffer) throws Exception {
+    /**
+     * Allocate a BIO with a copy of the readable contents of the given buffer.
+     * <p>
+     * The buffer offsets are not modified.
+     *
+     * @param buffer The buffer to allocate a BIO for.
+     * @return The BIO address.
+     * @throws Exception if a problem occurs.
+     */
+    private static long newBIO(Buffer buffer) throws Exception {
+        // TODO figure out a way to still do the bioWrite call even when we have zero readable bytes
+        //  (do we actually need this?)
         long bio = SSL.newMemBIO();
-        int readable = buffer.readableBytes();
-        if (SSL.bioWrite(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
-            SSL.freeBIO(bio);
-            throw new IllegalStateException("Could not write data to memory BIO");
-        }
+        buffer.forEachReadable(0, (index, component) -> {
+            int readable = component.readableBytes();
+            if (SSL.bioWrite(bio, component.readableNativeAddress(), readable) != readable) {
+                SSL.freeBIO(bio);
+                throw new IllegalStateException("Could not write data to memory BIO");
+            }
+            return false;
+        });
         return bio;
     }
 

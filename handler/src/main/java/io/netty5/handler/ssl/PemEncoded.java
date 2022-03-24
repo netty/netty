@@ -15,13 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * A marker interface for PEM encoded values.
  */
-interface PemEncoded extends ByteBufHolder {
+interface PemEncoded extends AutoCloseable {
 
     /**
      * Returns {@code true} if the PEM encoded value is considered
@@ -29,27 +28,26 @@ interface PemEncoded extends ByteBufHolder {
      */
     boolean isSensitive();
 
-    @Override
+    /**
+     * Returns the {@link Buffer} with the PEM encoded contents of this value.
+     * <p>
+     * <strong>Note:</strong> The returned buffer should not be closed directly.
+     * Instead, {@link #close()} should be called on this PEM encoded value instead.
+     *
+     * @return The underlying {@link Buffer} with the contents of this PEM encoded value.
+     */
+    Buffer content();
+
+    /**
+     * Return a copy of this PEM encoded value.
+     *
+     * @return A new identical copy of this PEM encoded value.
+     */
     PemEncoded copy();
 
+    /**
+     * Close this PEM encoded value and free its related resources.
+     */
     @Override
-    PemEncoded duplicate();
-
-    @Override
-    PemEncoded retainedDuplicate();
-
-    @Override
-    PemEncoded replace(ByteBuf content);
-
-    @Override
-    PemEncoded retain();
-
-    @Override
-    PemEncoded retain(int increment);
-
-    @Override
-    PemEncoded touch();
-
-    @Override
-    PemEncoded touch(Object hint);
+    void close();
 }

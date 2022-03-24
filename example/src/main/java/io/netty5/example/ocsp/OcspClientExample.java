@@ -94,6 +94,7 @@ public class OcspClientExample {
                         .channel(NioSocketChannel.class)
                         .group(group)
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000)
+                        .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                         .handler(newClientHandler(context, host, promise));
 
                 Channel channel = bootstrap.connect(host, 443).get();
@@ -118,9 +119,9 @@ public class OcspClientExample {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                SslHandler sslHandler = context.newHandler(ch.alloc());
-                ReferenceCountedOpenSslEngine engine
-                    = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+                SslHandler sslHandler = context.newHandler(ch.bufferAllocator());
+                ReferenceCountedOpenSslEngine engine =
+                        (ReferenceCountedOpenSslEngine) sslHandler.engine();
 
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(sslHandler);

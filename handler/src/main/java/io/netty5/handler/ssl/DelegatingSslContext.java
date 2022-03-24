@@ -17,7 +17,7 @@ package io.netty5.handler.ssl;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
@@ -61,42 +61,42 @@ public abstract class DelegatingSslContext extends SslContext {
     }
 
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc) {
+    public final SSLEngine newEngine(BufferAllocator alloc) {
         SSLEngine engine = ctx.newEngine(alloc);
         initEngine(engine);
         return engine;
     }
 
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
+    public final SSLEngine newEngine(BufferAllocator alloc, String peerHost, int peerPort) {
         SSLEngine engine = ctx.newEngine(alloc, peerHost, peerPort);
         initEngine(engine);
         return engine;
     }
 
     @Override
-    protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+    protected final SslHandler newHandler(BufferAllocator alloc, boolean startTls) {
         SslHandler handler = ctx.newHandler(alloc, startTls);
         initHandler(handler);
         return handler;
     }
 
     @Override
-    protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+    protected final SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         SslHandler handler = ctx.newHandler(alloc, peerHost, peerPort, startTls);
         initHandler(handler);
         return handler;
     }
 
     @Override
-    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+    protected SslHandler newHandler(BufferAllocator alloc, boolean startTls, Executor executor) {
         SslHandler handler = ctx.newHandler(alloc, startTls, executor);
         initHandler(handler);
         return handler;
     }
 
     @Override
-    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+    protected SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
         SslHandler handler = ctx.newHandler(alloc, peerHost, peerPort, startTls, executor);
         initHandler(handler);

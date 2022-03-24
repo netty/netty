@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -27,6 +26,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.nio.charset.StandardCharsets;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
@@ -54,12 +56,9 @@ public class OptionalSslHandlerTest {
     @Test
     public void handlerRemoved() throws Exception {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
-        final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
-        try {
+        try (Buffer payload = onHeapAllocator().copyOf("plaintext".getBytes(StandardCharsets.UTF_8))) {
             handler.decode(context, payload);
             verify(pipeline).remove(handler);
-        } finally {
-            payload.release();
         }
     }
 
@@ -77,12 +76,9 @@ public class OptionalSslHandlerTest {
                 return HANDLER_NAME;
             }
         };
-        final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
-        try {
+        try (Buffer payload = onHeapAllocator().copyOf("plaintext".getBytes(StandardCharsets.UTF_8))) {
             handler.decode(context, payload);
             verify(pipeline).replace(handler, HANDLER_NAME, nonSslHandler);
-        } finally {
-            payload.release();
         }
     }
 
@@ -100,24 +96,18 @@ public class OptionalSslHandlerTest {
                 return SSL_HANDLER_NAME;
             }
         };
-        final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 5 });
-        try {
+        try (Buffer payload = onHeapAllocator().copyOf(new byte[] { 22, 3, 1, 0, 5 })) {
             handler.decode(context, payload);
             verify(pipeline).replace(handler, SSL_HANDLER_NAME, sslHandler);
-        } finally {
-            payload.release();
         }
     }
 
     @Test
     public void decodeBuffered() throws Exception {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
-        final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3 });
-        try {
+        try (Buffer payload = onHeapAllocator().copyOf(new byte[] { 22, 3 })) {
             handler.decode(context, payload);
             verifyZeroInteractions(pipeline);
-        } finally {
-            payload.release();
         }
     }
 }

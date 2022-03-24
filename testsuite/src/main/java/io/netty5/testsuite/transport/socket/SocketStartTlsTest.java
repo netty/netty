@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
@@ -53,8 +52,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
-import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,7 +111,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         run(testInfo, (sb, cb) -> testStartTls(sb, cb, serverCtx, clientCtx));
     }
 
-    public static void testStartTls(ServerBootstrap sb, Bootstrap cb,
+    public void testStartTls(ServerBootstrap sb, Bootstrap cb,
                                     SslContext serverCtx, SslContext clientCtx) throws Throwable {
         testStartTls(sb, cb, serverCtx, clientCtx, true);
     }
@@ -125,18 +124,19 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         run(testInfo, (sb, cb) -> testStartTlsNotAutoRead(sb, cb, serverCtx, clientCtx));
     }
 
-    public static void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb,
+    public void testStartTlsNotAutoRead(ServerBootstrap sb, Bootstrap cb,
                                                SslContext serverCtx, SslContext clientCtx) throws Throwable {
         testStartTls(sb, cb, serverCtx, clientCtx, false);
     }
 
-    private static void testStartTls(ServerBootstrap sb, Bootstrap cb,
+    private void testStartTls(ServerBootstrap sb, Bootstrap cb,
                                      SslContext serverCtx, SslContext clientCtx, boolean autoRead) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        SSLEngine sse = serverCtx.newEngine(PooledByteBufAllocator.DEFAULT);
-        SSLEngine cse = clientCtx.newEngine(PooledByteBufAllocator.DEFAULT);
+        SSLEngine sse = serverCtx.newEngine(offHeapAllocator());
+        SSLEngine cse = clientCtx.newEngine(offHeapAllocator());
 
         final StartTlsServerHandler sh = new StartTlsServerHandler(sse, autoRead);
         final StartTlsClientHandler ch = new StartTlsClientHandler(cse, autoRead);
@@ -146,7 +146,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(byteBufToBuffer(), new LineBasedFrameDecoder(64), bufferToByteBuf());
+                p.addLast(new LineBasedFrameDecoder(64), bufferToByteBuf());
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(sh);
             }
@@ -157,7 +157,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(byteBufToBuffer(), new LineBasedFrameDecoder(64), bufferToByteBuf());
+                p.addLast(new LineBasedFrameDecoder(64), bufferToByteBuf());
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(ch);
             }

@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.CharsetUtil;
 
@@ -36,6 +35,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -206,7 +206,7 @@ public class SslContextBuilderTest {
                 .sslProvider(provider)
                 .keyStoreType("PKCS12");
         SslContext context = builder.build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
         engine.closeInbound();
         engine.closeOutbound();
     }
@@ -220,7 +220,7 @@ public class SslContextBuilderTest {
                         cert.privateKey())
                 .trustManager(cert.certificate());
         SslContext context = builder.build();
-        context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        context.newEngine(offHeapAllocator());
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
@@ -232,7 +232,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(cert.certificate())
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
         assertFalse(engine.getWantClientAuth());
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
@@ -247,7 +247,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(cert.cert())
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
         assertFalse(engine.getWantClientAuth());
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
@@ -261,7 +261,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(cert.certificate())
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
         assertTrue(engine.getWantClientAuth());
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
@@ -275,7 +275,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(cert.cert())
                                                      .clientAuth(ClientAuth.REQUIRE);
         SslContext context = builder.build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(offHeapAllocator());
         assertFalse(engine.getWantClientAuth());
         assertTrue(engine.getNeedClientAuth());
         engine.closeInbound();
@@ -365,7 +365,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(customTrustManager)
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext client_context = client_builder.build();
-        SSLEngine client_engine = client_context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client_engine = client_context.newEngine(offHeapAllocator());
         assertFalse(client_engine.getWantClientAuth());
         assertFalse(client_engine.getNeedClientAuth());
         client_engine.closeInbound();
@@ -375,7 +375,7 @@ public class SslContextBuilderTest {
                                                      .trustManager(customTrustManager)
                                                      .clientAuth(ClientAuth.REQUIRE);
         SslContext server_context = server_builder.build();
-        SSLEngine server_engine = server_context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server_engine = server_context.newEngine(offHeapAllocator());
         assertFalse(server_engine.getWantClientAuth());
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();

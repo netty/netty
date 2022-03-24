@@ -17,7 +17,6 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
@@ -53,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -440,7 +440,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-        EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
+        EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(offHeapAllocator()),
                 new ChannelHandler() {
                     @Override
                     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
@@ -857,7 +857,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         final ChannelHandler sharedHandler = new Http2StreamFrameToHttpObjectCodec(false);
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-        EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
+        EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(offHeapAllocator()),
             new ChannelHandler() {
                 @Override
                 public Future<Void> write(ChannelHandlerContext ctx, Object msg) {

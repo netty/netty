@@ -64,7 +64,7 @@ public final class EchoServer {
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
-                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                         p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
                      }
                      //p.addLast(new LoggingHandler(LogLevel.INFO));
                      p.addLast(serverHandler);

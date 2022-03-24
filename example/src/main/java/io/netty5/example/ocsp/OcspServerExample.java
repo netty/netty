@@ -16,6 +16,28 @@
 
 package io.netty5.example.ocsp;
 
+import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.ReferenceCountedOpenSslContext;
+import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
+import io.netty5.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.ssl.SslProvider;
+import io.netty5.util.CharsetUtil;
+import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.ocsp.BasicOCSPResp;
+import org.bouncycastle.cert.ocsp.CertificateStatus;
+import org.bouncycastle.cert.ocsp.OCSPReq;
+import org.bouncycastle.cert.ocsp.OCSPResp;
+import org.bouncycastle.cert.ocsp.SingleResp;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMParser;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -28,29 +50,6 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.ocsp.BasicOCSPResp;
-import org.bouncycastle.cert.ocsp.CertificateStatus;
-import org.bouncycastle.cert.ocsp.OCSPReq;
-import org.bouncycastle.cert.ocsp.OCSPResp;
-import org.bouncycastle.cert.ocsp.SingleResp;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-
-import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.ssl.OpenSsl;
-import io.netty5.handler.ssl.ReferenceCountedOpenSslContext;
-import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
-import io.netty5.handler.ssl.SslContextBuilder;
-import io.netty5.handler.ssl.SslHandler;
-import io.netty5.handler.ssl.SslProvider;
-import io.netty5.util.CharsetUtil;
 
 /**
  * ATTENTION: This is an incomplete example! In order to provide a fully functional
@@ -125,11 +124,11 @@ public class OcspServerExample {
             throw new IllegalStateException("Because we don't have a PrivateKey we can't continue past this point.");
         }
 
-        ReferenceCountedOpenSslContext context
-            = (ReferenceCountedOpenSslContext) SslContextBuilder.forServer(privateKey, keyCertChain)
-                .sslProvider(SslProvider.OPENSSL)
-                .enableOcsp(true)
-                .build();
+        ReferenceCountedOpenSslContext context =
+                (ReferenceCountedOpenSslContext) SslContextBuilder.forServer(privateKey, keyCertChain)
+                                                                  .sslProvider(SslProvider.OPENSSL)
+                                                                  .enableOcsp(true)
+                                                                  .build();
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
@@ -146,7 +145,7 @@ public class OcspServerExample {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                SslHandler sslHandler = context.newHandler(ch.alloc());
+                SslHandler sslHandler = context.newHandler(ch.bufferAllocator());
 
                 if (response != null) {
                     ReferenceCountedOpenSslEngine engine

@@ -69,7 +69,7 @@ public final class FileServer {
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
-                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                         p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
                      }
                      p.addLast(
                              new StringEncoder(CharsetUtil.UTF_8),

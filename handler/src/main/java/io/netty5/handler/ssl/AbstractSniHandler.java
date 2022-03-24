@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
@@ -31,7 +31,7 @@ import java.util.Locale;
  */
 public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
-    private static String extractSniHostname(ByteBuf in) {
+    private static String extractSniHostname(Buffer in) {
         // See https://tools.ietf.org/html/rfc5246#section-7.4.1.2
         //
         // Decode the ssl client hello packet.
@@ -52,8 +52,8 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         //
 
         // We have to skip bytes until SessionID (which sum to 34 bytes in this case).
-        int offset = in.readerIndex();
-        int endOffset = in.writerIndex();
+        int offset = in.readerOffset();
+        int endOffset = in.writerOffset();
         offset += 34;
 
         if (endOffset - offset >= 6) {
@@ -102,7 +102,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                 break;
                             }
 
-                            final String hostname = in.toString(offset, serverNameLength, CharsetUtil.US_ASCII);
+                            String hostname = in.copy(offset, serverNameLength).toString(StandardCharsets.US_ASCII);
                             return hostname.toLowerCase(Locale.US);
                         } else {
                             // invalid enum value
@@ -120,7 +120,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     private String hostname;
 
     @Override
-    protected Future<T> lookup(ChannelHandlerContext ctx, ByteBuf clientHello) throws Exception {
+    protected Future<T> lookup(ChannelHandlerContext ctx, Buffer clientHello) throws Exception {
         hostname = clientHello == null ? null : extractSniHostname(clientHello);
 
         return lookup(ctx, hostname);

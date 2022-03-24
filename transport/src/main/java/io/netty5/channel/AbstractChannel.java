@@ -698,6 +698,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Throwable t) {
                 try {
                     ReferenceCountUtil.release(msg);
+                } catch (Throwable inner) {
+                    t.addSuppressed(inner);
                 } finally {
                     safeSetFailure(promise, t);
                 }

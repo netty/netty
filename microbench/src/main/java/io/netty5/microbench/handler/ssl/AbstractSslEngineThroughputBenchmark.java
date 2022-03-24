@@ -15,8 +15,9 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.api.pool.PooledBufferAllocator;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
@@ -37,7 +38,7 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
 
     @Setup(Level.Iteration)
     public final void setup() throws Exception {
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true);
+        BufferAllocator allocator = new PooledBufferAllocator(MemoryManager.instance(), true);
         initEngines(allocator);
         initHandshakeBuffers();
 

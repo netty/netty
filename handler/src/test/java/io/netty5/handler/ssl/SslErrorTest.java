@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -146,10 +147,11 @@ public class SslErrorTest {
             serverChannel = new ServerBootstrap().group(group)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                             if (!serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
                                         exception, promise));
@@ -166,10 +168,11 @@ public class SslErrorTest {
 
             clientChannel = new Bootstrap().group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
 
                             if (serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,

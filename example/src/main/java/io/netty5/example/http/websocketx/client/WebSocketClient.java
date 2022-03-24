@@ -18,6 +18,7 @@ package io.netty5.example.http.websocketx.client;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -104,12 +105,13 @@ public final class WebSocketClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
+             .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  protected void initChannel(SocketChannel ch) {
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
-                         p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
+                         p.addLast(sslCtx.newHandler(ch.bufferAllocator(), host, port));
                      }
                      p.addLast(
                              new HttpClientCodec(),

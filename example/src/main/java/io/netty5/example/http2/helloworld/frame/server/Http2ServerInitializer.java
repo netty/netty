@@ -77,7 +77,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for TLS NPN negotiation to HTTP/2.
      */
     private void configureSsl(SocketChannel ch) {
-        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
+        ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()), new Http2OrHttpHandler());
     }
 
     /**

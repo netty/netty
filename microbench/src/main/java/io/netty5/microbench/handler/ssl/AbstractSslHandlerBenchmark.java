@@ -15,11 +15,10 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
@@ -34,7 +33,7 @@ import java.io.File;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
-import static io.netty5.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
+import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.COMPOSITE_CUMULATOR;
 
 public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     private static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
@@ -85,13 +84,13 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
             }
         }
 
-        SslHandler newClientHandler(ByteBufAllocator allocator, String cipher) {
+        SslHandler newClientHandler(BufferAllocator allocator, String cipher) {
             SslHandler handler = clientContext.newHandler(allocator);
             configureEngine(handler.engine(), cipher);
             return handler;
         }
 
-        SslHandler newServerHandler(ByteBufAllocator allocator, String cipher) {
+        SslHandler newServerHandler(BufferAllocator allocator, String cipher) {
             SslHandler handler = serverContext.newHandler(allocator);
             configureEngine(handler.engine(), cipher);
             return handler;
@@ -118,7 +117,7 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     protected EmbeddedChannelWriteAccumulatingHandlerContext clientCtx;
     protected EmbeddedChannelWriteAccumulatingHandlerContext serverCtx;
 
-    protected final void initSslHandlers(ByteBufAllocator allocator) {
+    protected final void initSslHandlers(BufferAllocator allocator) {
         clientSslHandler = newClientHandler(allocator);
         serverSslHandler = newServerHandler(allocator);
         clientCtx = new SslThroughputBenchmarkHandlerContext(allocator, clientSslHandler, COMPOSITE_CUMULATOR);
@@ -141,36 +140,31 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
         serverSslHandler.handlerAdded(serverCtx);
         clientSslHandler.handlerAdded(clientCtx);
         do {
-            ByteBuf clientCumulation = clientCtx.cumulation();
+            Buffer clientCumulation = clientCtx.cumulation();
             if (clientCumulation != null) {
-                serverSslHandler.channelRead(serverCtx, clientCumulation.retain());
+                serverSslHandler.channelRead(serverCtx, clientCumulation.split());
                 clientCtx.releaseCumulation();
             }
-            ByteBuf serverCumulation = serverCtx.cumulation();
+            Buffer serverCumulation = serverCtx.cumulation();
             if (serverCumulation != null) {
-                clientSslHandler.channelRead(clientCtx, serverCumulation.retain());
+                clientSslHandler.channelRead(clientCtx, serverCumulation.split());
                 serverCtx.releaseCumulation();
             }
         } while (!clientSslHandler.handshakeFuture().isDone() || !serverSslHandler.handshakeFuture().isDone());
     }
 
-    protected final SslHandler newClientHandler(ByteBufAllocator allocator) {
+    protected final SslHandler newClientHandler(BufferAllocator allocator) {
         return sslProvider.newClientHandler(allocator, cipher);
     }
 
-    protected final SslHandler newServerHandler(ByteBufAllocator allocator) {
+    protected final SslHandler newServerHandler(BufferAllocator allocator) {
         return sslProvider.newServerHandler(allocator, cipher);
     }
 
     private static final class SslThroughputBenchmarkHandlerContext extends
             EmbeddedChannelWriteAccumulatingHandlerContext {
-        SslThroughputBenchmarkHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-                                             ByteToMessageDecoder.Cumulator writeCumulator) {
-            super(alloc, handler, writeCumulator);
-        }
-
         SslThroughputBenchmarkHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                             ByteToMessageDecoder.Cumulator writeCumulator) {
+                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator) {
             super(alloc, handler, writeCumulator);
         }
 

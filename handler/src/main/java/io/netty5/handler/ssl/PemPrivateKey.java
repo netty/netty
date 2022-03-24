@@ -15,33 +15,31 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 
 import java.security.PrivateKey;
 
 import javax.security.auth.Destroyable;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty5.util.AbstractReferenceCounted;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.BufferHolder;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.IllegalReferenceCountException;
 
 /**
  * This is a special purpose implementation of a {@link PrivateKey} which allows the
  * user to pass PEM/PKCS#8 encoded key material straight into {@link OpenSslContext}
  * without having to parse and re-encode bytes in Java land.
- *
+ * <p>
  * All methods other than what's implemented in {@link PemEncoded} and {@link Destroyable}
  * throw {@link UnsupportedOperationException}s.
  *
  * @see PemEncoded
  * @see OpenSslContext
  * @see #valueOf(byte[])
- * @see #valueOf(ByteBuf)
+ * @see #valueOf(Buffer)
  */
-public final class PemPrivateKey extends AbstractReferenceCounted implements PrivateKey, PemEncoded {
+public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements PrivateKey, PemEncoded {
     private static final long serialVersionUID = 7978017465645018936L;
 
     private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
@@ -52,13 +50,13 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     /**
      * Creates a {@link PemEncoded} value from the {@link PrivateKey}.
      */
-    static PemEncoded toPEM(ByteBufAllocator allocator, boolean useDirect, PrivateKey key) {
+    static PemEncoded toPEM(BufferAllocator allocator, PrivateKey key) {
         // We can take a shortcut if the private key happens to be already
         // PEM/PKCS#8 encoded. This is the ideal case and reason why all
         // this exists. It allows the user to pass pre-encoded bytes straight
         // into OpenSSL without having to do any of the extra work.
         if (key instanceof PemEncoded) {
-            return ((PemEncoded) key).retain();
+            return ((PemEncoded) key).copy();
         }
 
         byte[] bytes = key.getEncoded();
@@ -66,18 +64,17 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
             throw new IllegalArgumentException(key.getClass().getName() + " does not support encoding");
         }
 
-        return toPEM(allocator, useDirect, bytes);
+        return toPEM(allocator, bytes);
     }
 
-    static PemEncoded toPEM(ByteBufAllocator allocator, boolean useDirect, byte[] bytes) {
-        ByteBuf encoded = Unpooled.wrappedBuffer(bytes);
-        try {
-            ByteBuf base64 = SslUtils.toBase64(allocator, encoded);
-            try {
+    static PemEncoded toPEM(BufferAllocator allocator, byte[] bytes) {
+        try (Buffer encoded = allocator.copyOf(bytes);
+             Buffer base64 = SslUtils.toBase64(allocator, encoded)) {
+            try  {
                 int size = BEGIN_PRIVATE_KEY.length + base64.readableBytes() + END_PRIVATE_KEY.length;
 
                 boolean success = false;
-                final ByteBuf pem = useDirect ? allocator.directBuffer(size) : allocator.buffer(size);
+                final Buffer pem = allocator.allocate(size);
                 try {
                     pem.writeBytes(BEGIN_PRIVATE_KEY);
                     pem.writeBytes(base64);
@@ -89,14 +86,14 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
                 } finally {
                     // Make sure we never leak that PEM ByteBuf if there's an Exception.
                     if (!success) {
-                        SslUtils.zerooutAndRelease(pem);
+                        SslUtils.zeroout(pem);
+                        pem.close();
                     }
                 }
             } finally {
-                SslUtils.zerooutAndRelease(base64);
+                SslUtils.zeroout(base64);
+                SslUtils.zeroout(encoded);
             }
-        } finally {
-            SslUtils.zerooutAndRelease(encoded);
         }
     }
 
@@ -107,23 +104,21 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
      * No input validation is performed to validate it.
      */
     public static PemPrivateKey valueOf(byte[] key) {
-        return valueOf(Unpooled.wrappedBuffer(key));
+        return valueOf(offHeapAllocator().copyOf(key));
     }
 
     /**
-     * Creates a {@link PemPrivateKey} from raw {@code ByteBuf}.
+     * Creates a {@link PemPrivateKey} from raw {@link Buffer}.
      *
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
-    public static PemPrivateKey valueOf(ByteBuf key) {
+    public static PemPrivateKey valueOf(Buffer key) {
         return new PemPrivateKey(key);
     }
 
-    private final ByteBuf content;
-
-    private PemPrivateKey(ByteBuf content) {
-        this.content = requireNonNull(content, "content");
+    private PemPrivateKey(Buffer content) {
+        super(content.makeReadOnly());
     }
 
     @Override
@@ -132,62 +127,32 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     }
 
     @Override
-    public ByteBuf content() {
-        int count = refCnt();
-        if (count <= 0) {
-            throw new IllegalReferenceCountException(count);
+    public Buffer content() {
+        if (!isAccessible()) {
+            throw new IllegalStateException("PemPrivateKey is closed.");
         }
 
-        return content;
+        return getBuffer();
     }
 
     @Override
     public PemPrivateKey copy() {
-        return replace(content.copy());
+        Buffer buffer = getBuffer();
+        return new PemPrivateKey(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true));
     }
 
     @Override
-    public PemPrivateKey duplicate() {
-        return replace(content.duplicate());
+    protected PemPrivateKey receive(Buffer buf) {
+        return new PemPrivateKey(buf);
     }
 
     @Override
-    public PemPrivateKey retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemPrivateKey replace(ByteBuf content) {
-        return new PemPrivateKey(content);
-    }
-
-    @Override
-    public PemPrivateKey touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public PemPrivateKey touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public PemPrivateKey retain() {
-        return (PemPrivateKey) super.retain();
-    }
-
-    @Override
-    public PemPrivateKey retain(int increment) {
-        return (PemPrivateKey) super.retain(increment);
-    }
-
-    @Override
-    protected void deallocate() {
+    public void close() {
         // Private Keys are sensitive. We need to zero the bytes
-        // before we're releasing the underlying ByteBuf
-        SslUtils.zerooutAndRelease(content);
+        // before we're releasing the underlying Buffer
+        // TODO cannot do this when the buffer is read-only
+//        SslUtils.zeroout(getBuffer());
+        super.close();
     }
 
     @Override
@@ -205,27 +170,13 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
         return PKCS8_FORMAT;
     }
 
-    /**
-     * NOTE: This is a JDK8 interface/method. Due to backwards compatibility
-     * reasons it's not possible to slap the {@code @Override} annotation onto
-     * this method.
-     *
-     * @see Destroyable#destroy()
-     */
     @Override
     public void destroy() {
-        release(refCnt());
+        close();
     }
 
-    /**
-     * NOTE: This is a JDK8 interface/method. Due to backwards compatibility
-     * reasons it's not possible to slap the {@code @Override} annotation onto
-     * this method.
-     *
-     * @see Destroyable#isDestroyed()
-     */
     @Override
     public boolean isDestroyed() {
-        return refCnt() == 0;
+        return !isAccessible();
     }
 }

@@ -95,7 +95,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel sch) throws Exception {
-                SSLEngine engine = serverCtx.newEngine(sch.alloc());
+                SSLEngine engine = serverCtx.newEngine(sch.bufferAllocator());
                 engine.setUseClientMode(false);
                 engine.setEnabledProtocols(protocols);
 
@@ -109,7 +109,8 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             @Override
             protected void initChannel(SocketChannel sch) throws Exception {
                 InetSocketAddress serverAddr = (InetSocketAddress) sc.localAddress();
-                SSLEngine engine = clientCtx.newEngine(sch.alloc(), serverAddr.getHostString(), serverAddr.getPort());
+                SSLEngine engine = clientCtx.newEngine(
+                        sch.bufferAllocator(), serverAddr.getHostString(), serverAddr.getPort());
                 engine.setUseClientMode(true);
                 engine.setEnabledProtocols(protocols);
 

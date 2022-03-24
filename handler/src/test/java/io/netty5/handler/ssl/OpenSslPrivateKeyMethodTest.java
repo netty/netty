@@ -17,13 +17,12 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -65,6 +64,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -130,7 +130,7 @@ public class OpenSslPrivateKeyMethodTest {
         assumeTrue(cipherSupported, "Unsupported cipher: " + RFC_CIPHER_NAME);
     }
 
-    private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
+    private static SslHandler newSslHandler(SslContext sslCtx, BufferAllocator allocator, Executor executor) {
         if (executor == null) {
             return sslCtx.newHandler(allocator);
         } else {
@@ -234,7 +234,8 @@ public class OpenSslPrivateKeyMethodTest {
                     @Override
                     protected void initChannel(Channel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(newSslHandler(sslServerContext, ch.alloc(), delegateExecutor(delegate)));
+                        pipeline.addLast(newSslHandler(
+                                sslServerContext, ch.bufferAllocator(), delegateExecutor(delegate)));
 
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
@@ -246,7 +247,7 @@ public class OpenSslPrivateKeyMethodTest {
                             @Override
                             public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                                 if (serverPromise.trySuccess(null)) {
-                                    ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
+                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
                                 ctx.close();
                             }
@@ -270,7 +271,8 @@ public class OpenSslPrivateKeyMethodTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(newSslHandler(sslClientContext, ch.alloc(), delegateExecutor(delegate)));
+                            pipeline.addLast(newSslHandler(
+                                    sslClientContext, ch.bufferAllocator(), delegateExecutor(delegate)));
 
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
@@ -297,7 +299,7 @@ public class OpenSslPrivateKeyMethodTest {
 
                     Channel client = client(server, clientHandler);
                     try {
-                        client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
+                        client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
                                 .syncUninterruptibly();
 
                         Future<Object> clientFuture = clientPromise.asFuture();
@@ -353,9 +355,9 @@ public class OpenSslPrivateKeyMethodTest {
         final SslContext sslClientContext = buildClientContext();
 
         SslHandler serverSslHandler = newSslHandler(
-                sslServerContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor(delegate));
+                sslServerContext, offHeapAllocator(), delegateExecutor(delegate));
         SslHandler clientSslHandler = newSslHandler(
-                sslClientContext, UnpooledByteBufAllocator.DEFAULT, delegateExecutor(delegate));
+                sslClientContext, offHeapAllocator(), delegateExecutor(delegate));
 
         try {
             try {
@@ -388,6 +390,7 @@ public class OpenSslPrivateKeyMethodTest {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(GROUP)
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(handler);
 
         return bootstrap.bind(address).get();
@@ -399,6 +402,7 @@ public class OpenSslPrivateKeyMethodTest {
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(GROUP)
+                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(handler);
 
         return bootstrap.connect(remoteAddress).get();

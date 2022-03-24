@@ -36,7 +36,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
 
         // Enable HTTPS if necessary.
         if (sslCtx != null) {
-            p.addLast(sslCtx.newHandler(ch.alloc()));
+            p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
 
         p.addLast(new HttpClientCodec());

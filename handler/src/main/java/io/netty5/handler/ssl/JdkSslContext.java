@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -317,17 +317,17 @@ public class JdkSslContext extends SslContext {
     }
 
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc) {
+    public final SSLEngine newEngine(BufferAllocator alloc) {
         return configureAndWrapEngine(context().createSSLEngine(), alloc);
     }
 
     @Override
-    public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
+    public final SSLEngine newEngine(BufferAllocator alloc, String peerHost, int peerPort) {
         return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort), alloc);
     }
 
     @SuppressWarnings("deprecation")
-    private SSLEngine configureAndWrapEngine(SSLEngine engine, ByteBufAllocator alloc) {
+    private SSLEngine configureAndWrapEngine(SSLEngine engine, BufferAllocator alloc) {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(protocols);
         engine.setUseClientMode(isClient());

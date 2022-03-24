@@ -18,6 +18,8 @@ package io.netty5.handler.logging;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -37,7 +39,7 @@ import static java.util.Objects.requireNonNull;
  * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
 @Sharable
-@SuppressWarnings({ "StringBufferReplaceableByString" })
+@SuppressWarnings("StringBufferReplaceableByString")
 public class LoggingHandler implements ChannelHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
@@ -324,7 +326,9 @@ public class LoggingHandler implements ChannelHandler {
      * @param arg       the argument of the event
      */
     protected String format(ChannelHandlerContext ctx, String eventName, Object arg) {
-        if (arg instanceof ByteBufConvertible) {
+        if (arg instanceof Buffer) {
+            return formatBuffer(ctx, eventName, (Buffer) arg);
+        } else if (arg instanceof ByteBufConvertible) {
             return formatByteBuf(ctx, eventName, ((ByteBufConvertible) arg).asByteBuf());
         } else if (arg instanceof ByteBufHolder) {
             return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
@@ -377,6 +381,34 @@ public class LoggingHandler implements ChannelHandler {
             if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
                 buf.append(NEWLINE);
                 appendPrettyHexDump(buf, msg);
+            }
+
+            return buf.toString();
+        }
+    }
+
+    /**
+     * Generates the default log message of the specified event whose argument is a {@link Buffer}.
+     */
+    private String formatBuffer(ChannelHandlerContext ctx, String eventName, Buffer msg) {
+        String chStr = ctx.channel().toString();
+        int length = msg.readableBytes();
+        if (length == 0) {
+            StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 4);
+            buf.append(chStr).append(' ').append(eventName).append(": 0B");
+            return buf.toString();
+        } else {
+            int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int hexDumpLength = 2 + rows * 80;
+                outputLength += hexDumpLength;
+            }
+            StringBuilder buf = new StringBuilder(outputLength);
+            buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B');
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                buf.append(NEWLINE);
+                ByteBufUtil.appendPrettyHexDump(buf, msg);
             }
 
             return buf.toString();

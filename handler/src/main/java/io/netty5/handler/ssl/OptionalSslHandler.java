@@ -15,23 +15,22 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.util.ReferenceCountUtil;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * {@link OptionalSslHandler} is a utility decoder to support both SSL and non-SSL handlers
  * based on the first message received.
  */
-public class OptionalSslHandler extends ByteToMessageDecoder {
+public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
 
     private final SslContext sslContext;
 
@@ -40,7 +39,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext context, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext context, Buffer in) throws Exception {
         if (in.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             return;
         }
@@ -86,7 +85,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     /**
      * Override to configure the SslHandler eg. {@link SSLParameters#setEndpointIdentificationAlgorithm(String)}.
      * The hostname and port is not known by this method so servers may want to override this method and use the
-     * {@link SslContext#newHandler(ByteBufAllocator, String, int)} variant.
+     * {@link SslContext#newHandler(io.netty5.buffer.api.BufferAllocator, String, int)} variant.
      *
      * @param context the {@link ChannelHandlerContext} to use.
      * @param sslContext the {@link SSLContext} to use.
@@ -94,7 +93,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
      * traffic is SSL.
      */
     protected SslHandler newSslHandler(ChannelHandlerContext context, SslContext sslContext) {
-        return sslContext.newHandler(context.alloc());
+        return sslContext.newHandler(context.bufferAllocator());
     }
 
     /**

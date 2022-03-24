@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -165,7 +165,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 if (issuers != null && issuers.length > 0) {
                     long bio = 0;
                     try {
-                        bio = toBIO(ByteBufAllocator.DEFAULT, issuers);
+                        bio = toBIO(DefaultBufferAllocators.offHeapAllocator(), issuers);
                         if (!SSLContext.setCACertificateBio(ctx, bio)) {
                             throw new SSLException("unable to setup accepted issuers for trustmanager " + manager);
                         }

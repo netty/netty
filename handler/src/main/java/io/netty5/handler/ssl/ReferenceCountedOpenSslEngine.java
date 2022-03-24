@@ -15,12 +15,17 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.ReadableComponent;
+import io.netty5.buffer.api.ReadableComponentProcessor;
+import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.api.WritableComponent;
+import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncTask;
-import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCounted;
@@ -68,7 +73,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
-import static io.netty5.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty5.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty5.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
@@ -94,7 +98,8 @@ import static javax.net.ssl.SSLEngineResult.Status.OK;
  * the instance depends upon are released. Otherwise if any method of this class is called which uses the
  * the {@link ReferenceCountedOpenSslContext} JNI resources the JVM may crash.
  */
-public class ReferenceCountedOpenSslEngine extends SSLEngine implements ReferenceCounted, ApplicationProtocolAccessor {
+public class ReferenceCountedOpenSslEngine extends SSLEngine
+        implements ReferenceCounted, ApplicationProtocolAccessor, VectoredUnwrap {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
 
@@ -210,7 +215,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     final boolean jdkCompatibilityMode;
     private final boolean clientMode;
-    final ByteBufAllocator alloc;
+    final BufferAllocator alloc;
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
@@ -234,11 +239,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      *                             wrap or unwrap call.
      * @param leakDetection {@code true} to enable leak detection of this object.
      */
-    ReferenceCountedOpenSslEngine(ReferenceCountedOpenSslContext context, final ByteBufAllocator alloc, String peerHost,
+    ReferenceCountedOpenSslEngine(ReferenceCountedOpenSslContext context, final BufferAllocator alloc, String peerHost,
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        this.alloc = requireNonNull(alloc, "alloc");
+        requireNonNull(alloc, "alloc");
+        if (alloc.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+            this.alloc = DefaultBufferAllocators.offHeapAllocator();
+        } else {
+            this.alloc = alloc;
+        }
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
         session = new DefaultOpenSslSession(context.sessionContext());
@@ -507,8 +517,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * Calling this function with src.remaining == 0 is undefined.
      */
     private int writePlaintextData(final ByteBuffer src, int len) {
+        assert len > 0 && src.remaining() > 0;
         final int pos = src.position();
-        final int limit = src.limit();
         final int sslWrote;
 
         if (src.isDirect()) {
@@ -517,57 +527,89 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 src.position(pos + sslWrote);
             }
         } else {
-            ByteBuf buf = alloc.directBuffer(len);
-            try {
-                src.limit(pos + len);
-
-                buf.setBytes(0, src);
-                src.limit(limit);
-
-                sslWrote = SSL.writeToSSL(ssl, memoryAddress(buf), len);
+            try (Buffer buf = alloc.allocate(len)) {
+                buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
+                SslWrite write = new SslWrite(ssl, len);
+                buf.forEachReadable(0, write);
+                sslWrote = write.sslWrote;
                 if (sslWrote > 0) {
                     src.position(pos + sslWrote);
                 } else {
                     src.position(pos);
                 }
-            } finally {
-                buf.release();
             }
         }
         return sslWrote;
     }
 
+    static final class SslWrite implements ReadableComponentProcessor<RuntimeException> {
+        private final long ssl;
+        private final int len;
+        int sslWrote;
+
+        SslWrite(long ssl, int len) {
+            this.ssl = ssl;
+            this.len = len;
+        }
+
+        @Override
+        public boolean process(int index, ReadableComponent component) {
+            sslWrote = SSL.writeToSSL(ssl, component.readableNativeAddress(), len);
+            return false;
+        }
+    }
+
     /**
      * Write encrypted data to the OpenSSL network BIO.
      */
-    private ByteBuf writeEncryptedData(final ByteBuffer src, int len) throws SSLException {
+    private Buffer writeEncryptedData(final ByteBuffer src, int len) throws SSLException {
+        assert len > 0 && src.remaining() > 0;
         final int pos = src.position();
         if (src.isDirect()) {
             SSL.bioSetByteBuffer(networkBIO, bufferAddress(src) + pos, len, false);
         } else {
-            final ByteBuf buf = alloc.directBuffer(len);
+            Buffer buf = alloc.allocate(len);
             try {
-                final int limit = src.limit();
-                src.limit(pos + len);
-                buf.writeBytes(src);
-                // Restore the original position and limit because we don't want to consume from `src`.
-                src.position(pos);
-                src.limit(limit);
-
-                SSL.bioSetByteBuffer(networkBIO, memoryAddress(buf), len, false);
+                buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
+                SslBioSetByteBuffer setBB = new SslBioSetByteBuffer(networkBIO, len);
+                buf.forEachReadable(0, setBB);
                 return buf;
             } catch (Throwable cause) {
-                buf.release();
+                buf.close();
                 throw cause;
             }
         }
         return null;
     }
 
+    static final class SslBioSetByteBuffer implements ReadableComponentProcessor<RuntimeException>,
+                                                      WritableComponentProcessor<RuntimeException> {
+        private final long networkBIO;
+        private final int len;
+
+        SslBioSetByteBuffer(long networkBIO, int len) {
+            this.networkBIO = networkBIO;
+            this.len = len;
+        }
+
+        @Override
+        public boolean process(int index, ReadableComponent component) {
+            SSL.bioSetByteBuffer(networkBIO, component.readableNativeAddress(), len, false);
+            return false;
+        }
+
+        @Override
+        public boolean process(int index, WritableComponent component) {
+            SSL.bioSetByteBuffer(networkBIO, component.writableNativeAddress(), len, true);
+            return false;
+        }
+    }
+
     /**
      * Read plaintext data from the OpenSSL internal BIO
      */
     private int readPlaintextData(final ByteBuffer dst) throws SSLException {
+        assert dst.remaining() > 0;
         final int sslRead;
         final int pos = dst.position();
         if (dst.isDirect()) {
@@ -578,20 +620,35 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         } else {
             final int limit = dst.limit();
             final int len = min(maxEncryptedPacketLength0(), limit - pos);
-            final ByteBuf buf = alloc.directBuffer(len);
-            try {
-                sslRead = SSL.readFromSSL(ssl, memoryAddress(buf), len);
+            try (Buffer buf = alloc.allocate(len)) {
+                SslRead read = new SslRead(ssl, len);
+                buf.forEachWritable(0, read);
+                sslRead = read.sslRead;
                 if (sslRead > 0) {
-                    dst.limit(pos + sslRead);
-                    buf.getBytes(buf.readerIndex(), dst);
-                    dst.limit(limit);
+                    buf.copyInto(0, dst, dst.position(), sslRead);
+                    dst.position(dst.position() + sslRead);
                 }
-            } finally {
-                buf.release();
             }
         }
 
         return sslRead;
+    }
+
+    static final class SslRead implements WritableComponentProcessor<RuntimeException> {
+        private final long ssl;
+        private final int len;
+        private int sslRead;
+
+        SslRead(long ssl, int len) {
+            this.ssl = ssl;
+            this.len = len;
+        }
+
+        @Override
+        public boolean process(int index, WritableComponent component) {
+            sslRead = SSL.readFromSSL(ssl, component.writableNativeAddress(), len);
+            return false;
+        }
     }
 
     /**
@@ -677,18 +734,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             int bytesProduced = 0;
-            ByteBuf bioReadCopyBuf = null;
-            try {
-                // Setup the BIO buffer so that we directly write the encryption results into dst.
-                if (dst.isDirect()) {
-                    SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), dst.remaining(),
-                            true);
-                } else {
-                    bioReadCopyBuf = alloc.directBuffer(dst.remaining());
-                    SSL.bioSetByteBuffer(networkBIO, memoryAddress(bioReadCopyBuf), bioReadCopyBuf.writableBytes(),
-                            true);
-                }
+            final Buffer bioReadCopyBuf;
+            // Setup the BIO buffer so that we directly write the encryption results into dst.
+            if (dst.isDirect()) {
+                SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), dst.remaining(), true);
+                bioReadCopyBuf = null;
+            } else {
+                int len = dst.remaining();
+                bioReadCopyBuf = alloc.allocate(len);
+                SslBioSetByteBuffer setBB = new SslBioSetByteBuffer(networkBIO, len);
+                bioReadCopyBuf.forEachWritable(0, setBB);
+            }
 
+            try {
                 int bioLengthBefore = SSL.bioLengthByteBuffer(networkBIO);
 
                 // Explicitly use outboundClosed as we want to drain any bytes that are still present.
@@ -934,10 +992,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (bioReadCopyBuf == null) {
                     dst.position(dst.position() + bytesProduced);
                 } else {
-                    assert bioReadCopyBuf.readableBytes() <= dst.remaining() : "The destination buffer " + dst +
-                            " didn't have enough remaining space to hold the encrypted content in " + bioReadCopyBuf;
-                    dst.put(bioReadCopyBuf.internalNioBuffer(bioReadCopyBuf.readerIndex(), bytesProduced));
-                    bioReadCopyBuf.release();
+                    try (bioReadCopyBuf) {
+                        bioReadCopyBuf.skipWritable(bytesProduced);
+                        assert bioReadCopyBuf.readableBytes() <= dst.remaining() :
+                                "The destination buffer " + dst + " didn't have enough remaining space to hold the " +
+                                "encrypted content in " + bioReadCopyBuf;
+                        bioReadCopyBuf.copyInto(0, dst, dst.position(), bytesProduced);
+                        dst.position(dst.position() + bytesProduced);
+                    }
                 }
             }
         }
@@ -1142,7 +1204,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 for (;;) {
                     ByteBuffer src = srcs[srcsOffset];
                     int remaining = src.remaining();
-                    final ByteBuf bioWriteCopyBuf;
+                    final Buffer bioWriteCopyBuf;
                     int pendingEncryptedBytes;
                     if (remaining == 0) {
                         if (sslPending <= 0) {
@@ -1241,7 +1303,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         }
                     } finally {
                         if (bioWriteCopyBuf != null) {
-                            bioWriteCopyBuf.release();
+                            bioWriteCopyBuf.close();
                         }
                     }
                 }
@@ -1316,6 +1378,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
+    @Override
     public final SSLEngineResult unwrap(final ByteBuffer[] srcs, final ByteBuffer[] dsts) throws SSLException {
         return unwrap(srcs, 0, srcs.length, dsts, 0, dsts.length);
     }
@@ -2185,7 +2248,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (PlatformDependent.hasUnsafe()) {
             return PlatformDependent.directBufferAddress(b);
         }
-        return Buffer.address(b);
+        return io.netty.internal.tcnative.Buffer.address(b);
     }
 
     /**

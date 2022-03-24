@@ -33,7 +33,7 @@ public class Http2StaticFileServerInitializer extends ChannelInitializer<SocketC
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         pipeline.addLast(Http2FrameCodecBuilder.forServer().build());
         pipeline.addLast(new ChunkedWriteHandler());
         pipeline.addLast(new Http2StaticFileServerHandler());

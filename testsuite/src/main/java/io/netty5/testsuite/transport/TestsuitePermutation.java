@@ -24,11 +24,12 @@ import io.netty5.buffer.api.BufferAllocator;
 import java.util.List;
 
 public final class TestsuitePermutation {
+    private static final List<AllocatorConfig> ALLOCATOR_CONFIGS = List.of(
+            new AllocatorConfig(UnpooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapUnpooled()),
+            new AllocatorConfig(PooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapPooled()));
 
     public static List<AllocatorConfig> allocator() {
-        return List.of(
-                new AllocatorConfig(UnpooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapUnpooled()),
-                new AllocatorConfig(PooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapPooled()));
+        return ALLOCATOR_CONFIGS;
     }
 
     private TestsuitePermutation() { }

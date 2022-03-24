@@ -15,7 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import javax.net.ssl.SSLEngine;
 import java.util.List;
 import java.util.Set;
@@ -51,7 +52,9 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
         @Override
         public final SSLEngine wrapSslEngine(SSLEngine engine,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-            return wrapSslEngine(engine, ByteBufAllocator.DEFAULT, applicationNegotiator, isServer);
+            // Allocator is only used by Conscrypt engine, which require off-heap buffers.
+            BufferAllocator alloc = DefaultBufferAllocators.offHeapAllocator();
+            return wrapSslEngine(engine, alloc, applicationNegotiator, isServer);
         }
 
         /**
@@ -66,8 +69,8 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
          * </ul>
          * @return The resulting wrapped engine. This may just be {@code engine}.
          */
-        abstract SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
-                                JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
+        abstract SSLEngine wrapSslEngine(SSLEngine engine, BufferAllocator alloc,
+                                         JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
     }
 
     /**

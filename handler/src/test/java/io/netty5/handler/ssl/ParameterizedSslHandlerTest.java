@@ -17,8 +17,10 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.Resource;
+import io.netty5.buffer.api.Send;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -71,7 +73,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.buffer.ByteBufUtil.writeAscii;
+import static io.netty5.buffer.ByteBufUtil.writeAscii;
 import static java.util.concurrent.ThreadLocalRandom.current;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -143,7 +145,7 @@ public class ParameterizedSslHandlerTest {
         Channel cc = null;
         try {
             final Promise<Void> donePromise = group.next().newPromise();
-            // The goal is to provide the SSLEngine with many ByteBuf components to ensure that the overhead for wrap
+            // The goal is to provide the SSLEngine with many Buffer components to ensure that the overhead for wrap
             // is correctly accounted for on each component.
             final int numComponents = 150;
             // This is the TLS packet size. The goal is to divide the maximum amount of application data that can fit
@@ -155,12 +157,13 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             final SslHandler handler = letHandlerCreateServerEngine
-                                    ? sslServerCtx.newHandler(ch.alloc())
-                                    : new SslHandler(sslServerCtx.newEngine(ch.alloc()));
+                                    ? sslServerCtx.newHandler(ch.bufferAllocator())
+                                    : new SslHandler(sslServerCtx.newEngine(ch.bufferAllocator()));
                             if (serverDisableWrapSize) {
                                 handler.setWrapDataSize(-1);
                             }
@@ -174,12 +177,15 @@ public class ParameterizedSslHandlerTest {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
-                                            CompositeByteBuf content = ctx.alloc().compositeDirectBuffer(numComponents);
+                                            @SuppressWarnings("unchecked")
+                                            Send<Buffer>[] components = new Send[numComponents];
                                             for (int i = 0; i < numComponents; ++i) {
-                                                ByteBuf buf = ctx.alloc().directBuffer(singleComponentSize);
-                                                buf.writerIndex(buf.writerIndex() + singleComponentSize);
-                                                content.addComponent(true, buf);
+                                                Buffer buf = ctx.bufferAllocator().allocate(singleComponentSize);
+                                                buf.skipWritable(singleComponentSize);
+                                                components[i] = buf.send();
                                             }
+                                            CompositeBuffer content = CompositeBuffer.compose(
+                                                    ctx.bufferAllocator(), components);
                                             ctx.writeAndFlush(content).addListener(future -> {
                                                 writeCause = future.cause();
                                                 if (writeCause == null) {
@@ -211,25 +217,26 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             if (letHandlerCreateClientEngine) {
-                                ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                                ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
                             } else {
-                                ch.pipeline().addLast(new SslHandler(sslClientCtx.newEngine(ch.alloc())));
+                                ch.pipeline().addLast(new SslHandler(sslClientCtx.newEngine(ch.bufferAllocator())));
                             }
                             ch.pipeline().addLast(new ChannelHandler() {
                                 private int bytesSeen;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                    if (msg instanceof ByteBuf) {
-                                        bytesSeen += ((ByteBuf) msg).readableBytes();
+                                    if (msg instanceof Buffer) {
+                                        bytesSeen += ((Buffer) msg).readableBytes();
                                         if (bytesSeen == expectedBytes) {
                                             donePromise.trySuccess(null);
                                         }
                                     }
-                                    ReferenceCountUtil.release(msg);
+                                    Resource.dispose(msg);
                                 }
 
                                 @Override
@@ -325,10 +332,11 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -342,10 +350,11 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -427,10 +436,11 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            SslHandler handler = sslServerCtx.newHandler(ch.alloc());
+                            SslHandler handler = sslServerCtx.newHandler(ch.bufferAllocator());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().cascadeTo(serverPromise);
 
@@ -447,6 +457,7 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -466,7 +477,7 @@ public class ParameterizedSslHandlerTest {
                                 });
                             }
 
-                            SslHandler handler = sslClientCtx.newHandler(ch.alloc());
+                            SslHandler handler = sslClientCtx.newHandler(ch.bufferAllocator());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().cascadeTo(clientPromise);
                             handler.handshakeFuture().addListener(future -> {
@@ -582,10 +593,12 @@ public class ParameterizedSslHandlerTest {
                     .group(group)
                     .channel(serverClass)
                     .childOption(ChannelOption.AUTO_READ, serverAutoRead)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(disableHandshakeTimeout(sslServerCtx.newHandler(ch.alloc())));
+                            ch.pipeline().addLast(
+                                    disableHandshakeTimeout(sslServerCtx.newHandler(ch.bufferAllocator())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
@@ -595,10 +608,12 @@ public class ParameterizedSslHandlerTest {
                     .group(group)
                     .channel(clientClass)
                     .option(ChannelOption.AUTO_READ, clientAutoRead)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(disableHandshakeTimeout(sslClientCtx.newHandler(ch.alloc())));
+                            ch.pipeline().addLast(
+                                    disableHandshakeTimeout(sslClientCtx.newHandler(ch.bufferAllocator())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
@@ -626,7 +641,7 @@ public class ParameterizedSslHandlerTest {
         return handler;
     }
 
-    private static final class ReentryWriteSslHandshakeHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static final class ReentryWriteSslHandshakeHandler extends SimpleChannelInboundHandler<Buffer> {
         private static final InternalLogger LOGGER =
                 InternalLoggerFactory.getInstance(ReentryWriteSslHandshakeHandler.class);
         private final String toWrite;
@@ -642,11 +657,11 @@ public class ParameterizedSslHandlerTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             // Write toWrite in two chunks, first here then we get SslHandshakeCompletionEvent (which is re-entry).
-            ctx.writeAndFlush(writeAscii(ctx.alloc(), toWrite.substring(0, toWrite.length() / 2)));
+            ctx.writeAndFlush(writeAscii(ctx.bufferAllocator(), toWrite.substring(0, toWrite.length() / 2)));
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
+        protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) {
             readQueue.append(msg.toString(CharsetUtil.US_ASCII));
             if (readQueue.length() >= toWrite.length()) {
                 doneLatch.countDown();
@@ -659,7 +674,7 @@ public class ParameterizedSslHandlerTest {
                 SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                 if (sslEvt.isSuccess()) {
                     // this is the re-entry write, it should be ordered after the subsequent write.
-                    ctx.writeAndFlush(writeAscii(ctx.alloc(), toWrite.substring(toWrite.length() / 2)));
+                    ctx.writeAndFlush(writeAscii(ctx.bufferAllocator(), toWrite.substring(toWrite.length() / 2)));
                 } else {
                     appendError(sslEvt.cause());
                 }

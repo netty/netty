@@ -16,6 +16,7 @@
 package io.netty5.example.portunification;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.example.factorial.BigIntegerDecoder;
@@ -79,7 +80,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private boolean isSsl(ByteBuf buf) {
         if (detectSsl) {
-            return SslHandler.isEncrypted(buf);
+            return SslHandler.isEncrypted(ByteBufBuffer.wrap(buf));
         }
         return false;
     }
@@ -110,7 +111,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private void enableSsl(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("ssl", sslCtx.newHandler(ctx.alloc()));
+        p.addLast("ssl", sslCtx.newHandler(ctx.bufferAllocator()));
         p.addLast("unificationA", new PortUnificationServerHandler(sslCtx, false, detectGzip));
         p.remove(this);
     }

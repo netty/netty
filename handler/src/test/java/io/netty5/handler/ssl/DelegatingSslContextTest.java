@@ -16,12 +16,12 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class DelegatingSslContextTest {
@@ -31,10 +31,10 @@ public class DelegatingSslContextTest {
     public void testInitEngineOnNewEngine() throws Exception {
         SslContext delegating = newDelegatingSslContext();
 
-        SSLEngine engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = delegating.newEngine(offHeapAllocator());
         assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
 
-        engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
+        engine = delegating.newEngine(offHeapAllocator(), "localhost", 9090);
         assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
     }
 
@@ -42,10 +42,10 @@ public class DelegatingSslContextTest {
     public void testInitEngineOnNewSslHandler() throws Exception {
         SslContext delegating = newDelegatingSslContext();
 
-        SslHandler handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        SslHandler handler = delegating.newHandler(offHeapAllocator());
         assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
 
-        handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
+        handler = delegating.newHandler(offHeapAllocator(), "localhost", 9090);
         assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
     }
 

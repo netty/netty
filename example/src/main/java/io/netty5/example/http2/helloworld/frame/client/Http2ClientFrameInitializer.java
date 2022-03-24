@@ -39,7 +39,7 @@ public final class Http2ClientFrameInitializer extends ChannelInitializer<Channe
     protected void initChannel(Channel ch) throws Exception {
         // ensure that our 'trust all' SSL handler is the first in the pipeline if SSL is enabled.
         if (sslCtx != null) {
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            ch.pipeline().addFirst(sslCtx.newHandler(ch.bufferAllocator()));
         }
 
         final Http2FrameCodec http2FrameCodec = Http2FrameCodecBuilder.forClient()

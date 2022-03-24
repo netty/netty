@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 
 import javax.net.ssl.SSLEngine;
 
@@ -117,7 +117,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
 
     private static final class FailureWrapper extends AllocatorAwareSslEngineWrapperFactory {
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+        public SSLEngine wrapSslEngine(SSLEngine engine, BufferAllocator alloc,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
                     + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
@@ -128,7 +128,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
 
     private static final class AlpnWrapper extends AllocatorAwareSslEngineWrapperFactory {
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+        public SSLEngine wrapSslEngine(SSLEngine engine, BufferAllocator alloc,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             if (Conscrypt.isEngineSupported(engine)) {
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)

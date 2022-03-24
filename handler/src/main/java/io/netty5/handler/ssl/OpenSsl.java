@@ -16,12 +16,11 @@
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
@@ -263,26 +262,24 @@ public final class OpenSsl {
                                                "AEAD-CHACHA20-POLY1305-SHA256");
                         }
 
-                        PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII));
-                        try {
+                        try (PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII))) {
                             // Let's check if we can set a callback, which may not work if the used OpenSSL version
                             // is to old.
                             SSLContext.setCertificateCallback(sslCtx, null);
 
                             X509Certificate certificate = selfSignedCertificate();
-                            certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
+                            certBio = ReferenceCountedOpenSslContext.toBIO(
+                                    DefaultBufferAllocators.offHeapAllocator(), certificate);
                             cert = SSL.parseX509Chain(certBio);
 
                             keyBio = ReferenceCountedOpenSslContext.toBIO(
-                                    UnpooledByteBufAllocator.DEFAULT, privateKey);
+                                    DefaultBufferAllocators.offHeapAllocator(), privateKey);
                             key = SSL.parsePrivateKey(keyBio, null);
 
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
                         } catch (Error ignore) {
                             logger.debug("KeyManagerFactory not supported.");
-                        } finally {
-                            privateKey.release();
                         }
                     } finally {
                         SSL.freeSSL(ssl);

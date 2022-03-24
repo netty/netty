@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static java.util.Objects.requireNonNull;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 
@@ -27,11 +28,13 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
+import io.netty5.buffer.api.Send;
+import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.IllegalReferenceCountException;
 
 /**
  * This is a special purpose implementation of a {@link X509Certificate} which allows
@@ -44,9 +47,9 @@ import io.netty5.util.IllegalReferenceCountException;
  * @see PemEncoded
  * @see OpenSslContext
  * @see #valueOf(byte[])
- * @see #valueOf(ByteBuf)
+ * @see #valueOf(Buffer)
  */
-public final class PemX509Certificate extends X509Certificate implements PemEncoded {
+public final class PemX509Certificate extends X509Certificate implements PemEncoded, Resource<PemX509Certificate> {
 
     private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
     private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
@@ -54,12 +57,10 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     /**
      * Creates a {@link PemEncoded} value from the {@link X509Certificate}s.
      */
-    static PemEncoded toPEM(ByteBufAllocator allocator, boolean useDirect,
-            X509Certificate... chain) throws CertificateEncodingException {
-
+    static PemEncoded toPEM(BufferAllocator alloc, X509Certificate... chain) throws CertificateEncodingException {
         checkNonEmpty(chain, "chain");
 
-        // We can take a shortcut if there is only one certificate and
+        // We can take a shortcut if there is only one certificate, and
         // it already happens to be a PemEncoded instance. This is the
         // ideal case and reason why all this exists. It allows the user
         // to pass pre-encoded bytes straight into OpenSSL without having
@@ -67,12 +68,12 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
         if (chain.length == 1) {
             X509Certificate first = chain[0];
             if (first instanceof PemEncoded) {
-                return ((PemEncoded) first).retain();
+                return ((PemEncoded) first).copy();
             }
         }
 
         boolean success = false;
-        ByteBuf pem = null;
+        Buffer pem = null;
         try {
             for (X509Certificate cert : chain) {
 
@@ -81,9 +82,9 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
                 }
 
                 if (cert instanceof PemEncoded) {
-                    pem = append(allocator, useDirect, (PemEncoded) cert, chain.length, pem);
+                    pem = append(alloc, (PemEncoded) cert, chain.length, pem);
                 } else {
-                    pem = append(allocator, useDirect, cert, chain.length, pem);
+                    pem = append(alloc, cert, chain.length, pem);
                 }
             }
 
@@ -93,63 +94,57 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
         } finally {
             // Make sure we never leak the PEM's ByteBuf in the event of an Exception
             if (!success && pem != null) {
-                pem.release();
+                pem.close();
             }
         }
     }
 
     /**
-     * Appends the {@link PemEncoded} value to the {@link ByteBuf} (last arg) and returns it.
-     * If the {@link ByteBuf} didn't exist yet it'll create it using the {@link ByteBufAllocator}.
+     * Appends the {@link PemEncoded} value to the {@link Buffer} (last arg) and returns it.
+     * If the {@link Buffer} didn't exist yet, an off-heap buffer will be created.
      */
-    private static ByteBuf append(ByteBufAllocator allocator, boolean useDirect,
-            PemEncoded encoded, int count, ByteBuf pem) {
-
-        ByteBuf content = encoded.content();
+    private static Buffer append(
+            BufferAllocator alloc, PemEncoded encoded, int count, Buffer pem) {
+        Buffer content = encoded.content();
 
         if (pem == null) {
             // see the other append() method
-            pem = newBuffer(allocator, useDirect, content.readableBytes() * count);
+            pem = alloc.allocate(content.readableBytes() * count);
+        } else {
+            pem.ensureWritable(content.readableBytes());
         }
 
-        pem.writeBytes(content.slice());
+        int length = content.readableBytes();
+        pem.skipWritable(length);
+        content.copyInto(content.readerOffset(), pem, pem.writerOffset(), length);
         return pem;
     }
 
     /**
-     * Appends the {@link X509Certificate} value to the {@link ByteBuf} (last arg) and returns it.
-     * If the {@link ByteBuf} didn't exist yet it'll create it using the {@link ByteBufAllocator}.
+     * Appends the {@link X509Certificate} value to the {@link Buffer} (last arg) and returns it.
+     * If the {@link Buffer} didn't exist yet, an off-heap buffer will be created.
      */
-    private static ByteBuf append(ByteBufAllocator allocator, boolean useDirect,
-            X509Certificate cert, int count, ByteBuf pem) throws CertificateEncodingException {
+    private static Buffer append(BufferAllocator alloc, X509Certificate cert, int count, Buffer pem)
+            throws CertificateEncodingException {
 
-        ByteBuf encoded = Unpooled.wrappedBuffer(cert.getEncoded());
-        try {
-            ByteBuf base64 = SslUtils.toBase64(allocator, encoded);
-            try {
-                if (pem == null) {
-                    // We try to approximate the buffer's initial size. The sizes of
-                    // certificates can vary a lot so it'll be off a bit depending
-                    // on the number of elements in the array (count argument).
-                    pem = newBuffer(allocator, useDirect,
-                            (BEGIN_CERT.length + base64.readableBytes() + END_CERT.length) * count);
-                }
-
-                pem.writeBytes(BEGIN_CERT);
-                pem.writeBytes(base64);
-                pem.writeBytes(END_CERT);
-            } finally {
-                base64.release();
+        try (Buffer encoded = alloc.copyOf(cert.getEncoded());
+             Buffer base64 = SslUtils.toBase64(alloc, encoded)) {
+            int length = BEGIN_CERT.length + base64.readableBytes() + END_CERT.length;
+            if (pem == null) {
+                // We try to approximate the buffer's initial size. The sizes of
+                // certificates can vary a lot so it'll be off a bit depending
+                // on the number of elements in the array (count argument).
+                pem = alloc.allocate(length * count);
+            } else {
+                pem.ensureWritable(length);
             }
-        } finally {
-            encoded.release();
+
+            pem.writeBytes(BEGIN_CERT);
+            pem.writeBytes(base64);
+            pem.writeBytes(END_CERT);
         }
 
         return pem;
-    }
-
-    private static ByteBuf newBuffer(ByteBufAllocator allocator, boolean useDirect, int initialCapacity) {
-        return useDirect ? allocator.directBuffer(initialCapacity) : allocator.buffer(initialCapacity);
     }
 
     /**
@@ -159,7 +154,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
      * No input validation is performed to validate it.
      */
     public static PemX509Certificate valueOf(byte[] key) {
-        return valueOf(Unpooled.wrappedBuffer(key));
+        return valueOf(offHeapAllocator().copyOf(key));
     }
 
     /**
@@ -168,14 +163,14 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
-    public static PemX509Certificate valueOf(ByteBuf key) {
+    public static PemX509Certificate valueOf(Buffer key) {
         return new PemX509Certificate(key);
     }
 
-    private final ByteBuf content;
+    private final Buffer content;
 
-    private PemX509Certificate(ByteBuf content) {
-        this.content = requireNonNull(content, "content");
+    private PemX509Certificate(Buffer content) {
+        this.content = requireNonNull(content, "content").makeReadOnly();
     }
 
     @Override
@@ -185,72 +180,33 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public ByteBuf content() {
-        int count = refCnt();
-        if (count <= 0) {
-            throw new IllegalReferenceCountException(count);
+    public Buffer content() {
+        if (!content.isAccessible()) {
+            throw Statics.attachTrace((ResourceSupport<?, ?>) content,
+                                      new IllegalStateException("PemX509Certificate is closed."));
         }
 
         return content;
     }
 
     @Override
+    public void close() {
+        content.close();
+    }
+
+    @Override
     public PemX509Certificate copy() {
-        return replace(content.copy());
+        return new PemX509Certificate(content.copy(content.readerOffset(), content.readableBytes(), true));
     }
 
     @Override
-    public PemX509Certificate duplicate() {
-        return replace(content.duplicate());
+    public Send<PemX509Certificate> send() {
+        return content.send().map(PemX509Certificate.class, PemX509Certificate::new);
     }
 
     @Override
-    public PemX509Certificate retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemX509Certificate replace(ByteBuf content) {
-        return new PemX509Certificate(content);
-    }
-
-    @Override
-    public PemX509Certificate retain() {
-        content.retain();
-        return this;
-    }
-
-    @Override
-    public PemX509Certificate retain(int increment) {
-        content.retain(increment);
-        return this;
-    }
-
-    @Override
-    public PemX509Certificate touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public PemX509Certificate touch(Object hint) {
-        content.touch(hint);
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
+    public boolean isAccessible() {
+        return content.isAccessible();
     }
 
     @Override

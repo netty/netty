@@ -14,9 +14,9 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -35,27 +35,27 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
     public enum BufferType {
         HEAP {
             @Override
-            ByteBuf newBuffer(ByteBufAllocator allocator, int size) {
-                return allocator.heapBuffer(size);
+            Buffer newBuffer(int size) {
+                return DefaultBufferAllocators.onHeapAllocator().allocate(size);
             }
         },
         DIRECT {
             @Override
-            ByteBuf newBuffer(ByteBufAllocator allocator, int size) {
-                return allocator.directBuffer(size);
+            Buffer newBuffer(int size) {
+                return DefaultBufferAllocators.offHeapAllocator().allocate(size);
             }
         };
 
-        abstract ByteBuf newBuffer(ByteBufAllocator allocator, int size);
+        abstract Buffer newBuffer(int size);
     }
 
-    protected ByteBuf wrapSrcBuffer;
+    protected Buffer wrapSrcBuffer;
     protected EmbeddedChannel channel;
-    private ByteBufAllocator allocator;
+    private BufferAllocator allocator;
 
     @Setup(Level.Iteration)
     public final void setup() throws Exception {
-        allocator = new PooledByteBufAllocator(true);
+        allocator = DefaultBufferAllocators.offHeapAllocator();
 
         initSslHandlers(allocator);
 
@@ -63,7 +63,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
 
         byte[] bytes = new byte[messageSize];
         ThreadLocalRandom.current().nextBytes(bytes);
-        wrapSrcBuffer.writeBytes(bytes);
+        wrapSrcBuffer.writeBytes(bytes).makeReadOnly();
 
         // Complete the initial TLS handshake.
         doHandshake();
@@ -72,24 +72,23 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
     @TearDown(Level.Iteration)
     public final void tearDown() throws Exception {
         destroySslHandlers();
-        wrapSrcBuffer.release();
+        wrapSrcBuffer.close();
         clientCtx.releaseCumulation();
         serverCtx.releaseCumulation();
     }
 
-    protected final ByteBuf allocateBuffer(int size) {
-        return bufferType.newBuffer(allocator, size);
+    protected final Buffer allocateBuffer(int size) {
+        return bufferType.newBuffer(size);
     }
 
-    protected final ByteBuf doWrite(int numWrites) throws Exception {
+    protected final Buffer doWrite(int numWrites) throws Exception {
         clientCtx.releaseCumulation();
 
         for (int i = 0; i < numWrites; ++i) {
-            ByteBuf wrapSrcBuffer = this.wrapSrcBuffer.retainedSlice();
-
-            clientSslHandler.write(clientCtx, wrapSrcBuffer);
+            Buffer copy = wrapSrcBuffer.copy(wrapSrcBuffer.readerOffset(), wrapSrcBuffer.readableBytes());
+            clientSslHandler.write(clientCtx, copy);
         }
         clientSslHandler.flush(clientCtx);
-        return clientCtx.cumulation().retainedSlice();
+        return clientCtx.cumulation().split();
     }
 }

@@ -18,7 +18,7 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -106,7 +106,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         return params;
     }
 
-    private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
+    private static SslHandler newSslHandler(SslContext sslCtx, BufferAllocator allocator, Executor executor) {
         if (executor == null) {
             return sslCtx.newHandler(allocator);
         } else {
@@ -134,7 +134,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     ChannelPipeline p = sch.pipeline();
-                    p.addLast(newSslHandler(serverCtx, sch.alloc(), executorService));
+                    p.addLast(newSslHandler(serverCtx, sch.bufferAllocator(), executorService));
                     p.addLast(new LoggingHandler(LOG_LEVEL));
                     p.addLast(sh);
                 }
@@ -144,7 +144,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     ChannelPipeline p = sch.pipeline();
-                    p.addLast(newSslHandler(clientCtx, sch.alloc(), executorService));
+                    p.addLast(newSslHandler(clientCtx, sch.bufferAllocator(), executorService));
                     p.addLast(new LoggingHandler(LOG_LEVEL));
                     p.addLast(ch);
                 }
