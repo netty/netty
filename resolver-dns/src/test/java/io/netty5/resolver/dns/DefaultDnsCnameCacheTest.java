@@ -22,7 +22,6 @@ import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.nio.NioHandler;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

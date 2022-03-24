@@ -26,7 +26,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelId;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 

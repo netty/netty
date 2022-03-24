@@ -18,7 +18,6 @@ import io.netty5.handler.codec.http2.Http2TestUtil.TestStreamByteDistributorStre
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 abstract class AbstractWeightedFairQueueByteDistributorDependencyTest {

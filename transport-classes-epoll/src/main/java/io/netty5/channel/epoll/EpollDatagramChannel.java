@@ -40,7 +40,6 @@ import io.netty5.channel.unix.SegmentedDatagramPacket;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;

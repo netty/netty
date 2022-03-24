@@ -16,7 +16,6 @@
 package io.netty5.buffer.api;
 
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 
 /**
  * A resource that has a life-time, and can be {@linkplain #close() closed}.

@@ -19,7 +19,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.Future;
 
 public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
