@@ -212,7 +212,26 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         }
 
         @Override
+        @Deprecated
         public WebSocketExtensionData newReponseData() {
+            HashMap<String, String> parameters = new HashMap<String, String>(4);
+            if (serverNoContext) {
+                parameters.put(SERVER_NO_CONTEXT, null);
+            }
+            if (clientNoContext) {
+                parameters.put(CLIENT_NO_CONTEXT, null);
+            }
+            if (serverWindowSize != MAX_WINDOW_SIZE) {
+                parameters.put(SERVER_MAX_WINDOW, Integer.toString(serverWindowSize));
+            }
+            if (clientWindowSize != MAX_WINDOW_SIZE) {
+                parameters.put(CLIENT_MAX_WINDOW, Integer.toString(clientWindowSize));
+            }
+            return new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters);
+        }
+
+        @Override
+        public WebSocketExtensionData newResponseData() {
             HashMap<String, String> parameters = new HashMap<String, String>(4);
             if (serverNoContext) {
                 parameters.put(SERVER_NO_CONTEXT, null);
