@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -42,7 +43,7 @@ import io.netty5.handler.codec.MessageToMessageEncoder;
  * </pre>
  */
 @Sharable
-public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
+public class Base64Encoder extends MessageToMessageEncoder<Buffer> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -63,7 +64,7 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
-        out.add(Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect));
+    protected void encode(ChannelHandlerContext ctx, Buffer msg, List<Object> out) throws Exception {
+        out.add(Base64.encode(msg, msg.readerOffset(), msg.readableBytes(), breakLines, dialect));
     }
 }

@@ -18,6 +18,7 @@ package io.netty5.handler.codec.base64;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -44,7 +45,7 @@ import io.netty5.handler.codec.MessageToMessageDecoder;
  * </pre>
  */
 @Sharable
-public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
+public class Base64Decoder extends MessageToMessageDecoder<Buffer> {
 
     private final Base64Dialect dialect;
 
@@ -58,7 +59,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        ctx.fireChannelRead(Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect));
+    protected void decode(ChannelHandlerContext ctx, Buffer msg) throws Exception {
+        ctx.fireChannelRead(Base64.decode(msg, msg.readerOffset(), msg.readableBytes(), dialect));
     }
 }

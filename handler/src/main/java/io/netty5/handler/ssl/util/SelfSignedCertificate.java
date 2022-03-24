@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.ssl.util;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.PlatformDependent;
@@ -40,6 +39,8 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+
 /**
  * Generates a temporary self-signed certificate for testing purposes.
  * <p>
@@ -49,8 +50,8 @@ import java.util.Date;
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
  * An X.509 certificate file and a EC/RSA private key file are generated in a system's temporary directory using
- * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
- * {@link java.io.File#deleteOnExit()}.
+ * {@link File#createTempFile(String, String)}, and they are deleted when the JVM exits using
+ * {@link File#deleteOnExit()}.
  * </p><p>
  * The certificate is generated using <a href="https://www.bouncycastle.org/">Bouncy Castle</a>, which is an
  * <em>optional</em> dependency of Netty.
@@ -304,20 +305,12 @@ public final class SelfSignedCertificate {
     static String[] newSelfSignedCertificate(
             String fqdn, PrivateKey key, X509Certificate cert) throws IOException, CertificateEncodingException {
         // Encode the private key into a file.
-        ByteBuf wrappedBuf = Unpooled.wrappedBuffer(key.getEncoded());
-        ByteBuf encodedBuf;
         final String keyText;
-        try {
-            encodedBuf = Base64.encode(wrappedBuf, true);
-            try {
-                keyText = "-----BEGIN PRIVATE KEY-----\n" +
-                        encodedBuf.toString(CharsetUtil.US_ASCII) +
-                        "\n-----END PRIVATE KEY-----\n";
-            } finally {
-                encodedBuf.release();
-            }
-        } finally {
-            wrappedBuf.release();
+        try (Buffer wrappedBuf = onHeapAllocator().copyOf(key.getEncoded());
+             Buffer encodedBuf = Base64.encode(wrappedBuf, true)) {
+            keyText = "-----BEGIN PRIVATE KEY-----\n" +
+                      encodedBuf.toString(CharsetUtil.US_ASCII) +
+                      "\n-----END PRIVATE KEY-----\n";
         }
 
         // Change all asterisk to 'x' for file name safety.
@@ -338,20 +331,13 @@ public final class SelfSignedCertificate {
             }
         }
 
-        wrappedBuf = Unpooled.wrappedBuffer(cert.getEncoded());
         final String certText;
-        try {
-            encodedBuf = Base64.encode(wrappedBuf, true);
-            try {
-                // Encode the certificate into a CRT file.
-                certText = "-----BEGIN CERTIFICATE-----\n" +
-                        encodedBuf.toString(CharsetUtil.US_ASCII) +
-                        "\n-----END CERTIFICATE-----\n";
-            } finally {
-                encodedBuf.release();
-            }
-        } finally {
-            wrappedBuf.release();
+        try (Buffer wrappedBuf = onHeapAllocator().copyOf(cert.getEncoded());
+             Buffer encodedBuf = Base64.encode(wrappedBuf, true)) {
+            // Encode the certificate into a CRT file.
+            certText = "-----BEGIN CERTIFICATE-----\n" +
+                       encodedBuf.toString(CharsetUtil.US_ASCII) +
+                       "\n-----END CERTIFICATE-----\n";
         }
 
         File certFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".crt", null);

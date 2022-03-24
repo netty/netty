@@ -16,6 +16,9 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
@@ -170,13 +173,14 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         ByteBuf header = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(settingsHeader), CharsetUtil.UTF_8);
         try {
             // Decode the SETTINGS payload.
-            ByteBuf payload = Base64.decode(header, URL_SAFE);
+            try (Buffer payload = Base64.decode(ByteBufBuffer.wrap(header), URL_SAFE)) {
 
-            // Create an HTTP/2 frame for the settings.
-            ByteBuf frame = createSettingsFrame(ctx, payload);
+                // Create an HTTP/2 frame for the settings.
+                ByteBuf frame = createSettingsFrame(ctx, ByteBufAdaptor.intoByteBuf(payload));
 
-            // Decode the SETTINGS frame and return the settings object.
-            return decodeSettings(ctx, frame);
+                // Decode the SETTINGS frame and return the settings object.
+                return decodeSettings(ctx, frame);
+            }
         } finally {
             header.release();
         }
@@ -207,7 +211,6 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
         writeFrameHeader(frame, payload.readableBytes(), SETTINGS, new Http2Flags(), 0);
         frame.writeBytes(payload);
-        payload.release();
         return frame;
     }
 }

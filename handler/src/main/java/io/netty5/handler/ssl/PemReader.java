@@ -16,7 +16,8 @@
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -36,6 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 
 /**
  * Reads a PEM file and converts it into a list of DERs so that they are imported into a {@link KeyStore} easily.
@@ -81,12 +84,10 @@ final class PemReader {
         Matcher m = CERT_PATTERN.matcher(content);
         int start = 0;
         while (m.find(start)) {
-
-            ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
-            ByteBuf der = Base64.decode(base64);
-            base64.release();
-            certs.add(der);
-
+            try (Buffer base64 = onHeapAllocator().copyOf(m.group(1).getBytes(CharsetUtil.US_ASCII))) {
+                ByteBuf der = ByteBufAdaptor.intoByteBuf(Base64.decode(base64));
+                certs.add(der);
+            }
             start = m.end();
         }
 
@@ -125,10 +126,9 @@ final class PemReader {
                     " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
         }
 
-        ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
-        ByteBuf der = Base64.decode(base64);
-        base64.release();
-        return der;
+        try (Buffer base64 = onHeapAllocator().copyOf(m.group(1).getBytes(CharsetUtil.US_ASCII))) {
+            return ByteBufAdaptor.intoByteBuf(Base64.decode(base64));
+        }
     }
 
     private static String readContent(InputStream in) throws IOException {

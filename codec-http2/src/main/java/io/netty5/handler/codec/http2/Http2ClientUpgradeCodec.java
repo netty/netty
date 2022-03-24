@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -34,11 +34,10 @@ import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty5.util.CharsetUtil.UTF_8;
-import static io.netty5.util.ReferenceCountUtil.release;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Client-side cleartext upgrade codec from HTTP to HTTP/2.
+ * Client-side clear-text upgrade codec from HTTP to HTTP/2.
  */
 @UnstableApi
 public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.UpgradeCodec {
@@ -55,7 +54,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     public Http2ClientUpgradeCodec(String handlerName, Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
-        this(handlerName, (Http2ConnectionHandler) frameCodec, upgradeToHandler, null);
+        this(handlerName, frameCodec, upgradeToHandler, null);
     }
 
     /**
@@ -77,7 +76,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      */
     public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler,
         Http2MultiplexHandler http2MultiplexHandler) {
-        this((String) null, connectionHandler, http2MultiplexHandler);
+        this(null, connectionHandler, http2MultiplexHandler);
     }
 
     /**
@@ -152,26 +151,20 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * the HTTP2-Settings upgrade header.
      */
     private CharSequence getSettingsHeaderValue(ChannelHandlerContext ctx) {
-        ByteBuf buf = null;
-        ByteBuf encodedBuf = null;
-        try {
-            // Get the local settings for the handler.
-            Http2Settings settings = connectionHandler.decoder().localSettings();
-
-            // Serialize the payload of the SETTINGS frame.
-            int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
-            buf = ctx.alloc().buffer(payloadLength);
+        // Get the local settings for the handler.
+        Http2Settings settings = connectionHandler.decoder().localSettings();
+        int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
+        // Serialize the payload of the SETTINGS frame.
+        try (Buffer buf = ctx.bufferAllocator().allocate(payloadLength)) {
             for (CharObjectMap.PrimitiveEntry<Long> entry : settings.entries()) {
                 buf.writeChar(entry.key());
                 buf.writeInt(entry.value().intValue());
             }
 
             // Base64 encode the payload and then convert to a string for the header.
-            encodedBuf = Base64.encode(buf, URL_SAFE);
-            return encodedBuf.toString(UTF_8);
-        } finally {
-            release(buf);
-            release(encodedBuf);
+           try (Buffer encodedBuf = Base64.encode(buf, URL_SAFE)) {
+               return encodedBuf.toString(UTF_8);
+           }
         }
     }
 }
