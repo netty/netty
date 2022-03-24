@@ -88,7 +88,7 @@ public class BufferAndChannelTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeLong(0x0102030405060708L);
-            buf.skipWritable(-5);
+            buf.writerOffset(buf.writerOffset() - 5);
             long position = channel.position();
             long size = channel.size();
             int bytesWritten = buf.transferTo(channel, 8);

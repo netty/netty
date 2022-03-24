@@ -44,6 +44,7 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
@@ -138,11 +139,13 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public void skipReadable(int delta) {
+        checkPositiveOrZero(delta, "delta");
         readerOffset(readerOffset() + delta);
     }
 
     @Override
     public void skipWritable(int delta) {
+        checkPositiveOrZero(delta, "delta");
         writerOffset(writerOffset() + delta);
     }
 

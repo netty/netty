@@ -418,7 +418,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
-        int initialReadableBytes = buf.readableBytes();
+        int initialReaderOffset = buf.readerOffset();
         buf.forEachReadable(0, (index, component) -> {
             long address = component.readableNativeAddress();
             assert address != 0;
@@ -428,10 +428,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
             return false;
         });
-        int readableBytesLeft = buf.readableBytes();
-        if (readableBytesLeft < initialReadableBytes) {
-            int bytesWritten = initialReadableBytes - readableBytesLeft;
-            buf.skipReadable(-bytesWritten); // Restore read offset for ChannelOutboundBuffer.
+        int readerOffset = buf.readerOffset();
+        if (initialReaderOffset < readerOffset) {
+            buf.readerOffset(initialReaderOffset); // Restore read offset for ChannelOutboundBuffer.
+            int bytesWritten = readerOffset - initialReaderOffset;
             in.removeBytes(bytesWritten);
             return 1; // Some data was written to the socket.
         }

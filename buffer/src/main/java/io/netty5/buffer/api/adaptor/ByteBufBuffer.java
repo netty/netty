@@ -52,6 +52,7 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressOfDirectByteBuffer;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * An implementation of the {@link Buffer} interface, that wraps a {@link ByteBuf}.
@@ -153,6 +154,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void skipReadable(int delta) {
+        checkPositiveOrZero(delta, "delta");
         delegate.readerIndex(delegate.readerIndex() + delta);
     }
 
@@ -169,6 +171,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public void skipWritable(int delta) {
+        checkPositiveOrZero(delta, "delta");
         delegate.writerIndex(delegate.writerIndex() + delta);
     }
 

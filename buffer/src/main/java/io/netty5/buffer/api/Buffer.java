@@ -126,11 +126,12 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     int readerOffset();
 
     /**
-     * Set the reader offset to {@code readerOffset() + delta}.
+     * Move the reader offset forward by the given delta.
      *
      * @param delta to accumulate.
-     * @throws IndexOutOfBoundsException if the new reader offset is less than zero or greater than the current
+     * @throws IndexOutOfBoundsException if the new reader offset is greater than the current
      * {@link #writerOffset()}.
+     * @throws IllegalArgumentException if the given delta is negative.
      * @throws BufferClosedException if this buffer is closed.
      */
     void skipReadable(int delta);
@@ -154,11 +155,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     int writerOffset();
 
     /**
-     * Set the write offset to {@code writerOffset() + delta}.
+     * Move the writer offset to ahead by the given delta.
      *
      * @param delta to accumulate.
-     * @throws IndexOutOfBoundsException if the new writer offset is less than the current {@link #readerOffset()} or
-     * greater than {@link #capacity()}.
+     * @throws IndexOutOfBoundsException if the new writer offset is greater than {@link #capacity()}.
+     * @throws IllegalArgumentException if the given delta is negative.
      * @throws BufferClosedException if this buffer is closed.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */

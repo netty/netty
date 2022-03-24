@@ -63,7 +63,7 @@ public class BufferEqualsTest extends BufferTestSupport {
             buf1.writeBytes(data1);
             buf2.writeBytes(data2);
             buf2.skipReadable(3);
-            buf2.skipWritable(-5);
+            buf2.writerOffset(buf2.writerOffset() - 5);
 
             Assertions.assertEquals(buf1, buf2);
             Assertions.assertEquals(buf2, buf1);

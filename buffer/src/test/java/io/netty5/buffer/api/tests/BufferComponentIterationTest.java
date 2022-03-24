@@ -477,4 +477,30 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             assertThat(buf).isEqualTo(target);
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void negativeSkipReadableOnReadableComponentMustThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeLong(0x0102030405060708L);
+            assertThat(buf.readInt()).isEqualTo(0x01020304);
+            buf.forEachReadable(0, (index, component) -> {
+                assertThrows(IllegalArgumentException.class, () -> component.skipReadable(-1));
+                return true;
+            });
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void negativeSkipWritableOnWritableComponentMustThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.forEachWritable(0, (index, component) -> {
+                assertThrows(IllegalArgumentException.class, () -> component.skipWritable(-1));
+                return true;
+            });
+        }
+    }
 }
