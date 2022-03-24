@@ -523,9 +523,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                     settings.put(id, Long.valueOf(value));
                 } catch (IllegalArgumentException e) {
                     if (id == SETTINGS_INITIAL_WINDOW_SIZE) {
-                        throw connectionError(FLOW_CONTROL_ERROR, e, e.getMessage());
+                        throw connectionError(FLOW_CONTROL_ERROR, e, "Failed setting initial window size: %s", e.getMessage());
                     }
-                    throw connectionError(PROTOCOL_ERROR, e, e.getMessage());
+                    throw connectionError(PROTOCOL_ERROR, e, "Protocol error: %s", e.getMessage());
                 }
             }
             listener.onSettingsRead(ctx, settings);
