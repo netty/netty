@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.addExact;
 import static java.lang.Math.toIntExact;
 
@@ -327,17 +328,13 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public void skipReadable(int delta) {
-        if (delta < 0) {
-            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
-        }
+        checkPositiveOrZero(delta, "delta");
         readerOffset(readerOffset() + delta);
     }
 
     @Override
     public void skipWritable(int delta) {
-        if (delta < 0) {
-            throw new IllegalArgumentException("Delta cannot be negative: " + delta);
-        }
+        checkPositiveOrZero(delta, "delta");
         writerOffset(writerOffset() + delta);
     }
 
