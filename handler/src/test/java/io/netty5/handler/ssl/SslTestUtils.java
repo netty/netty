@@ -18,16 +18,11 @@ package io.netty5.handler.ssl;
 
 import org.conscrypt.OpenSSLProvider;
 
-import javax.net.ssl.SNIMatcher;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import java.io.InputStream;
 import java.security.Provider;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 

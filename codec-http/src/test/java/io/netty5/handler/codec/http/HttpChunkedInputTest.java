@@ -15,30 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.stream.ChunkedFile;
-import io.netty5.handler.stream.ChunkedInput;
-import io.netty5.handler.stream.ChunkedNioFile;
-import io.netty5.handler.stream.ChunkedNioStream;
-import io.netty5.handler.stream.ChunkedStream;
-import io.netty5.handler.stream.ChunkedWriteHandler;
-import io.netty5.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.channels.Channels;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class HttpChunkedInputTest {
 /*
     private static final byte[] BYTES = new byte[1024 * 64];

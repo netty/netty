@@ -17,7 +17,6 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.ResourceLeakDetectorFactory;
 import io.netty5.util.ResourceLeakTracker;

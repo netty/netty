@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty5.channel.RecvBufferAllocator.Handle;
