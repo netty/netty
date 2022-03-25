@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.codec.frame;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
@@ -32,45 +31,43 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class DelimiterBasedFrameDecoderTest {
 
     @Test
-    public void testFailSlowTooLongFrameRecovery() throws Exception {
+    public void testFailSlowTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 }));
+            ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 1, 2 }));
             try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0 })));
+                assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 0 })));
                 fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A', 0 }));
-            ByteBuf buf = ch.readInbound();
-            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
-
-            buf.release();
+            ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 'A', 0 }));
+            try (Buffer buf = ch.readInbound()) {
+                assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            }
         }
     }
 
     @Test
-    public void testFailFastTooLongFrameRecovery() throws Exception {
+    public void testFailFastTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
             try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 })));
+                assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 1, 2 })));
                 fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 'A', 0 }));
-            ByteBuf buf = ch.readInbound();
-            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
-
-            buf.release();
+            ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 0, 'A', 0 }));
+            try (Buffer buf = ch.readInbound()) {
+                assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            }
         }
     }
 }

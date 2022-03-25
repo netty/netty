@@ -38,6 +38,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
+
 public class SocketStringEchoTest extends AbstractSocketTest {
 
     static final Random random = new Random();
@@ -62,6 +64,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
     }
 
     public void testStringEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         testStringEcho(sb, cb, true);
     }
 
@@ -72,6 +75,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
     }
 
     public void testStringEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         testStringEcho(sb, cb, false);
     }
 
@@ -84,20 +88,22 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         final StringEchoHandler sh = new StringEchoHandler(autoRead, serverDonePromise);
         final StringEchoHandler ch = new StringEchoHandler(autoRead, clientDonePromise);
 
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+                sch.pipeline().addLast(BUFFER_TO_BYTEBUF_HANDLER);
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
         });
 
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+                sch.pipeline().addLast(BUFFER_TO_BYTEBUF_HANDLER);
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", ch);
@@ -189,7 +195,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             donePromise.tryFailure(new IllegalStateException("channelInactive: " + ctx.channel()));
         }
     }

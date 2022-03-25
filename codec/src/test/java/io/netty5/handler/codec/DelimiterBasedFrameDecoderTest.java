@@ -15,11 +15,10 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.Charset;
@@ -33,96 +32,98 @@ public class DelimiterBasedFrameDecoderTest {
     public void testMultipleLinesStrippedDelimiters() {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
-        ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "TestLine\r\ng\r\n", Charset.defaultCharset()));
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals("TestLine", buf.toString(Charset.defaultCharset()));
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals("TestLine", buf.toString(Charset.defaultCharset()));
+        }
 
-        ByteBuf buf2 = ch.readInbound();
-        assertEquals("g", buf2.toString(Charset.defaultCharset()));
+        try (Buffer buf2 = ch.readInbound()) {
+            assertEquals("g", buf2.toString(Charset.defaultCharset()));
+        }
+
         assertNull(ch.readInbound());
         ch.finish();
-
-        buf.release();
-        buf2.release();
     }
 
     @Test
     public void testIncompleteLinesStrippedDelimiters() {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
-        ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
-        ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "Line\r\ng\r\n", Charset.defaultCharset()));
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals("TestLine", buf.toString(Charset.defaultCharset()));
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals("TestLine", buf.toString(Charset.defaultCharset()));
+        }
 
-        ByteBuf buf2 = ch.readInbound();
-        assertEquals("g", buf2.toString(Charset.defaultCharset()));
+        try (Buffer buf2 = ch.readInbound()) {
+            assertEquals("g", buf2.toString(Charset.defaultCharset()));
+        }
+
         assertNull(ch.readInbound());
         ch.finish();
-
-        buf.release();
-        buf2.release();
     }
 
     @Test
     public void testMultipleLines() {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
-        ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "TestLine\r\ng\r\n", Charset.defaultCharset()));
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals("TestLine\r\n", buf.toString(Charset.defaultCharset()));
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals("TestLine\r\n", buf.toString(Charset.defaultCharset()));
+        }
 
-        ByteBuf buf2 = ch.readInbound();
-        assertEquals("g\r\n", buf2.toString(Charset.defaultCharset()));
+        try (Buffer buf2 = ch.readInbound()) {
+            assertEquals("g\r\n", buf2.toString(Charset.defaultCharset()));
+        }
+
         assertNull(ch.readInbound());
         ch.finish();
-
-        buf.release();
-        buf2.release();
     }
 
     @Test
     public void testIncompleteLines() {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
-        ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "Test", Charset.defaultCharset()));
         assertNull(ch.readInbound());
-        ch.writeInbound(Unpooled.copiedBuffer("Line\r\ng\r\n", Charset.defaultCharset()));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "Line\r\ng\r\n", Charset.defaultCharset()));
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals("TestLine\r\n", buf.toString(Charset.defaultCharset()));
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals("TestLine\r\n", buf.toString(Charset.defaultCharset()));
+        }
 
-        ByteBuf buf2 = ch.readInbound();
-        assertEquals("g\r\n", buf2.toString(Charset.defaultCharset()));
+        try (Buffer buf2 = ch.readInbound()) {
+            assertEquals("g\r\n", buf2.toString(Charset.defaultCharset()));
+        }
+
         assertNull(ch.readInbound());
         ch.finish();
-
-        buf.release();
-        buf2.release();
     }
 
     @Test
-    public void testDecode() throws Exception {
+    public void testDecode() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 
-        ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "first\r\nsecond\nthird", CharsetUtil.US_ASCII));
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals("first", buf.toString(CharsetUtil.US_ASCII));
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals("first", buf.toString(CharsetUtil.US_ASCII));
+        }
 
-        ByteBuf buf2 = ch.readInbound();
-        assertEquals("second", buf2.toString(CharsetUtil.US_ASCII));
+        try (Buffer buf2 = ch.readInbound()) {
+            assertEquals("second", buf2.toString(CharsetUtil.US_ASCII));
+        }
+
         assertNull(ch.readInbound());
         ch.finish();
+    }
 
-        ReferenceCountUtil.release(ch.readInbound());
-
-        buf.release();
-        buf2.release();
+    private static Buffer copiedBuffer(BufferAllocator allocator, String str, Charset charset) {
+        return allocator.copyOf(str.getBytes(charset));
     }
 }

@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty.util.ByteProcessor;
+import io.netty5.util.ByteProcessor;
 
 /**
- * A decoder that splits the received {@link ByteBuf}s on line endings.
+ * A decoder that splits the received {@link Buffer}s on line endings.
  * <p>
  * Both {@code "\n"} and {@code "\r\n"} are handled.
  * <p>
@@ -31,7 +31,7 @@ import io.netty.util.ByteProcessor;
  * <p>
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
  */
-public class LineBasedFrameDecoder extends ByteToMessageDecoder {
+public class LineBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
 
     /** Maximum length of a frame we're willing to decode.  */
     private final int maxLength;
@@ -78,7 +78,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected final void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         Object decoded = decode0(ctx, in);
         if (decoded != null) {
             ctx.fireChannelRead(decoded);
@@ -86,32 +86,32 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Create a frame out of the {@link ByteBuf} and return it.
+     * Create a frame out of the {@link Buffer} and return it.
      *
      * @param   ctx             the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
-     * @param   buffer          the {@link ByteBuf} from which to read data
-     * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
+     * @param   buffer          the {@link Buffer} from which to read data
+     * @return  frame           the {@link Buffer} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
-    protected Object decode0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode0(ChannelHandlerContext ctx, Buffer buffer) {
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {
-                final ByteBuf frame;
-                final int length = eol - buffer.readerIndex();
+                final Buffer frame;
+                final int length = eol - buffer.readerOffset();
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
 
                 if (length > maxLength) {
-                    buffer.readerIndex(eol + delimLength);
+                    buffer.readerOffset(eol + delimLength);
                     fail(ctx, length);
                     return null;
                 }
 
                 if (stripDelimiter) {
-                    frame = buffer.readRetainedSlice(length);
-                    buffer.skipBytes(delimLength);
+                    frame = buffer.readSplit(length);
+                    buffer.skipReadable(delimLength);
                 } else {
-                    frame = buffer.readRetainedSlice(length + delimLength);
+                    frame = buffer.readSplit(length + delimLength);
                 }
 
                 return frame;
@@ -119,7 +119,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                 final int length = buffer.readableBytes();
                 if (length > maxLength) {
                     discardedBytes = length;
-                    buffer.readerIndex(buffer.writerIndex());
+                    buffer.readerOffset(buffer.writerOffset());
                     discarding = true;
                     offset = 0;
                     if (failFast) {
@@ -130,9 +130,9 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
             }
         } else {
             if (eol >= 0) {
-                final int length = discardedBytes + eol - buffer.readerIndex();
+                final int length = discardedBytes + eol - buffer.readerOffset();
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
-                buffer.readerIndex(eol + delimLength);
+                buffer.readerOffset(eol + delimLength);
                 discardedBytes = 0;
                 discarding = false;
                 if (!failFast) {
@@ -140,7 +140,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                 }
             } else {
                 discardedBytes += buffer.readableBytes();
-                buffer.readerIndex(buffer.writerIndex());
+                buffer.readerOffset(buffer.writerOffset());
                 // We skip everything in the buffer, we need to set the offset to 0 again.
                 offset = 0;
             }
@@ -162,9 +162,11 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      * Returns the index in the buffer of the end of line found.
      * Returns -1 if no end of line was found in the buffer.
      */
-    private int findEndOfLine(final ByteBuf buffer) {
+    private int findEndOfLine(final Buffer buffer) {
         int totalLength = buffer.readableBytes();
-        int i = buffer.forEachByte(buffer.readerIndex() + offset, totalLength - offset, ByteProcessor.FIND_LF);
+        int index = buffer.readerOffset() + offset;
+        int i = buffer.openCursor(index, totalLength - offset).process(ByteProcessor.FIND_LF);
+        i = i == -1 ? -1 : index + i;
         if (i >= 0) {
             offset = 0;
             if (i > 0 && buffer.getByte(i - 1) == '\r') {
