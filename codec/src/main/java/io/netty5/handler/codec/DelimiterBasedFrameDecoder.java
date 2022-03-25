@@ -274,7 +274,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
 
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        closeDelimiters(delimiters);
+        if (delimiters != null) {
+            closeDelimiters(delimiters);
+        }
         super.handlerRemoved0(ctx);
     }
 
