@@ -30,7 +30,7 @@ public final class Delimiters {
      */
     public static Buffer[] nulDelimiter() {
         return new Buffer[] {
-                onHeapUnpooled().copyOf(new byte[] { 0 }) };
+                onHeapUnpooled().copyOf(new byte[] { 0 }).makeReadOnly() };
     }
 
     /**
@@ -39,8 +39,8 @@ public final class Delimiters {
      */
     public static Buffer[] lineDelimiter() {
         return new Buffer[] {
-                onHeapUnpooled().copyOf(new byte[] { '\r', '\n' }),
-                onHeapUnpooled().copyOf(new byte[] { '\n' }),
+                onHeapUnpooled().copyOf(new byte[] { '\r', '\n' }).makeReadOnly(),
+                onHeapUnpooled().copyOf(new byte[] { '\n' }).makeReadOnly(),
         };
     }
 

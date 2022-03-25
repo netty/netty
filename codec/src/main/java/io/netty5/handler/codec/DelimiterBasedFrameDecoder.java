@@ -115,7 +115,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
             int maxFrameLength, boolean stripDelimiter, boolean failFast,
             Buffer delimiter) {
         this(maxFrameLength, stripDelimiter, failFast, new Buffer[] {
-                delimiter.copy(delimiter.readerOffset(), delimiter.readableBytes())});
+                delimiter.copy(delimiter.readerOffset(), delimiter.readableBytes(), true)});
     }
 
     /**
@@ -178,7 +178,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
             for (int i = 0; i < delimiters.length; i ++) {
                 Buffer d = delimiters[i];
                 validateDelimiter(d);
-                this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes());
+                this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes(), true);
             }
             lineBasedDecoder = null;
         }
