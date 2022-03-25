@@ -19,8 +19,8 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.TooLongHttpLineException;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.handler.codec.http2.Http2Error.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class Http2ExceptionTest {
 
