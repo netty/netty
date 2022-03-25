@@ -510,7 +510,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Returns the absolute point in time (relative to {@link #nanoTime()}) at which the the next
+     * Returns the absolute point in time (relative to {@link #nanoTime()}) at which the next
      * closest scheduled task should run.
      */
     @UnstableApi

@@ -74,7 +74,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
      * @param path The value for {@link PseudoHeaderName#PATH}.
      * @param scheme The value for {@link PseudoHeaderName#SCHEME}.
      * @param authority The value for {@link PseudoHeaderName#AUTHORITY}.
-     * @param otherHeaders A an array of key:value pairs. Must not contain any
+     * @param otherHeaders An array of key:value pairs. Must not contain any
      *                     <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.1">pseudo headers</a>
      *                     or {@code null} names/values.
      *                     A copy will <strong>NOT</strong> be made of this array. If the contents of this array
