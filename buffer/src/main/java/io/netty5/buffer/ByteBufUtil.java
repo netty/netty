@@ -16,6 +16,7 @@
 package io.netty5.buffer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -68,6 +69,16 @@ public final class ByteBufUtil {
     static byte[] threadLocalTempArray(int minLength) {
         return minLength <= MAX_TL_ARRAY_LEN ? BYTE_ARRAYS.get()
             : PlatformDependent.allocateUninitializedArray(minLength);
+    }
+
+    /**
+     * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * of the readable bytes of the given {@link Buffer}.
+     */
+    public static String hexDump(Buffer buffer) {
+        byte[] array = new byte[buffer.readableBytes()];
+        buffer.copyInto(buffer.readerOffset(), array, 0, array.length);
+        return hexDump(array, 0, array.length);
     }
 
     /**

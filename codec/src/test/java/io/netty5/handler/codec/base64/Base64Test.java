@@ -15,31 +15,29 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
-import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class Base64Test {
 
     @Test
     public void testNotAddNewLineWhenEndOnLimit() {
-        ByteBuf src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcde",
-                CharsetUtil.US_ASCII);
-        ByteBuf expectedEncoded =
+        Buffer src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcde",
+                                  CharsetUtil.US_ASCII);
+        Buffer expectedEncoded =
                 copiedBuffer("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5emFiY2Rl",
                         CharsetUtil.US_ASCII);
         testEncode(src, expectedEncoded);
@@ -47,9 +45,9 @@ public class Base64Test {
 
     @Test
     public void testAddNewLine() {
-        ByteBuf src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz12345678",
+        Buffer src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz12345678",
                 CharsetUtil.US_ASCII);
-        ByteBuf expectedEncoded =
+        Buffer expectedEncoded =
                 copiedBuffer("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejEyMzQ1\nNjc4",
                         CharsetUtil.US_ASCII);
         testEncode(src, expectedEncoded);
@@ -57,8 +55,8 @@ public class Base64Test {
 
     @Test
     public void testEncodeEmpty() {
-        ByteBuf src = Unpooled.EMPTY_BUFFER;
-        ByteBuf expectedEncoded = Unpooled.EMPTY_BUFFER;
+        Buffer src = onHeapAllocator().allocate(0);
+        Buffer expectedEncoded = onHeapAllocator().allocate(0);
         testEncode(src, expectedEncoded);
     }
 
@@ -96,8 +94,8 @@ public class Base64Test {
                 "8i96YWK0VxcCMQC7pf6Wk3RhUU2Sg6S9e6CiirFLDyzLkaWxuCnXcOwTvuXTHUQSeUCp2Q6ygS5q\n" +
                 "Kyc=";
 
-        ByteBuf src = Unpooled.wrappedBuffer(certFromString(cert).getEncoded());
-        ByteBuf expectedEncoded = copiedBuffer(expected, CharsetUtil.US_ASCII);
+        Buffer src = onHeapAllocator().copyOf(certFromString(cert).getEncoded());
+        Buffer expectedEncoded = copiedBuffer(expected, CharsetUtil.US_ASCII);
         testEncode(src, expectedEncoded);
     }
 
@@ -111,54 +109,37 @@ public class Base64Test {
         }
     }
 
-    private static void testEncode(ByteBuf src, ByteBuf expectedEncoded) {
-        ByteBuf encoded = Base64.encode(src, true, Base64Dialect.STANDARD);
-        try {
+    private static void testEncode(Buffer src, Buffer expectedEncoded) {
+        try (Buffer encoded = Base64.encode(src, true, Base64Dialect.STANDARD)) {
             assertEquals(expectedEncoded, encoded);
         } finally {
-            src.release();
-            expectedEncoded.release();
-            encoded.release();
+            src.close();
+            expectedEncoded.close();
         }
     }
 
     @Test
-    public void testEncodeDecodeBE() {
-        testEncodeDecode(ByteOrder.BIG_ENDIAN);
+    public void testEncodeDecode() {
+        testEncodeDecode(64);
+        testEncodeDecode(128);
+        testEncodeDecode(512);
+        testEncodeDecode(1024);
+        testEncodeDecode(4096);
+        testEncodeDecode(8192);
+        testEncodeDecode(16384);
     }
 
-    @Test
-    public void testEncodeDecodeLE() {
-        testEncodeDecode(ByteOrder.LITTLE_ENDIAN);
-    }
-
-    private static void testEncodeDecode(ByteOrder order) {
-        testEncodeDecode(64, order);
-        testEncodeDecode(128, order);
-        testEncodeDecode(512, order);
-        testEncodeDecode(1024, order);
-        testEncodeDecode(4096, order);
-        testEncodeDecode(8192, order);
-        testEncodeDecode(16384, order);
-    }
-
-    private static void testEncodeDecode(int size, ByteOrder order) {
+    private static void testEncodeDecode(int size) {
         byte[] bytes = new byte[size];
         ThreadLocalRandom.current().nextBytes(bytes);
 
-        ByteBuf src = Unpooled.wrappedBuffer(bytes).order(order);
-        ByteBuf encoded = Base64.encode(src);
-        ByteBuf decoded = Base64.decode(encoded);
-        ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);
-        try {
+        try (Buffer src = onHeapAllocator().copyOf(bytes);
+             Buffer encoded = Base64.encode(src);
+             Buffer decoded = Base64.decode(encoded);
+             Buffer expectedBuf = onHeapAllocator().copyOf(bytes)) {
             assertEquals(expectedBuf, decoded,
-                        StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
+                         StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
                          StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
-        } finally {
-            src.release();
-            encoded.release();
-            decoded.release();
-            expectedBuf.release();
         }
     }
 
@@ -177,15 +158,16 @@ public class Base64Test {
     public void decodingFailsOnInvalidInputByte() {
         char[] invalidChars = {'\u007F', '\u0080', '\u00BD', '\u00FF'};
         for (char invalidChar : invalidChars) {
-            ByteBuf buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1);
-            try {
+            try (Buffer buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1)) {
                 Base64.decode(buf);
                 fail("Invalid character in not detected: " + invalidChar);
             } catch (IllegalArgumentException ignored) {
                 // as expected
-            } finally {
-                assertTrue(buf.release());
             }
         }
+    }
+
+    private static Buffer copiedBuffer(String str, Charset charset) {
+        return onHeapAllocator().copyOf(str.getBytes(charset));
     }
 }

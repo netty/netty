@@ -19,16 +19,16 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ByteProcessor;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.ByteProcessor;
 
-import java.nio.ByteOrder;
-
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Utility class for {@link ByteBuf} that encodes and decodes to and from
+ * Utility class for {@link Buffer} that encodes and decodes to and from
  * <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> notation.
  * <p>
  * The encoding and decoding algorithm in this class has been derived from
@@ -65,50 +65,51 @@ public final class Base64 {
         return dialect.breakLinesByDefault;
     }
 
-    public static ByteBuf encode(ByteBuf src) {
+    public static Buffer encode(Buffer src) {
         return encode(src, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf encode(ByteBuf src, Base64Dialect dialect) {
+    public static Buffer encode(Buffer src, Base64Dialect dialect) {
         return encode(src, breakLines(dialect), dialect);
     }
 
-    public static ByteBuf encode(ByteBuf src, boolean breakLines) {
+    public static Buffer encode(Buffer src, boolean breakLines) {
         return encode(src, breakLines, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf encode(ByteBuf src, boolean breakLines, Base64Dialect dialect) {
+    public static Buffer encode(Buffer src, boolean breakLines, Base64Dialect dialect) {
         requireNonNull(src, "src");
 
-        ByteBuf dest = encode(src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
-        src.readerIndex(src.writerIndex());
+        Buffer dest = encode(src, src.readerOffset(), src.readableBytes(), breakLines, dialect);
+        src.readerOffset(src.writerOffset());
         return dest;
     }
 
-    public static ByteBuf encode(ByteBuf src, int off, int len) {
+    public static Buffer encode(Buffer src, int off, int len) {
         return encode(src, off, len, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf encode(ByteBuf src, int off, int len, Base64Dialect dialect) {
+    public static Buffer encode(Buffer src, int off, int len, Base64Dialect dialect) {
         return encode(src, off, len, breakLines(dialect), dialect);
     }
 
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len, boolean breakLines) {
+    public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines) {
         return encode(src, off, len, breakLines, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect) {
-        return encode(src, off, len, breakLines, dialect, src.alloc());
+    public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect) {
+        return encode(src, off, len, breakLines, dialect,
+                      src.isDirect() ? offHeapAllocator() : onHeapAllocator());
     }
 
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
+    public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect, BufferAllocator allocator) {
         requireNonNull(src, "src");
         requireNonNull(dialect, "dialect");
 
-        ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
+        Buffer dest = allocator.allocate(encodedBufferSize(len, breakLines));
         byte[] alphabet = alphabet(dialect);
         int d = 0;
         int e = 0;
@@ -136,11 +137,11 @@ public final class Base64 {
             e--;
         }
 
-        return dest.slice(0, e);
+        return dest.writerOffset(e);
     }
 
     private static void encode3to4(
-            ByteBuf src, int srcOffset, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
+            Buffer src, int srcOffset, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet) {
         //           1         2         3
         // 01234567890123456789012345678901 Bit position
         // --------000000001111111122222222 Array position from threeBytes
@@ -152,35 +153,19 @@ public final class Base64 {
         // significant bytes passed in the array.
         // We have to shift left 24 in order to flush out the 1's that appear
         // when Java treats a value as negative that is cast from a byte to an int.
-        if (src.order() == ByteOrder.BIG_ENDIAN) {
-            final int inBuff;
-            switch (numSigBytes) {
-                case 1:
-                    inBuff = toInt(src.getByte(srcOffset));
-                    break;
-                case 2:
-                    inBuff = toIntBE(src.getShort(srcOffset));
-                    break;
-                default:
-                    inBuff = numSigBytes <= 0 ? 0 : toIntBE(src.getMedium(srcOffset));
-                    break;
-            }
-            encode3to4BigEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
-        } else {
-            final int inBuff;
-            switch (numSigBytes) {
-                case 1:
-                    inBuff = toInt(src.getByte(srcOffset));
-                    break;
-                case 2:
-                    inBuff = toIntLE(src.getShort(srcOffset));
-                    break;
-                default:
-                    inBuff = numSigBytes <= 0 ? 0 : toIntLE(src.getMedium(srcOffset));
-                    break;
-            }
-            encode3to4LittleEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
+        final int inBuff;
+        switch (numSigBytes) {
+        case 1:
+            inBuff = toInt(src.getByte(srcOffset));
+            break;
+        case 2:
+            inBuff = toIntBE(src.getShort(srcOffset));
+            break;
+        default:
+            inBuff = numSigBytes <= 0 ? 0 : toIntBE(src.getMedium(srcOffset));
+            break;
         }
+        encode3to4BigEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
     }
 
     // package-private for testing
@@ -206,20 +191,12 @@ public final class Base64 {
         return (value & 0xff00) << 8 | (value & 0xff) << 8;
     }
 
-    private static int toIntLE(short value) {
-        return (value & 0xff) << 16 | (value & 0xff00);
-    }
-
     private static int toIntBE(int mediumValue) {
         return (mediumValue & 0xff0000) | (mediumValue & 0xff00) | (mediumValue & 0xff);
     }
 
-    private static int toIntLE(int mediumValue) {
-        return (mediumValue & 0xff) << 16 | (mediumValue & 0xff00) | (mediumValue & 0xff0000) >>> 16;
-    }
-
     private static void encode3to4BigEndian(
-            int inBuff, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
+            int inBuff, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet) {
         // Packing bytes into an int to reduce bound and reference count checking.
         switch (numSigBytes) {
             case 3:
@@ -246,58 +223,30 @@ public final class Base64 {
         }
     }
 
-    private static void encode3to4LittleEndian(
-            int inBuff, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
-        // Packing bytes into an int to reduce bound and reference count checking.
-        switch (numSigBytes) {
-            case 3:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]       |
-                                        alphabet[inBuff >>> 12 & 0x3f] << 8  |
-                                        alphabet[inBuff >>>  6 & 0x3f] << 16 |
-                                        alphabet[inBuff        & 0x3f] << 24);
-                break;
-            case 2:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]       |
-                                        alphabet[inBuff >>> 12 & 0x3f] << 8  |
-                                        alphabet[inBuff >>> 6  & 0x3f] << 16 |
-                                        EQUALS_SIGN << 24);
-                break;
-            case 1:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]      |
-                                        alphabet[inBuff >>> 12 & 0x3f] << 8 |
-                                        EQUALS_SIGN << 16                   |
-                                        EQUALS_SIGN << 24);
-                break;
-            default:
-                // NOOP
-                break;
-        }
-    }
-
-    public static ByteBuf decode(ByteBuf src) {
+    public static Buffer decode(Buffer src) {
         return decode(src, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
+    public static Buffer decode(Buffer src, Base64Dialect dialect) {
         requireNonNull(src, "src");
 
-        ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
-        src.readerIndex(src.writerIndex());
+        Buffer dest = decode(src, src.readerOffset(), src.readableBytes(), dialect);
+        src.readerOffset(src.writerOffset());
         return dest;
     }
 
-    public static ByteBuf decode(
-            ByteBuf src, int off, int len) {
+    public static Buffer decode(
+            Buffer src, int off, int len) {
         return decode(src, off, len, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf decode(
-            ByteBuf src, int off, int len, Base64Dialect dialect) {
-        return decode(src, off, len, dialect, src.alloc());
+    public static Buffer decode(
+            Buffer src, int off, int len, Base64Dialect dialect) {
+        return decode(src, off, len, dialect, src.isDirect() ? offHeapAllocator() : onHeapAllocator());
     }
 
-    public static ByteBuf decode(
-            ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufAllocator allocator) {
+    public static Buffer decode(
+            Buffer src, int off, int len, Base64Dialect dialect, BufferAllocator allocator) {
         requireNonNull(src, "src");
         requireNonNull(dialect, "dialect");
 
@@ -315,17 +264,17 @@ public final class Base64 {
         private int b4Posn;
         private byte[] decodabet;
         private int outBuffPosn;
-        private ByteBuf dest;
+        private Buffer dest;
 
-        ByteBuf decode(ByteBuf src, int off, int len, ByteBufAllocator allocator, Base64Dialect dialect) {
-            dest = allocator.buffer(decodedBufferSize(len)).order(src.order()); // Upper limit on size of output
+        Buffer decode(Buffer src, int off, int len, BufferAllocator allocator, Base64Dialect dialect) {
+            dest = allocator.allocate(decodedBufferSize(len)); // Upper limit on size of output
 
-            decodabet = decodabet(dialect);
             try {
-                src.forEachByte(off, len, this);
-                return dest.slice(0, outBuffPosn);
+                decodabet = decodabet(dialect);
+                src.openCursor(off, len).process(this);
+                return dest.writerOffset(outBuffPosn);
             } catch (Throwable cause) {
-                dest.release();
+                dest.close();
                 throw cause;
             }
         }
@@ -352,7 +301,7 @@ public final class Base64 {
                     "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
         }
 
-        private static int decode4to3(byte[] src, ByteBuf dest, int destOffset, byte[] decodabet) {
+        private static int decode4to3(byte[] src, Buffer dest, int destOffset, byte[] decodabet) {
             final byte src0 = src[0];
             final byte src1 = src[1];
             final byte src2 = src[2];
@@ -364,7 +313,7 @@ public final class Base64 {
                 } catch (IndexOutOfBoundsException ignored) {
                     throw new IllegalArgumentException("not encoded in Base64");
                 }
-                dest.setByte(destOffset, decodedValue);
+                dest.setUnsignedByte(destOffset, (byte) decodedValue);
                 return 1;
             }
 
@@ -374,49 +323,23 @@ public final class Base64 {
                 final byte b1 = decodabet[src1];
                 // Packing bytes into a short to reduce bound and reference count checking.
                 try {
-                    if (dest.order() == ByteOrder.BIG_ENDIAN) {
-                        // The decodabet bytes are meant to straddle byte boundaries and so we must carefully mask out
-                        // the bits we care about.
-                        decodedValue = ((decodabet[src0] & 0x3f) << 2 | (b1 & 0xf0) >> 4) << 8 |
-                                        (b1 & 0xf) << 4 | (decodabet[src2] & 0xfc) >>> 2;
-                    } else {
-                        // This is just a simple byte swap of the operation above.
-                        decodedValue = (decodabet[src0] & 0x3f) << 2 | (b1 & 0xf0) >> 4 |
-                                      ((b1 & 0xf) << 4 | (decodabet[src2] & 0xfc) >>> 2) << 8;
-                    }
+                    // The decodabet bytes are meant to straddle byte boundaries and so we must carefully mask out
+                    // the bits we care about.
+                    decodedValue = ((decodabet[src0] & 0x3f) << 2 | (b1 & 0xf0) >> 4) << 8 |
+                                   (b1 & 0xf) << 4 | (decodabet[src2] & 0xfc) >>> 2;
                 } catch (IndexOutOfBoundsException ignored) {
                     throw new IllegalArgumentException("not encoded in Base64");
                 }
-                dest.setShort(destOffset, decodedValue);
+                dest.setUnsignedShort(destOffset, decodedValue);
                 return 2;
             }
 
             // Example: DkLE
             try {
-                if (dest.order() == ByteOrder.BIG_ENDIAN) {
-                    decodedValue = (decodabet[src0] & 0x3f) << 18 |
-                                   (decodabet[src1] & 0xff) << 12 |
-                                   (decodabet[src2] & 0xff) << 6 |
-                                    decodabet[src3] & 0xff;
-                } else {
-                    final byte b1 = decodabet[src1];
-                    final byte b2 = decodabet[src2];
-                    // The goal is to byte swap the BIG_ENDIAN case above. There are 2 interesting things to consider:
-                    // 1. We are byte swapping a 3 byte data type. The left and the right byte switch, but the middle
-                    //    remains the same.
-                    // 2. The contents straddles byte boundaries. This means bytes will be pulled apart during the byte
-                    //    swapping process.
-                    decodedValue = (decodabet[src0] & 0x3f) << 2 |
-                                   // The bottom half of b1 remains in the middle.
-                                   (b1 & 0xf) << 12 |
-                                   // The top half of b1 are the least significant bits after the swap.
-                                   (b1 & 0xf0) >>> 4 |
-                                   // The bottom 2 bits of b2 will be the most significant bits after the swap.
-                                   (b2 & 0x3) << 22 |
-                                   // The remaining 6 bits of b2 remain in the middle.
-                                   (b2 & 0xfc) << 6 |
-                                   (decodabet[src3] & 0xff) << 16;
-                }
+                decodedValue = (decodabet[src0] & 0x3f) << 18 |
+                               (decodabet[src1] & 0xff) << 12 |
+                               (decodabet[src2] & 0xff) << 6 |
+                               decodabet[src3] & 0xff;
             } catch (IndexOutOfBoundsException ignored) {
                 throw new IllegalArgumentException("not encoded in Base64");
             }

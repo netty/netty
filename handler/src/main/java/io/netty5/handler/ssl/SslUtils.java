@@ -18,6 +18,12 @@ package io.netty5.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.AllocationType;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.base64.Base64Dialect;
@@ -37,6 +43,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -463,15 +470,18 @@ final class SslUtils {
     }
 
     /**
-     * Same as {@link Base64#encode(ByteBuf, boolean)} but allows the use of a custom {@link ByteBufAllocator}.
+     * Same as {@link Base64#encode(Buffer, boolean)} but allows the use of a custom {@link ByteBufAllocator}.
      *
-     * @see Base64#encode(ByteBuf, boolean)
+     * @see Base64#encode(Buffer, boolean)
      */
     static ByteBuf toBase64(ByteBufAllocator allocator, ByteBuf src) {
-        ByteBuf dst = Base64.encode(src, src.readerIndex(),
-                src.readableBytes(), true, Base64Dialect.STANDARD, allocator);
-        src.readerIndex(src.writerIndex());
-        return dst;
+        try (Buffer dst = Base64.encode(ByteBufBuffer.wrap(src), src.readerIndex(),
+                                    src.readableBytes(), true, Base64Dialect.STANDARD)) {
+            src.readerIndex(src.writerIndex());
+            ByteBuf result = allocator.buffer(dst.readableBytes()); // TODO temporary copy until we port this class.
+            result.writeBytes(ByteBufAdaptor.intoByteBuf(dst));
+            return result;
+        }
     }
 
     /**
