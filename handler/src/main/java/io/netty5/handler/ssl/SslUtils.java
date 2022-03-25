@@ -499,7 +499,7 @@ final class SslUtils {
     }
 
     /**
-     * Returns {@code true} if the the given cipher (in openssl format) is for TLSv1.3, {@code false} otherwise.
+     * Returns {@code true} if the given cipher (in openssl format) is for TLSv1.3, {@code false} otherwise.
      */
     static boolean isTLSv13Cipher(String cipher) {
         // See https://tools.ietf.org/html/rfc8446#appendix-B.4
