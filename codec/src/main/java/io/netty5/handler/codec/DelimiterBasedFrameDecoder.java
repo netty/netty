@@ -254,8 +254,20 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
     }
 
     private static void closeDelimiters(Buffer[] delimiters) {
+        RuntimeException re = null;
         for (Buffer delimiter : delimiters) {
-            delimiter.close();
+            try {
+                delimiter.close();
+            } catch (RuntimeException e) {
+                if (re == null) {
+                    re = e;
+                } else {
+                    re.addSuppressed(e);
+                }
+            }
+        }
+        if (re != null) {
+            throw re;
         }
     }
 
