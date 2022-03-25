@@ -23,18 +23,21 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketCancelWriteTest extends AbstractSocketTest {
@@ -98,7 +101,9 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
             throw ch.exception.get();
         }
         assertEquals(0, ch.counter.get());
+        assertNull(ch.received);
         assertEquals(Unpooled.wrappedBuffer(new byte[]{'b', 'c', 'e'}), sh.received);
+        releaseReceivedBuffer(sh.received);
     }
 
     @Test
@@ -161,7 +166,17 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
             throw ch.exception.get();
         }
         assertEquals(0, ch.counter.get());
+        assertNull(ch.received);
         assertEquals(preferredAllocator().copyOf(new byte[] { 'b', 'c', 'e' }), sh.received);
+        releaseReceivedBuffer(sh.received);
+    }
+
+    private void releaseReceivedBuffer(Object buffer) {
+        if (buffer instanceof Buffer) {
+            ((Buffer) buffer).close();
+        } else {
+            ReferenceCountUtil.release(buffer);
+        }
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<Object> {
