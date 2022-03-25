@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty5-parent</artifactId>
   <packaging>pom</packaging>
-  <version>5.0.1.Alpha1-SNAPSHOT</version>
+  <version>5.0.0.Alpha2-SNAPSHOT</version>
 
   <name>Netty 5 Parent</name>
   <url>https://netty.io/</url>
