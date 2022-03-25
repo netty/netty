@@ -100,30 +100,6 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
      * @param maxFrameLength  the maximum length of the decoded frame.
      *                        A {@link TooLongFrameException} is thrown if
      *                        the length of the frame exceeds this value.
-     * @param stripDelimiter  whether the decoded frame should strip out the
-     *                        delimiter or not
-     * @param failFast  If <tt>true</tt>, a {@link TooLongFrameException} is
-     *                  thrown as soon as the decoder notices the length of the
-     *                  frame will exceed <tt>maxFrameLength</tt> regardless of
-     *                  whether the entire frame has been read.
-     *                  If <tt>false</tt>, a {@link TooLongFrameException} is
-     *                  thrown after the entire frame that exceeds
-     *                  <tt>maxFrameLength</tt> has been read.
-     * @param delimiter  the delimiter
-     */
-    public DelimiterBasedFrameDecoder(
-            int maxFrameLength, boolean stripDelimiter, boolean failFast,
-            Buffer delimiter) {
-        this(maxFrameLength, stripDelimiter, failFast, new Buffer[] {
-                delimiter.copy(delimiter.readerOffset(), delimiter.readableBytes(), true)});
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param maxFrameLength  the maximum length of the decoded frame.
-     *                        A {@link TooLongFrameException} is thrown if
-     *                        the length of the frame exceeds this value.
      * @param delimiters  the delimiters
      */
     public DelimiterBasedFrameDecoder(int maxFrameLength, Buffer... delimiters) {
