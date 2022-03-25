@@ -149,12 +149,14 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
         if (isLineBased(delimiters) && !isSubclass()) {
             lineBasedDecoder = new LineBasedFrameDecoder(maxFrameLength, stripDelimiter, failFast);
             this.delimiters = null;
+            closeDelimiters(delimiters);
         } else {
             this.delimiters = new Buffer[delimiters.length];
             for (int i = 0; i < delimiters.length; i ++) {
                 Buffer d = delimiters[i];
                 validateDelimiter(d);
                 this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes(), true);
+                d.close();
             }
             lineBasedDecoder = null;
         }
@@ -267,6 +269,18 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
                 buffer.skipReadable(buffer.readableBytes());
             }
             return null;
+        }
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        closeDelimiters(delimiters);
+        super.handlerRemoved0(ctx);
+    }
+
+    private static void closeDelimiters(Buffer[] delimiters) {
+        for (Buffer delimiter : delimiters) {
+            delimiter.close();
         }
     }
 
