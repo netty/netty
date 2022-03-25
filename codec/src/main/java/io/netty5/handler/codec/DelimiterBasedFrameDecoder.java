@@ -337,7 +337,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
 
     private static void validateDelimiter(Buffer delimiter) {
         requireNonNull(delimiter, "delimiter");
-        if (delimiter.readableBytes() <= 0) {
+        if (delimiter.readableBytes() == 0) {
             throw new IllegalArgumentException("empty delimiter");
         }
     }
