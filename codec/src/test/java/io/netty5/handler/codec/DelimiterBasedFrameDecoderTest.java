@@ -23,8 +23,11 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.Charset;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DelimiterBasedFrameDecoderTest {
 
@@ -121,6 +124,25 @@ public class DelimiterBasedFrameDecoderTest {
 
         assertNull(ch.readInbound());
         ch.finish();
+    }
+
+    @Test
+    void testDelimitersClosed() {
+        Buffer[] delimiters = Delimiters.lineDelimiter();
+        new DelimiterBasedFrameDecoder(8192, false, delimiters);
+        assertFalse(delimiters[0].isAccessible());
+        assertFalse(delimiters[1].isAccessible());
+
+        delimiters = Delimiters.nulDelimiter();
+        new DelimiterBasedFrameDecoder(8192, false, delimiters);
+        assertFalse(delimiters[0].isAccessible());
+    }
+
+    @Test
+    void testEmptyDelimiter() {
+        Buffer delimiter = preferredAllocator().allocate(0);
+        assertThrows(IllegalArgumentException.class, () -> new DelimiterBasedFrameDecoder(8192, false, delimiter));
+        assertFalse(delimiter.isAccessible());
     }
 
     private static Buffer copiedBuffer(BufferAllocator allocator, String str, Charset charset) {

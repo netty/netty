@@ -125,11 +125,33 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
             closeDelimiters(delimiters);
         } else {
             this.delimiters = new Buffer[delimiters.length];
-            for (int i = 0; i < delimiters.length; i ++) {
-                Buffer d = delimiters[i];
-                validateDelimiter(d);
-                this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes(), true);
-                d.close();
+            RuntimeException re = null;
+            try {
+                for (int i = 0; i < delimiters.length; i++) {
+                    Buffer d = delimiters[i];
+                    validateDelimiter(d);
+                    this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes(), true);
+                }
+            } catch (IllegalArgumentException e) {
+                re = e;
+                try {
+                    closeDelimiters(this.delimiters);
+                } catch (RuntimeException e1) {
+                    re.addSuppressed(e1);
+                }
+            } finally {
+                try {
+                    closeDelimiters(delimiters);
+                } catch (RuntimeException e) {
+                    if (re == null) {
+                        re = e;
+                    } else {
+                        re.addSuppressed(e);
+                    }
+                }
+            }
+            if (re != null) {
+                throw re;
             }
             lineBasedDecoder = null;
         }
@@ -257,7 +279,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
         RuntimeException re = null;
         for (Buffer delimiter : delimiters) {
             try {
-                delimiter.close();
+                if (delimiter != null) {
+                    delimiter.close();
+                }
             } catch (RuntimeException e) {
                 if (re == null) {
                     re = e;
