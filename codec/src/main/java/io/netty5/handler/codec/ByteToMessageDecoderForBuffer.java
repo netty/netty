@@ -194,12 +194,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 Buffer data = (Buffer) msg;
                 first = cumulation == null;
                 if (first) {
-                    if (data.readOnly()) {
-                        cumulation = CompositeBuffer.compose(ctx.bufferAllocator(), data.copy().send());
-                        data.close();
-                    } else {
-                        cumulation = data;
-                    }
+                    cumulation = data;
                 } else {
                     cumulation = cumulator.cumulate(ctx.bufferAllocator(), cumulation, data);
                 }
@@ -246,7 +241,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     protected final void discardSomeReadBytes() {
         if (cumulation != null && !first) {
             // discard some bytes if possible to make more room in the buffer.
-            cumulation.compact();
+            cumulator.discardSomeReadBytes(cumulation);
         }
     }
 
@@ -409,6 +404,16 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
          * call {@link Buffer#close()} if a {@link Buffer} is fully consumed.
          */
         Buffer cumulate(BufferAllocator alloc, Buffer cumulation, Buffer in);
+
+        /**
+         * Consume the given buffer and return a new buffer with the same readable data, but where any data before the
+         * read offset may have been removed.
+         * The returned buffer may be the same buffer instance as the buffer passed in.
+         *
+         * @param cumulation The buffer we wish to trim already processed bytes from.
+         * @return A buffer where the bytes before the reader-offset have been removed.
+         */
+        Buffer discardSomeReadBytes(Buffer cumulation);
     }
 
     // Package private so we can also make use of it in ReplayingDecoder.
@@ -615,17 +620,52 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 cumulation.close();
                 return in;
             }
-            CompositeBuffer composite;
             try (in) {
+                if (in.readableBytes() == 0) {
+                    return cumulation;
+                }
+                if (cumulation.readOnly()) {
+                    Buffer tmp = cumulation.copy();
+                    cumulation.close();
+                    cumulation = tmp;
+                } else if (cumulation.writableBytes() > 0) {
+                    // Prevent writer-offset gaps from an initial cumulation.
+                    Buffer tmp = cumulation.split();
+                    cumulation.close();
+                    cumulation = tmp;
+                }
+                CompositeBuffer composite;
                 if (CompositeBuffer.isComposite(cumulation)) {
                     composite = (CompositeBuffer) cumulation;
                 } else {
                     composite = CompositeBuffer.compose(alloc, cumulation.send());
                 }
-                // Using split() even on the writable buffer, in order to prevent gaps in the composite buffer.
-                composite.extendWith((in.readOnly() ? in.copy() : in.split()).send());
+                if (in.readOnly()) {
+                    composite.extendWith(in.copy().send());
+                } else {
+                    if (in.readerOffset() != 0) {
+                        // We can't compose buffers that will have reader-offset gaps.
+                        in.readSplit(0).close(); // Trim off already-read bytes at the beginning.
+                    }
+                    if (in.writableBytes() > 0) {
+                        // We also can't compose buffers that will have writer-offset gaps.
+                        // Trim off the excess with split.
+                        composite.extendWith(in.split().send());
+                    } else {
+                        composite.extendWith(in.send());
+                    }
+                }
                 return composite;
             }
+        }
+
+        @Override
+        public Buffer discardSomeReadBytes(Buffer cumulation) {
+            // Compact is slow on composite buffers, and we also need to avoid leaving any writable space at the end.
+            // Using readSplit(0), we grab zero readable bytes in the split-off buffer, but all the already-read
+            // bytes get cut off from the cumulation buffer.
+            cumulation.readSplit(0).close();
+            return cumulation;
         }
 
         @Override
@@ -652,6 +692,14 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 cumulation.writeBytes(in);
                 return cumulation;
             }
+        }
+
+        @Override
+        public Buffer discardSomeReadBytes(Buffer cumulation) {
+            if (cumulation.readerOffset() > cumulation.writableBytes()) {
+                cumulation.compact();
+            }
+            return cumulation;
         }
 
         private static Buffer expandCumulationAndWrite(BufferAllocator alloc, Buffer oldCumulation, Buffer in) {
