@@ -225,7 +225,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void whenExtendingCompositeBufferWithWriteOffsetLessThanCapacityExtensionWriteOffsetMustZero() {
+    public void whenExtendingCompositeBufferWithWriteOffsetLessThanCapacityExtensionWriteOffsetMustBeZero() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
@@ -235,6 +235,12 @@ public class BufferCompositionTest extends BufferTestSupport {
                 composite.writeInt(0);
                 try (Buffer b = allocator.allocate(8)) {
                     b.writeInt(1);
+                    var exc = assertThrows(IllegalArgumentException.class,
+                            () -> composite.extendWith(b.send()));
+                    assertThat(exc).hasMessageContaining("unwritten gap");
+                }
+                try (Buffer b = allocator.allocate(8)) {
+                    b.writeLong(1);
                     var exc = assertThrows(IllegalArgumentException.class,
                             () -> composite.extendWith(b.send()));
                     assertThat(exc).hasMessageContaining("unwritten gap");
@@ -282,6 +288,16 @@ public class BufferCompositionTest extends BufferTestSupport {
             b.readInt();
             var exc = assertThrows(IllegalArgumentException.class,
                     () -> composite.extendWith(b.send()));
+            assertThat(exc).hasMessageContaining("unread gap");
+            assertThat(composite.capacity()).isEqualTo(8);
+            assertThat(composite.writerOffset()).isEqualTo(8);
+            assertThat(composite.readerOffset()).isEqualTo(4);
+
+            Buffer c = allocator.allocate(8);
+            c.writeLong(1);
+            c.readLong();
+            exc = assertThrows(IllegalArgumentException.class,
+                    () -> composite.extendWith(c.send()));
             assertThat(exc).hasMessageContaining("unread gap");
             assertThat(composite.capacity()).isEqualTo(8);
             assertThat(composite.writerOffset()).isEqualTo(8);

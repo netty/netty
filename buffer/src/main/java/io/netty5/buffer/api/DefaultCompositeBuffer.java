@@ -221,12 +221,15 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (bufs.length > 0) {
             boolean woffMidpoint = false;
             for (Buffer buf : bufs) {
-                if (buf.writableBytes() == 0) {
-                    woff += buf.capacity();
-                } else if (!woffMidpoint) {
+                if (!woffMidpoint) {
+                    // First region, before the composite writer-offset.
                     woff += buf.writerOffset();
-                    woffMidpoint = true;
+                    if (buf.writableBytes() > 0) {
+                        // We have writable bytes, so the composite writer-offset is in here.
+                        woffMidpoint = true;
+                    }
                 } else if (buf.writerOffset() != 0) {
+                    // We're past the composite write-offset, so all component writer-offsets must be zero from here.
                     throw new IllegalArgumentException(
                             "The given buffers cannot be composed because they leave an unwritten gap: " +
                             Arrays.toString(bufs) + '.');
@@ -234,19 +237,18 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
             boolean roffMidpoint = false;
             for (Buffer buf : bufs) {
-                if (buf.readableBytes() == 0 && buf.writableBytes() == 0) {
-                    roff += buf.capacity();
-                } else if (!roffMidpoint) {
+                if (!roffMidpoint) {
+                    // First region, before we've found the composite reader-offset.
                     roff += buf.readerOffset();
-                    roffMidpoint = true;
+                    if (buf.readableBytes() > 0 || buf.writableBytes() > 0) {
+                        roffMidpoint = true;
+                    }
                 } else if (buf.readerOffset() != 0) {
                     throw new IllegalArgumentException(
                             "The given buffers cannot be composed because they leave an unread gap: " +
                             Arrays.toString(bufs) + '.');
                 }
             }
-            assert roff <= woff:
-                    "The given buffers place the read offset ahead of the write offset: " + Arrays.toString(bufs) + '.';
         }
         // Commit computed offsets, if any
         this.woff = woff;
