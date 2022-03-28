@@ -23,10 +23,16 @@ public final class WriteTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = -144786655770296065L;
 
-    public static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
+    public static final WriteTimeoutException INSTANCE = new WriteTimeoutException(true);
 
-    private WriteTimeoutException() {
-        super(true);
+    public WriteTimeoutException() { }
+
+    public WriteTimeoutException(String message) {
+        super(message, false);
+    }
+
+    private WriteTimeoutException(boolean shared) {
+        super(null, shared);
     }
 
 }
