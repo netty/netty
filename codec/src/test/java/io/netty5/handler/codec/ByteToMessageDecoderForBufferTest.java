@@ -28,10 +28,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.SplittableRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -42,6 +44,7 @@ import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
 import static io.netty5.buffer.api.CompositeBuffer.compose;
 import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.COMPOSITE_CUMULATOR;
 import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -459,8 +462,8 @@ public class ByteToMessageDecoderForBufferTest {
         this.allocator = allocator;
         Buffer buffer = newBufferWithRandomBytes(allocator);
         try (CompositeBuffer cumulation = compose(allocator, buffer.send())) {
-            Buffer in = newBufferWithRandomBytes(allocator, 12);
-            in.readByte(); // This causes the offsets to no longer line up, and makes extendWith() throw.
+            Buffer in = allocator.allocate(0);
+            in.close(); // Cause the cumulator to throw.
 
             assertThrows(Exception.class, () -> COMPOSITE_CUMULATOR.cumulate(allocator, cumulation, in));
             assertFalse(in.isAccessible());
@@ -582,6 +585,50 @@ public class ByteToMessageDecoderForBufferTest {
             }
             assertNull(channel.readInbound());
         }
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("allocators")
+    public void testHighVolume(BufferAllocator allocator, Cumulator cumulator) {
+        this.allocator = allocator;
+        SplittableRandom rng = new SplittableRandom();
+        AtomicInteger receiveCounter = new AtomicInteger();
+        AtomicBoolean lastMessage = new AtomicBoolean();
+
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, Buffer in) {
+                // Don't split off the input buffer like what would normally happen.
+                // Force the decoder to discard read bytes.
+                // Also, don't always read unless this is the last message.
+                // This will force the decoder to buffer data across packets.
+                int valuesAvailable = in.readableBytes() / Integer.BYTES;
+                int valuesToRead = lastMessage.get() ? valuesAvailable : rng.nextInt(0, valuesAvailable + 1);
+                for (int i = 0; i < valuesToRead; i++) {
+                    int value = in.readInt();
+                    assertThat(value).isEqualTo(1 + receiveCounter.get());
+                    receiveCounter.set(value);
+                }
+            }
+        });
+        int sendCounter = 0;
+        do {
+            int valueCapacity = rng.nextInt(10, 1000);
+            int valuesSkipped = rng.nextInt(0, valueCapacity / 4);
+            int valuesWritten = rng.nextInt(0, valueCapacity - valuesSkipped);
+            Buffer buf = allocator.allocate(valueCapacity * Integer.BYTES);
+            buf.skipWritable(valuesSkipped * Integer.BYTES);
+            buf.skipReadable(valuesSkipped * Integer.BYTES);
+            for (int i = 0; i < valuesWritten; i++) {
+                buf.writeInt(++sendCounter);
+            }
+            channel.writeInbound(buf);
+        } while (sendCounter < 1_000_000);
+        lastMessage.set(true);
+        channel.flushInbound();
+        channel.finishAndReleaseAll();
+
+        assertThat(receiveCounter.get()).isEqualTo(sendCounter);
     }
 
     private static Buffer newBufferWithRandomBytes(BufferAllocator allocator) {
