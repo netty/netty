@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -102,7 +103,7 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         assertEquals(0, ch.counter.get());
         assertNull(ch.received);
         assertEquals(Unpooled.wrappedBuffer(new byte[]{'b', 'c', 'e'}), sh.received);
-        releaseReceivedBuffer(sh.received);
+        Resource.dispose(sh.received);
     }
 
     @Test
@@ -167,15 +168,7 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         assertEquals(0, ch.counter.get());
         assertNull(ch.received);
         assertEquals(preferredAllocator().copyOf(new byte[] { 'b', 'c', 'e' }), sh.received);
-        releaseReceivedBuffer(sh.received);
-    }
-
-    private void releaseReceivedBuffer(Object buffer) {
-        if (buffer instanceof Buffer) {
-            ((Buffer) buffer).close();
-        } else {
-            ReferenceCountUtil.release(buffer);
-        }
+        Resource.dispose(sh.received);
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<Object> {

@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.PrematureChannelClosureException;
 import io.netty5.util.CharsetUtil;
@@ -528,9 +529,12 @@ public class HttpResponseDecoderTest {
         assertTrue(res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
                                           false));
         assertTrue(res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat", false));
+        Resource.dispose(res);
 
-        LastHttpContent<?> lastHttpContent = ch.readInbound();
-        assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), lastHttpContent);
+        try (LastHttpContent<?> lastHttpContent = ch.readInbound();
+             EmptyLastHttpContent expected = new EmptyLastHttpContent(ch.bufferAllocator())) {
+            assertEquals(expected, lastHttpContent);
+        }
 
         assertFalse(ch.finish());
     }
@@ -553,14 +557,17 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), sameInstance(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        Resource.dispose(res);
 
-        try (HttpContent<?> content = ch.readInbound()) {
-            assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), content);
+        try (HttpContent<?> content = ch.readInbound();
+             EmptyLastHttpContent expected = new EmptyLastHttpContent(ch.bufferAllocator())) {
+            assertEquals(expected, content);
         }
 
         assertTrue(ch.finish());
 
-        try (Buffer expected = copiedBuffer(ch.bufferAllocator(), otherData); Buffer buffer = ch.readInbound()) {
+        try (Buffer expected = copiedBuffer(ch.bufferAllocator(), otherData);
+             Buffer buffer = ch.readInbound()) {
             assertEquals(expected, buffer);
         }
     }

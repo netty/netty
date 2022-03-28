@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -334,9 +335,12 @@ public class HttpClientCodecTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), sameInstance(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        Resource.dispose(res);
 
-        LastHttpContent<?> lastHttpContent = ch.readInbound();
-        assertEquals(new EmptyLastHttpContent(ch.bufferAllocator()), lastHttpContent);
+        try (LastHttpContent<?> lastHttpContent = ch.readInbound();
+             EmptyLastHttpContent expected = new EmptyLastHttpContent(ch.bufferAllocator())) {
+            assertEquals(expected, lastHttpContent);
+        }
 
         assertFalse(ch.finish());
     }
