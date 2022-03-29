@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -120,6 +119,10 @@ public abstract class SocketTest<T extends Socket> {
         assertNotEquals(ByteBuffer.allocate(0), socket.getRawOpt(level(), optname(), 4));
     }
 
-    protected abstract int level();
-    protected abstract int optname();
+    protected int level() {
+        return 1;
+    }
+    protected int optname() {
+        return 2;
+    }
 }
