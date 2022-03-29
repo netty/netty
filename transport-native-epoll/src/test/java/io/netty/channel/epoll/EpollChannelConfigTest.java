@@ -70,7 +70,6 @@ public class EpollChannelConfigTest {
         channel.fd().close();
     }
 
-
     @Test
     public void testRawOption() throws Exception {
         Epoll.ensureAvailability();
@@ -89,5 +88,4 @@ public class EpollChannelConfigTest {
         channel.fd().close();
     }
 }
-
 
