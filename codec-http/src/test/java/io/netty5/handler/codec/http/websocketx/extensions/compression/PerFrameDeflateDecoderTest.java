@@ -24,8 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
-import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
+import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
+import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
@@ -41,9 +41,11 @@ public class PerFrameDeflateDecoderTest {
 
     @Test
     public void testCompressedFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
+
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false));
 
         // initialize

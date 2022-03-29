@@ -15,9 +15,9 @@
  */
 package io.netty5.testsuite.transport.socket;
 
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -53,8 +53,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
-import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
+import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
+import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -146,7 +146,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(BYTEBUF_TO_BUFFER_HANDLER, new LineBasedFrameDecoder(64), BUFFER_TO_BYTEBUF_HANDLER);
+                p.addLast(byteBufToBuffer(), new LineBasedFrameDecoder(64), bufferToByteBuf());
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(sh);
             }
@@ -157,7 +157,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(BYTEBUF_TO_BUFFER_HANDLER, new LineBasedFrameDecoder(64), BUFFER_TO_BYTEBUF_HANDLER);
+                p.addLast(byteBufToBuffer(), new LineBasedFrameDecoder(64), bufferToByteBuf());
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(ch);
             }

@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
-import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
+import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
+import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
@@ -50,9 +50,10 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testCompressedFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
@@ -111,9 +112,10 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testFragmentedFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
@@ -166,9 +168,10 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testMultiCompressedPayloadWithinFrame() {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         // initialize
@@ -240,9 +243,10 @@ public class PerMessageDeflateDecoderTest {
     public void testSelectivityDecompressionSkip() {
         WebSocketExtensionFilter selectivityDecompressionFilter =
                 frame -> frame instanceof TextWebSocketFrame && frame.binaryData().readableBytes() < 100;
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
 
@@ -282,9 +286,10 @@ public class PerMessageDeflateDecoderTest {
     public void testIllegalStateWhenDecompressionInProgress() {
         WebSocketExtensionFilter selectivityDecompressionFilter = frame -> frame.binaryData().readableBytes() < 100;
 
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
 
@@ -346,9 +351,10 @@ public class PerMessageDeflateDecoderTest {
                          "f6f736e73746575637a6d727a7175707a6e74627578687871767771697a71766c64626d78726d6d7675756877" +
                          "62667963626b687a726d676e646263776e67797264706d6c6863626577616967706a78636a72697464756e627" +
                          "977616f79736475676f76736f7178746a7a7479626c64636b6b6778637768746c62";
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(BYTEBUF_TO_BUFFER_HANDLER,
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                bufferToByteBuf(),
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8),
-                BUFFER_TO_BYTEBUF_HANDLER);
+                byteBufToBuffer());
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
         Buffer originPayload = encoderChannel.bufferAllocator().copyOf(ByteBufUtil.decodeHexDump(hexDump));
