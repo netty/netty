@@ -132,6 +132,18 @@ public class EpollChannelConfig extends UnixChannelConfig {
         return this;
     }
 
+    @Override
+    public EpollChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
+
+    @Override
+    public EpollChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
     /**
      * Return the {@link EpollMode} used. Default is
      * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
