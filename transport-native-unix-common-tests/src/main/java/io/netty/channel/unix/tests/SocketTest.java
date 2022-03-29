@@ -108,7 +108,7 @@ public abstract class SocketTest<T extends Socket> {
         assertNotEquals(0, socket.getIntOpt(level(), optname()));
         socket.setIntOpt(level(), optname(), 0);
         // This should be disabled again
-        assertEquals(0, socket.getIntOpt(0xffff, optname()));
+        assertEquals(0, socket.getIntOpt(level(), optname()));
     }
 
     @Test
