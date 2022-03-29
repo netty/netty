@@ -458,11 +458,11 @@ public class Socket extends FileDescriptor {
         setTrafficClass(fd, ipv6, trafficClass);
     }
 
-    public final void setIntOpt(int level, int optname, int optvalue) throws IOException {
+    public void setIntOpt(int level, int optname, int optvalue) throws IOException {
         setIntOpt(fd, level, optname, optvalue);
     }
 
-    public final void setRawOpt(int level, int optname, ByteBuffer optvalue) throws IOException {
+    public void setRawOpt(int level, int optname, ByteBuffer optvalue) throws IOException {
         if (optvalue.hasArray()) {
             setRawOpt(fd, level, optname,
                     optvalue.array(), optvalue.arrayOffset() + optvalue.position(), optvalue.remaining());
@@ -473,11 +473,11 @@ public class Socket extends FileDescriptor {
         }
     }
 
-    public final int getIntOpt(int level, int optname) throws IOException {
+    public int getIntOpt(int level, int optname) throws IOException {
         return getIntOpt(fd, level, optname);
     }
 
-    public final ByteBuffer getRawOpt(int level, int optname, int length) throws IOException {
+    public ByteBuffer getRawOpt(int level, int optname, int length) throws IOException {
         byte[] bytes = new byte[length];
         getRawOpt(fd, level, optname, bytes);
         return ByteBuffer.wrap(bytes);
