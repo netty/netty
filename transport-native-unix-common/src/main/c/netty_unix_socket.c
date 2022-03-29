@@ -1052,6 +1052,32 @@ static jint netty_unix_socket_isBroadcast(JNIEnv* env, jclass clazz, jint fd) {
     return optval;
 }
 
+static void netty_unix_socket_setIntOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jint optval) {
+    netty_unix_socket_setOption(env, fd, level, optname, &optval, sizeof(optval));
+}
+
+static void netty_unix_socket_setRawOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray array, jint offset, jint len) {
+    jbyte* optval = (*env)->GetByteArrayElements(env, array, 0);
+    netty_unix_socket_setOption(env, fd, level, optname, optval, len);
+    (*env)->ReleaseByteArrayElements(env, array, optval, 0);
+}
+
+static jint netty_unix_socket_getIntOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname) {
+    jint optval;
+    if (netty_unix_socket_getOption(env, fd, level, optname, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+static void netty_unix_socket_getRawOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray array) {
+    jbyte* optval = (*env)->GetByteArrayElements(env, array, 0);
+    int len = (*env)->GetArrayLength(env, array);
+    netty_unix_socket_getOption(env, fd, level, optname, optval, len);
+
+    (*env)->ReleaseByteArrayElements(env, array, optval, 0);
+}
+
 static jint netty_unit_socket_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
@@ -1108,7 +1134,11 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
   { "isIPv6Preferred0", "(Z)Z", (void *) netty_unix_socket_isIPv6Preferred0 },
   { "isIPv6", "(I)Z", (void *) netty_unix_socket_isIPv6 },
-  { "msgFastopen", "()I", (void *) netty_unit_socket_msgFastopen }
+  { "msgFastopen", "()I", (void *) netty_unit_socket_msgFastopen },
+  { "setIntOpt", "(IIII)V", (void *) netty_unix_socket_setIntOpt },
+  { "setRawOpt", "(III[BII)V", (void *) netty_unix_socket_setRawOpt },
+  { "getIntOpt", "(III)I", (void *) netty_unix_socket_getIntOpt },
+  { "getRawOpt", "(III[B)V", (void *) netty_unix_socket_getRawOpt }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 

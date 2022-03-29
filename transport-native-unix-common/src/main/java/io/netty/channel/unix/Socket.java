@@ -458,6 +458,31 @@ public class Socket extends FileDescriptor {
         setTrafficClass(fd, ipv6, trafficClass);
     }
 
+    public final void setIntOpt(int level, int optname, int optvalue) throws IOException {
+        setIntOpt(fd, level, optname, optvalue);
+    }
+
+    public final void setRawOpt(int level, int optname, ByteBuffer optvalue) throws IOException {
+        if (optvalue.hasArray()) {
+            setRawOpt(fd, level, optname,
+                    optvalue.array(), optvalue.arrayOffset() + optvalue.position(), optvalue.remaining());
+        } else {
+            byte[] bytes = new byte[optvalue.remaining()];
+            optvalue.duplicate().get(bytes);
+            setRawOpt(fd, level, optname, bytes, 0, bytes.length);
+        }
+    }
+
+    public final int getIntOpt(int level, int optname) throws IOException {
+        return getIntOpt(fd, level, optname);
+    }
+
+    public final ByteBuffer getRawOpt(int level, int optname, int length) throws IOException {
+        byte[] bytes = new byte[length];
+        getRawOpt(fd, level, optname, bytes);
+        return ByteBuffer.wrap(bytes);
+    }
+
     public static boolean isIPv6Preferred() {
         return isIpv6Preferred;
     }
@@ -599,4 +624,11 @@ public class Socket extends FileDescriptor {
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setBroadcast(int fd, int broadcast) throws IOException;
     private static native void setTrafficClass(int fd, boolean ipv6, int trafficClass) throws IOException;
+
+    private static native void setIntOpt(int fd, int level, int optname, int optvalue) throws IOException;
+    private static native void setRawOpt(int fd, int level, int optname, byte[] optvalue, int offset, int length)
+            throws IOException;
+
+    private static native int getIntOpt(int fd, int level, int optname) throws IOException;
+    private static native void getRawOpt(int fd, int level, int optname, byte[] bytes) throws IOException;
 }

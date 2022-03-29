@@ -17,10 +17,10 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.unix.UnixChannelConfig;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Map;
@@ -30,16 +30,16 @@ import static io.netty.channel.unix.Limits.SSIZE_MAX;
 import static java.lang.Math.min;
 
 @UnstableApi
-public class KQueueChannelConfig extends DefaultChannelConfig {
+public class KQueueChannelConfig extends UnixChannelConfig {
     private volatile boolean transportProvidesGuess;
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     KQueueChannelConfig(AbstractKQueueChannel channel) {
-        super(channel);
+        super(channel, channel.socket);
     }
 
     KQueueChannelConfig(AbstractKQueueChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
-        super(channel, recvByteBufAllocator);
+        super(channel, recvByteBufAllocator, channel.socket);
     }
 
     @Override

@@ -86,4 +86,14 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
     protected BsdSocket newSocket() {
         return BsdSocket.newSocketStream();
     }
+
+    @Override
+    protected int level() {
+        return 0xffff;
+    }
+
+    @Override
+    protected int optname() {
+        return 0x0004;
+    }
 }

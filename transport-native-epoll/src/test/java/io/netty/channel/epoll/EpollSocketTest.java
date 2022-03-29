@@ -66,4 +66,14 @@ public class EpollSocketTest extends SocketTest<LinuxSocket> {
     protected LinuxSocket newSocket() {
         return LinuxSocket.newSocketStream();
     }
+
+    @Override
+    protected int level() {
+        return 1;
+    }
+
+    @Override
+    protected int optname() {
+        return 2;
+    }
 }
