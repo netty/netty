@@ -182,6 +182,17 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
+    public void emptyCompositeBufferMustAllowSettingOffsetsToZero() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+                composite.readerOffset(0);
+                composite.writerOffset(0);
+                composite.resetOffsets();
+            }
+        }
+    }
+
+    @Test
     public void emptyCompositeBufferMustAllowExtendingWithBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {

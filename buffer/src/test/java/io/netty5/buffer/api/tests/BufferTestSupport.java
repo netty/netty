@@ -525,6 +525,16 @@ public abstract class BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeLong(0x0102030405060708L);
+            try (Buffer buffer = bbAlloc.apply(0)) {
+                buf.copyInto(0, buffer, 0, buffer.capacity());
+            }
+
+            try (Buffer buffer = bbAlloc.apply(8)) {
+                buf.copyInto(0, buffer, 0, 0);
+                buffer.writerOffset(8);
+                assertEquals(0L, buffer.readLong());
+            }
+
             try (Buffer buffer = bbAlloc.apply(8)) {
                 buffer.writerOffset(8);
                 buf.copyInto(0, buffer, 0, buffer.capacity());
@@ -536,7 +546,6 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x06, buffer.readByte());
                 assertEquals((byte) 0x07, buffer.readByte());
                 assertEquals((byte) 0x08, buffer.readByte());
-                buffer.resetOffsets();
             }
 
             try (Buffer buffer = bbAlloc.apply(6)) {
