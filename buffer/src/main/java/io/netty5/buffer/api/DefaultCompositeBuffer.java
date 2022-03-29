@@ -291,7 +291,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public CompositeBuffer readerOffset(int index) {
-        prepRead(index, 0);
+        checkReadBounds(index, 0);
         int indexLeft = index;
         for (Buffer buf : bufs) {
             buf.readerOffset(Math.min(indexLeft, buf.capacity()));
@@ -383,26 +383,32 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (closed) {
             throw bufferIsClosed(this);
         }
-        Buffer choice = (Buffer) chooseBuffer(offset, 0);
         Buffer[] copies;
 
-        if (length > 0) {
-            copies = new Buffer[bufs.length];
-            int off = subOffset;
-            int cap = length;
-            int i;
-            int j = 0;
-            for (i = searchOffsets(offset); cap > 0; i++) {
-                var buf = bufs[i];
-                int avail = buf.capacity() - off;
-                copies[j++] = buf.copy(off, Math.min(cap, avail), readOnly);
-                cap -= avail;
-                off = 0;
-            }
-            copies = Arrays.copyOf(copies, j);
+        if (bufs.length == 0) {
+            // Specialise for the empty buffer.
+            assert length == 0 && offset == 0;
+            copies = bufs;
         } else {
-            // Specialize for length == 0, since we must copy from at least one constituent buffer.
-            copies = new Buffer[] { choice.copy(subOffset, 0) };
+            Buffer choice = (Buffer) chooseBuffer(offset, 0);
+            if (length > 0) {
+                copies = new Buffer[bufs.length];
+                int off = subOffset;
+                int cap = length;
+                int i;
+                int j = 0;
+                for (i = searchOffsets(offset); cap > 0; i++) {
+                    var buf = bufs[i];
+                    int avail = buf.capacity() - off;
+                    copies[j++] = buf.copy(off, Math.min(cap, avail), readOnly);
+                    cap -= avail;
+                    off = 0;
+                }
+                copies = Arrays.copyOf(copies, j);
+            } else {
+                // Specialize for length == 0.
+                copies = new Buffer[] { choice.copy(subOffset, 0) };
+            }
         }
 
         return new DefaultCompositeBuffer(allocator, copies, COMPOSITE_DROP);
@@ -465,6 +471,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
+        }
+        if (length == 0) {
+            return;
         }
 
         // Iterate in reverse to account for src and dest buffer overlap.
