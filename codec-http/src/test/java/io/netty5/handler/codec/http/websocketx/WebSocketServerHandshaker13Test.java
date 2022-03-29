@@ -121,7 +121,6 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
             req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
             req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
             req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
-            req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, "http://example.com");
             req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
             req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
 

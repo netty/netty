@@ -269,22 +269,6 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString RETRY_AFTER = AsciiString.cached("retry-after");
     /**
-     * {@code "sec-websocket-key1"}
-     */
-    public static final AsciiString SEC_WEBSOCKET_KEY1 = AsciiString.cached("sec-websocket-key1");
-    /**
-     * {@code "sec-websocket-key2"}
-     */
-    public static final AsciiString SEC_WEBSOCKET_KEY2 = AsciiString.cached("sec-websocket-key2");
-    /**
-     * {@code "sec-websocket-location"}
-     */
-    public static final AsciiString SEC_WEBSOCKET_LOCATION = AsciiString.cached("sec-websocket-location");
-    /**
-     * {@code "sec-websocket-origin"}
-     */
-    public static final AsciiString SEC_WEBSOCKET_ORIGIN = AsciiString.cached("sec-websocket-origin");
-    /**
      * {@code "sec-websocket-protocol"}
      */
     public static final AsciiString SEC_WEBSOCKET_PROTOCOL = AsciiString.cached("sec-websocket-protocol");
@@ -352,18 +336,6 @@ public final class HttpHeaderNames {
      * {@code "warning"}
      */
     public static final AsciiString WARNING = AsciiString.cached("warning");
-    /**
-     * {@code "websocket-location"}
-     */
-    public static final AsciiString WEBSOCKET_LOCATION = AsciiString.cached("websocket-location");
-    /**
-     * {@code "websocket-origin"}
-     */
-    public static final AsciiString WEBSOCKET_ORIGIN = AsciiString.cached("websocket-origin");
-    /**
-     * {@code "websocket-protocol"}
-     */
-    public static final AsciiString WEBSOCKET_PROTOCOL = AsciiString.cached("websocket-protocol");
     /**
      * {@code "www-authenticate"}
      */

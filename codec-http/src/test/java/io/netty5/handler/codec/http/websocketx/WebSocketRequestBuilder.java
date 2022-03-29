@@ -129,11 +129,7 @@ public class WebSocketRequestBuilder {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            if (version == WebSocketVersion.V13) {
-                headers.set(HttpHeaderNames.ORIGIN, origin);
-            } else {
-                headers.set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin);
-            }
+            headers.set(HttpHeaderNames.ORIGIN, origin);
         }
         if (version != null) {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());

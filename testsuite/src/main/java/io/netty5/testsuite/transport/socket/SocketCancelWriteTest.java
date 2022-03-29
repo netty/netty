@@ -15,14 +15,16 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty5.bootstrap.Bootstrap;
-import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.bootstrap.Bootstrap;
+import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -35,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketCancelWriteTest extends AbstractSocketTest {
@@ -98,7 +101,9 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
             throw ch.exception.get();
         }
         assertEquals(0, ch.counter.get());
+        assertNull(ch.received);
         assertEquals(Unpooled.wrappedBuffer(new byte[]{'b', 'c', 'e'}), sh.received);
+        Resource.dispose(sh.received);
     }
 
     @Test
@@ -161,7 +166,9 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
             throw ch.exception.get();
         }
         assertEquals(0, ch.counter.get());
+        assertNull(ch.received);
         assertEquals(preferredAllocator().copyOf(new byte[] { 'b', 'c', 'e' }), sh.received);
+        Resource.dispose(sh.received);
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<Object> {
