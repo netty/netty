@@ -90,12 +90,6 @@ public abstract class UnixChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    public UnixChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-        return this;
-    }
-
-    @Override
     public UnixChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
@@ -116,12 +110,6 @@ public abstract class UnixChannelConfig extends DefaultChannelConfig {
     @Override
     public UnixChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public UnixChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
         return this;
     }
 

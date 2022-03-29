@@ -155,18 +155,6 @@ public class KQueueChannelConfig extends UnixChannelConfig {
     }
 
     @Override
-    public KQueueChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
     protected final void autoReadCleared() {
         ((AbstractKQueueChannel) channel).clearReadFilter();
     }
