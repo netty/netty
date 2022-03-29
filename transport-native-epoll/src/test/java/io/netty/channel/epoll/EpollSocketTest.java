@@ -69,11 +69,15 @@ public class EpollSocketTest extends SocketTest<LinuxSocket> {
 
     @Override
     protected int level() {
+        // Value for SOL_SOCKET
+        // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         return 1;
     }
 
     @Override
     protected int optname() {
+        // Value for SO_REUSEADDR
+        // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         return 2;
     }
 }

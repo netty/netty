@@ -98,6 +98,8 @@ public class KQueueChannelConfigTest {
     @Test
     public void testRawOption() throws Exception {
         KQueueSocketChannel channel = new KQueueSocketChannel();
+        // Value for SOL_SOCKET and SO_REUSEADDR
+        // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 0xffff, 0x0004, 4);
 
         ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);

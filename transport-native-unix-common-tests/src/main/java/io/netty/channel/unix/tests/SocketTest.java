@@ -17,6 +17,7 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Socket;
+import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,9 +121,10 @@ public abstract class SocketTest<T extends Socket> {
     }
 
     protected int level() {
-        return 1;
+        throw new AssumptionViolatedException("Not supported");
     }
+
     protected int optname() {
-        return 2;
+        throw new AssumptionViolatedException("Not supported");
     }
 }

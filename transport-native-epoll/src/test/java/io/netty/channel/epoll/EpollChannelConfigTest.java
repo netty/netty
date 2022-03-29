@@ -74,6 +74,8 @@ public class EpollChannelConfigTest {
     public void testRawOption() throws Exception {
         Epoll.ensureAvailability();
         EpollSocketChannel channel = new EpollSocketChannel();
+        // Value for SOL_SOCKET and SO_REUSEADDR
+        // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 1, 2, 4);
 
         ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
