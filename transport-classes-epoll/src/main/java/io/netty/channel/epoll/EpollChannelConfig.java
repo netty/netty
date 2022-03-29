@@ -75,7 +75,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         validate(option, value);
         if (option == EpollChannelOption.EPOLL_MODE) {
             setEpollMode((EpollMode) value);
-        }  else {
+        } else {
             try {
                 if (option instanceof IntegerUnixChannelOption) {
                     IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
