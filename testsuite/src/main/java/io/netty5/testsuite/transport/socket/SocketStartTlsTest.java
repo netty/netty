@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.handler.codec.BufferToByteBufHandler.BUFFER_TO_BYTEBUF_HANDLER;
+import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -139,22 +141,24 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         final StartTlsServerHandler sh = new StartTlsServerHandler(sse, autoRead);
         final StartTlsClientHandler ch = new StartTlsClientHandler(cse, autoRead);
 
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(BYTEBUF_TO_BUFFER_HANDLER, new LineBasedFrameDecoder(64), BUFFER_TO_BYTEBUF_HANDLER);
+                p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(sh);
             }
         });
 
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(BYTEBUF_TO_BUFFER_HANDLER, new LineBasedFrameDecoder(64), BUFFER_TO_BYTEBUF_HANDLER);
+                p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(ch);
             }
         });

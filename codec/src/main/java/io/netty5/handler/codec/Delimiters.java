@@ -15,8 +15,9 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+
+import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
 
 /**
  * A set of commonly used delimiters for {@link DelimiterBasedFrameDecoder}.
@@ -27,19 +28,19 @@ public final class Delimiters {
      * Returns a {@code NUL (0x00)} delimiter, which could be used for
      * Flash XML socket or any similar protocols.
      */
-    public static ByteBuf[] nulDelimiter() {
-        return new ByteBuf[] {
-                Unpooled.wrappedBuffer(new byte[] { 0 }) };
+    public static Buffer[] nulDelimiter() {
+        return new Buffer[] {
+                onHeapUnpooled().copyOf(new byte[] { 0 }).makeReadOnly() };
     }
 
     /**
      * Returns {@code CR ('\r')} and {@code LF ('\n')} delimiters, which could
      * be used for text-based line protocols.
      */
-    public static ByteBuf[] lineDelimiter() {
-        return new ByteBuf[] {
-                Unpooled.wrappedBuffer(new byte[] { '\r', '\n' }),
-                Unpooled.wrappedBuffer(new byte[] { '\n' }),
+    public static Buffer[] lineDelimiter() {
+        return new Buffer[] {
+                onHeapUnpooled().copyOf(new byte[] { '\r', '\n' }).makeReadOnly(),
+                onHeapUnpooled().copyOf(new byte[] { '\n' }).makeReadOnly(),
         };
     }
 
