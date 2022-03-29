@@ -54,7 +54,8 @@ public final class RawUnixChannelOption extends GenericUnixChannelOption<ByteBuf
     public void validate(ByteBuffer value) {
         super.validate(value);
         if (value.remaining() != length) {
-            throw new IllegalArgumentException("Length of value does not match. Expected " + length + ", but got " + value.remaining());
+            throw new IllegalArgumentException("Length of value does not match. Expected "
+                    + length + ", but got " + value.remaining());
         }
     }
 }
