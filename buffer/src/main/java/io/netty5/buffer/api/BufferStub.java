@@ -556,12 +556,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeBoolean(boolean value) {
-        return delegate.writeBoolean(value);
+       delegate.writeBoolean(value);
+       return this;
     }
 
     @Override
     public Buffer setBoolean(int woff, boolean value) {
-        return delegate.setBoolean(woff, value);
+       delegate.setBoolean(woff, value);
+       return this;
     }
 
     @Override
