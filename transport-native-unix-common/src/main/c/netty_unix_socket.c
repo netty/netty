@@ -1084,7 +1084,7 @@ static void netty_unix_socket_getRawOptAddress(JNIEnv* env, jclass clazz, jint f
     netty_unix_socket_getOption(env, fd, level, optname, (void *) outAddress, len);
 }
 
-static jint netty_unit_socket_msgFastopen(JNIEnv* env, jclass clazz) {
+static jint netty_unix_socket_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
@@ -1140,7 +1140,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
   { "isIPv6Preferred0", "(Z)Z", (void *) netty_unix_socket_isIPv6Preferred0 },
   { "isIPv6", "(I)Z", (void *) netty_unix_socket_isIPv6 },
-  { "msgFastopen", "()I", (void *) netty_unit_socket_msgFastopen },
+  { "msgFastopen", "()I", (void *) netty_unix_socket_msgFastopen },
   { "setIntOpt", "(IIII)V", (void *) netty_unix_socket_setIntOpt },
   { "setRawOptArray", "(III[BII)V", (void *) netty_unix_socket_setRawOptArray },
   { "setRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_setRawOptAddress },
