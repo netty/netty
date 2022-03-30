@@ -19,6 +19,7 @@ import io.netty5.buffer.api.internal.Statics;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -395,6 +396,71 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         writerOffset(woff + length);
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
+        }
+        return this;
+    }
+
+    /**
+     * Writes into this buffer from the source {@link ByteBuffer}.
+     * This updates the {@linkplain #writerOffset() write offset} of this buffer and also the position of
+     * the source {@link ByteBuffer}.
+     *
+     * @param source The {@link ByteBuffer} to read from.
+     * @return This buffer.
+     */
+    default Buffer writeBytes(ByteBuffer source) {
+        if (source.hasArray()) {
+            writeBytes(source.array(), source.arrayOffset() + source.position(), source.remaining());
+            source.position(source.limit());
+        } else {
+            int woff = writerOffset();
+            int length = source.remaining();
+            writerOffset(woff + source.remaining());
+            // Try to reduce bounce-checking by using long and int when possible.
+            boolean needReverse = source.order() != ByteOrder.BIG_ENDIAN;
+            for (;length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {
+                setLong(woff, needReverse ? Long.reverseBytes(source.getLong()) : source.getLong());
+            }
+            for (;length >= Integer.BYTES; length -= Integer.BYTES, woff += Integer.BYTES) {
+                setInt(woff, needReverse ? Integer.reverseBytes(source.getInt()) : source.getInt());
+            }
+            for (; length > 0; length--, woff++) {
+                setByte(woff, source.get());
+            }
+        }
+        return this;
+    }
+
+
+    /**
+     * Read from this buffer, into the destination {@link ByteBuffer}
+     * This updates the {@linkplain #readerOffset() read offset} of this buffer and also the position of
+     * the destination {@link ByteBuffer}.
+     *
+     * @param destination The {@link ByteBuffer} to write into.
+     * @return This buffer.
+     */
+    default Buffer readBytes(ByteBuffer destination) {
+        if (destination.hasArray()) {
+            readBytes(destination.array(), destination.arrayOffset() + destination.position(),
+                    destination.remaining());
+            destination.position(destination.limit());
+        } else {
+            int roff = readerOffset();
+            int length = destination.remaining();
+            readerOffset(roff + destination.remaining());
+
+            // Try to reduce bounce-checking by using long and int when possible.
+            boolean needReverse = destination.order() != ByteOrder.BIG_ENDIAN;
+            for (;length >= Long.BYTES; length -= Long.BYTES, roff += Long.BYTES) {
+                destination.putLong(needReverse ? Long.reverseBytes(getLong(roff)) : getLong(roff));
+            }
+            for (;length >= Integer.BYTES; length -= Integer.BYTES, roff += Integer.BYTES) {
+                destination.putInt(needReverse ? Integer.reverseBytes(getInt(roff)) : getInt(roff));
+            }
+            for (; length > 0; length--, roff++) {
+                destination.put(getByte(roff));
+            }
         }
         return this;
     }

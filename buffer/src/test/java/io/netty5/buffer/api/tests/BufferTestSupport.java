@@ -843,6 +843,13 @@ public abstract class BufferTestSupport {
         return bs;
     }
 
+
+    public static byte[] toByteArray(ByteBuffer buf) {
+        byte[] bs = new byte[buf.remaining()];
+        buf.duplicate().get(bs);
+        return bs;
+    }
+
     public static void assertEquals(byte expected, byte actual) {
         if (expected != actual) {
             fail(String.format("expected: %1$s (0x%1$X) but was: %2$s (0x%2$X)", expected, actual));
