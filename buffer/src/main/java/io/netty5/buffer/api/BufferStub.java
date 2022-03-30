@@ -57,7 +57,8 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer readerOffset(int offset) {
-        return delegate.readerOffset(offset);
+        delegate.readerOffset(offset);
+        return this;
     }
 
     @Override
@@ -72,7 +73,8 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writerOffset(int offset) {
-        return delegate.writerOffset(offset);
+        delegate.writerOffset(offset);
+        return this;
     }
 
     @Override
@@ -87,12 +89,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer fill(byte value) {
-        return delegate.fill(value);
+        delegate.fill(value);
+        return this;
     }
 
     @Override
     public Buffer makeReadOnly() {
-        return delegate.makeReadOnly();
+        delegate.makeReadOnly();
+        return this;
     }
 
     @Override
@@ -132,17 +136,20 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeBytes(Buffer source) {
-        return delegate.writeBytes(source);
+        delegate.writeBytes(source);
+        return this;
     }
 
     @Override
     public Buffer writeBytes(byte[] source) {
-        return delegate.writeBytes(source);
+        delegate.writeBytes(source);
+        return this;
     }
 
     @Override
     public Buffer resetOffsets() {
-        return delegate.resetOffsets();
+        delegate.resetOffsets();
+        return this;
     }
 
     @Override
@@ -172,12 +179,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer ensureWritable(int size) {
-        return delegate.ensureWritable(size);
+        delegate.ensureWritable(size);
+        return this;
     }
 
     @Override
     public Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
-        return delegate.ensureWritable(size, minimumGrowth, allowCompaction);
+        delegate.ensureWritable(size, minimumGrowth, allowCompaction);
+        return this;
     }
 
     @Override
@@ -202,7 +211,8 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer compact() {
-        return delegate.compact();
+        delegate.compact();
+        return this;
     }
 
     @Override
@@ -254,22 +264,26 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeByte(byte value) {
-        return delegate.writeByte(value);
+        delegate.writeByte(value);
+        return this;
     }
 
     @Override
     public Buffer setByte(int woff, byte value) {
-        return delegate.setByte(woff, value);
+        delegate.setByte(woff, value);
+        return this;
     }
 
     @Override
     public Buffer writeUnsignedByte(int value) {
-        return delegate.writeUnsignedByte(value);
+        delegate.writeUnsignedByte(value);
+        return this;
     }
 
     @Override
     public Buffer setUnsignedByte(int woff, int value) {
-        return delegate.setUnsignedByte(woff, value);
+        delegate.setUnsignedByte(woff, value);
+        return this;
     }
 
     @Override
@@ -284,12 +298,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeChar(char value) {
-        return delegate.writeChar(value);
+        delegate.writeChar(value);
+        return this;
     }
 
     @Override
     public Buffer setChar(int woff, char value) {
-        return delegate.setChar(woff, value);
+        delegate.setChar(woff, value);
+        return this;
     }
 
     @Override
@@ -314,22 +330,26 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeShort(short value) {
-        return delegate.writeShort(value);
+        delegate.writeShort(value);
+        return this;
     }
 
     @Override
     public Buffer setShort(int woff, short value) {
-        return delegate.setShort(woff, value);
+        delegate.setShort(woff, value);
+        return this;
     }
 
     @Override
     public Buffer writeUnsignedShort(int value) {
-        return delegate.writeUnsignedShort(value);
+        delegate.writeUnsignedShort(value);
+        return this;
     }
 
     @Override
     public Buffer setUnsignedShort(int woff, int value) {
-        return delegate.setUnsignedShort(woff, value);
+        delegate.setUnsignedShort(woff, value);
+        return this;
     }
 
     @Override
@@ -354,22 +374,26 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeMedium(int value) {
-        return delegate.writeMedium(value);
+        delegate.writeMedium(value);
+        return this;
     }
 
     @Override
     public Buffer setMedium(int woff, int value) {
-        return delegate.setMedium(woff, value);
+        delegate.setMedium(woff, value);
+        return this;
     }
 
     @Override
     public Buffer writeUnsignedMedium(int value) {
-        return delegate.writeUnsignedMedium(value);
+        delegate.writeUnsignedMedium(value);
+        return this;
     }
 
     @Override
     public Buffer setUnsignedMedium(int woff, int value) {
-        return delegate.setUnsignedMedium(woff, value);
+        delegate.setUnsignedMedium(woff, value);
+        return this;
     }
 
     @Override
@@ -394,22 +418,26 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeInt(int value) {
-        return delegate.writeInt(value);
+        delegate.writeInt(value);
+        return this;
     }
 
     @Override
     public Buffer setInt(int woff, int value) {
-        return delegate.setInt(woff, value);
+        delegate.setInt(woff, value);
+        return this;
     }
 
     @Override
     public Buffer writeUnsignedInt(long value) {
-        return delegate.writeUnsignedInt(value);
+        delegate.writeUnsignedInt(value);
+        return this;
     }
 
     @Override
     public Buffer setUnsignedInt(int woff, long value) {
-        return delegate.setUnsignedInt(woff, value);
+        delegate.setUnsignedInt(woff, value);
+        return this;
     }
 
     @Override
@@ -424,12 +452,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeFloat(float value) {
-        return delegate.writeFloat(value);
+        delegate.writeFloat(value);
+        return this;
     }
 
     @Override
     public Buffer setFloat(int woff, float value) {
-        return delegate.setFloat(woff, value);
+        delegate.setFloat(woff, value);
+        return this;
     }
 
     @Override
@@ -444,12 +474,14 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeLong(long value) {
-        return delegate.writeLong(value);
+        delegate.writeLong(value);
+        return this;
     }
 
     @Override
     public Buffer setLong(int woff, long value) {
-        return delegate.setLong(woff, value);
+        delegate.setLong(woff, value);
+        return this;
     }
 
     @Override
@@ -464,12 +496,74 @@ public class BufferStub implements Buffer {
 
     @Override
     public Buffer writeDouble(double value) {
-        return delegate.writeDouble(value);
+        delegate.writeDouble(value);
+        return this;
     }
 
     @Override
     public Buffer setDouble(int woff, double value) {
-        return delegate.setDouble(woff, value);
+        delegate.setDouble(woff, value);
+        return this;
+    }
+
+    @Override
+    public Buffer writeCharSequence(CharSequence source, Charset charset) {
+        delegate.writeCharSequence(source, charset);
+        return this;
+    }
+
+    @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        return delegate.readCharSequence(length, charset);
+    }
+
+    @Override
+    public Buffer writeBytes(byte[] source, int srcPos, int length) {
+        delegate.writeBytes(source, srcPos, length);
+        return this;
+    }
+
+    @Override
+    public Buffer readBytes(byte[] destination, int destPos, int length) {
+        delegate.readBytes(destination, destPos, length);
+        return this;
+    }
+
+    @Override
+    public Buffer copy(int offset, int length) {
+        return delegate.copy(offset, length);
+    }
+
+    @Override
+    public Buffer readSplit(int length) {
+        return delegate.readSplit(length);
+    }
+
+    @Override
+    public Buffer writeSplit(int length) {
+        return delegate.writeSplit(length);
+    }
+
+    @Override
+    public boolean readBoolean() {
+        return delegate.readBoolean();
+    }
+
+    @Override
+    public boolean getBoolean(int roff) {
+        return delegate.getBoolean(roff);
+    }
+
+    @Override
+    public Buffer writeBoolean(boolean value) {
+       delegate.writeBoolean(value);
+       return this;
+    }
+
+    @Override
+    public Buffer setBoolean(int woff, boolean value) {
+       delegate.setBoolean(woff, value);
+       return this;
     }
 
     @Override
