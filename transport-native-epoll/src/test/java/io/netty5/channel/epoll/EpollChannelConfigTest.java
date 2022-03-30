@@ -69,7 +69,6 @@ public class EpollChannelConfigTest {
         }
     }
 
-
     @Test
     public void testIntegerOption() throws Exception {
         Epoll.ensureAvailability();
