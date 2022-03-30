@@ -22,9 +22,12 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.unix.IntegerUnixChannelOption;
+import io.netty.channel.unix.RawUnixChannelOption;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
@@ -51,6 +54,21 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         if (option == EpollChannelOption.EPOLL_MODE) {
             return (T) getEpollMode();
         }
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                return (T) Integer.valueOf(((AbstractEpollChannel) channel).socket.getIntOpt(
+                        opt.level(), opt.optname()));
+            }
+            if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ByteBuffer out = ByteBuffer.allocate(opt.length());
+                ((AbstractEpollChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                return (T) out.flip();
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
         return super.getOption(option);
     }
 
@@ -60,6 +78,19 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         if (option == EpollChannelOption.EPOLL_MODE) {
             setEpollMode((EpollMode) value);
         } else {
+            try {
+                if (option instanceof IntegerUnixChannelOption) {
+                    IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                    ((AbstractEpollChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                    return true;
+                } else if (option instanceof RawUnixChannelOption) {
+                    RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                    ((AbstractEpollChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                    return true;
+                }
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
             return super.setOption(option, value);
         }
         return true;
