@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api;
 
+import java.nio.charset.Charset;
+
 /**
  * The {@code CompositeBuffer} is a concrete {@link Buffer} implementation that make a number of other buffers appear
  * as one. A composite buffer behaves the same as a normal, non-composite buffer in every way, so you normally don't
@@ -182,6 +184,26 @@ public interface CompositeBuffer extends Buffer {
     @Override
     default CompositeBuffer writeBytes(byte[] source, int srcPos, int length) {
         return (CompositeBuffer) Buffer.super.writeBytes(source, srcPos, length);
+    }
+
+    @Override
+    default CompositeBuffer writeCharSequence(CharSequence source, Charset charset) {
+        return (CompositeBuffer) Buffer.super.writeCharSequence(source, charset);
+    }
+
+    @Override
+    default CompositeBuffer readBytes(byte[] destination, int destPos, int length) {
+        return (CompositeBuffer) Buffer.super.readBytes(destination, destPos, length);
+    }
+
+    @Override
+    default CompositeBuffer writeBoolean(boolean value) {
+        return (CompositeBuffer) Buffer.super.writeBoolean(value);
+    }
+
+    @Override
+    default CompositeBuffer setBoolean(int woff, boolean value) {
+        return (CompositeBuffer) Buffer.super.setBoolean(woff, value);
     }
 
     @Override
