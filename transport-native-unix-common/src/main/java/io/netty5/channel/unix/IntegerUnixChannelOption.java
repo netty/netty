@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,19 +15,18 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.channel.ChannelOption;
-
-public class UnixChannelOption<T> extends ChannelOption<T> {
-    public static final ChannelOption<Boolean> SO_REUSEPORT = valueOf(UnixChannelOption.class, "SO_REUSEPORT");
-    public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
-            ChannelOption.valueOf(UnixChannelOption.class, "DOMAIN_SOCKET_READ_MODE");
-
-    @SuppressWarnings({ "unused", "deprecation" })
-    protected UnixChannelOption() {
-        super(null);
-    }
-
-    UnixChannelOption(String name) {
-        super(name);
+/**
+ * A {@link GenericUnixChannelOption} which uses an {@link Integer} as {@code optval}.
+ */
+public final class IntegerUnixChannelOption extends GenericUnixChannelOption<Integer> {
+    /**
+     * Creates a new instance.
+     *
+     * @param name      the name that is used.
+     * @param level     the level.
+     * @param optname   the optname.
+     */
+    public IntegerUnixChannelOption(String name, int level, int optname) {
+        super(name, level, optname);
     }
 }

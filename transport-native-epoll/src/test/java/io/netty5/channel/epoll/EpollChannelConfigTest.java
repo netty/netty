@@ -18,8 +18,15 @@ package io.netty5.channel.epoll;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.unix.Buffer;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class EpollChannelConfigTest {
@@ -57,6 +64,49 @@ public class EpollChannelConfigTest {
             } catch (ChannelException e) {
                 // expected
             }
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+
+    @Test
+    public void testIntegerOption() throws Exception {
+        Epoll.ensureAvailability();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        try {
+            EpollSocketChannel channel = new EpollSocketChannel(group.next());
+            IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 1, 2);
+            Integer zero = 0;
+            assertEquals(zero, channel.config().getOption(opt));
+            channel.config().setOption(opt, 1);
+            assertNotEquals(zero, channel.config().getOption(opt));
+            channel.fd().close();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testRawOption() throws Exception {
+        Epoll.ensureAvailability();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        try {
+            EpollSocketChannel channel = new EpollSocketChannel(group.next());
+            // Value for SOL_SOCKET and SO_REUSEADDR
+            // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
+            RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 1, 2, 4);
+
+            ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
+            disabled.putInt(0).flip();
+            assertEquals(disabled, channel.config().getOption(opt));
+
+            ByteBuffer enabled = Buffer.allocateDirectWithNativeOrder(4);
+            enabled.putInt(1).flip();
+
+            channel.config().setOption(opt, enabled);
+            assertNotEquals(disabled, channel.config().getOption(opt));
+            channel.fd().close();
         } finally {
             group.shutdownGracefully();
         }
