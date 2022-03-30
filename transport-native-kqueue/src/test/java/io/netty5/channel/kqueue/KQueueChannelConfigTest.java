@@ -94,7 +94,6 @@ public class KQueueChannelConfigTest {
         }
     }
 
-
     @Test
     public void testIntegerOption() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
