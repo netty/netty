@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Random;
 
-import static io.netty5.handler.codec.ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER;
+import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.NEVER_SKIP;
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateEncoder.EMPTY_DEFLATE_BLOCK;
@@ -51,7 +51,8 @@ public class PerMessageDeflateEncoderTest {
     public void testCompressedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE), BYTEBUF_TO_BUFFER_HANDLER);
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE),
+                byteBufToBuffer());
 
         // initialize
         byte[] payload = new byte[300];
@@ -111,7 +112,8 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, NEVER_SKIP));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE), BYTEBUF_TO_BUFFER_HANDLER);
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE),
+                byteBufToBuffer());
 
         // initialize
         byte[] payload1 = new byte[100];
@@ -201,7 +203,8 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE), BYTEBUF_TO_BUFFER_HANDLER);
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE),
+                byteBufToBuffer());
 
         String textPayload = "not compressed payload";
         byte[] binaryPayload = new byte[101];

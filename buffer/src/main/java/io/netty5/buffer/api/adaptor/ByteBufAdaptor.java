@@ -99,6 +99,7 @@ public final class ByteBufAdaptor extends ByteBuf {
      */
     public static Buffer extract(ByteBuf byteBuf) {
         if (byteBuf instanceof ByteBufAdaptor) {
+            byteBuf.touch("ByteBufAdaptor.extract");
             ByteBufAdaptor bba = (ByteBufAdaptor) byteBuf;
             return bba.buffer;
         }
@@ -138,12 +139,13 @@ public final class ByteBufAdaptor extends ByteBuf {
      * @return A {@link ByteBuf} that uses the given {@link Buffer} as a backing store.
      */
     public static ByteBuf intoByteBuf(Buffer buffer) {
-        if (buffer instanceof ByteBufConvertible) {
-            ByteBufConvertible convertible = (ByteBufConvertible) buffer;
-            return convertible.asByteBuf();
-        } else if (buffer instanceof ByteBufBuffer) {
+        buffer.touch("ByteBufAdaptor.intoByteBuf");
+        if (buffer instanceof ByteBufBuffer) {
             ByteBufBuffer byteBufBuffer = (ByteBufBuffer) buffer;
             return byteBufBuffer.unwrapAndClose();
+        } else if (buffer instanceof ByteBufConvertible) {
+            ByteBufConvertible convertible = (ByteBufConvertible) buffer;
+            return convertible.asByteBuf();
         } else {
             return new ByteBufAdaptor(ByteBufAllocatorAdaptor.DEFAULT_INSTANCE, buffer, buffer.capacity());
         }

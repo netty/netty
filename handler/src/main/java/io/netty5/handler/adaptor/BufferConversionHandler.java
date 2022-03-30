@@ -88,6 +88,28 @@ public final class BufferConversionHandler implements ChannelHandler {
         this.onUserEvent = onUserEvent;
     }
 
+    /**
+     * Create a conversion handler to insert after {@link Buffer}-reading handles, and before {@link ByteBuf}-reading
+     * handles.
+     * For writes, the handler will convert in the opposite direction.
+     *
+     * @return A conversion handler.
+     */
+    public static BufferConversionHandler bufferToByteBuf() {
+        return LazyBufferToByteBuf.HANDLER;
+    }
+
+    /**
+     * Create a conversion handler to insert after {@link ByteBuf}-reading handles, and before {@link Buffer}-reading
+     * handles.
+     * For writes, the handler will convert in the opposite direction.
+     *
+     * @return A conversion handler.
+     */
+    public static BufferConversionHandler byteBufToBuffer() {
+        return LazyByteBufToBuffer.HANDLER;
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ctx.fireChannelRead(onRead.convert(msg));
@@ -176,5 +198,21 @@ public final class BufferConversionHandler implements ChannelHandler {
          * @return The result of the conversion.
          */
         public abstract Object convert(Object msg);
+    }
+
+    static final class LazyBufferToByteBuf {
+        static final BufferConversionHandler HANDLER =
+                new BufferConversionHandler(Conversion.BUFFER_TO_BYTEBUF, Conversion.BYTEBUF_TO_BUFFER);
+
+        private LazyBufferToByteBuf() {
+        }
+    }
+
+    static final class LazyByteBufToBuffer {
+        static final BufferConversionHandler HANDLER =
+                new BufferConversionHandler(Conversion.BYTEBUF_TO_BUFFER, Conversion.BUFFER_TO_BYTEBUF);
+
+        private LazyByteBufToBuffer() {
+        }
     }
 }

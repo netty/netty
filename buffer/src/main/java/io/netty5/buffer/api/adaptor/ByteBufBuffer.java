@@ -76,6 +76,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     static Buffer wrap(ByteBuf byteBuf, AllocatorControl control, Drop<ByteBufBuffer> drop) {
+        byteBuf.touch("ByteBufBuffer.wrap");
         ByteBufBuffer buf = new ByteBufBuffer(control, byteBuf, drop);
         drop.attach(buf);
         return buf;
@@ -452,7 +453,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         int woff = writerOffset();
         int roff = readerOffset();
         var drop = unsafeGetDrop().fork();
-        var splitBuffer = new ByteBufBuffer(control, delegate.slice(0, splitOffset), drop);
+        var splitBuffer = new ByteBufBuffer(control, delegate.retainedSlice(0, splitOffset), drop);
         drop.attach(splitBuffer);
         // ByteBuf.slice() have different semantics for the offsets, so we need to re-compute them.
         splitBuffer.delegate.writerIndex(Math.min(woff, splitOffset));

@@ -30,7 +30,6 @@ import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.ByteBufToBufferHandler;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.PrematureChannelClosureException;
 import io.netty5.util.CharsetUtil;
@@ -137,10 +136,10 @@ public class HttpClientCodecTest {
         try {
             sb.group(new MultithreadEventLoopGroup(2, NioHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER);
                     // Don't use the HttpServerCodec, because we don't want to have content-length or anything added.
                     ch.pipeline().addLast(new HttpRequestDecoder(4096, 8192, true));
                     ch.pipeline().addLast(new HttpObjectAggregator<DefaultHttpContent>(4096));
@@ -178,10 +177,10 @@ public class HttpClientCodecTest {
             cb.group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()));
             cb.channel(NioSocketChannel.class);
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
+            cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(ByteBufToBufferHandler.BYTEBUF_TO_BUFFER_HANDLER);
                     ch.pipeline().addLast(new HttpClientCodec(4096, 8192, true, true));
                     ch.pipeline().addLast(new HttpObjectAggregator<DefaultHttpContent>(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
