@@ -117,7 +117,13 @@ public abstract class SocketTest<T extends Socket> {
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(4);
         buffer.putInt(1).flip();
         socket.setRawOpt(level(), optname(), buffer);
-        assertNotEquals(ByteBuffer.allocate(0), socket.getRawOpt(level(), optname(), 4));
+
+        ByteBuffer out = ByteBuffer.allocate(4);
+        socket.getRawOpt(level(), optname(), out);
+        assertFalse(out.hasRemaining());
+
+        out.flip();
+        assertNotEquals(ByteBuffer.allocate(0), out);
     }
 
     protected int level() {

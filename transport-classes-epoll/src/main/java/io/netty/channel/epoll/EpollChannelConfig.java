@@ -62,7 +62,9 @@ public class EpollChannelConfig extends DefaultChannelConfig {
             }
             if (option instanceof RawUnixChannelOption) {
                 RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                return (T) ((AbstractEpollChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), opt.length());
+                ByteBuffer out = ByteBuffer.allocate(opt.length());
+                ((AbstractEpollChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                return (T) out.flip();
             }
         } catch (IOException e) {
             throw new ChannelException(e);
