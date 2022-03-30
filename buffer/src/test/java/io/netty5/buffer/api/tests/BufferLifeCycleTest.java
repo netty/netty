@@ -812,7 +812,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
-    @MethodSource("allocators")
+    @MethodSource("closeableAllocators")
     public void allocatingOnClosedAllocatorMustThrow(Fixture fixture) {
         BufferAllocator allocator = fixture.createAllocator();
         Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[8]);

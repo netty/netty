@@ -86,12 +86,8 @@ public interface Statics {
         }
     }
 
-    static <T extends Buffer> Drop<T> standardDropWrap(Drop<T> drop, MemoryManager manager) {
-        return CleanerDrop.wrap(ArcDrop.wrap(drop), manager);
-    }
-
     static Function<Drop<Buffer>, Drop<Buffer>> standardDrop(MemoryManager manager) {
-        return drop -> standardDropWrap(drop, manager);
+        return drop -> CleanerDrop.wrap(drop, manager);
     }
 
     static VarHandle findVarHandle(Lookup lookup, Class<?> recv, String name, Class<?> type) {

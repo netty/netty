@@ -28,8 +28,6 @@ import io.netty5.util.internal.LongPriorityQueue;
 
 import java.util.PriorityQueue;
 
-import static io.netty5.buffer.api.internal.Statics.standardDropWrap;
-
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
  *
@@ -590,8 +588,8 @@ final class PoolChunk implements PoolChunkMetric {
 
         @Override
         public <BufferType extends Buffer> Drop<BufferType> drop() {
-            var pooledDrop = new PooledDrop(chunk, threadCache, handle, maxLength);
-            return (Drop<BufferType>) standardDropWrap(pooledDrop, chunk.arena.manager);
+            var pooledDrop = ArcDrop.wrap(new PooledDrop(chunk, threadCache, handle, maxLength));
+            return (Drop<BufferType>) CleanerDrop.wrap(pooledDrop, chunk.arena.manager);
         }
     }
 

@@ -21,8 +21,10 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.pool.PooledBufferAllocator;
+import io.netty5.buffer.api.tests.Fixture.Properties;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -52,9 +54,11 @@ import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
 import static io.netty5.buffer.api.internal.Statics.acquire;
+import static io.netty5.buffer.api.tests.Fixture.Properties.COMPOSITE;
 import static io.netty5.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty5.buffer.api.tests.Fixture.Properties.HEAP;
 import static io.netty5.buffer.api.tests.Fixture.Properties.POOLED;
+import static io.netty5.buffer.api.tests.Fixture.Properties.UNCLOSEABLE;
 import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -89,6 +93,10 @@ public abstract class BufferTestSupport {
             () -> Arrays.stream(ALL_COMBINATIONS.get())
                     .filter(f -> f.isPooled())
                     .toArray(Fixture[]::new));
+    private static final Memoize<Fixture[]> CLOSEABLE_ALLOCS = new Memoize<>(
+            () -> Arrays.stream(ALL_COMBINATIONS.get())
+                    .filter(f -> !f.isUncloseable())
+                    .toArray(Fixture[]::new));
 
     protected static Predicate<Fixture> filterOfTheDay(int percentage) {
         Instant today = Instant.now().truncatedTo(ChronoUnit.DAYS); // New seed every day.
@@ -99,6 +107,10 @@ public abstract class BufferTestSupport {
 
     static Fixture[] allocators() {
         return ALL_ALLOCATORS.get();
+    }
+
+    static Fixture[] closeableAllocators() {
+        return CLOSEABLE_ALLOCS.get();
     }
 
     static Fixture[] nonCompositeAllocators() {
@@ -125,6 +137,7 @@ public abstract class BufferTestSupport {
         return List.of(
                 new Fixture("heap", BufferAllocator::onHeapUnpooled, HEAP),
                 new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT),
+                new Fixture("sensitive", SensitiveBufferAllocator::sensitiveOffHeapAllocator, DIRECT, UNCLOSEABLE),
                 new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
                 new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT),
                 new Fixture("pooledDirect", () ->
@@ -190,6 +203,12 @@ public abstract class BufferTestSupport {
         // Add 2-way composite buffers of all combinations.
         for (Fixture first : initFixtures) {
             for (Fixture second : initFixtures) {
+                Properties[] properties;
+                if (first.isUncloseable() || second.isUncloseable()) {
+                    properties = new Properties[] { COMPOSITE, UNCLOSEABLE };
+                } else {
+                    properties = new Properties[] { COMPOSITE };
+                }
                 builder.add(new Fixture("compose(" + first + ", " + second + ')', () -> {
                     return new TestAllocator() {
                         final BufferAllocator a = first.get();
@@ -219,7 +238,7 @@ public abstract class BufferTestSupport {
                             b.close();
                         }
                     };
-                }, Fixture.Properties.COMPOSITE));
+                }, properties));
             }
         }
 
@@ -252,7 +271,7 @@ public abstract class BufferTestSupport {
                     allocator.close();
                 }
             };
-        }, Fixture.Properties.COMPOSITE));
+        }, COMPOSITE));
 
         for (Fixture fixture : initFixtures) {
             builder.add(new Fixture(fixture + ".ensureWritable", () -> {
@@ -314,7 +333,7 @@ public abstract class BufferTestSupport {
                         allocator.close();
                     }
                 };
-            }, Fixture.Properties.COMPOSITE));
+            }, fixture.isUncloseable() ? new Properties[] { UNCLOSEABLE, COMPOSITE } : new Properties[] { COMPOSITE }));
         }
 
         var stream = builder.build();
