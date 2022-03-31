@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the brotli format.
+ * Decompresses a {@link ByteBuf} encoded with the brotli format.
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
