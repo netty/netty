@@ -390,14 +390,14 @@
     </profile>
 
     <profile>
-      <id>boringssl-osx-arch64</id>
+      <id>boringssl-mac-aarch64</id>
       <activation>
         <os>
           <!--
-           Automatically active on osx with aarch64 as we only release static boringssl version of
+           Automatically active on mac with aarch64 as we only release static boringssl version of
            netty-tcnative for it.
          -->
-          <family>osx</family>
+          <family>mac</family>
           <arch>aarch64</arch>
         </os>
       </activation>
