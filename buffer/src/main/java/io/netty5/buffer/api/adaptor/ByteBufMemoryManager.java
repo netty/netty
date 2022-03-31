@@ -24,6 +24,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.api.internal.ArcDrop;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 
 import java.util.function.Function;
@@ -74,7 +75,7 @@ public final class ByteBufMemoryManager implements MemoryManager {
     }
 
     private static Drop<Buffer> drop() {
-        return convert(ByteBufBuffer.ByteBufDrop.INSTANCE);
+        return ArcDrop.wrap(convert(ByteBufBuffer.ByteBufDrop.INSTANCE));
     }
 
     @Override

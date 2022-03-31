@@ -66,10 +66,15 @@ public final class Fixture implements Supplier<BufferAllocator> {
         return properties.contains(Properties.POOLED);
     }
 
+    public boolean isUncloseable() {
+        return properties.contains(Properties.UNCLOSEABLE);
+    }
+
     public enum Properties {
         HEAP,
         DIRECT,
         COMPOSITE,
-        POOLED
+        POOLED,
+        UNCLOSEABLE
     }
 }
