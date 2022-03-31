@@ -418,10 +418,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
             writerOffset(woff + source.remaining());
             // Try to reduce bounce-checking by using long and int when possible.
             boolean needReverse = source.order() != ByteOrder.BIG_ENDIAN;
-            for (;length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {
+            for (; length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {
                 setLong(woff, needReverse ? Long.reverseBytes(source.getLong()) : source.getLong());
             }
-            for (;length >= Integer.BYTES; length -= Integer.BYTES, woff += Integer.BYTES) {
+            for (; length >= Integer.BYTES; length -= Integer.BYTES, woff += Integer.BYTES) {
                 setInt(woff, needReverse ? Integer.reverseBytes(source.getInt()) : source.getInt());
             }
             for (; length > 0; length--, woff++) {
@@ -430,7 +430,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         }
         return this;
     }
-
 
     /**
      * Read from this buffer, into the destination {@link ByteBuffer}
@@ -452,10 +451,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
             // Try to reduce bounce-checking by using long and int when possible.
             boolean needReverse = destination.order() != ByteOrder.BIG_ENDIAN;
-            for (;length >= Long.BYTES; length -= Long.BYTES, roff += Long.BYTES) {
+            for (; length >= Long.BYTES; length -= Long.BYTES, roff += Long.BYTES) {
                 destination.putLong(needReverse ? Long.reverseBytes(getLong(roff)) : getLong(roff));
             }
-            for (;length >= Integer.BYTES; length -= Integer.BYTES, roff += Integer.BYTES) {
+            for (; length >= Integer.BYTES; length -= Integer.BYTES, roff += Integer.BYTES) {
                 destination.putInt(needReverse ? Integer.reverseBytes(getInt(roff)) : getInt(roff));
             }
             for (; length > 0; length--, roff++) {

@@ -843,7 +843,6 @@ public abstract class BufferTestSupport {
         return bs;
     }
 
-
     public static byte[] toByteArray(ByteBuffer buf) {
         byte[] bs = new byte[buf.remaining()];
         buf.duplicate().get(bs);
