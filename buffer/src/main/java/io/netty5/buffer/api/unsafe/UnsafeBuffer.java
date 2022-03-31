@@ -196,6 +196,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             copy.rsize = length;
             copy.roff = 0;
             copy.woff = length;
+            return copy;
         }
         Buffer copy = control.getAllocator().allocate(length);
         try {
