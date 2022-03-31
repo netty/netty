@@ -106,7 +106,7 @@ public class SensitiveBufferTest {
         }
     }
 
-    private static class StubManager implements MemoryManager {
+    private static final class StubManager implements MemoryManager {
         private final MemoryManager baseMemoryManager;
         private final AtomicInteger bytesCleared = new AtomicInteger();
 

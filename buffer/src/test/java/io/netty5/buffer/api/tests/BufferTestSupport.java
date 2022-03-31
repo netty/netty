@@ -203,7 +203,7 @@ public abstract class BufferTestSupport {
         // Add 2-way composite buffers of all combinations.
         for (Fixture first : initFixtures) {
             for (Fixture second : initFixtures) {
-                Properties[] properties;
+                final Properties[] properties;
                 if (first.isUncloseable() || second.isUncloseable()) {
                     properties = new Properties[] { COMPOSITE, UNCLOSEABLE };
                 } else {
