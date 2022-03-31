@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.CharsetUtil;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
@@ -69,7 +70,7 @@ final class Java8SslUtils {
         }
         List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
         for (String name: names) {
-            sniServerNames.add(new SNIHostName(name));
+            sniServerNames.add(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
         }
         return sniServerNames;
     }

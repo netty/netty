@@ -247,7 +247,7 @@ public final class ObjectUtil {
      */
     public static <T extends Collection<?>> T checkNonEmpty(T collection, String name) {
         //No String concatenation for check
-        if (checkNotNull(collection, name).size() == 0) {
+        if (checkNotNull(collection, name).isEmpty()) {
             throw new IllegalArgumentException("Param '" + name + "' must not be empty");
         }
         return collection;
@@ -290,7 +290,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Trims the the given argument and checks whether it is neither null nor empty.
+     * Trims the given argument and checks whether it is neither null nor empty.
      * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
      * Otherwise, returns the trimmed argument.
      *

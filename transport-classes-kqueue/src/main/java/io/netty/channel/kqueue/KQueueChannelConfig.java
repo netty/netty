@@ -16,13 +16,18 @@
 package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.unix.IntegerUnixChannelOption;
+import io.netty.channel.unix.RawUnixChannelOption;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import static io.netty.channel.kqueue.KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS;
@@ -54,6 +59,21 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
             return (T) Boolean.valueOf(getRcvAllocTransportProvidesGuess());
         }
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                return (T) Integer.valueOf(((AbstractKQueueChannel) channel).socket.getIntOpt(
+                        opt.level(), opt.optname()));
+            }
+            if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ByteBuffer out = ByteBuffer.allocate(opt.level());
+                ((AbstractKQueueChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                return (T) out.flip();
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
         return super.getOption(option);
     }
 
@@ -64,6 +84,19 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
             setRcvAllocTransportProvidesGuess((Boolean) value);
         } else {
+            try {
+                if (option instanceof IntegerUnixChannelOption) {
+                    IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                    ((AbstractKQueueChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                    return true;
+                } else if (option instanceof RawUnixChannelOption) {
+                    RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                    ((AbstractKQueueChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                    return true;
+                }
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
             return super.setOption(option, value);
         }
 

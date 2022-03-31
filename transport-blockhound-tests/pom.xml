@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.75.Final-SNAPSHOT</version>
+    <version>4.1.76.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
@@ -87,6 +87,7 @@
     <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty.transport_blockhound_tests</javaModuleName>
   </properties>
 
   <dependencies>

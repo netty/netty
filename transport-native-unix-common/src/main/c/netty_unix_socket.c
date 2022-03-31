@@ -1052,7 +1052,39 @@ static jint netty_unix_socket_isBroadcast(JNIEnv* env, jclass clazz, jint fd) {
     return optval;
 }
 
-static jint netty_unit_socket_msgFastopen(JNIEnv* env, jclass clazz) {
+static void netty_unix_socket_setIntOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jint optval) {
+    netty_unix_socket_setOption(env, fd, level, optname, &optval, sizeof(optval));
+}
+
+static void netty_unix_socket_setRawOptArray(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray inArray, jint offset, jint len) {
+    jbyte* optval = (*env)->GetByteArrayElements(env, inArray, 0);
+    netty_unix_socket_setOption(env, fd, level, optname, optval + offset, len);
+    (*env)->ReleaseByteArrayElements(env, inArray, optval, 0);
+}
+
+static void netty_unix_socket_setRawOptAddress(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jlong inAddress, jint len) {
+    netty_unix_socket_setOption(env, fd, level, optname, (void *) inAddress, len);
+}
+
+static jint netty_unix_socket_getIntOpt(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname) {
+    jint optval;
+    if (netty_unix_socket_getOption(env, fd, level, optname, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+static void netty_unix_socket_getRawOptArray(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray outArray, jint offset, jint len) {
+    jbyte* optval = (*env)->GetByteArrayElements(env, outArray, 0);
+    netty_unix_socket_getOption(env, fd, level, optname, optval + offset, len);
+    (*env)->ReleaseByteArrayElements(env, outArray, optval, 0);
+}
+
+static void netty_unix_socket_getRawOptAddress(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jlong outAddress, jint len) {
+    netty_unix_socket_getOption(env, fd, level, optname, (void *) outAddress, len);
+}
+
+static jint netty_unix_socket_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
@@ -1108,7 +1140,13 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
   { "isIPv6Preferred0", "(Z)Z", (void *) netty_unix_socket_isIPv6Preferred0 },
   { "isIPv6", "(I)Z", (void *) netty_unix_socket_isIPv6 },
-  { "msgFastopen", "()I", (void *) netty_unit_socket_msgFastopen }
+  { "msgFastopen", "()I", (void *) netty_unix_socket_msgFastopen },
+  { "setIntOpt", "(IIII)V", (void *) netty_unix_socket_setIntOpt },
+  { "setRawOptArray", "(III[BII)V", (void *) netty_unix_socket_setRawOptArray },
+  { "setRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_setRawOptAddress },
+  { "getIntOpt", "(III)I", (void *) netty_unix_socket_getIntOpt },
+  { "getRawOptArray", "(III[BII)V", (void *) netty_unix_socket_getRawOptArray },
+  { "getRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_getRawOptAddress }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 

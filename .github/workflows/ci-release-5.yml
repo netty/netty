@@ -1,0 +1,249 @@
+# ----------------------------------------------------------------------------
+# Copyright 2022 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+name: Release 5.0
+
+on:
+
+  # Releases can only be triggered via the action tab
+  workflow_dispatch:
+
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-prepare-release-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-prepare-release-
+            ${{ runner.os }}-maven-
+
+      - name: Prepare release with Maven
+        run: |
+          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+          ./mvnw -B -ntp clean
+
+      - name: Checkout tag
+        run: ./.github/scripts/release_checkout_tag.sh release.properties
+
+      - name: Upload workspace
+        uses: actions/upload-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ${{ github.workspace }}/**
+
+  stage-release-linux:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    strategy:
+      matrix:
+        include:
+          - setup: linux-x86_64-java11
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run stage-release"
+          - setup: linux-aarch64
+            docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-release"
+
+    name: stage-release-${{ matrix.setup }}
+
+    steps:
+      - name: Download release-workspace
+        uses: actions/download-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ./prepare-release-workspace/
+
+      - name: Adjust mvnw permissions
+        run: chmod 755 ./prepare-release-workspace/mvnw
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Enable caching of Docker layers
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-{hash}
+          restore-keys: |
+            ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-
+            ${{ runner.os }}-staging-docker-cache-
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ matrix.setup }}-
+            ${{ runner.os }}-maven-
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - name: Build docker image
+        working-directory: ./prepare-release-workspace/
+        run: docker-compose ${{ matrix.docker-compose-build }}
+
+      - name: Stage release to local staging directory
+        working-directory: ./prepare-release-workspace/
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEYNAME: ${{ secrets.GPG_KEYNAME }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: docker-compose ${{ matrix.docker-compose-run }}
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+
+      - name: Rollback release on failure
+        working-directory: ./prepare-release-workspace/
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty main
+
+  deploy-staged-release:
+    runs-on: ubuntu-18.04
+    # Wait until we have staged everything
+    needs: stage-release-linux
+    steps:
+      - name: Download release-workspace
+        uses: actions/download-artifact@v2
+        with:
+          name: prepare-release-workspace
+          path: ./prepare-release-workspace/
+
+      - name: Adjust mvnw permissions
+        run: chmod 755 ./prepare-release-workspace/mvnw
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      # Hardcode the staging artifacts that need to be downloaded.
+      # These must match the matrix setups. There is currently no way to pull this out of the config.
+      - name: Download linux-aarch64 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-aarch64-local-staging
+          path: ~/linux-aarch64-local-staging
+
+      - name: Download linux-x86_64-java11 staging directory
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-java11-local-staging
+          path: ~/linux-x86_64-java11-local-staging
+
+      # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
+      # all together with one maven command.
+      - name: Merge staging repositories
+        working-directory: ./prepare-release-workspace/
+        run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging
+
+      - uses: s4u/maven-settings-action@v2.2.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-deploy-staged-release-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-deploy-staged-release-
+            ${{ runner.os }}-maven-
+
+      - name: Deploy local staged artifacts
+        working-directory: ./prepare-release-workspace/
+        # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+
+      - name: Rollback release on failure
+        working-directory: ./prepare-release-workspace/
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty main

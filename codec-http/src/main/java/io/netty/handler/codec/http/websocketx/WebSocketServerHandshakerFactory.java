@@ -160,14 +160,14 @@ public class WebSocketServerHandshakerFactory {
     }
 
     /**
-     * Return that we need cannot not support the web socket version
+     * Return that we need cannot support the web socket version
      */
     public static ChannelFuture sendUnsupportedVersionResponse(Channel channel) {
         return sendUnsupportedVersionResponse(channel, channel.newPromise());
     }
 
     /**
-     * Return that we need cannot not support the web socket version
+     * Return that we need cannot support the web socket version
      */
     public static ChannelFuture sendUnsupportedVersionResponse(Channel channel, ChannelPromise promise) {
         HttpResponse res = new DefaultFullHttpResponse(

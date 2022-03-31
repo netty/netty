@@ -1712,7 +1712,7 @@ public abstract class SSLEngineTest {
         return result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED;
     }
 
-    private void runDelegatedTasks(boolean delegate, SSLEngineResult result, SSLEngine engine) throws Exception {
+    private void runDelegatedTasks(boolean delegate, SSLEngineResult result, SSLEngine engine) {
         if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_TASK) {
             for (;;) {
                 Runnable task = engine.getDelegatedTask();
@@ -1722,7 +1722,7 @@ public abstract class SSLEngineTest {
                 if (!delegate) {
                     task.run();
                 } else {
-                    delegatingExecutor.submit(task).get();
+                    delegatingExecutor.execute(task);
                 }
             }
         }

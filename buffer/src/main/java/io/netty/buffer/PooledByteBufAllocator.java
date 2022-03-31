@@ -55,6 +55,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
+    private static final int CACHE_NOT_USED = 0;
+
     private final Runnable trimTask = new Runnable() {
         @Override
         public void run() {
@@ -423,14 +425,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
-     * Default maximum order - System Property: io.netty.allocator.maxOrder - default 11
+     * Default maximum order - System Property: io.netty.allocator.maxOrder - default 9
      */
     public static int defaultMaxOrder() {
         return DEFAULT_MAX_ORDER;
     }
 
     /**
-     * Default thread caching behavior - System Property: io.netty.allocator.useCacheForAllThreads - default true
+     * Default thread caching behavior - System Property: io.netty.allocator.useCacheForAllThreads - default false
      */
     public static boolean defaultUseCacheForAllThreads() {
         return DEFAULT_USE_CACHE_FOR_ALL_THREADS;
@@ -511,13 +513,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
 
             final Thread current = Thread.currentThread();
-            if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
+            final EventExecutor executor = ThreadExecutorMap.currentExecutor();
+
+            if (useCacheForAllThreads ||
+                    // If the current thread is a FastThreadLocalThread we will always use the cache
+                    current instanceof FastThreadLocalThread ||
+                    // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
+                    // will allocate a lot!
+                    executor != null) {
                 final PoolThreadCache cache = new PoolThreadCache(
                         heapArena, directArena, smallCacheSize, normalCacheSize,
                         DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
 
                 if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {
-                    final EventExecutor executor = ThreadExecutorMap.currentExecutor();
                     if (executor != null) {
                         executor.scheduleAtFixedRate(trimTask, DEFAULT_CACHE_TRIM_INTERVAL_MILLIS,
                                 DEFAULT_CACHE_TRIM_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
@@ -540,6 +548,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
 
             PoolArena<T> minArena = arenas[0];
+            //optimized
+            //If it is the first execution, directly return minarena and reduce the number of for loop comparisons below
+            if (minArena.numThreadCaches.get() == CACHE_NOT_USED) {
+                return minArena;
+            }
             for (int i = 1; i < arenas.length; i++) {
                 PoolArena<T> arena = arenas[i];
                 if (arena.numThreadCaches.get() < minArena.numThreadCaches.get()) {

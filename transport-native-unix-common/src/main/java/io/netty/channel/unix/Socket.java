@@ -458,6 +458,43 @@ public class Socket extends FileDescriptor {
         setTrafficClass(fd, ipv6, trafficClass);
     }
 
+    public void setIntOpt(int level, int optname, int optvalue) throws IOException {
+        setIntOpt(fd, level, optname, optvalue);
+    }
+
+    public void setRawOpt(int level, int optname, ByteBuffer optvalue) throws IOException {
+        int limit = optvalue.limit();
+        if (optvalue.isDirect()) {
+            setRawOptAddress(fd, level, optname,
+                    Buffer.memoryAddress(optvalue) + optvalue.position(), optvalue.remaining());
+        } else if (optvalue.hasArray()) {
+            setRawOptArray(fd, level, optname,
+                    optvalue.array(), optvalue.arrayOffset() + optvalue.position(), optvalue.remaining());
+        } else {
+            byte[] bytes = new byte[optvalue.remaining()];
+            optvalue.duplicate().get(bytes);
+            setRawOptArray(fd, level, optname, bytes, 0, bytes.length);
+        }
+        optvalue.position(limit);
+    }
+
+    public int getIntOpt(int level, int optname) throws IOException {
+        return getIntOpt(fd, level, optname);
+    }
+
+    public void getRawOpt(int level, int optname, ByteBuffer out) throws IOException {
+        if (out.isDirect()) {
+            getRawOptAddress(fd, level, optname, Buffer.memoryAddress(out) + out.position() , out.remaining());
+        } else if (out.hasArray()) {
+            getRawOptArray(fd, level, optname, out.array(), out.position() + out.arrayOffset(), out.remaining());
+        } else {
+            byte[] outArray = new byte[out.remaining()];
+            getRawOptArray(fd, level, optname, outArray, 0, outArray.length);
+            out.put(outArray);
+        }
+        out.position(out.limit());
+    }
+
     public static boolean isIPv6Preferred() {
         return isIpv6Preferred;
     }
@@ -599,4 +636,15 @@ public class Socket extends FileDescriptor {
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setBroadcast(int fd, int broadcast) throws IOException;
     private static native void setTrafficClass(int fd, boolean ipv6, int trafficClass) throws IOException;
+
+    private static native void setIntOpt(int fd, int level, int optname, int optvalue) throws IOException;
+    private static native void setRawOptArray(int fd, int level, int optname, byte[] optvalue, int offset, int length)
+            throws IOException;
+    private static native void setRawOptAddress(int fd, int level, int optname, long optvalueMemoryAddress, int length)
+            throws IOException;
+    private static native int getIntOpt(int fd, int level, int optname) throws IOException;
+    private static native void getRawOptArray(int fd, int level, int optname, byte[] out, int offset, int length)
+            throws IOException;
+    private static native void getRawOptAddress(int fd, int level, int optname, long outMemoryAddress, int length)
+            throws IOException;
 }
