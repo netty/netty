@@ -184,6 +184,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             }
             copy.roff = 0;
             copy.woff = length;
+            return copy;
         }
         Buffer copy = control.getAllocator().allocate(length);
         try {
