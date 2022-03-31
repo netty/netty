@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 /**
@@ -204,6 +205,16 @@ public interface CompositeBuffer extends Buffer {
     @Override
     default CompositeBuffer setBoolean(int woff, boolean value) {
         return (CompositeBuffer) Buffer.super.setBoolean(woff, value);
+    }
+
+    @Override
+    default CompositeBuffer writeBytes(ByteBuffer source) {
+        return (CompositeBuffer) Buffer.super.writeBytes(source);
+    }
+
+    @Override
+    default CompositeBuffer readBytes(ByteBuffer destination) {
+        return (CompositeBuffer) Buffer.super.readBytes(destination);
     }
 
     @Override

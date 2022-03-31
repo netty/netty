@@ -381,6 +381,71 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     }
 
     @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesMustWriteAllBytesFromHeapByteBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) 1);
+            ByteBuffer source = ByteBuffer.allocate(8).put(new byte[] {2, 3, 4, 5, 6, 7}).flip();
+            buffer.writeBytes(source);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(7);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(toByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7, 0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesMustWriteAllBytesFromDirectByteBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) 1);
+            ByteBuffer source = ByteBuffer.allocateDirect(8).put(new byte[] {2, 3, 4, 5, 6, 7}).flip();
+            buffer.writeBytes(source);
+            assertThat(source.position()).isEqualTo(source.limit());
+
+            assertThat(buffer.writerOffset()).isEqualTo(7);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(toByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7, 0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void readBytesIntoHeapByteBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeLong(0x0102030405060708L);
+            ByteBuffer dest = ByteBuffer.allocate(4);
+            assertThat(buffer.readByte()).isEqualTo((byte) 1);
+            assertThat(buffer.readByte()).isEqualTo((byte) 2);
+            buffer.readBytes(dest);
+            assertThat(dest.position()).isEqualTo(dest.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isEqualTo(6);
+            assertThat(toByteArray(dest.flip())).containsExactly(0x03, 0x04, 0x05, 0x06);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void readBytesIntoDirectByteBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeLong(0x0102030405060708L);
+            ByteBuffer dest = ByteBuffer.allocateDirect(4);
+            assertThat(buffer.readByte()).isEqualTo((byte) 1);
+            assertThat(buffer.readByte()).isEqualTo((byte) 2);
+            buffer.readBytes(dest);
+            assertThat(dest.position()).isEqualTo(dest.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isEqualTo(6);
+            assertThat(toByteArray(dest.flip())).containsExactly(0x03, 0x04, 0x05, 0x06);
+        }
+    }
+
+    @ParameterizedTest
     @MethodSource("directAllocators")
     public void offHeapBuffersMustBeDirect(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();

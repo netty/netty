@@ -567,6 +567,18 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public Buffer writeBytes(ByteBuffer source) {
+        delegate.writeBytes(source);
+        return this;
+    }
+
+    @Override
+    public Buffer readBytes(ByteBuffer destination) {
+        delegate.readBytes(destination);
+        return this;
+    }
+
+    @Override
     public Send<Buffer> send() {
         return delegate.send();
     }
