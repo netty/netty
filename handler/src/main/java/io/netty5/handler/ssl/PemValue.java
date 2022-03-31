@@ -25,21 +25,13 @@ import java.security.cert.X509Certificate;
  * A PEM encoded value.
  *
  * @see PemEncoded
- * @see PemPrivateKey#toPEM(BufferAllocator, java.security.PrivateKey)
+ * @see #toPEM(java.security.PrivateKey)
  * @see PemX509Certificate#toPEM(BufferAllocator, X509Certificate...)
  */
 class PemValue extends BufferHolder<PemValue> implements PemEncoded {
 
-    private final boolean sensitive;
-
-    PemValue(Buffer content, boolean sensitive) {
+    PemValue(Buffer content) {
         super(content.makeReadOnly());
-        this.sensitive = sensitive;
-    }
-
-    @Override
-    public boolean isSensitive() {
-        return sensitive;
     }
 
     @Override
@@ -54,20 +46,11 @@ class PemValue extends BufferHolder<PemValue> implements PemEncoded {
     @Override
     public PemValue copy() {
         Buffer buffer = getBuffer();
-        return new PemValue(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true), sensitive);
-    }
-
-    @Override
-    public void close() {
-        if (sensitive) {
-            // TODO cannot do this when the buffer is read-only
-//            SslUtils.zeroout(getBuffer());
-        }
-        super.close();
+        return new PemValue(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true));
     }
 
     @Override
     protected PemValue receive(Buffer buf) {
-        return new PemValue(buf, sensitive);
+        return new PemValue(buf);
     }
 }

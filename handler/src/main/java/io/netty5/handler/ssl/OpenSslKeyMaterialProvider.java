@@ -54,7 +54,7 @@ class OpenSslKeyMaterialProvider {
         long pkey = 0;
 
         try {
-            pkeyBio = toBIO(offHeapAllocator(), key);
+            pkeyBio = toBIO(key);
             pkey = SSL.parsePrivateKey(pkeyBio, password);
         } catch (Exception e) {
             throw new SSLException("PrivateKey type not supported " + key.getFormat(), e);
@@ -117,7 +117,7 @@ class OpenSslKeyMaterialProvider {
             if (key instanceof OpenSslPrivateKey) {
                 keyMaterial = ((OpenSslPrivateKey) key).newKeyMaterial(chain, certificates);
             } else {
-                pkeyBio = toBIO(allocator, key);
+                pkeyBio = toBIO(key);
                 pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
                 keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey, certificates);
             }

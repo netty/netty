@@ -27,7 +27,6 @@ import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,7 +79,7 @@ public class PemEncodedTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                PemPrivateKey.toPEM(offHeapAllocator(), new PrivateKey() {
+                PemPrivateKey.toPEM(new PrivateKey() {
                     @Override
                     public String getAlgorithm() {
                         return null;

@@ -24,6 +24,7 @@ import javax.security.auth.Destroyable;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferHolder;
+import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.util.CharsetUtil;
 
 /**
@@ -50,7 +51,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     /**
      * Creates a {@link PemEncoded} value from the {@link PrivateKey}.
      */
-    static PemEncoded toPEM(BufferAllocator allocator, PrivateKey key) {
+    static PemEncoded toPEM(PrivateKey key) {
         // We can take a shortcut if the private key happens to be already
         // PEM/PKCS#8 encoded. This is the ideal case and reason why all
         // this exists. It allows the user to pass pre-encoded bytes straight
@@ -64,35 +65,30 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
             throw new IllegalArgumentException(key.getClass().getName() + " does not support encoding");
         }
 
-        return toPEM(allocator, bytes);
+        return toPEM(bytes);
     }
 
-    static PemEncoded toPEM(BufferAllocator allocator, byte[] bytes) {
+    static PemEncoded toPEM(byte[] bytes) {
+        BufferAllocator allocator = SensitiveBufferAllocator.sensitiveOffHeapAllocator();
         try (Buffer encoded = allocator.copyOf(bytes);
              Buffer base64 = SslUtils.toBase64(allocator, encoded)) {
-            try  {
-                int size = BEGIN_PRIVATE_KEY.length + base64.readableBytes() + END_PRIVATE_KEY.length;
+            int size = BEGIN_PRIVATE_KEY.length + base64.readableBytes() + END_PRIVATE_KEY.length;
 
-                boolean success = false;
-                final Buffer pem = allocator.allocate(size);
-                try {
-                    pem.writeBytes(BEGIN_PRIVATE_KEY);
-                    pem.writeBytes(base64);
-                    pem.writeBytes(END_PRIVATE_KEY);
+            boolean success = false;
+            final Buffer pem = allocator.allocate(size);
+            try {
+                pem.writeBytes(BEGIN_PRIVATE_KEY);
+                pem.writeBytes(base64);
+                pem.writeBytes(END_PRIVATE_KEY);
 
-                    PemValue value = new PemValue(pem, true);
-                    success = true;
-                    return value;
-                } finally {
-                    // Make sure we never leak that PEM ByteBuf if there's an Exception.
-                    if (!success) {
-                        SslUtils.zeroout(pem);
-                        pem.close();
-                    }
-                }
+                PemValue value = new PemValue(pem);
+                success = true;
+                return value;
             } finally {
-                SslUtils.zeroout(base64);
-                SslUtils.zeroout(encoded);
+                // Make sure we never leak that PEM ByteBuf if there's an Exception.
+                if (!success) {
+                    pem.close();
+                }
             }
         }
     }
@@ -122,11 +118,6 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     }
 
     @Override
-    public boolean isSensitive() {
-        return true;
-    }
-
-    @Override
     public Buffer content() {
         if (!isAccessible()) {
             throw new IllegalStateException("PemPrivateKey is closed.");
@@ -144,15 +135,6 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     @Override
     protected PemPrivateKey receive(Buffer buf) {
         return new PemPrivateKey(buf);
-    }
-
-    @Override
-    public void close() {
-        // Private Keys are sensitive. We need to zero the bytes
-        // before we're releasing the underlying Buffer
-        // TODO cannot do this when the buffer is read-only
-//        SslUtils.zeroout(getBuffer());
-        super.close();
     }
 
     @Override

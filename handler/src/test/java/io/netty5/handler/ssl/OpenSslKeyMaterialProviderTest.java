@@ -143,7 +143,7 @@ public class OpenSslKeyMaterialProviderTest {
         assertNotNull(certChain);
         long pkeyBio = 0L;
         OpenSslPrivateKey sslPrivateKey;
-        try (PemEncoded pemKey = PemPrivateKey.toPEM(offHeapAllocator(), privateKey)) {
+        try (PemEncoded pemKey = PemPrivateKey.toPEM(privateKey)) {
             pkeyBio = ReferenceCountedOpenSslContext.toBIO(offHeapAllocator(), pemKey);
             sslPrivateKey = new OpenSslPrivateKey(SSL.parsePrivateKey(pkeyBio, null));
         } finally {

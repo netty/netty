@@ -21,13 +21,6 @@ import io.netty5.buffer.api.Buffer;
  * A marker interface for PEM encoded values.
  */
 interface PemEncoded extends AutoCloseable {
-
-    /**
-     * Returns {@code true} if the PEM encoded value is considered
-     * sensitive information such as a private key.
-     */
-    boolean isSensitive();
-
     /**
      * Returns the {@link Buffer} with the PEM encoded contents of this value.
      * <p>

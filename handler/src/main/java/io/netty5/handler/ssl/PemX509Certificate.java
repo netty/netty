@@ -88,7 +88,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
                 }
             }
 
-            PemValue value = new PemValue(pem, false);
+            PemValue value = new PemValue(pem);
             success = true;
             return value;
         } finally {
@@ -171,12 +171,6 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     private PemX509Certificate(Buffer content) {
         this.content = requireNonNull(content, "content").makeReadOnly();
-    }
-
-    @Override
-    public boolean isSensitive() {
-        // There is no sensitive information in a X509 Certificate
-        return false;
     }
 
     @Override

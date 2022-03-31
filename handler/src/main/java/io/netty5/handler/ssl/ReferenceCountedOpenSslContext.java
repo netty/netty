@@ -17,6 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
@@ -848,7 +849,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             keyCertChainBio2 = toBIO(offHeapAllocator(), encoded);
 
             if (key != null) {
-                keyBio = toBIO(offHeapAllocator(), key);
+                keyBio = toBIO(key);
             }
 
             SSLContext.setCertificateBio(
@@ -877,13 +878,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code key} is {@code null}. The BIO contains the content of the {@code key}.
      */
-    static long toBIO(BufferAllocator allocator, PrivateKey key) throws Exception {
+    static long toBIO(PrivateKey key) throws Exception {
         if (key == null) {
             return 0;
         }
 
-        try (PemEncoded pem = PemPrivateKey.toPEM(allocator, key)) {
-            return toBIO(allocator, pem);
+        try (PemEncoded pem = PemPrivateKey.toPEM(key)) {
+            return toBIO(SensitiveBufferAllocator.sensitiveOffHeapAllocator(), pem);
         }
     }
 
@@ -925,15 +926,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try (Buffer buffer = allocator.allocate(readableBytes)) {
             content.copyInto(content.readerOffset(), buffer, 0, readableBytes);
             buffer.skipWritable(readableBytes);
-            try {
-                return newBIO(buffer);
-            } finally {
-                // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we
-                // need to zero out the bytes of the copy before we're releasing it.
-                if (pem.isSensitive()) {
-                    SslUtils.zeroout(buffer);
-                }
-            }
+            return newBIO(buffer);
         }
     }
 
