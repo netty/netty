@@ -86,4 +86,18 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
     protected BsdSocket newSocket() {
         return BsdSocket.newSocketStream();
     }
+
+    @Override
+    protected int level() {
+        // Value for SOL_SOCKET
+        // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
+        return 0xffff;
+    }
+
+    @Override
+    protected int optname() {
+        // Value for SO_REUSEADDR
+        // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
+        return 0x0004;
+    }
 }

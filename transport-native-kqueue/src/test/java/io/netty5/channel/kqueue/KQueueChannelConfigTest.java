@@ -21,11 +21,17 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.unix.Buffer;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class KQueueChannelConfigTest {
@@ -83,6 +89,46 @@ public class KQueueChannelConfigTest {
                     .handler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).get();
             ch.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testIntegerOption() throws Exception {
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        try {
+            KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
+            IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 0xffff, 0x0004);
+            Integer zero = 0;
+            assertEquals(zero, channel.config().getOption(opt));
+            channel.config().setOption(opt, 1);
+            assertNotEquals(zero, channel.config().getOption(opt));
+            channel.fd().close();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testRawOption() throws Exception {
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        try {
+            KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
+            // Value for SOL_SOCKET and SO_REUSEADDR
+            // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
+            RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 0xffff, 0x0004, 4);
+
+            ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
+            disabled.putInt(0).flip();
+            assertEquals(disabled, channel.config().getOption(opt));
+
+            ByteBuffer enabled = Buffer.allocateDirectWithNativeOrder(4);
+            enabled.putInt(1).flip();
+
+            channel.config().setOption(opt, enabled);
+            assertNotEquals(disabled, channel.config().getOption(opt));
+            channel.fd().close();
         } finally {
             group.shutdownGracefully();
         }
