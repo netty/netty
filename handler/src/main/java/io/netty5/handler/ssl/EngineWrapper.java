@@ -95,8 +95,9 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
                 VectoredUnwrap vectoredEngine = (VectoredUnwrap) engine;
                 return processResult(vectoredEngine.unwrap(inputs, outputs));
             } else {
-                int count = inputs.length;
-                assert count == 1 : "Unwrap can only take input from a single buffer, but got " + count + " buffers.";
+                if (inputs.length > 1) {
+                    coalesceInputs();
+                }
                 return processResult(engine.unwrap(inputs[0], outputs));
             }
         } finally {
@@ -158,6 +159,23 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
                 length -= remaining;
             }
         }
+    }
+
+    private void coalesceInputs() {
+        int rem = 0;
+        for (ByteBuffer input : inputs) {
+            rem += input.remaining();
+        }
+        if (cachedReadingBuffer == null || cachedReadingBuffer.capacity() < rem) {
+            cachedReadingBuffer = allocateCachingBuffer(rem);
+        }
+        cachedReadingBuffer.clear();
+        for (ByteBuffer input : inputs) {
+            cachedReadingBuffer.put(input);
+        }
+        cachedReadingBuffer.flip();
+        singleReadableBuffer[0] = cachedReadingBuffer;
+        inputs = singleReadableBuffer;
     }
 
     private SSLEngineResult processResult(SSLEngineResult result) {
