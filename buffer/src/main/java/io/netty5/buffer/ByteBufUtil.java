@@ -160,25 +160,21 @@ public final class ByteBufUtil {
 
         static {
             final char[] DIGITS = "0123456789abcdef".toCharArray();
-            for (int i = 0; i < 256; i ++) {
-                HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
-                HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
+            for (int i = 0; i < 256; i++) {
+                HEXDUMP_TABLE[i << 1] = DIGITS[i >>> 4 & 0x0F];
+                HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i & 0x0F];
             }
 
             int i;
 
             // Generate the lookup table for hex dump paddings
-            for (i = 0; i < HEXPADDING.length; i ++) {
+            for (i = 0; i < HEXPADDING.length; i++) {
                 int padding = HEXPADDING.length - i;
-                StringBuilder buf = new StringBuilder(padding * 3);
-                for (int j = 0; j < padding; j ++) {
-                    buf.append("   ");
-                }
-                HEXPADDING[i] = buf.toString();
+                HEXPADDING[i] = "   ".repeat(padding);
             }
 
             // Generate the lookup table for the start-offset header in each row (up to 64KiB).
-            for (i = 0; i < HEXDUMP_ROWPREFIXES.length; i ++) {
+            for (i = 0; i < HEXDUMP_ROWPREFIXES.length; i++) {
                 StringBuilder buf = new StringBuilder(12);
                 buf.append(NEWLINE);
                 buf.append(Long.toHexString(i << 4 & 0xFFFFFFFFL | 0x100000000L));
@@ -188,22 +184,18 @@ public final class ByteBufUtil {
             }
 
             // Generate the lookup table for byte-to-hex-dump conversion
-            for (i = 0; i < BYTE2HEX.length; i ++) {
+            for (i = 0; i < BYTE2HEX.length; i++) {
                 BYTE2HEX[i] = ' ' + StringUtil.byteToHexStringPadded(i);
             }
 
             // Generate the lookup table for byte dump paddings
-            for (i = 0; i < BYTEPADDING.length; i ++) {
+            for (i = 0; i < BYTEPADDING.length; i++) {
                 int padding = BYTEPADDING.length - i;
-                StringBuilder buf = new StringBuilder(padding);
-                for (int j = 0; j < padding; j ++) {
-                    buf.append(' ');
-                }
-                BYTEPADDING[i] = buf.toString();
-        }
+                BYTEPADDING[i] = " ".repeat(padding);
+            }
 
             // Generate the lookup table for byte-to-char conversion
-            for (i = 0; i < BYTE2CHAR.length; i ++) {
+            for (i = 0; i < BYTE2CHAR.length; i++) {
                 if (i <= 0x1f || i >= 0x7f) {
                     BYTE2CHAR[i] = '.';
                 } else {

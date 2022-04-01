@@ -174,12 +174,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
     }
 
     private void releaseHandshakeBuffer() {
-        releaseIfNotNull(handshakeBuffer);
+        Resource.dispose(handshakeBuffer);
         handshakeBuffer = null;
-    }
-
-    private static void releaseIfNotNull(Buffer buffer) {
-        Resource.dispose(buffer);
     }
 
     private void select(final ChannelHandlerContext ctx, Buffer clientHello) {
@@ -192,7 +188,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                 suppressRead = true;
                 final Buffer finalClientHello = clientHello;
                 future.addListener(f -> {
-                    releaseIfNotNull(finalClientHello);
+                    Resource.dispose(finalClientHello);
                     try {
                         suppressRead = false;
                         try {
@@ -218,7 +214,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
         } finally {
-            releaseIfNotNull(clientHello);
+            Resource.dispose(clientHello);
         }
     }
 

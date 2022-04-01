@@ -71,7 +71,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
         this.engine = engine;
         this.useDirectBuffer = useDirectBuffer;
         singleEmptyBuffer = new ByteBuffer[1];
-        singleEmptyBuffer[0] = useDirectBuffer ? EMPTY_BUFFER_DIRECT : EMPTY_BUFFER_HEAP;
+        singleEmptyBuffer[0] = useDirectBuffer? EMPTY_BUFFER_DIRECT : EMPTY_BUFFER_HEAP;
         singleReadableBuffer = new ByteBuffer[1];
         singleWritableBuffer = new ByteBuffer[1];
     }
@@ -80,7 +80,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
         try {
             prepare(in, out);
             int count = outputs.length;
-            assert count == 1: "Wrap can only output to a single buffer, but got " + count + " buffers.";
+            assert count == 1 : "Wrap can only output to a single buffer, but got " + count + " buffers.";
             return processResult(engine.wrap(inputs, outputs[0]));
         } finally {
             finish(in, out);
@@ -96,7 +96,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
                 return processResult(vectoredEngine.unwrap(inputs, outputs));
             } else {
                 int count = inputs.length;
-                assert count == 1: "Unwrap can only take input from a single buffer, but got " + count + " buffers.";
+                assert count == 1 : "Unwrap can only take input from a single buffer, but got " + count + " buffers.";
                 return processResult(engine.unwrap(inputs[0], outputs));
             }
         } finally {
@@ -107,49 +107,45 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
     private void prepare(Buffer in, Buffer out) {
         if (in == null || in.readableBytes() == 0) {
             inputs = singleEmptyBuffer;
+        } else if (in.isDirect() == useDirectBuffer) {
+            int count = in.countReadableComponents();
+            assert count > 0 : "Input buffer has readable bytes, but no readable components: " + in;
+            inputs = count == 1? singleReadableBuffer : new ByteBuffer[count];
+            int prepared = in.forEachReadable(0, this);
+            assert prepared == count : "Expected to prepare " + count + " buffers, but got " + prepared;
         } else {
-            if (in.isDirect() == useDirectBuffer) {
-                int count = in.countReadableComponents();
-                assert count > 0: "Input buffer has readable bytes, but no readable components: " + in;
-                inputs = count == 1 ? singleReadableBuffer : new ByteBuffer[count];
-                int prepared = in.forEachReadable(0, this);
-                assert prepared == count: "Expected to prepare " + count + " buffers, but got " + prepared;
-            } else {
-                inputs = singleReadableBuffer;
-                int readable = in.readableBytes();
-                if (cachedReadingBuffer == null || cachedReadingBuffer.capacity() < readable) {
-                    cachedReadingBuffer = allocateCachingBuffer(readable);
-                }
-                cachedReadingBuffer.clear();
-                in.copyInto(in.readerOffset(), cachedReadingBuffer, 0, readable);
-                cachedReadingBuffer.limit(readable);
-                inputs[0] = cachedReadingBuffer;
+            inputs = singleReadableBuffer;
+            int readable = in.readableBytes();
+            if (cachedReadingBuffer == null || cachedReadingBuffer.capacity() < readable) {
+                cachedReadingBuffer = allocateCachingBuffer(readable);
             }
+            cachedReadingBuffer.clear();
+            in.copyInto(in.readerOffset(), cachedReadingBuffer, 0, readable);
+            cachedReadingBuffer.limit(readable);
+            inputs[0] = cachedReadingBuffer;
         }
         if (out == null || out.writableBytes() == 0) {
             outputs = singleEmptyBuffer;
+        } else if (out.isDirect() == useDirectBuffer) {
+            int count = out.countWritableComponents();
+            assert count > 0 : "Output buffer has writable space, but no writable components: " + out;
+            outputs = count == 1? singleWritableBuffer : new ByteBuffer[count];
+            int prepared = out.forEachWritable(0, this);
+            assert prepared == count : "Expected to prepare " + count + " buffers, but got " + prepared;
         } else {
-            if (out.isDirect() == useDirectBuffer) {
-                int count = out.countWritableComponents();
-                assert count > 0: "Output buffer has writable space, but no writable components: " + out;
-                outputs = count == 1 ? singleWritableBuffer : new ByteBuffer[count];
-                int prepared = out.forEachWritable(0, this);
-                assert prepared == count: "Expected to prepare " + count + " buffers, but got " + prepared;
-            } else {
-                inputs = singleWritableBuffer;
-                int writable = out.writableBytes();
-                if (cachedWritingBuffer == null || cachedWritingBuffer.capacity() < writable) {
-                    cachedWritingBuffer = allocateCachingBuffer(writable);
-                }
-                outputs[0] = cachedWritingBuffer.position(0).limit(writable);
-                writeBack = true;
+            inputs = singleWritableBuffer;
+            int writable = out.writableBytes();
+            if (cachedWritingBuffer == null || cachedWritingBuffer.capacity() < writable) {
+                cachedWritingBuffer = allocateCachingBuffer(writable);
             }
+            outputs[0] = cachedWritingBuffer.position(0).limit(writable);
+            writeBack = true;
         }
     }
 
     private ByteBuffer allocateCachingBuffer(int capacity) {
         capacity = PlatformDependent.roundToPowerOfTwo(capacity);
-        return useDirectBuffer ? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity);
+        return useDirectBuffer? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity);
     }
 
     private void limitInput(int length) {
@@ -173,22 +169,26 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
         if (result != null) { // Result can be null if the operation failed.
             if (in != null) {
                 in.skipReadable(result.bytesConsumed());
-                Reference.reachabilityFence(in);
             }
             if (out != null) {
                 if (writeBack) {
                     assert outputs.length == 1;
                     ByteBuffer buf = outputs[0];
-                    while (buf.remaining() > Long.BYTES) {
+                    while (buf.remaining() >= Long.BYTES) {
                         out.writeLong(buf.getLong());
                     }
-                    while (buf.hasRemaining()) {
+                    if (buf.remaining() >= Integer.BYTES) {
+                        out.writeInt(buf.getInt());
+                    }
+                    if (buf.remaining() >= Short.BYTES) {
+                        out.writeShort(buf.getShort());
+                    }
+                    if (buf.hasRemaining()) {
                         out.writeByte(buf.get());
                     }
                 } else {
                     out.skipWritable(result.bytesProduced());
                 }
-                Reference.reachabilityFence(out);
             }
             result = null;
         }
@@ -196,11 +196,18 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
         singleWritableBuffer[0] = null;
         inputs = null;
         outputs = null;
+        // The ByteBuffers used for wrap/unwrap may be derived from the internal memory of the in/out Buffer instances.
+        // Use a reachability fence to guarantee that the memory is not freed via a GC route before we've removed all
+        // references to the ByteBuffers using that memory.
+        // First, we null-out the ByteBuffer references (above), then we fence the Buffer instances (below).
+        Reference.reachabilityFence(in);
+        Reference.reachabilityFence(out);
     }
 
     @Override
     public boolean process(int index, ReadableComponent component) {
         // Some SSLEngine implementations require their input buffers be mutable. Let's try to accommodate.
+        // See https://bugs.openjdk.java.net/browse/JDK-8283577 for the details.
         ByteBuffer byteBuffer = Statics.tryGetWritableBufferFromReadableComponent(component);
         if (byteBuffer == null) {
             byteBuffer = component.readableBuffer();

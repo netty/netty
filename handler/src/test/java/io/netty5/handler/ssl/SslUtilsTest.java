@@ -47,10 +47,11 @@ public class SslUtilsTest {
         try (Buffer buffer = offHeapAllocator().copyOf(cTOsBE);
              Buffer copy = buffer.copy()) {
             buffer.forEachReadable(0, (index, component) -> {
+                assertEquals(0, index); // Only one component expected here.
                 ByteBuffer[] byteBuffers = { component.readableBuffer() };
                 assertEquals(getEncryptedPacketLength(byteBuffers, 0),
                              getEncryptedPacketLength(copy, 0));
-                return false;
+                return true;
             });
         }
     }

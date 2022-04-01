@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
  * Optional extra interface that {@link javax.net.ssl.SSLEngine} sub-classes can implement, if they support a faster
  * way of unwrapping multiple input buffers into multiple output buffers.
  */
-public interface VectoredUnwrap {
+interface VectoredUnwrap {
     /**
      * Similar to {@link javax.net.ssl.SSLEngine#unwrap(ByteBuffer, ByteBuffer[])}, but takes an array of input buffers.
      *

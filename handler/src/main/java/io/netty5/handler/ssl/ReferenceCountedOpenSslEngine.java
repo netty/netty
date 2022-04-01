@@ -517,7 +517,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
      * Calling this function with src.remaining == 0 is undefined.
      */
     private int writePlaintextData(final ByteBuffer src, int len) {
-        assert len > 0 && src.remaining() > 0;
+        assert len > 0;
+        assert src.remaining() > 0;
         final int pos = src.position();
         final int sslWrote;
 

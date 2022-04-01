@@ -16,6 +16,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
@@ -85,7 +86,7 @@ public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
     /**
      * Override to configure the SslHandler eg. {@link SSLParameters#setEndpointIdentificationAlgorithm(String)}.
      * The hostname and port is not known by this method so servers may want to override this method and use the
-     * {@link SslContext#newHandler(io.netty5.buffer.api.BufferAllocator, String, int)} variant.
+     * {@link SslContext#newHandler(BufferAllocator, String, int)} variant.
      *
      * @param context the {@link ChannelHandlerContext} to use.
      * @param sslContext the {@link SSLContext} to use.
