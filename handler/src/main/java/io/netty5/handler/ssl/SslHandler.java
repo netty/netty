@@ -2121,19 +2121,17 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             }
             if (cumulation instanceof CompositeBuffer) {
                 CompositeBuffer composite = (CompositeBuffer) cumulation;
-                composite.extendWith(next.send());
+                if (next.readableBytes() < wrapDataSize / 2) {
+                    composite.ensureWritable(wrapDataSize);
+                    composite.writeBytes(next);
+                    next.close();
+                } else {
+                    composite.extendWith(next.send());
+                }
                 return composite;
             }
-            if (cumulation.readOnly()) {
-                Buffer tmp = alloc.allocate(cumulation.readableBytes() + next.readableBytes());
-                tmp.writeBytes(cumulation);
-                cumulation.close();
-                cumulation = tmp;
-            } else {
-                cumulation.ensureWritable(next.readableBytes());
-            }
-            cumulation.writeBytes(next);
-            next.close();
+            int minIncrement = 2 * wrapDataSize; // Amortise cost of allocation.
+            cumulation = copyAndCompose(alloc, cumulation, next, minIncrement);
             return cumulation;
         }
 
