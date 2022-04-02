@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
         extends ResourceSupport<Buffer, T> implements BufferIntegratable, Buffer {
 
-    private AtomicReference<ByteBufAdaptor> adaptor;
+    private final AtomicReference<ByteBufAdaptor> adaptor = new AtomicReference<>();
     protected final AllocatorControl control;
 
     protected AdaptableBuffer(Drop<T> drop, AllocatorControl control) {
@@ -46,7 +46,7 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
     @Override
     public ByteBuf asByteBuf() {
         AtomicReference<ByteBufAdaptor> bba = adaptor;
-        if (bba == null) {
+        if (bba.get() == null) {
             BufferAllocator allocator = control.getAllocator();
             final BufferAllocator onHeap;
             final BufferAllocator offHeap;
