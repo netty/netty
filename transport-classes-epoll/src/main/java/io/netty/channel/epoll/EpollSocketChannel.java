@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -47,6 +48,11 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     public EpollSocketChannel() {
         super(newSocketStream(), false);
+        config = new EpollSocketChannelConfig(this);
+    }
+
+    public EpollSocketChannel(InternetProtocolFamily protocol) {
+        super(newSocketStream(protocol), false);
         config = new EpollSocketChannelConfig(this);
     }
 
