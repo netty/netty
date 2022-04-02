@@ -83,7 +83,7 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     @Override
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
         ChainedOptionsBuilder runnerOptions = super.newOptionsBuilder();
-        if (getForks() > 0) {
+        if (getForks() >= 0) {
             runnerOptions.forks(getForks());
         }
 

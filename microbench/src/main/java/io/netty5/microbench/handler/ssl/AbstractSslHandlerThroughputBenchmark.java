@@ -55,7 +55,14 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
 
     @Setup(Level.Iteration)
     public final void setup() throws Exception {
-        allocator = DefaultBufferAllocators.offHeapAllocator();
+        switch (bufferType) {
+        case HEAP:
+            allocator = DefaultBufferAllocators.onHeapAllocator();
+            break;
+        case DIRECT:
+            allocator = DefaultBufferAllocators.offHeapAllocator();
+            break;
+        }
 
         initSslHandlers(allocator);
 
@@ -85,7 +92,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
         clientCtx.releaseCumulation();
 
         for (int i = 0; i < numWrites; ++i) {
-            Buffer copy = wrapSrcBuffer.copy(wrapSrcBuffer.readerOffset(), wrapSrcBuffer.readableBytes());
+            Buffer copy = wrapSrcBuffer.copy(wrapSrcBuffer.readerOffset(), wrapSrcBuffer.readableBytes(), true);
             clientSslHandler.write(clientCtx, copy);
         }
         clientSslHandler.flush(clientCtx);
