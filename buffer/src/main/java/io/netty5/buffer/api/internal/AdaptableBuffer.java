@@ -26,10 +26,12 @@ import io.netty5.buffer.api.adaptor.ByteBufAllocatorAdaptor;
 import io.netty5.util.IllegalReferenceCountException;
 import io.netty5.util.ReferenceCounted;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
         extends ResourceSupport<Buffer, T> implements BufferIntegratable, Buffer {
 
-    private volatile ByteBufAdaptor adaptor;
+    private AtomicReference<ByteBufAdaptor> adaptor;
     protected final AllocatorControl control;
 
     protected AdaptableBuffer(Drop<T> drop, AllocatorControl control) {
@@ -43,7 +45,7 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
 
     @Override
     public ByteBuf asByteBuf() {
-        ByteBufAdaptor bba = adaptor;
+        AtomicReference<ByteBufAdaptor> bba = adaptor;
         if (bba == null) {
             BufferAllocator allocator = control.getAllocator();
             final BufferAllocator onHeap;
@@ -56,9 +58,10 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
                 offHeap = allocator.isPooling() ? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled();
             }
             ByteBufAllocatorAdaptor alloc = new ByteBufAllocatorAdaptor(onHeap, offHeap);
-            return adaptor = new ByteBufAdaptor(alloc, this, Integer.MAX_VALUE);
+            adaptor.set(new ByteBufAdaptor(alloc, this, Integer.MAX_VALUE));
+            return adaptor.get();
         }
-        return bba;
+        return bba.get();
     }
 
     @Override
