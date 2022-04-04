@@ -450,6 +450,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
             PoolSubpage page = (PoolSubpage) SUBPAGE_ARRAY.getVolatile(smallSubpagePools, i);
             if (page != null) {
                 page.destroy();
+                SUBPAGE_ARRAY.setVolatile(smallSubpagePools, i, null);
             }
         }
         for (PoolChunkList list : new PoolChunkList[] {qInit, q000, q025, q050, q100}) {
