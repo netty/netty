@@ -36,6 +36,7 @@ import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 
 import static io.netty5.buffer.api.internal.Statics.bbput;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
@@ -146,10 +147,28 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (rmem == CLOSED_BUFFER) {
             throw bufferIsClosed(this);
         }
-        for (int i = 0; i < capacity; i++) {
-            wmem.put(i, value);
+        final ByteBuffer wmem = this.wmem;
+        if (!wmem.hasArray()) {
+            fill(wmem, capacity, value);
+        } else {
+            final int start = wmem.arrayOffset();
+            final int end = wmem.arrayOffset() + capacity;
+            Arrays.fill(wmem.array(), start, end, value);
         }
         return this;
+    }
+
+    private static void fill(final ByteBuffer wmem, final int capacity, final byte value) {
+        final int intFillValue = (value & 0xFF) * 0x01010101;
+        final int intCount = capacity >>> 2;
+        for (int i = 0; i < intCount; i++) {
+            wmem.putInt(i << 2, intFillValue);
+        }
+        final int byteCount = capacity & 3;
+        final int bytesOffset = intCount << 2;
+        for (int i = 0; i < byteCount; i++) {
+            wmem.put(bytesOffset + i, value);
+        }
     }
 
     private long nativeAddress() {
