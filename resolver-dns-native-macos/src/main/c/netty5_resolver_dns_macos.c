@@ -191,9 +191,7 @@ static jint netty5_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char*
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
-    if (packagePrefix != NULL) {
-        staticPackagePrefix = strdup(packagePrefix);
-    }
+    staticPackagePrefix = packagePrefix;
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
