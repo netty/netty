@@ -79,7 +79,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
             if (preferDirect) {
                 out = ctx.alloc().ioBuffer();
             } else {
-                out = Unpooled.buffer();
+                out = ctx.alloc().buffer();
             }
             Encoders.compress(msg, out, parameters);
             return out;
