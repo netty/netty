@@ -504,9 +504,6 @@ public class BufferLifeCycleTest extends BufferTestSupport {
                     assertEquals(expected.readerOffset(), buf.readerOffset());
                     assertEquals(expected.writableBytes(), buf.writableBytes());
                     assertEquals(expected.writerOffset(), buf.writerOffset());
-                    byte[] bytes = new byte[8];
-                    buf.copyInto(0, bytes, 0, 8);
-                    assertThat(bytes).containsExactly(0, 0, 0, 0, 0, 0, 0, 0);
 
                     var tlr = ThreadLocalRandom.current();
                     for (int j = 0; j < tlr.nextInt(0, 8); j++) {

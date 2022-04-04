@@ -315,7 +315,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         Drop<Buffer> drop = memory.drop();
         Buffer buffer = manager.recoverMemory(control, memory.memory(), drop);
         drop.attach(buffer);
-        return buffer.fill((byte) 0);
+        return buffer;
     }
 
     @Override
