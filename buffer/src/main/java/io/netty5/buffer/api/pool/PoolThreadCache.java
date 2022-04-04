@@ -23,7 +23,6 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -47,7 +46,10 @@ final class PoolThreadCache {
 
     final AtomicInteger arenaReferenceCounter;
 
-    private final WeakReference<Cache> cacheRef;
+    private final PoolArena arena;
+    // Hold the caches for the different size classes, which are small and normal.
+    private final MemoryRegionCache[] smallSubPageCaches;
+    private final MemoryRegionCache[] normalCaches;
 
     private final int freeSweepAllocationThreshold;
 
@@ -73,12 +75,16 @@ final class PoolThreadCache {
                                                    + freeSweepAllocationThreshold + " (expected: > 0)");
             }
 
-            cacheRef = new WeakReference<>(new Cache(arena, smallSubPageCaches, normalCaches));
+            this.arena = arena;
+            this.smallSubPageCaches = smallSubPageCaches;
+            this.normalCaches = normalCaches;
             arenaReferenceCounter = arena.numThreadCaches;
             arenaReferenceCounter.getAndIncrement();
         } else {
             // No heapArea is configured so just null out all caches
-            cacheRef = null;
+            this.arena = null;
+            smallSubPageCaches = null;
+            normalCaches = null;
             arenaReferenceCounter = null;
         }
     }
@@ -115,15 +121,7 @@ final class PoolThreadCache {
     }
 
     PoolArena getArena() {
-        Cache cache = getCache();
-        if (cache != null) {
-            return cache.arena;
-        }
-        return null;
-    }
-
-    private Cache getCache() {
-        return cacheRef == null ? null : cacheRef.get();
+        return arena;
     }
 
     // val > 0
@@ -186,9 +184,8 @@ final class PoolThreadCache {
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
     void free() {
-        Cache cache = getCache();
-        if (cache != null) {
-            int numFreed = free(cache.smallSubPageCaches) + free(cache.normalCaches);
+        if (arena != null) {
+            int numFreed = free(smallSubPageCaches) + free(normalCaches);
 
             if (numFreed > 0 && logger.isDebugEnabled()) {
                 logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
@@ -221,10 +218,9 @@ final class PoolThreadCache {
     }
 
     void trim() {
-        Cache cache = getCache();
-        if (cache != null) {
-            trim(cache.smallSubPageCaches);
-            trim(cache.normalCaches);
+        if (arena != null) {
+            trim(smallSubPageCaches);
+            trim(normalCaches);
         }
     }
 
@@ -245,19 +241,17 @@ final class PoolThreadCache {
     }
 
     private MemoryRegionCache cacheForSmall(int sizeIdx) {
-        Cache cache = getCache();
-        if (cache != null) {
-            return cache(cache.smallSubPageCaches, sizeIdx);
+        if (arena != null) {
+            return cache(smallSubPageCaches, sizeIdx);
         }
         return null;
     }
 
     private MemoryRegionCache cacheForNormal(PoolArena area, int sizeIdx) {
-        Cache cache = getCache();
-        if (cache != null) {
+        if (area != null) {
             // We need to substract area.numSmallSubpagePools as sizeIdx is the overall index for all sizes.
             int idx = sizeIdx - area.numSmallSubpagePools;
-            return cache(cache.normalCaches, idx);
+            return cache(normalCaches, idx);
         }
         return null;
     }
@@ -294,20 +288,6 @@ final class PoolThreadCache {
         @Override
         protected UntetheredMemory allocBuf(PoolChunk chunk, long handle, int size, PoolThreadCache threadCache) {
             return chunk.allocateBuffer(handle, size, threadCache);
-        }
-    }
-
-    private static final class Cache {
-        final PoolArena arena;
-        // Hold the caches for the different size classes, which are small and normal.
-        final MemoryRegionCache[] smallSubPageCaches;
-        final MemoryRegionCache[] normalCaches;
-
-        private Cache(PoolArena arena, MemoryRegionCache[] smallSubPageCaches,
-                      MemoryRegionCache[] normalCaches) {
-            this.arena = arena;
-            this.smallSubPageCaches = smallSubPageCaches;
-            this.normalCaches = normalCaches;
         }
     }
 
