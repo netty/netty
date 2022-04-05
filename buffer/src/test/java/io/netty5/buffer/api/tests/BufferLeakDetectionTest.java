@@ -55,7 +55,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Consumer<Buffer> closeBuffer = buffer -> buffer.close();
         AtomicInteger counter = new AtomicInteger();
         Semaphore gcEvents = new Semaphore(0);
-        Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet());
+        Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet(), true);
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
              var ignore2 = installGcEventListener(() -> gcEvents.release());
              BufferAllocator allocator = fixture.createAllocator()) {
@@ -75,7 +75,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         Object hint = makeHint(testInfo);
         Consumer<Buffer> leakBuffer = buffer -> { };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
-        Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak));
+        Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak), true);
         CreateAndUseBuffers runnable;
         Thread thread;
         LeakInfo leakInfo;
@@ -103,7 +103,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         };
         AtomicInteger counter = new AtomicInteger();
         Semaphore gcEvents = new Semaphore(0);
-        Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet());
+        Consumer<LeakInfo> callback = forHint(hint, leak -> counter.incrementAndGet(), true);
         try (var ignore1 = MemoryManager.onLeakDetected(callback);
              var ignore2 = installGcEventListener(() -> gcEvents.release());
              BufferAllocator allocator = fixture.createAllocator()) {
@@ -127,8 +127,8 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
         AtomicReference<LeakInfo> nonLeakAsserts = new AtomicReference<>();
-        Consumer<LeakInfo> callback = forHint(leakingHint, leak -> leakQueue.offer(leak));
-        Consumer<LeakInfo> assertNoNonLeakingHints = forHint(nonLeakingHint, leak -> nonLeakAsserts.set(leak));
+        Consumer<LeakInfo> callback = forHint(leakingHint, leak -> leakQueue.offer(leak), true);
+        Consumer<LeakInfo> assertNoNonLeakingHints = forHint(nonLeakingHint, leak -> nonLeakAsserts.set(leak), false);
         CreateAndUseBuffers runnable;
         Thread thread;
         LeakInfo leakInfo;
@@ -162,7 +162,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             buffer.send(); // Send object itself leaks.
         };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
-        Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak));
+        Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak), true);
         CreateAndUseBuffers runnable;
         Thread thread;
         LeakInfo leakInfo;
@@ -206,12 +206,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
         return counter;
     }
 
-    private static Consumer<LeakInfo> forHint(Object hint, Consumer<LeakInfo> consumer) {
+    private static Consumer<LeakInfo> forHint(Object hint, Consumer<LeakInfo> consumer, boolean warnOnUnrecognized) {
         return leak -> {
             boolean foundIntendedLeak = leak.stream().anyMatch(tracePoint -> tracePoint.hint() == hint);
             if (foundIntendedLeak) {
                 consumer.accept(leak);
-            } else {
+            } else if (warnOnUnrecognized) {
                 InternalLogger logger = InternalLoggerFactory.getInstance(BufferLeakDetectionTest.class);
                 logger.warn("Found leaked object \"{}\" that did not match hint \"{}\".",
                             leak.objectDescription(), hint);
