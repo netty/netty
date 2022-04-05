@@ -136,4 +136,49 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             timerFd.close();
         }
     }
+
+    @Test
+    public void testResultNoTimeoutCorrectlyEncoded() throws Throwable {
+        final FileDescriptor epoll = Native.newEpollCreate();
+        final FileDescriptor eventFd = Native.newEventFd();
+        final FileDescriptor timerFd = Native.newTimerFd();
+        final EpollEventArray array = new EpollEventArray(1024);
+        try {
+            Native.epollCtlAdd(epoll.intValue(), eventFd.intValue(), Native.EPOLLIN | Native.EPOLLET);
+            final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+            final Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (;;) {
+                            long ready = Native.epollWait(epoll, array, timerFd, 0, 0, 10);
+                            if (ready > 0) {
+                                assertEquals(1, Native.epollReady(ready));
+                                assertEquals(eventFd.intValue(), array.fd(0));
+                                return;
+                            }
+                            Thread.sleep(100);
+                        }
+                    } catch (IOException e) {
+                        causeRef.set(e);
+                    } catch (InterruptedException ignore) {
+                        // ignore
+                    }
+                }
+            });
+            t.start();
+            Native.eventFdWrite(eventFd.intValue(), 1);
+
+            t.join();
+            Throwable cause = causeRef.get();
+            if (cause != null) {
+                throw cause;
+            }
+        } finally {
+            array.free();
+            epoll.close();
+            eventFd.close();
+            timerFd.close();
+        }
+    }
 }
