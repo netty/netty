@@ -218,6 +218,14 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw new IllegalArgumentException("The srcPos + length is beyond the end of the buffer: " +
                     "srcPos = " + srcPos + ", length = " + length + '.');
         }
+        if (dest.hasArray() && hasReadableArray()) {
+            final byte[] srcArray = rmem.array();
+            final int srcStart = rmem.arrayOffset() + srcPos;
+            final byte[] dstArray = dest.array();
+            final int dstStart = dest.arrayOffset() + destPos;
+            System.arraycopy(srcArray, srcStart, dstArray, dstStart, length);
+            return;
+        }
         dest = dest.duplicate().clear();
         bbput(dest, destPos, rmem, srcPos, length);
     }
