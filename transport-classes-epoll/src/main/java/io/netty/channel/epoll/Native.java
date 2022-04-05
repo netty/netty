@@ -172,7 +172,7 @@ public final class Native {
         if (timeoutSec == 0 && timeoutNs == 0) {
             // Zero timeout => poll (aka return immediately)
             // We shift this to be consistent with what is done in epollWait0(...)
-            return (((long) epollWait(epollFd, events, 0)) << 32);
+            return ((long) epollWait(epollFd, events, 0)) << 32;
         }
         if (timeoutSec == Integer.MAX_VALUE) {
             // Max timeout => wait indefinitely: disarm timerfd first
