@@ -40,10 +40,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.net.ProtocolFamily;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -62,59 +60,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY;
-
-    static {
-        Method found = null;
-        try {
-            found = SelectorProvider.class.getMethod(
-                            "openSocketChannel", ProtocolFamily.class);
-        } catch (Throwable e) {
-            logger.warn("openSocketChannel(ProtocolFamily) not available, will use default", e);
-        }
-        OPEN_SOCKET_CHANNEL_WITH_FAMILY = found;
-    }
-
-    private static SocketChannel newSocket(SelectorProvider provider) {
-        try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
-            return provider.openSocketChannel();
-        } catch (IOException e) {
-            throw new ChannelException("Failed to open a socket.", e);
-        }
-    }
-
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-    private static SocketChannel newSocket(SelectorProvider provider, InternetProtocolFamily family) {
-        try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
-            if (family != null && OPEN_SOCKET_CHANNEL_WITH_FAMILY != null) {
-                try {
-                    return (SocketChannel) OPEN_SOCKET_CHANNEL_WITH_FAMILY.invoke(
-                                    provider, ProtocolFamilyConverter.convert(family));
-                } catch (InvocationTargetException e) {
-                    throw new IOException(e);
-                } catch (IllegalAccessException e) {
-                    throw new IOException(e);
-                }
-            }
-            return provider.openSocketChannel();
-        } catch (IOException e) {
-            throw new ChannelException("Failed to open a socket.", e);
-        }
-    }
+    private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
+            SelectorProviderUtil.findOpenMethod("openSocketChannel");
 
     private final SocketChannelConfig config;
+
+    private static SocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
+        try {
+            SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
+            return channel == null ? provider.openSocketChannel() : channel;
+        } catch (IOException e) {
+            throw new ChannelException("Failed to open a socket.", e);
+        }
+    }
 
     /**
      * Create a new instance
@@ -134,7 +92,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
     public NioSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
-        this(newSocket(provider, family));
+        this(newChannel(provider, family));
     }
 
     /**
