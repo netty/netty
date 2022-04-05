@@ -23,6 +23,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DefaultServerSocketChannelConfig;
@@ -31,7 +32,10 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -53,12 +57,35 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
-    private static ServerSocketChannel newSocket(SelectorProvider provider) {
+    private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY;
+
+    static {
+        Method found = null;
         try {
-            //  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-            //  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
-            //
-            //  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+            found = SelectorProvider.class.getMethod(
+                    "openServerSocketChannel", ProtocolFamily.class);
+        } catch (Throwable e) {
+            logger.info("openServerSocketChannel(ProtocolFamily) not available, will use default method", e);
+        }
+        OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY = found;
+    }
+
+    private static ServerSocketChannel newSocket(SelectorProvider provider, InternetProtocolFamily family) {
+        try {
+            /**
+             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+             *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
+             *
+             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+             */
+            if (family != null && OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY != null) {
+                try {
+                    return (ServerSocketChannel) OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY.invoke(
+                            provider, ProtocolFamilyConverter.convert(family));
+                } catch (InvocationTargetException | IllegalAccessException e) {
+                    throw new IOException(e);
+                }
+            }
             return provider.openServerSocketChannel();
         } catch (IOException e) {
             throw new ChannelException(
@@ -73,14 +100,22 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        this(eventLoop, childEventLoopGroup, newSocket(DEFAULT_SELECTOR_PROVIDER));
+        this(eventLoop, childEventLoopGroup, DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, SelectorProvider provider) {
-        this(eventLoop, childEventLoopGroup, newSocket(provider));
+        this(eventLoop, childEventLoopGroup, provider, null);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
+     */
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                  SelectorProvider provider, InternetProtocolFamily protocolFamily) {
+        this(eventLoop, childEventLoopGroup, newSocket(provider, protocolFamily));
     }
 
     /**

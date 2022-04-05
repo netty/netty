@@ -22,6 +22,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -49,7 +50,11 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollSocketChannel(EventLoop eventLoop) {
-        super(eventLoop, newSocketStream(), false);
+        this(eventLoop, null);
+    }
+
+    public EpollSocketChannel(EventLoop eventLoop, InternetProtocolFamily protocolFamily) {
+        super(eventLoop, newSocketStream(protocolFamily), false);
         config = new EpollSocketChannelConfig(this);
     }
 

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.unix.IovArray;
@@ -34,7 +35,11 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     private final KQueueSocketChannelConfig config;
 
     public KQueueSocketChannel(EventLoop eventLoop) {
-        super(null, eventLoop, BsdSocket.newSocketStream(), false);
+        this(eventLoop, null);
+    }
+
+    public KQueueSocketChannel(EventLoop eventLoop, InternetProtocolFamily protocol) {
+        super(null, eventLoop, BsdSocket.newSocketStream(protocol), false);
         config = new KQueueSocketChannelConfig(this);
     }
 
