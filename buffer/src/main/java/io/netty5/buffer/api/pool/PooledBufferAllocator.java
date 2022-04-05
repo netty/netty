@@ -16,6 +16,7 @@
 package io.netty5.buffer.api.pool;
 
 import io.netty5.buffer.api.AllocationType;
+import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
@@ -65,6 +66,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
     private final Runnable trimTask = this::trimCurrentThreadCache;
+    private final AllocatorControl pooledAllocatorControl = () -> this;
 
     static {
         int defaultAlignment = SystemPropertyUtil.getInt(
@@ -255,6 +257,10 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         metric = new PooledBufferAllocatorMetric(this);
     }
 
+    final AllocatorControl getPooledAllocatorControl() {
+        return pooledAllocatorControl;
+    }
+
     private static PoolArena[] newArenaArray(int size) {
         return new PoolArena[size];
     }
@@ -310,10 +316,9 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             throw allocatorClosedException();
         }
         Statics.assertValidBufferSize(size);
-        PooledAllocatorControl control = new PooledAllocatorControl(this);
         UntetheredMemory memory = allocateUntethered(size);
         Drop<Buffer> drop = memory.drop();
-        Buffer buffer = manager.recoverMemory(control, memory.memory(), drop);
+        Buffer buffer = manager.recoverMemory(pooledAllocatorControl, memory.memory(), drop);
         drop.attach(buffer);
         return buffer;
     }
@@ -323,9 +328,8 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         if (closed) {
             throw allocatorClosedException();
         }
-        PooledAllocatorControl control = new PooledAllocatorControl(this);
         Buffer constantBuffer = manager.allocateShared(
-                control, bytes.length, ArcDrop::wrap, allocationType);
+                pooledAllocatorControl, bytes.length, ArcDrop::wrap, allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }

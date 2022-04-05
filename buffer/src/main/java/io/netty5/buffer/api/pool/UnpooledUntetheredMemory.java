@@ -32,9 +32,8 @@ class UnpooledUntetheredMemory implements UntetheredMemory {
     UnpooledUntetheredMemory(PooledBufferAllocator allocator, MemoryManager manager,
                              AllocationType allocationType, int size) {
         this.manager = manager;
-        PooledAllocatorControl allocatorControl = new PooledAllocatorControl(allocator);
         dropCaptor = new DropCaptor<>();
-        buffer = manager.allocateShared(allocatorControl, size, dropCaptor, allocationType);
+        buffer = manager.allocateShared(allocator.getPooledAllocatorControl(), size, dropCaptor, allocationType);
     }
 
     @Override
