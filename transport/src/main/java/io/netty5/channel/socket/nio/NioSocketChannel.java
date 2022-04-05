@@ -26,6 +26,7 @@ import io.netty5.channel.FileRegion;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.channel.socket.DefaultSocketChannelConfig;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.util.concurrent.Future;
@@ -37,7 +38,10 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -56,12 +60,47 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
+    private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY;
+
+    static {
+        Method found = null;
+        try {
+            found = SelectorProvider.class.getMethod(
+                    "openSocketChannel", ProtocolFamily.class);
+        } catch (Throwable e) {
+            logger.warn("openSocketChannel(ProtocolFamily) not available, will use default", e);
+        }
+        OPEN_SOCKET_CHANNEL_WITH_FAMILY = found;
+    }
+
     private static SocketChannel newSocket(SelectorProvider provider) {
         try {
             //  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
             //  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
             //
             //  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+            return provider.openSocketChannel();
+        } catch (IOException e) {
+            throw new ChannelException("Failed to open a socket.", e);
+        }
+    }
+
+    private static SocketChannel newSocket(SelectorProvider provider, InternetProtocolFamily family) {
+        try {
+            /**
+             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
+             *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
+             *
+             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+             */
+            if (family != null && OPEN_SOCKET_CHANNEL_WITH_FAMILY != null) {
+                try {
+                    return (SocketChannel) OPEN_SOCKET_CHANNEL_WITH_FAMILY.invoke(
+                            provider, ProtocolFamilyConverter.convert(family));
+                } catch (InvocationTargetException | IllegalAccessException e) {
+                    throw new IOException(e);
+                }
+            }
             return provider.openSocketChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
@@ -82,6 +121,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      */
     public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider) {
         this(eventLoop, newSocket(provider));
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
+     */
+    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, InternetProtocolFamily family) {
+        this(eventLoop, newSocket(provider, family));
     }
 
     /**

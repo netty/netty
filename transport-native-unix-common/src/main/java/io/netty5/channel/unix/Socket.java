@@ -16,6 +16,7 @@
 package io.netty5.channel.unix;
 
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 
@@ -499,6 +500,11 @@ public class Socket extends FileDescriptor {
         return isIpv6Preferred;
     }
 
+    public static boolean shouldUseIpv6(InternetProtocolFamily family) {
+        return family == null ? isIPv6Preferred() :
+                        family == InternetProtocolFamily.IPv6;
+    }
+
     private static native boolean isIPv6Preferred0(boolean ipv4Preferred);
 
     private static native boolean isIPv6(int fd);
@@ -534,6 +540,10 @@ public class Socket extends FileDescriptor {
         return newSocketStream0(isIPv6Preferred());
     }
 
+    protected static int newSocketStream0(InternetProtocolFamily protocol) {
+        return newSocketStream0(shouldUseIpv6(protocol));
+    }
+
     protected static int newSocketStream0(boolean ipv6) {
         int res = newSocketStreamFd(ipv6);
         if (res < 0) {
@@ -544,6 +554,10 @@ public class Socket extends FileDescriptor {
 
     protected static int newSocketDgram0() {
         return newSocketDgram0(isIPv6Preferred());
+    }
+
+    protected static int newSocketDgram0(InternetProtocolFamily family) {
+        return newSocketDgram0(shouldUseIpv6(family));
     }
 
     protected static int newSocketDgram0(boolean ipv6) {

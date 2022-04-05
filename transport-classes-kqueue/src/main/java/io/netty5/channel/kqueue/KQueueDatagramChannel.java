@@ -28,6 +28,7 @@ import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramChannelConfig;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
@@ -64,7 +65,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     private final KQueueDatagramChannelConfig config;
 
     public KQueueDatagramChannel(EventLoop eventLoop) {
-        super(null, eventLoop, newSocketDgram(), false);
+        this(eventLoop, null);
+    }
+
+    public KQueueDatagramChannel(EventLoop eventLoop, InternetProtocolFamily protocolFamily) {
+        super(null, eventLoop, newSocketDgram(protocolFamily), false);
         config = new KQueueDatagramChannelConfig(this);
     }
 

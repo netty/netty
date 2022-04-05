@@ -328,12 +328,20 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketStream0(ipv6));
     }
 
+    public static LinuxSocket newSocketStream(InternetProtocolFamily protocol) {
+        return new LinuxSocket(newSocketStream0(protocol));
+    }
+
     public static LinuxSocket newSocketStream() {
         return newSocketStream(isIPv6Preferred());
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
         return new LinuxSocket(newSocketDgram0(ipv6));
+    }
+
+    public static LinuxSocket newSocketDgram(InternetProtocolFamily family) {
+        return new LinuxSocket(newSocketDgram0(family));
     }
 
     public static LinuxSocket newSocketDgram() {
