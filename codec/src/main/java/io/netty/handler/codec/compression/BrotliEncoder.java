@@ -16,8 +16,8 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
+import com.aayushatharva.brotli4j.encoder.Encoders;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -75,15 +75,14 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         }
 
         try {
-            byte[] uncompressed = ByteBufUtil.getBytes(msg, msg.readerIndex(), msg.readableBytes(), false);
-            byte[] compressed = Encoder.compress(uncompressed, parameters);
+            ByteBuf out;
             if (preferDirect) {
-                ByteBuf out = ctx.alloc().ioBuffer(compressed.length);
-                out.writeBytes(compressed);
-                return out;
+                out = ctx.alloc().ioBuffer();
             } else {
-                return Unpooled.wrappedBuffer(compressed);
+                out = ctx.alloc().buffer();
             }
+            Encoders.compress(msg, out, parameters);
+            return out;
         } catch (Exception e) {
             ReferenceCountUtil.release(msg);
             throw e;
