@@ -18,6 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.IovArray;
@@ -34,6 +35,11 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
 
     public KQueueSocketChannel() {
         super(null, BsdSocket.newSocketStream(), false);
+        config = new KQueueSocketChannelConfig(this);
+    }
+
+    public KQueueSocketChannel(InternetProtocolFamily protocol) {
+        super(null, BsdSocket.newSocketStream(protocol), false);
         config = new KQueueSocketChannelConfig(this);
     }
 
