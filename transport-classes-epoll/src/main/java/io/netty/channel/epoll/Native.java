@@ -171,7 +171,8 @@ public final class Native {
                                 int timeoutSec, int timeoutNs, long millisThreshold) throws IOException {
         if (timeoutSec == 0 && timeoutNs == 0) {
             // Zero timeout => poll (aka return immediately)
-            return epollWait(epollFd, events, 0);
+            // We shift this to be consistent with what is done in epollWait0(...)
+            return (((long) epollWait(epollFd, events, 0)) << 32);
         }
         if (timeoutSec == Integer.MAX_VALUE) {
             // Max timeout => wait indefinitely: disarm timerfd first
