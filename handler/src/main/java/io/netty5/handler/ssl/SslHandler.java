@@ -1125,7 +1125,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                 msg = ByteBufBuffer.wrap((ByteBuf) msg);
             } else {
                 logger.warn("Rejecting buffer: {}", msg);
-                throw new IllegalArgumentException("SslHandler needs Buffer, not ByteBuf: " + msg);
+                throw new UnsupportedMessageTypeException("SslHandler needs Buffer, not ByteBuf: " + msg);
             }
         }
         super.channelRead(ctx, msg);

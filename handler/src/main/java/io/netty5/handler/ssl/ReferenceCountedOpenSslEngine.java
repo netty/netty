@@ -175,6 +175,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     private String[] explicitlyEnabledProtocols;
     private boolean sessionSet;
 
+    // Buffer IO helpers
+    private SslWrite write;
+    private SslRead read;
+    private final SslBioSetByteBuffer setBioByteBuffer = new SslBioSetByteBuffer();
+
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
     private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
@@ -346,6 +351,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
+
+        write = new SslWrite(ssl);
+        read = new SslRead(ssl);
     }
 
     final synchronized String[] authMethods() {
@@ -501,6 +509,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         if (!destroyed) {
             destroyed = true;
             engineMap.remove(ssl);
+            read = null;
+            write = null;
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
 
@@ -530,7 +540,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         } else {
             try (Buffer buf = alloc.allocate(len)) {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                SslWrite write = new SslWrite(ssl, len);
+                write.len = len;
                 buf.forEachReadable(0, write);
                 sslWrote = write.sslWrote;
                 if (sslWrote > 0) {
@@ -545,12 +555,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     static final class SslWrite implements ReadableComponentProcessor<RuntimeException> {
         private final long ssl;
-        private final int len;
+        int len;
         int sslWrote;
 
-        SslWrite(long ssl, int len) {
+        SslWrite(long ssl) {
             this.ssl = ssl;
-            this.len = len;
         }
 
         @Override
@@ -572,8 +581,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             Buffer buf = alloc.allocate(len);
             try {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                SslBioSetByteBuffer setBB = new SslBioSetByteBuffer(networkBIO, len);
-                buf.forEachReadable(0, setBB);
+                setBioByteBuffer.networkBIO = networkBIO;
+                setBioByteBuffer.len = len;
+                buf.forEachReadable(0, setBioByteBuffer);
                 return buf;
             } catch (Throwable cause) {
                 buf.close();
@@ -585,13 +595,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     static final class SslBioSetByteBuffer implements ReadableComponentProcessor<RuntimeException>,
                                                       WritableComponentProcessor<RuntimeException> {
-        private final long networkBIO;
-        private final int len;
-
-        SslBioSetByteBuffer(long networkBIO, int len) {
-            this.networkBIO = networkBIO;
-            this.len = len;
-        }
+        long networkBIO;
+        int len;
 
         @Override
         public boolean process(int index, ReadableComponent component) {
@@ -622,7 +627,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             final int limit = dst.limit();
             final int len = min(maxEncryptedPacketLength0(), limit - pos);
             try (Buffer buf = alloc.allocate(len)) {
-                SslRead read = new SslRead(ssl, len);
+                read.len = len;
                 buf.forEachWritable(0, read);
                 sslRead = read.sslRead;
                 if (sslRead > 0) {
@@ -637,12 +642,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     static final class SslRead implements WritableComponentProcessor<RuntimeException> {
         private final long ssl;
-        private final int len;
-        private int sslRead;
+        int len;
+        int sslRead;
 
-        SslRead(long ssl, int len) {
+        SslRead(long ssl) {
             this.ssl = ssl;
-            this.len = len;
         }
 
         @Override
@@ -743,8 +747,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             } else {
                 int len = dst.remaining();
                 bioReadCopyBuf = alloc.allocate(len);
-                SslBioSetByteBuffer setBB = new SslBioSetByteBuffer(networkBIO, len);
-                bioReadCopyBuf.forEachWritable(0, setBB);
+                setBioByteBuffer.networkBIO = networkBIO;
+                setBioByteBuffer.len = len;
+                bioReadCopyBuf.forEachWritable(0, setBioByteBuffer);
             }
 
             try {

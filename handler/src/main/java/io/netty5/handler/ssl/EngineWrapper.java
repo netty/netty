@@ -29,6 +29,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /**
  * Used by {@link SslHandler} to {@linkplain SSLEngine#wrap(ByteBuffer, ByteBuffer) wrap} and
@@ -68,7 +69,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
     private boolean writeBack;
 
     EngineWrapper(SSLEngine engine, boolean useDirectBuffer) {
-        this.engine = engine;
+        this.engine = Objects.requireNonNull(engine, "engine");
         this.useDirectBuffer = useDirectBuffer;
         singleEmptyBuffer = new ByteBuffer[1];
         singleEmptyBuffer[0] = useDirectBuffer? EMPTY_BUFFER_DIRECT : EMPTY_BUFFER_HEAP;
@@ -94,12 +95,11 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
             if (engine instanceof VectoredUnwrap) {
                 VectoredUnwrap vectoredEngine = (VectoredUnwrap) engine;
                 return processResult(vectoredEngine.unwrap(inputs, outputs));
-            } else {
-                if (inputs.length > 1) {
-                    coalesceInputs();
-                }
-                return processResult(engine.unwrap(inputs[0], outputs));
             }
+            if (inputs.length > 1) {
+                coalesceInputs();
+            }
+            return processResult(engine.unwrap(inputs[0], outputs));
         } finally {
             finish(in, out);
         }

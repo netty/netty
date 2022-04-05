@@ -940,8 +940,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * @throws Exception if a problem occurs.
      */
     private static long newBIO(Buffer buffer) throws Exception {
-        // TODO figure out a way to still do the bioWrite call even when we have zero readable bytes
-        //  (do we actually need this?)
         long bio = SSL.newMemBIO();
         buffer.forEachReadable(0, (index, component) -> {
             int readable = component.readableBytes();
@@ -949,7 +947,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSL.freeBIO(bio);
                 throw new IllegalStateException("Could not write data to memory BIO");
             }
-            return false;
+            return true;
         });
         return bio;
     }

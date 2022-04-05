@@ -16,7 +16,7 @@
 package io.netty5.handler.codec;
 
 /**
- * Thrown if an unsupported message is received by an codec.
+ * Thrown if an unsupported message is received by a codec.
  */
 public class UnsupportedMessageTypeException extends CodecException {
 
