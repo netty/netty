@@ -242,7 +242,10 @@ final class PoolChunkList implements PoolChunkListMetric {
         PoolChunk chunk = head;
         while (chunk != null) {
             chunk.destroy();
+            PoolChunk tmp = chunk;
             chunk = chunk.next;
+            tmp.next = null;
+            tmp.prev = null;
         }
         head = null;
     }
