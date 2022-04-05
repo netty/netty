@@ -249,7 +249,7 @@ final class PlatformDependent0 {
                                                 MethodHandle constructorHandle = MethodHandles.lookup()
                                                         .unreflectConstructor(constructor);
                                                 if (constructor.getParameterCount() == 4) {
-                                                    Object[] nullArgs = new Object[] { null };
+                                                    Object[] nullArgs = { null };
                                                     constructorHandle = MethodHandles
                                                             .insertArguments(constructorHandle, 3, nullArgs);
                                                 }
@@ -269,7 +269,7 @@ final class PlatformDependent0 {
                     // try to use the constructor now
                     try {
                         directBufferConstructorHandle = (MethodHandle) maybeDirectBufferConstructorHandle;
-                        directBufferConstructorHandle.invokeExact(address, 1, null);
+                        directBufferConstructorHandle.invoke(address, 1, (Object) null);
                         logger.debug("direct buffer constructor: available");
                     } catch (Throwable ignore) {
                         directBufferConstructorHandle = null;
@@ -422,7 +422,7 @@ final class PlatformDependent0 {
             ALIGN_SLICE = null;
         }
 
-        logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
+        logger.debug("java.nio.DirectByteBuffer.<init>(long, int, Object): {}",
                 DIRECT_BUFFER_CONSTRUCTOR_HANDLE != null ? "available" : "unavailable");
     }
 
@@ -516,7 +516,7 @@ final class PlatformDependent0 {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invokeExact(address, capacity, attachment);
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR_HANDLE.invoke(address, capacity, attachment);
         } catch (Throwable cause) {
             // Not expected to ever throw!
             if (cause instanceof Error) {
