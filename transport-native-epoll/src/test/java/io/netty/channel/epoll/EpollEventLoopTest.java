@@ -137,7 +137,6 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
         }
     }
 
-
     @Test
     public void testResultNoTimeoutCorrectlyEncoded() throws Throwable {
         final FileDescriptor epoll = Native.newEpollCreate();
