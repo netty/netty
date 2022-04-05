@@ -36,7 +36,6 @@ public final class ArcDrop<T> implements Drop<T> {
 
     public ArcDrop(Drop<T> delegate) {
         this.delegate = delegate;
-        count = 1;
     }
 
     public static <X> Drop<X> wrap(Drop<X> drop) {
@@ -72,7 +71,7 @@ public final class ArcDrop<T> implements Drop<T> {
             n = c - 1;
             checkValidState(c);
         } while (!COUNT.compareAndSet(this, c, n));
-        if (n == 0) {
+        if (n == -1) {
             delegate.drop(obj);
         }
     }
@@ -105,7 +104,7 @@ public final class ArcDrop<T> implements Drop<T> {
     }
 
     private static void checkValidState(int count) {
-        if (count == 0) {
+        if (count == -1) {
             throw new IllegalStateException("Underlying resources have already been freed.");
         }
     }
