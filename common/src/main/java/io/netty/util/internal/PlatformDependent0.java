@@ -575,6 +575,14 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(object, fieldOffset);
     }
 
+    static void putInt(Object object, long fieldOffset, int value) {
+        UNSAFE.putInt(object, fieldOffset, value);
+    }
+
+    static void storeFence() {
+        UNSAFE.storeFence();
+    }
+
     private static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
     }
