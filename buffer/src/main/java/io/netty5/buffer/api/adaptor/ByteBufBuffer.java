@@ -310,7 +310,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         if (channel instanceof ScatteringByteChannel) {
             ScatteringByteChannel scatteringByteChannel = (ScatteringByteChannel) channel;
-            int bytesRead = delegate.setBytes(readerOffset(), scatteringByteChannel, length);
+            int bytesRead = delegate.setBytes(writerOffset(), scatteringByteChannel, length);
             if (bytesRead > 0) {
                 skipWritable(bytesRead);
             }
