@@ -112,7 +112,7 @@ public class SslHandlerTest {
     };
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testNonApplicationDataFailureFailsQueuedWrites() throws Exception {
         final CountDownLatch writeLatch = new CountDownLatch(1);
         final Queue<Promise<Void>> writesToFail = new ConcurrentLinkedQueue<>();
@@ -272,7 +272,7 @@ public class SslHandlerTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testHandshakeAndClosePromiseFailedOnRemoval() throws Exception {
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
         engine.setUseClientMode(true);
@@ -565,7 +565,7 @@ public class SslHandlerTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testEventsFired() throws Exception {
         SSLEngine engine = newServerModeSSLEngine();
         final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<>();
@@ -591,7 +591,7 @@ public class SslHandlerTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testHandshakeFailBeforeWritePromise() throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -1249,26 +1249,26 @@ public class SslHandlerTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv12() throws Throwable {
         testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, true);
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv13() throws Throwable {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
         testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, true);
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv12AndNoKey() throws Throwable {
         testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, false);
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testSessionTicketsWithTLSv13AndNoKey() throws Throwable {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
         testSessionTickets(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, false);
