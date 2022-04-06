@@ -398,7 +398,7 @@ final class HpackDecoder {
                 throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
             }
 
-            if (headers.contains(name)) {
+            if (contains(headers, name)) {
                 throw streamError(streamId, PROTOCOL_ERROR, "Duplicate HTTP/2 pseudo-header '%s' encountered.", name);
             }
 
@@ -406,6 +406,34 @@ final class HpackDecoder {
         }
 
         return HeaderType.REGULAR_HEADER;
+    }
+
+    private static boolean contains(Http2Headers headers, CharSequence name) {
+        if (headers == EmptyHttp2Headers.INSTANCE) {
+            return false;
+        }
+        if (headers instanceof DefaultHttp2Headers || headers instanceof ReadOnlyHttp2Headers) {
+            return headers.contains(name);
+        }
+        // We can't be sure the Http2Headers implementation support contains on pseudo-headers,
+        // so we have to use the direct accessors instead.
+        if (Http2Headers.PseudoHeaderName.METHOD.value().equals(name)) {
+            return headers.method() != null;
+        }
+        if (Http2Headers.PseudoHeaderName.SCHEME.value().equals(name)) {
+            return headers.scheme() != null;
+        }
+        if (Http2Headers.PseudoHeaderName.AUTHORITY.value().equals(name)) {
+            return headers.authority() != null;
+        }
+        if (Http2Headers.PseudoHeaderName.PATH.value().equals(name)) {
+            return headers.path() != null;
+        }
+        if (Http2Headers.PseudoHeaderName.STATUS.value().equals(name)) {
+            return headers.status() != null;
+        }
+        // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
+        return false;
     }
 
     private CharSequence readName(int index) throws Http2Exception {

@@ -37,6 +37,10 @@ import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.MockingDetails;
+import org.mockito.invocation.Invocation;
+
+import java.lang.reflect.Method;
 
 import static io.netty5.handler.codec.http2.HpackDecoder.decodeULE128;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
@@ -48,7 +52,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -420,8 +426,19 @@ public class HpackDecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verify(mockHeaders).contains(of(":authority"));
         verify(mockHeaders).add(of(":authority"), of(value));
+        MockingDetails details = mockingDetails(mockHeaders);
+        for (Invocation invocation : details.getInvocations()) {
+            Method method = invocation.getMethod();
+            if ("authority".equals(method.getName())
+                    && invocation.getArguments().length == 0) {
+                invocation.markVerified();
+            } else if ("contains".equals(method.getName())
+                    && invocation.getArguments().length == 1
+                    && invocation.getArgument(0).equals(of(":authority"))) {
+                invocation.markVerified();
+            }
+        }
         verifyNoMoreInteractions(mockHeaders);
         reset(mockHeaders);
 
