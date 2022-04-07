@@ -16,15 +16,15 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.ProtocolFamily;
 import java.nio.channels.Channel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 
 final class SelectorProviderUtil {
@@ -33,7 +33,7 @@ final class SelectorProviderUtil {
     static Method findOpenMethod(String methodName) {
         if (PlatformDependent.javaVersion() >= 15) {
             try {
-                return SelectorProvider.class.getMethod(methodName, java.net.ProtocolFamily.class);
+                return SelectorProvider.class.getMethod(methodName, ProtocolFamily.class);
             } catch (Throwable e) {
                 logger.debug("SelectorProvider.{}(ProtocolFamily) not available, will use default", methodName, e);
             }
@@ -43,7 +43,7 @@ final class SelectorProviderUtil {
 
     static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
                                                     InternetProtocolFamily family) throws IOException {
-        /**
+        /*
          *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
          *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
          *
