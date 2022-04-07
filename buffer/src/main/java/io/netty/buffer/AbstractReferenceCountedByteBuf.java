@@ -18,7 +18,6 @@ package io.netty.buffer;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReferenceCountUpdater;
 
 /**
@@ -48,12 +47,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
-        if (!PlatformDependent.hasUnsafe()) {
-            refCnt = updater.initialValue();
-        } else {
-            PlatformDependent.putInt(this, REFCNT_FIELD_OFFSET, updater.initialValue());
-            PlatformDependent.storeFence();
-        }
+        updater.setInitialValue(this);
     }
 
     @Override
