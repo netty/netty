@@ -566,24 +566,20 @@ final class PoolChunk implements PoolChunkMetric {
         private final PoolThreadCache threadCache;
         private final long handle;
         private final int maxLength;
-        private final int offset;
-        private final int size;
 
         private UntetheredChunkAllocation(
                 Object memory, PoolChunk chunk, PoolThreadCache threadCache,
                 long handle, int maxLength, int offset, int size) {
-            this.memory = memory;
+            this.memory = chunk.arena.manager.sliceMemory(memory, offset, size);
             this.chunk = chunk;
             this.threadCache = threadCache;
             this.handle = handle;
             this.maxLength = maxLength;
-            this.offset = offset;
-            this.size = size;
         }
 
         @Override
         public <Memory> Memory memory() {
-            return (Memory) chunk.arena.manager.sliceMemory(memory, offset, size);
+            return (Memory) memory;
         }
 
         @Override
