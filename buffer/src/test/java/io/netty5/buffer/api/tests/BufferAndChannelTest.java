@@ -430,6 +430,29 @@ public class BufferAndChannelTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void transferFromMustStartFromWritableOffset(Fixture fixture) throws IOException {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(4)) {
+            ByteBuffer data = ByteBuffer.allocate(4).putInt(0x01020304).flip();
+            long position = channel.position();
+            assertThat(channel.write(data, position)).isEqualTo(4);
+            long size = channel.size();
+            int bytesRead = buf.transferFrom(channel, 2);
+            bytesRead += buf.transferFrom(channel, 2);
+            assertThat(bytesRead).isEqualTo(4);
+            assertThat(buf.readableBytes()).isEqualTo(4);
+            assertThat(channel.position()).isEqualTo(4 + position);
+            assertThat(channel.size()).isEqualTo(size);
+            for (int i = 0; i < buf.readableBytes(); i++) {
+                assertThat(buf.readByte()).isEqualTo(data.get(i));
+            }
+        } finally {
+            channel.position(channel.size());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void transferFromMustThrowIfBufferIsReadOnly(Fixture fixture) throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L).makeReadOnly()) {
