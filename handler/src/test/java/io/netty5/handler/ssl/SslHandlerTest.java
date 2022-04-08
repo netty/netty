@@ -52,6 +52,7 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
+import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Disabled;
@@ -599,6 +600,7 @@ public class SslHandlerTest {
         final CountDownLatch latch = new CountDownLatch(2);
         final CountDownLatch latch2 = new CountDownLatch(2);
         final BlockingQueue<Object> events = new LinkedBlockingQueue<>();
+        final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
         Channel serverChannel = null;
         Channel clientChannel = null;
         EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
@@ -614,9 +616,13 @@ public class SslHandlerTest {
                       ch.pipeline().addLast(new ChannelHandler() {
                           @Override
                           public void channelActive(ChannelHandlerContext ctx) {
+                              logger.debug("[testHandshakeFailBeforeWritePromise] server channel active");
                               Buffer buf = ctx.bufferAllocator().allocate(10);
+                              buf.fill((byte) 0);
                               buf.skipWritable(buf.capacity());
                               ctx.writeAndFlush(buf).addListener(future -> {
+                                  logger.debug("[testHandshakeFailBeforeWritePromise] " +
+                                               "server write and flush completed: " + future);
                                   events.add(future);
                                   latch.countDown();
                               });
@@ -624,6 +630,7 @@ public class SslHandlerTest {
 
                           @Override
                           public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                              logger.debug("[testHandshakeFailBeforeWritePromise] server user event triggered: " + evt);
                               if (evt instanceof SslCompletionEvent) {
                                   events.add(evt);
                                   latch.countDown();
@@ -644,9 +651,14 @@ public class SslHandlerTest {
                       ch.pipeline().addFirst(new ChannelHandler() {
                           @Override
                           public void channelActive(ChannelHandlerContext ctx) {
+                              logger.debug("[testHandshakeFailBeforeWritePromise] client channel active");
                               Buffer buf = ctx.bufferAllocator().allocate(1000);
+                              buf.fill((byte) 0);
                               buf.skipWritable(buf.capacity());
-                              ctx.writeAndFlush(buf);
+                              ctx.writeAndFlush(buf).addListener(future -> {
+                                  logger.debug("[testHandshakeFailBeforeWritePromise] " +
+                                               "client write and flush completed");
+                              });
                           }
                       });
                   }
@@ -657,8 +669,8 @@ public class SslHandlerTest {
             try {
                 latch.await();
             } catch (InterruptedException e) {
-                InternalLoggerFactory.getInstance(getClass()).error(
-                        "Timing out testHandshakeFailBeforeWritePromise, with these events captured: " + events, e);
+                logger.error(
+                        "[testHandshakeFailBeforeWritePromise] timing out with these events captured: " + events, e);
                 throw e;
             }
 
