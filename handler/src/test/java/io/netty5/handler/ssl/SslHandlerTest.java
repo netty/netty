@@ -52,6 +52,7 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -653,7 +654,13 @@ public class SslHandlerTest {
 
             serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).get();
             clientChannel = cb.connect(serverChannel.localAddress()).get();
-            latch.await();
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                InternalLoggerFactory.getInstance(getClass()).error(
+                        "Timing out testHandshakeFailBeforeWritePromise, with these events captured: " + events, e);
+                throw e;
+            }
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
             assertTrue(evt instanceof SslHandshakeCompletionEvent);
