@@ -316,7 +316,6 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     private final EngineWrapper engineWrapper;
 
     private final boolean startTls;
-    private boolean convertBuffer;
 
     private final SslTasksRunner sslTaskRunnerForUnwrap = new SslTasksRunner(true);
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
@@ -628,15 +627,10 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     @Override
     public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof Buffer)) {
-            if (convertBuffer && msg instanceof ByteBuf) {
-                logger.debug("Converting buffer for write: {}", msg);
-                msg = ByteBufBuffer.wrap((ByteBuf) msg);
-            } else {
-                UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, Buffer.class);
-                logger.warn(exception);
-                ReferenceCountUtil.safeRelease(msg);
-                return ctx.newFailedFuture(exception);
-            }
+            UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, Buffer.class);
+            logger.warn(exception);
+            ReferenceCountUtil.safeRelease(msg);
+            return ctx.newFailedFuture(exception);
         }
         if (pendingUnencryptedWrites == null) {
             IllegalStateException exception = newPendingWritesNullException();
@@ -1118,20 +1112,6 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) { // todo temporary buffer conversion
-            if (convertBuffer) {
-                logger.debug("Converting buffer for read: {}", msg);
-                msg = ByteBufBuffer.wrap((ByteBuf) msg);
-            } else {
-                logger.warn("Rejecting buffer: {}", msg);
-                throw new UnsupportedMessageTypeException("SslHandler needs Buffer, not ByteBuf: " + msg);
-            }
-        }
-        super.channelRead(ctx, msg);
-    }
-
-    @Override
     protected void decode(ChannelHandlerContext ctx, Buffer in) throws SSLException {
         if (isStateSet(STATE_PROCESS_TASK)) {
             return;
@@ -1224,8 +1204,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                         executedRead = true;
                         executeChannelRead(ctx, decodeOut);
                     } else {
-                        // TODO temporary buffer conversion
-                        ctx.fireChannelRead(convertBuffer ? ByteBufAdaptor.intoByteBuf(decodeOut) : decodeOut);
+                        ctx.fireChannelRead(decodeOut);
                     }
                     decodeOut = null;
                 }
@@ -1970,7 +1949,6 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        convertBuffer = !ctx.channel().config().getRecvBufferAllocatorUseBuffer();
         if (!startTls) {
             startHandshakeProcessing(true);
         }

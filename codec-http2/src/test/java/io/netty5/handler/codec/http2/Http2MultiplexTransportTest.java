@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -334,6 +335,7 @@ public class Http2MultiplexTransportTest {
                     .build();
 
             ServerBootstrap sb = new ServerBootstrap();
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             sb.group(eventLoopGroup);
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<Channel>() {
@@ -341,6 +343,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()));
+                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
@@ -369,12 +372,14 @@ public class Http2MultiplexTransportTest {
             final CountDownLatch latch = new CountDownLatch(2);
             final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
             Bootstrap bs = new Bootstrap();
+            bs.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             bs.group(eventLoopGroup);
             bs.channel(NioSocketChannel.class);
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
+                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -473,12 +478,14 @@ public class Http2MultiplexTransportTest {
                     .build();
 
             ServerBootstrap sb = new ServerBootstrap();
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             sb.group(eventLoopGroup);
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(serverCtx.newHandler(ch.bufferAllocator()));
+                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -518,12 +525,14 @@ public class Http2MultiplexTransportTest {
 
             final CountDownLatch latch = new CountDownLatch(1);
             Bootstrap bs = new Bootstrap();
+            bs.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             bs.group(eventLoopGroup);
             bs.channel(NioSocketChannel.class);
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
+                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
