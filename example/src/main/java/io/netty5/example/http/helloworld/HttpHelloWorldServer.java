@@ -55,6 +55,7 @@ public final class HttpHelloWorldServer {
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
+             .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HttpHelloWorldServerInitializer(sslCtx));
 

@@ -18,9 +18,9 @@ package io.netty5.handler.ssl;
 import static java.util.Objects.requireNonNull;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.ReferenceCountUtil;
 
 import javax.net.ssl.KeyManager;
@@ -192,7 +192,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                             if (alias != null && !materialMap.containsKey(alias)) {
                                 try {
                                     materialMap.put(alias, super.chooseKeyMaterial(
-                                            UnpooledByteBufAllocator.DEFAULT, alias));
+                                            DefaultBufferAllocators.offHeapAllocator(), alias));
                                 } catch (Exception e) {
                                     // Just store the exception and rethrow it when we try to choose the keymaterial
                                     // for this alias later on.
@@ -210,7 +210,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
-                OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
+                OpenSslKeyMaterial chooseKeyMaterial(BufferAllocator allocator, String alias) throws Exception {
                     Object value = materialMap.get(alias);
                     if (value == null) {
                         // There is no keymaterial for the requested alias, return null

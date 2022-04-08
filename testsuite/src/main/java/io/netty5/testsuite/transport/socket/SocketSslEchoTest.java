@@ -17,8 +17,10 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -90,6 +92,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         CERT_FILE = ssc.certificate();
         KEY_FILE = ssc.privateKey();
     }
+
+    private static final BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
 
     protected enum RenegotiationType {
         NONE, // no renegotiation
@@ -250,6 +254,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         reset();
 
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
@@ -259,10 +265,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 serverChannel = sch;
 
                 if (serverUsesDelegatedTaskExecutor) {
-                    SSLEngine sse = serverCtx.newEngine(sch.alloc());
+                    SSLEngine sse = serverCtx.newEngine(sch.bufferAllocator());
                     serverSslHandler = new SslHandler(sse, delegatedTaskExecutor);
                 } else {
-                    serverSslHandler = serverCtx.newHandler(sch.alloc());
+                    serverSslHandler = serverCtx.newHandler(sch.bufferAllocator());
                 }
                 serverSslHandler.setHandshakeTimeoutMillis(0);
 
@@ -281,10 +287,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 clientChannel = sch;
 
                 if (clientUsesDelegatedTaskExecutor) {
-                    SSLEngine cse = clientCtx.newEngine(sch.alloc());
+                    SSLEngine cse = clientCtx.newEngine(sch.bufferAllocator());
                     clientSslHandler = new SslHandler(cse, delegatedTaskExecutor);
                 } else {
-                    clientSslHandler = clientCtx.newHandler(sch.alloc());
+                    clientSslHandler = clientCtx.newHandler(sch.bufferAllocator());
                 }
                 clientSslHandler.setHandshakeTimeoutMillis(0);
 
@@ -313,8 +319,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         // Wait for the handshake to complete before we flush anything. SslHandler should flush non-application data.
         clientHandshakeFuture.sync();
         clientHandshakeEventLatch.await();
+        Buffer dataBuffer = bufferAllocator.copyOf(data);
 
-        clientChannel.writeAndFlush(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        clientChannel.writeAndFlush(dataBuffer.readSplit(FIRST_MESSAGE_SIZE));
         clientSendCounter.set(FIRST_MESSAGE_SIZE);
 
         boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
@@ -322,9 +329,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         while (clientSendCounter.get() < data.length) {
             int clientSendCounterVal = clientSendCounter.get();
             int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
-            ByteBuf buf = Unpooled.wrappedBuffer(data, clientSendCounterVal, length);
+            Buffer buf = dataBuffer.readSplit(length);
             if (useCompositeByteBuf) {
-                buf = Unpooled.compositeBuffer().addComponent(true, buf);
+                buf = CompositeBuffer.compose(bufferAllocator, buf.send());
             }
 
             Future<Void> future = clientChannel.writeAndFlush(buf);
@@ -450,7 +457,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     @Sharable
-    private abstract class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private abstract class EchoHandler extends SimpleChannelInboundHandler<Buffer> {
 
         protected final AtomicInteger recvCounter;
         protected final AtomicInteger negoCounter;
@@ -517,9 +524,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+            in.readBytes(actual, 0, actual.length);
 
             int lastIdx = recvCounter.get();
             for (int i = 0; i < actual.length; i ++) {
@@ -554,18 +561,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+            in.readBytes(actual, 0, actual.length);
 
             int lastIdx = recvCounter.get();
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            ByteBuf buf = Unpooled.wrappedBuffer(actual);
+            Buffer buf = bufferAllocator.copyOf(actual);
             if (useCompositeByteBuf) {
-                buf = Unpooled.compositeBuffer().addComponent(true, buf);
+                buf = CompositeBuffer.compose(bufferAllocator, buf.send());
             }
             ctx.writeAndFlush(buf);
 

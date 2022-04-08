@@ -47,13 +47,14 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
         String methodName = TestUtils.testMethodName(testInfo);
         for (AllocatorConfig config: newAllocators()) {
             int i = 0;
-            for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e: combos) {
+            for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e : combos) {
                 sb = e.newServerInstance();
                 cb = e.newClientInstance();
                 configure(sb, cb, config.byteBufAllocator, config.bufferAllocator);
                 logger.info(String.format(
                         "Running: %s %d of %d (%s + %s) with %s",
-                        methodName, ++ i, combos.size(), sb, cb, StringUtil.simpleClassName(config.byteBufAllocator)));
+                        methodName, ++i, combos.size(), sb, cb,
+                        StringUtil.simpleClassName(config.byteBufAllocator)));
                 runner.run(sb, cb);
             }
         }

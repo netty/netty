@@ -34,7 +34,7 @@ public class HttpSnoopServerInitializer extends ChannelInitializer<SocketChannel
     public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         if (sslCtx != null) {
-            p.addLast(sslCtx.newHandler(ch.alloc()));
+            p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
         p.addLast(new HttpRequestDecoder());
         // Uncomment the following line if you don't want to handle HttpChunks.

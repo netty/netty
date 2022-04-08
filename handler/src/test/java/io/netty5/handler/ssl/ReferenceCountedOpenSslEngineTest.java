@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.function.Executable;
@@ -100,7 +100,7 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
             .ciphers(param.ciphers())
             .build());
 
-        SSLEngine engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = clientSslCtx.newEngine(DefaultBufferAllocators.offHeapAllocator());
         assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 2);
 
         cleanupClientSslContext(clientSslCtx);

@@ -44,8 +44,17 @@ public abstract class AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
     protected static final int DEFAULT_MEASURE_ITERATIONS = 10;
     protected static final String[] BASE_JVM_ARGS = {
-        "-server", "-dsa", "-da", "-ea:io.netty5...",
-        "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty5.leakDetection.level=disabled"};
+            "-server",
+            "-dsa",
+            "-da",
+            "-ea:io.netty5...",
+            "-XX:+HeapDumpOnOutOfMemoryError",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+DebugNonSafepoints",
+            "-Dio.netty5.leakDetection.level=disabled",
+            "-Dio.netty5.buffer.leakDetectionEnabled=false",
+            "-Dio.netty5.buffer.lifecycleTracingEnabled=false",
+    };
 
     static {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);

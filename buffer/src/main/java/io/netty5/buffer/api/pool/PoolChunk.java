@@ -25,6 +25,8 @@ import io.netty5.buffer.api.internal.CleanerDrop;
 import io.netty5.buffer.api.internal.DropCaptor;
 import io.netty5.util.internal.LongLongHashMap;
 import io.netty5.util.internal.LongPriorityQueue;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.PriorityQueue;
 
@@ -138,6 +140,7 @@ import java.util.PriorityQueue;
  *
  */
 final class PoolChunk implements PoolChunkMetric {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(PoolChunk.class);
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
@@ -570,7 +573,13 @@ final class PoolChunk implements PoolChunkMetric {
         private UntetheredChunkAllocation(
                 Object memory, PoolChunk chunk, PoolThreadCache threadCache,
                 long handle, int maxLength, int offset, int size) {
-            this.memory = chunk.arena.manager.sliceMemory(memory, offset, size);
+            try {
+                this.memory = chunk.arena.manager.sliceMemory(memory, offset, size);
+            } catch (Exception e) {
+                LOGGER.error("Failed to create slice of pool chunk memory. Chunk layout: " +
+                             chunk.toString() + ", memory: " + chunk.memory, e);
+                throw e;
+            }
             this.chunk = chunk;
             this.threadCache = threadCache;
             this.handle = handle;

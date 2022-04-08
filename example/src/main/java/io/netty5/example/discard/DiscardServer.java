@@ -60,7 +60,7 @@ public final class DiscardServer {
                  public void initChannel(SocketChannel ch) {
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
-                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                         p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
                      }
                      p.addLast(new DiscardServerHandler());
                  }

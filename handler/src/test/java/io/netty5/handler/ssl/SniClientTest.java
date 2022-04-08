@@ -17,7 +17,6 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -75,6 +74,7 @@ import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -143,7 +143,7 @@ public class SniClientTest {
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    SslHandler handler = finalContext.newHandler(ch.alloc());
+                    SslHandler handler = finalContext.newHandler(ch.bufferAllocator());
                     SSLParameters parameters = handler.engine().getSSLParameters();
                     SNIMatcher matcher = new SNIMatcher(0) {
                         @Override
@@ -190,7 +190,7 @@ public class SniClientTest {
                     .sslProvider(sslClientProvider).build();
 
             SslHandler sslHandler = new SslHandler(
-                    sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
+                    sslClientContext.newEngine(offHeapAllocator(), sniHost, -1));
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).get();
 
@@ -438,7 +438,7 @@ public class SniClientTest {
             Bootstrap cb = new Bootstrap();
 
             SslHandler handler = new SslHandler(
-                    sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
+                    sslClientContext.newEngine(offHeapAllocator(), sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).get();
             assertEquals(sniHostName, promise.asFuture().syncUninterruptibly().getNow());
 

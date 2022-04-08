@@ -15,17 +15,16 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.AllocationType;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -117,16 +116,19 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty5.handler.ssl.SslUtils.isValidHostNameForSNI;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -165,10 +167,10 @@ public abstract class SSLEngineTest {
     protected CountDownLatch clientLatch;
 
     interface MessageReceiver {
-        void messageReceived(ByteBuf msg);
+        void messageReceived(Buffer msg);
     }
 
-    protected static final class MessageDelegatorChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    protected static final class MessageDelegatorChannelHandler extends SimpleChannelInboundHandler<Buffer> {
         private final MessageReceiver receiver;
         private final CountDownLatch latch;
 
@@ -179,7 +181,7 @@ public abstract class SSLEngineTest {
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
             receiver.messageReceived(msg);
             latch.countDown();
         }
@@ -296,167 +298,51 @@ public abstract class SSLEngineTest {
         }
     }
 
-    private static final class TestByteBufAllocator implements ByteBufAllocator {
+    private static final class TestBufferAllocator implements BufferAllocator {
+        private final BufferAllocator delegate;
 
-        private final ByteBufAllocator allocator;
-        private final BufferType type;
-
-        TestByteBufAllocator(ByteBufAllocator allocator, BufferType type) {
-            this.allocator = allocator;
-            this.type = type;
-        }
-
-        @Override
-        public ByteBuf buffer() {
+        TestBufferAllocator(BufferType type) {
+            final BufferAllocator delegate;
             switch (type) {
-                case Direct:
-                    return allocator.directBuffer();
-                case Heap:
-                    return allocator.heapBuffer();
-                case Mixed:
-                    return ThreadLocalRandom.current().nextBoolean() ?
-                            allocator.directBuffer() : allocator.heapBuffer();
-                default:
-                    throw new Error();
+            case Direct:
+                delegate = offHeapAllocator();
+                break;
+            case Heap:
+                delegate = onHeapAllocator();
+                break;
+            case Mixed:
+                delegate = ThreadLocalRandom.current().nextBoolean() ?
+                        offHeapAllocator() : onHeapAllocator();
+                break;
+            default:
+                throw new IllegalStateException("Unknown allocator type: " + type);
             }
+            this.delegate = delegate;
         }
 
         @Override
-        public ByteBuf buffer(int initialCapacity) {
-            switch (type) {
-                case Direct:
-                    return allocator.directBuffer(initialCapacity);
-                case Heap:
-                    return allocator.heapBuffer(initialCapacity);
-                case Mixed:
-                    return ThreadLocalRandom.current().nextBoolean() ?
-                            allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
-                default:
-                    throw new Error();
-            }
+        public boolean isPooling() {
+            return delegate.isPooling();
         }
 
         @Override
-        public ByteBuf buffer(int initialCapacity, int maxCapacity) {
-            switch (type) {
-                case Direct:
-                    return allocator.directBuffer(initialCapacity, maxCapacity);
-                case Heap:
-                    return allocator.heapBuffer(initialCapacity, maxCapacity);
-                case Mixed:
-                    return ThreadLocalRandom.current().nextBoolean() ?
-                            allocator.directBuffer(initialCapacity, maxCapacity) :
-                            allocator.heapBuffer(initialCapacity, maxCapacity);
-                default:
-                    throw new Error();
-            }
+        public AllocationType getAllocationType() {
+            return delegate.getAllocationType();
         }
 
         @Override
-        public ByteBuf ioBuffer() {
-            return allocator.ioBuffer();
+        public Buffer allocate(int size) {
+            return delegate.allocate(size);
         }
 
         @Override
-        public ByteBuf ioBuffer(int initialCapacity) {
-            return allocator.ioBuffer(initialCapacity);
+        public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+            return delegate.constBufferSupplier(bytes);
         }
 
         @Override
-        public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
-            return allocator.ioBuffer(initialCapacity, maxCapacity);
-        }
-
-        @Override
-        public ByteBuf heapBuffer() {
-            return allocator.heapBuffer();
-        }
-
-        @Override
-        public ByteBuf heapBuffer(int initialCapacity) {
-            return allocator.heapBuffer(initialCapacity);
-        }
-
-        @Override
-        public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
-            return allocator.heapBuffer(initialCapacity, maxCapacity);
-        }
-
-        @Override
-        public ByteBuf directBuffer() {
-            return allocator.directBuffer();
-        }
-
-        @Override
-        public ByteBuf directBuffer(int initialCapacity) {
-            return allocator.directBuffer(initialCapacity);
-        }
-
-        @Override
-        public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-            return allocator.directBuffer(initialCapacity, maxCapacity);
-        }
-
-        @Override
-        public CompositeByteBuf compositeBuffer() {
-            switch (type) {
-                case Direct:
-                    return allocator.compositeDirectBuffer();
-                case Heap:
-                    return allocator.compositeHeapBuffer();
-                case Mixed:
-                    return ((Random) ThreadLocalRandom.current()).nextBoolean() ?
-                            allocator.compositeDirectBuffer() :
-                            allocator.compositeHeapBuffer();
-                default:
-                    throw new Error();
-            }
-        }
-
-        @Override
-        public CompositeByteBuf compositeBuffer(int maxNumComponents) {
-            switch (type) {
-                case Direct:
-                    return allocator.compositeDirectBuffer(maxNumComponents);
-                case Heap:
-                    return allocator.compositeHeapBuffer(maxNumComponents);
-                case Mixed:
-                    return ((Random) ThreadLocalRandom.current()).nextBoolean() ?
-                            allocator.compositeDirectBuffer(maxNumComponents) :
-                            allocator.compositeHeapBuffer(maxNumComponents);
-                default:
-                    throw new Error();
-            }
-        }
-
-        @Override
-        public CompositeByteBuf compositeHeapBuffer() {
-            return allocator.compositeHeapBuffer();
-        }
-
-        @Override
-        public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
-            return allocator.compositeHeapBuffer(maxNumComponents);
-        }
-
-        @Override
-        public CompositeByteBuf compositeDirectBuffer() {
-            return allocator.compositeDirectBuffer();
-        }
-
-        @Override
-        public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
-            return allocator.compositeDirectBuffer(maxNumComponents);
-        }
-
-        @Override
-        public boolean isDirectBufferPooled() {
-            return allocator.isDirectBufferPooled();
-        }
-
-        @Override
-        public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
-            return allocator.calculateNewCapacity(minNewCapacity, maxCapacity);
+        public void close() {
+            delegate.close();
         }
     }
 
@@ -555,14 +441,14 @@ public abstract class SSLEngineTest {
             .ciphers(param.ciphers())
             .sslProvider(sslServerProvider()).build());
         final SSLEngine serverEngine =
-            wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
             .trustManager(cert.certificate())
             .protocols(param.protocols())
             .ciphers(param.ciphers())
             .sslProvider(sslClientProvider()).build());
         final SSLEngine clientEngine =
-            wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         final String[] enabledCiphers = { param.ciphers().get(0) };
 
@@ -603,8 +489,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
             // Set the server to only support a single TLSv1.2 cipher
             final String serverCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
@@ -827,14 +713,15 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
                 ChannelPipeline p = ch.pipeline();
-                SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.alloc()) :
-                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.bufferAllocator()) :
+                        serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
                 if (serverInitEngine) {
                     mySetupMutualAuthServerInitSslHandler(handler);
                 }
@@ -872,14 +759,15 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
                 ChannelPipeline p = ch.pipeline();
 
-                SslHandler handler = !param.delegate ? clientSslCtx.newHandler(ch.alloc()) :
-                        clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                SslHandler handler = !param.delegate ? clientSslCtx.newHandler(ch.bufferAllocator()) :
+                        clientSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelHandler() {
@@ -957,6 +845,8 @@ public abstract class SSLEngineTest {
         // Verify that any pending writes are failed with the cached handshake exception and not a general SSLException.
         clientWriteFuture.awaitUninterruptibly();
         Throwable actualCause = clientWriteFuture.cause();
+        assertTrue(clientWriteFuture.isDone());
+        assertTrue(clientWriteFuture.isFailed());
         assertSame(clientException, actualCause);
     }
 
@@ -995,14 +885,15 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
                 ChannelPipeline p = ch.pipeline();
 
-                SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.alloc()) :
-                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.bufferAllocator()) :
+                        serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelHandler() {
@@ -1038,15 +929,16 @@ public abstract class SSLEngineTest {
         final Promise<Void> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler sslHandler = !param.delegate ?
-                        clientSslCtx.newHandler(ch.alloc(), expectedHost, 0) :
-                        clientSslCtx.newHandler(ch.alloc(), expectedHost, 0,  delegatingExecutor);
+                        clientSslCtx.newHandler(ch.bufferAllocator(), expectedHost, 0) :
+                        clientSslCtx.newHandler(ch.bufferAllocator(), expectedHost, 0,  delegatingExecutor);
 
                 SSLParameters parameters = sslHandler.engine().getSSLParameters();
                 if (isValidHostNameForSNI(expectedHost)) {
@@ -1064,7 +956,7 @@ public abstract class SSLEngineTest {
                         // through we just want to verify the local failure condition. This way we don't have to worry
                         // about verifying the payload and releasing the content on the server side.
                         if (failureExpected) {
-                            ctx.write(ctx.alloc().buffer(1).writeByte(1)).cascadeTo(clientWritePromise);
+                            ctx.write(ctx.bufferAllocator().copyOf(new byte[] { 1 })).cascadeTo(clientWritePromise);
                         }
                     }
 
@@ -1182,13 +1074,14 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
 
                 ChannelPipeline p = ch.pipeline();
-                final SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.alloc()));
+                final SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.bufferAllocator()));
                 engine.setUseClientMode(false);
                 engine.setNeedClientAuth(true);
 
@@ -1224,14 +1117,15 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
 
                 final SslHandler handler = !param.delegate ?
-                        clientSslCtx.newHandler(ch.alloc()) :
-                        clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                        clientSslCtx.newHandler(ch.bufferAllocator()) :
+                        clientSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                 handler.engine().setNeedClientAuth(true);
                 ChannelPipeline p = ch.pipeline();
@@ -1272,17 +1166,14 @@ public abstract class SSLEngineTest {
     }
 
     protected void runTest(String expectedApplicationProtocol) throws Exception {
-        final ByteBuf clientMessage = Unpooled.copiedBuffer("I am a client".getBytes());
-        final ByteBuf serverMessage = Unpooled.copiedBuffer("I am a server".getBytes());
-        try {
-            writeAndVerifyReceived(clientMessage.retain(), clientChannel, serverLatch, serverReceiver);
-            writeAndVerifyReceived(serverMessage.retain(), serverConnectedChannel, clientLatch, clientReceiver);
-            verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
-            verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
-        } finally {
-            clientMessage.release();
-            serverMessage.release();
+        try (Buffer clientMessage = onHeapAllocator().copyOf("I am a client".getBytes(UTF_8))) {
+            writeAndVerifyReceived(clientMessage, clientChannel, serverLatch, serverReceiver);
         }
+        try (Buffer serverMessage = onHeapAllocator().copyOf("I am a server".getBytes(UTF_8))) {
+            writeAndVerifyReceived(serverMessage, serverConnectedChannel, clientLatch, clientReceiver);
+        }
+        verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
+        verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
     }
 
     private static void verifyApplicationLevelProtocol(Channel channel, String expectedApplicationProtocol) {
@@ -1300,21 +1191,24 @@ public abstract class SSLEngineTest {
         }
     }
 
-    private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
+    private static void writeAndVerifyReceived(Buffer message, Channel sendChannel, CountDownLatch receiverLatch,
                                                MessageReceiver receiver) throws Exception {
-        List<ByteBuf> dataCapture = null;
+        List<Buffer> dataCapture = null;
         try {
-            assertTrue(sendChannel.writeAndFlush(message).await(10, TimeUnit.SECONDS));
-            receiverLatch.await(5, TimeUnit.SECONDS);
-            message.readerIndex(0);
-            ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+            Future<Void> writeAndFlush = sendChannel.writeAndFlush(message.copy());
+            assertTrue(writeAndFlush.await(10, TimeUnit.SECONDS));
+            if (!writeAndFlush.isSuccess()) {
+                throw new Exception("Write and flush failed", writeAndFlush.cause());
+            }
+            assertTrue(receiverLatch.await(10, TimeUnit.SECONDS));
+            ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
             verify(receiver).messageReceived(captor.capture());
             dataCapture = captor.getAllValues();
             assertEquals(message, dataCapture.get(0));
         } finally {
             if (dataCapture != null) {
-                for (ByteBuf data : dataCapture) {
-                    data.release();
+                for (Buffer data : dataCapture) {
+                    data.close();
                 }
             }
         }
@@ -1327,7 +1221,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider()).build());
         SSLEngine engine = null;
         try {
-            engine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            engine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
             assertTrue(engine.getSession().getCreationTime() <= System.currentTimeMillis());
         } finally {
             cleanupClientSslEngine(engine);
@@ -1354,8 +1248,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
@@ -1389,8 +1283,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
             // Before the handshake the id should have length == 0
             assertEquals(0, clientEngine.getSession().getId().length);
@@ -1468,16 +1362,17 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap()
                 .group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()))
                 .channel(NioServerSocketChannel.class)
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
-                        ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type));
+                        ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
 
                         ChannelPipeline p = ch.pipeline();
 
                         SslHandler handler = !param.delegate ?
-                                serverSslCtx.newHandler(ch.alloc()) :
-                                serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                                serverSslCtx.newHandler(ch.bufferAllocator()) :
+                                serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                         p.addLast(handler);
                         p.addLast(new ChannelHandler() {
@@ -1488,7 +1383,7 @@ public abstract class SSLEngineTest {
                                     // This data will be sent to the client before any of the re-negotiation data can be
                                     // sent. The client will read this, detect that it is not the response to
                                     // renegotiation which was expected, and respond with a fatal alert.
-                                    ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(100));
+                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 100 }));
                                 }
                                 ctx.fireUserEventTriggered(evt);
                             }
@@ -1500,7 +1395,7 @@ public abstract class SSLEngineTest {
                                 // received from the client. The flush will encrypt all data and should not result in
                                 // deadlock.
                                 ctx.channel().executor().schedule(() -> {
-                                    ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(101));
+                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 101 }));
                                 }, 500, TimeUnit.MILLISECONDS);
                             }
 
@@ -1526,16 +1421,17 @@ public abstract class SSLEngineTest {
         cb = new Bootstrap();
         cb.group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()))
                 .channel(NioSocketChannel.class)
+                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
-                        ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+                        ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
                         ChannelPipeline p = ch.pipeline();
 
                         SslHandler sslHandler = !param.delegate ?
-                                clientSslCtx.newHandler(ch.alloc()) :
-                                clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                                clientSslCtx.newHandler(ch.bufferAllocator()) :
+                                clientSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                         // The renegotiate is not expected to succeed, so we should stop trying in a timely manner so
                         // the unit test can terminate relativley quicly.
@@ -1564,7 +1460,7 @@ public abstract class SSLEngineTest {
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 ReferenceCountUtil.release(msg);
                                 // Simulate a request that the server's application logic will think is invalid.
-                                ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(102));
+                                ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 102 }));
                                 ctx.pipeline().get(SslHandler.class).renegotiate();
                             }
                         });
@@ -1592,7 +1488,7 @@ public abstract class SSLEngineTest {
                                             .ciphers(param.ciphers())
                                             .build());
 
-            sslEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            sslEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
             // Disable all protocols
             sslEngine.setEnabledProtocols(EmptyArrays.EMPTY_STRINGS);
@@ -1828,16 +1724,17 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(type));
 
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler sslHandler = !delegate ?
-                        serverSslCtx.newHandler(ch.alloc()) :
-                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                        serverSslCtx.newHandler(ch.bufferAllocator()) :
+                        serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
@@ -1858,16 +1755,17 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+                ch.config().setBufferAllocator(new TestBufferAllocator(type));
 
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler sslHandler = !delegate ?
-                        clientSslCtx.newHandler(ch.alloc()) :
-                        clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                        clientSslCtx.newHandler(ch.bufferAllocator()) :
+                        clientSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
@@ -1915,16 +1813,16 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         final Promise<String> promise = sb.config().group().next().newPromise();
         serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
                 SslHandler sslHandler = !param.delegate ?
-                        serverSslCtx.newHandler(ch.alloc()) :
-                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                        serverSslCtx.newHandler(ch.bufferAllocator()) :
+                        serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                 ch.pipeline().addFirst(sslHandler);
                 ch.pipeline().addLast(new ChannelHandler() {
@@ -1997,11 +1895,12 @@ public abstract class SSLEngineTest {
         cb = new Bootstrap();
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         clientChannel = cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
-                ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.alloc()))));
+                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.bufferAllocator()))));
             }
 
         }).connect(serverChannel.localAddress()).get();
@@ -2024,7 +1923,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2032,7 +1931,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         byte[] bytes = "Hello World".getBytes(CharsetUtil.US_ASCII);
 
@@ -2122,14 +2021,14 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(clientProtocols)
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .protocols(serverProtocols)
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             if (handshakeFails) {
@@ -2185,8 +2084,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -2219,8 +2118,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -2242,7 +2141,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2251,7 +2150,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             // Allocate an buffer that is bigger then the max plain record size.
@@ -2290,7 +2189,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         try {
             final ByteBuffer src = allocateBuffer(param.type(), client.getSession().getApplicationBufferSize());
@@ -2322,7 +2221,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         try {
             client.closeInbound();
@@ -2356,7 +2255,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2365,7 +2264,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             testBeginHandshakeCloseOutbound(param, client);
@@ -2410,7 +2309,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2419,7 +2318,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             testCloseInboundAfterBeginHandshake(client);
@@ -2458,7 +2357,7 @@ public abstract class SSLEngineTest {
                 // This test only works for non TLSv1.3 for now
                 .protocols(SslProtocols.TLS_v1_2)
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2467,7 +2366,7 @@ public abstract class SSLEngineTest {
                 // This test only works for non TLSv1.3 for now
                 .protocols(SslProtocols.TLS_v1_2)
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             ByteBuffer plainClientOut = allocateBuffer(param.type(), client.getSession().getApplicationBufferSize());
@@ -2616,7 +2515,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2625,7 +2524,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             ByteBuffer dst = allocateBuffer(param.type(), client.getSession().getPacketBufferSize());
@@ -2662,7 +2561,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2671,7 +2570,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             // Choose buffer size small enough that we can put multiple buffers into one buffer and pass it into the
@@ -2744,7 +2643,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2753,7 +2652,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             ByteBuffer plainClientOut = allocateBuffer(param.type(), 4096);
@@ -2815,7 +2714,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2824,7 +2723,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             ByteBuffer plainClient = allocateBuffer(param.type(), 1024);
@@ -2893,7 +2792,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -2902,7 +2801,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
         try {
             ByteBuffer plainServerOut =
@@ -2957,7 +2856,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SSLEngine server = wrapEngine(ctx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(ctx.newEngine(offHeapAllocator()));
 
         try {
             Set<String> supported = new HashSet<>(Arrays.asList(server.getSupportedProtocols()));
@@ -3043,7 +2942,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .build());
 
-        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "127.0.0.1", 1234));
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator(), "127.0.0.1", 1234));
         SSLParameters sslParameters = client.getSSLParameters();
         sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
         if (useSNI) {
@@ -3057,7 +2956,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build());
 
-        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
         try {
             handshake(param.type(), param.delegate(), client, server);
             if (!useSNI) {
@@ -3087,7 +2986,7 @@ public abstract class SSLEngineTest {
                     .sslContextProvider(serverSslContextProvider())
                     .sslProvider(sslServerProvider())
                     .ciphers(cipherList).build());
-            server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             fail();
         } catch (IllegalArgumentException | SSLException expected) {
             // Expected when invalid cipher is used.
@@ -3117,8 +3016,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             String clientCipher = clientEngine.getSession().getCipherSuite();
@@ -3193,8 +3092,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, host, port));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator(), host, port));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             int clientSessions = currentSessionCacheSize(clientSslCtx.sessionContext());
             int serverSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
@@ -3421,8 +3320,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             SSLSession session = clientEngine.getSession();
             assertEquals(0, session.getValueNames().length);
@@ -3545,8 +3444,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
@@ -3796,8 +3695,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -3863,8 +3762,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             assertTrue(clientTmf.isVerified());
@@ -3922,8 +3821,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession clientSession = clientEngine.getSession();
@@ -3960,8 +3859,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             assertEnabledProtocolsAndCipherSuites(clientEngine);
             assertEnabledProtocolsAndCipherSuites(serverEngine);
@@ -4023,16 +3922,16 @@ public abstract class SSLEngineTest {
             sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                     new MultithreadEventLoopGroup(NioHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
-
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             final Promise<SecretKey> promise = sb.config().group().next().newPromise();
             serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+                    ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
                     SslHandler sslHandler = !param.delegate() ?
-                            serverSslCtx.newHandler(ch.alloc()) :
-                            serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                            serverSslCtx.newHandler(ch.bufferAllocator()) :
+                            serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
                     ch.pipeline().addLast(sslHandler);
                     ch.pipeline().addLast(new SslMasterKeyHandler() {
@@ -4174,8 +4073,8 @@ public abstract class SSLEngineTest {
         String[] clientProtocols;
         String[] serverProtocols;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             clientProtocols = clientEngine.getEnabledProtocols();
             serverProtocols = serverEngine.getEnabledProtocols();
         } finally {
@@ -4240,8 +4139,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "/invalid.path", 80));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator(), "/invalid.path", 80));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             assertNotNull(clientEngine.getSSLParameters());
             assertNotNull(serverEngine.getSSLParameters());

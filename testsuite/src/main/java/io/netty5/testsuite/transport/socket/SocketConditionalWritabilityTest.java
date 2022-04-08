@@ -150,11 +150,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
 
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            if (msg instanceof Resource<?>) {
-                                ((Resource<?>) msg).close();
-                            } else {
-                                ReferenceCountUtil.release(msg);
-                            }
+                            Resource.dispose(msg);
                             writeRemainingBytes(ctx);
                         }
 
@@ -211,7 +207,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                                     }
                                 }
                             } else {
-                                ReferenceCountUtil.release(msg);
+                                Resource.dispose(msg);
                             }
                         }
                     });

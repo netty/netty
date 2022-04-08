@@ -15,10 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +28,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -76,10 +74,10 @@ public class OpenSslKeyMaterialProviderTest {
     public void testChooseKeyMaterial() throws Exception {
         OpenSslKeyMaterialProvider provider = newMaterialProvider(newKeyManagerFactory(), PASSWORD);
         OpenSslKeyMaterial nonExistingMaterial = provider.chooseKeyMaterial(
-                UnpooledByteBufAllocator.DEFAULT, NON_EXISTING_ALIAS);
+                offHeapAllocator(), NON_EXISTING_ALIAS);
         assertNull(nonExistingMaterial);
 
-        OpenSslKeyMaterial material = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, EXISTING_ALIAS);
+        OpenSslKeyMaterial material = provider.chooseKeyMaterial(offHeapAllocator(), EXISTING_ALIAS);
         assertNotNull(material);
         assertNotEquals(0, material.certificateChainAddress());
         assertNotEquals(0, material.privateKeyAddress());
@@ -143,15 +141,12 @@ public class OpenSslKeyMaterialProviderTest {
         final X509Certificate[] certChain = SslContext.toX509Certificates(
                 getClass().getResourceAsStream("localhost_server.pem"));
         assertNotNull(certChain);
-        PemEncoded pemKey = null;
         long pkeyBio = 0L;
         OpenSslPrivateKey sslPrivateKey;
-        try {
-            pemKey = PemPrivateKey.toPEM(ByteBufAllocator.DEFAULT, true, privateKey);
-            pkeyBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, pemKey);
+        try (PemEncoded pemKey = PemPrivateKey.toPEM(privateKey)) {
+            pkeyBio = ReferenceCountedOpenSslContext.toBIO(offHeapAllocator(), pemKey);
             sslPrivateKey = new OpenSslPrivateKey(SSL.parsePrivateKey(pkeyBio, null));
         } finally {
-            ReferenceCountUtil.safeRelease(pemKey);
             if (pkeyBio != 0L) {
                 SSL.freeBIO(pkeyBio);
             }
@@ -161,14 +156,14 @@ public class OpenSslKeyMaterialProviderTest {
         OpenSslKeyMaterialProvider provider = new OpenSslKeyMaterialProvider(
                 new SingleKeyManager(keyAlias, sslPrivateKey, certChain),
                 null);
-        OpenSslKeyMaterial material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+        OpenSslKeyMaterial material = provider.chooseKeyMaterial(offHeapAllocator(), keyAlias);
         assertNotNull(material);
         assertEquals(2, sslPrivateKey.refCnt());
         assertEquals(1, material.refCnt());
         assertTrue(material.release());
         assertEquals(1, sslPrivateKey.refCnt());
         // Can get material multiple times from the same key
-        material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+        material = provider.chooseKeyMaterial(offHeapAllocator(), keyAlias);
         assertNotNull(material);
         assertEquals(2, sslPrivateKey.refCnt());
         assertTrue(material.release());

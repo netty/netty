@@ -17,15 +17,16 @@ package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.security.NoSuchAlgorithmException;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,29 +34,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SslUtilsTest {
 
-    @SuppressWarnings("deprecation")
     @Test
     public void testPacketLength() throws Exception {
-        SSLEngine engineLE = newEngine();
         SSLEngine engineBE = newEngine();
 
         ByteBuffer empty = ByteBuffer.allocate(0);
-        ByteBuffer cTOsLE = ByteBuffer.allocate(17 * 1024).order(ByteOrder.LITTLE_ENDIAN);
         ByteBuffer cTOsBE = ByteBuffer.allocate(17 * 1024);
-
-        assertTrue(engineLE.wrap(empty, cTOsLE).bytesProduced() > 0);
-        cTOsLE.flip();
 
         assertTrue(engineBE.wrap(empty, cTOsBE).bytesProduced() > 0);
         cTOsBE.flip();
 
-        ByteBuf bufferLE = Unpooled.buffer().order(ByteOrder.LITTLE_ENDIAN).writeBytes(cTOsLE);
-        ByteBuf bufferBE = Unpooled.buffer().writeBytes(cTOsBE);
-
-        // Test that the packet-length for BE and LE is the same
-        assertEquals(getEncryptedPacketLength(bufferBE, 0), getEncryptedPacketLength(bufferLE, 0));
-        assertEquals(getEncryptedPacketLength(new ByteBuffer[] { bufferBE.nioBuffer() }, 0),
-                getEncryptedPacketLength(new ByteBuffer[] { bufferLE.nioBuffer().order(ByteOrder.LITTLE_ENDIAN) }, 0));
+        try (Buffer buffer = offHeapAllocator().copyOf(cTOsBE);
+             Buffer copy = buffer.copy()) {
+            buffer.forEachReadable(0, (index, component) -> {
+                assertEquals(0, index); // Only one component expected here.
+                ByteBuffer[] byteBuffers = { component.readableBuffer() };
+                assertEquals(getEncryptedPacketLength(byteBuffers, 0),
+                             getEncryptedPacketLength(copy, 0));
+                return true;
+            });
+        }
     }
 
     private static SSLEngine newEngine() throws SSLException, NoSuchAlgorithmException  {
@@ -78,14 +76,13 @@ public class SslUtilsTest {
     @Test
     public void shouldGetPacketLengthOfGmsslProtocolFromByteBuf() {
         int bodyLength = 65;
-        ByteBuf buf = Unpooled.buffer()
-                              .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
-                              .writeShort(SslUtils.GMSSL_PROTOCOL_VERSION)
-                              .writeShort(bodyLength);
-
-        int packetLength = getEncryptedPacketLength(buf, 0);
-        assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
-        buf.release();
+        try (Buffer buf = offHeapAllocator().allocate(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH)
+                              .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                              .writeShort((short) SslUtils.GMSSL_PROTOCOL_VERSION)
+                              .writeShort((short) bodyLength)) {
+            int packetLength = getEncryptedPacketLength(buf, 0);
+            assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
+        }
     }
 
     @Test

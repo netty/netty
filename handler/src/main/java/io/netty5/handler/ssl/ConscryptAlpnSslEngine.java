@@ -19,8 +19,11 @@ import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.api.WritableComponent;
+import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import java.nio.ByteBuffer;
@@ -41,21 +44,22 @@ import org.conscrypt.HandshakeListener;
 /**
  * A {@link JdkSslEngine} that uses the Conscrypt provider or SSL with ALPN.
  */
-abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
+abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUnwrap {
     private static final boolean USE_BUFFER_ALLOCATOR = SystemPropertyUtil.getBoolean(
             "io.netty5.handler.ssl.conscrypt.useBufferAllocator", true);
 
-    static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine, ByteBufAllocator alloc,
+    static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
         return new ClientEngine(engine, alloc, applicationNegotiator);
     }
 
-    static ConscryptAlpnSslEngine newServerEngine(SSLEngine engine, ByteBufAllocator alloc,
+    static ConscryptAlpnSslEngine newServerEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
         return new ServerEngine(engine, alloc, applicationNegotiator);
     }
 
-    private ConscryptAlpnSslEngine(SSLEngine engine, ByteBufAllocator alloc, List<String> protocols) {
+    private ConscryptAlpnSslEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+                                   List<String> protocols) {
         super(engine);
 
         // Configure the Conscrypt engine to use Netty's buffer allocator. This is a trade-off of memory vs
@@ -90,15 +94,16 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         return (int) min(Integer.MAX_VALUE, plaintextBytes + maxOverhead);
     }
 
-    final SSLEngineResult unwrap(ByteBuffer[] srcs, ByteBuffer[] dests) throws SSLException {
+    @Override
+    public final SSLEngineResult unwrap(ByteBuffer[] srcs, ByteBuffer[] dests) throws SSLException {
         return Conscrypt.unwrap(getWrappedEngine(), srcs, dests);
     }
 
     private static final class ClientEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelectionListener protocolListener;
 
-        ClientEngine(SSLEngine engine, ByteBufAllocator alloc,
-                JdkApplicationProtocolNegotiator applicationNegotiator) {
+        ClientEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+                     JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, alloc, applicationNegotiator.protocols());
             // Register for completion of the handshake.
             Conscrypt.setHandshakeListener(engine, new HandshakeListener() {
@@ -126,7 +131,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     private static final class ServerEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelector protocolSelector;
 
-        ServerEngine(SSLEngine engine, ByteBufAllocator alloc,
+        ServerEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
                      JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, alloc, applicationNegotiator.protocols());
 
@@ -156,25 +161,35 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     }
 
     private static final class BufferAllocatorAdapter extends BufferAllocator {
-        private final ByteBufAllocator alloc;
+        private final io.netty5.buffer.api.BufferAllocator alloc;
 
-        BufferAllocatorAdapter(ByteBufAllocator alloc) {
+        BufferAllocatorAdapter(io.netty5.buffer.api.BufferAllocator alloc) {
+            if (alloc.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
+                alloc = DefaultBufferAllocators.offHeapAllocator();
+            }
             this.alloc = alloc;
         }
 
         @Override
         public AllocatedBuffer allocateDirectBuffer(int capacity) {
-            return new BufferAdapter(alloc.directBuffer(capacity));
+            return new BufferAdapter(alloc.allocate(capacity));
         }
     }
 
-    private static final class BufferAdapter extends AllocatedBuffer {
-        private final ByteBuf nettyBuffer;
-        private final ByteBuffer buffer;
+    private static final class BufferAdapter extends AllocatedBuffer
+            implements WritableComponentProcessor<RuntimeException> {
+        private final Buffer nettyBuffer;
+        private ByteBuffer buffer;
 
-        BufferAdapter(ByteBuf nettyBuffer) {
+        BufferAdapter(Buffer nettyBuffer) {
             this.nettyBuffer = nettyBuffer;
-            buffer = nettyBuffer.nioBuffer(0, nettyBuffer.capacity());
+            nettyBuffer.forEachWritable(0, this); // Capture internal writable ByteBuffer.
+        }
+
+        @Override
+        public boolean process(int index, WritableComponent component) {
+            buffer = component.writableBuffer();
+            return false;
         }
 
         @Override
@@ -189,7 +204,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
         @Override
         public AllocatedBuffer release() {
-            nettyBuffer.release();
+            nettyBuffer.close();
             return this;
         }
     }

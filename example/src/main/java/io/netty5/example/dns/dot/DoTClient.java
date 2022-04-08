@@ -15,8 +15,8 @@
  */
 package io.netty5.example.dns.dot;
 
-import io.netty5.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufUtil;
+import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -73,32 +73,32 @@ public final class DoTClient {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             final SslContext sslContext = SslContextBuilder.forClient()
-                    .protocols("TLSv1.3", "TLSv1.2")
-                    .build();
+                                                           .protocols("TLSv1.3", "TLSv1.2")
+                                                           .build();
 
             Bootstrap b = new Bootstrap();
             b.group(group)
-                    .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast(sslContext.newHandler(ch.alloc(), DNS_SERVER_HOST, DNS_SERVER_PORT))
-                                    .addLast(new TcpDnsQueryEncoder())
-                                    .addLast(new TcpDnsResponseDecoder())
-                                    .addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
-                                        @Override
-                                        protected void messageReceived(
-                                                ChannelHandlerContext ctx, DefaultDnsResponse msg) {
-                                            try {
-                                                handleQueryResp(msg);
-                                            } finally {
-                                                ctx.close();
-                                            }
-                                        }
-                                    });
-                        }
-                    });
+             .channel(NioSocketChannel.class)
+             .handler(new ChannelInitializer<SocketChannel>() {
+                 @Override
+                 protected void initChannel(SocketChannel ch) {
+                     ChannelPipeline p = ch.pipeline();
+                     p.addLast(sslContext.newHandler(ch.bufferAllocator(), DNS_SERVER_HOST, DNS_SERVER_PORT))
+                      .addLast(new TcpDnsQueryEncoder())
+                      .addLast(new TcpDnsResponseDecoder())
+                      .addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
+                          @Override
+                          protected void messageReceived(
+                                  ChannelHandlerContext ctx, DefaultDnsResponse msg) {
+                              try {
+                                  handleQueryResp(msg);
+                              } finally {
+                                  ctx.close();
+                              }
+                          }
+                      });
+                 }
+             });
             final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).get();
 
             int randomID = new Random().nextInt(60000 - 1000) + 1000;

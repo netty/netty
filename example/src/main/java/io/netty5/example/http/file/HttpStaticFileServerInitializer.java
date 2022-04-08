@@ -35,7 +35,7 @@ public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketCh
     public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
         if (sslCtx != null) {
-            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+            pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));

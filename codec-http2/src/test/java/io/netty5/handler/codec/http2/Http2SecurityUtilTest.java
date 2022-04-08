@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
@@ -43,7 +43,7 @@ public class Http2SecurityUtilTest {
     private static void testCiphersIncluded(String protocol) throws SSLException  {
         SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).protocols(protocol)
                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE).build();
-        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(DefaultBufferAllocators.offHeapAllocator());
         Assertions.assertTrue(engine.getEnabledCipherSuites().length > 0, "No " + protocol + " ciphers found");
     }
 }

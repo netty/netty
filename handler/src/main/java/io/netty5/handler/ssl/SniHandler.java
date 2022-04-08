@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.AsyncMapping;
@@ -130,7 +130,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) throws Exception {
         SslHandler sslHandler = null;
         try {
-            sslHandler = newSslHandler(sslContext, ctx.alloc());
+            sslHandler = newSslHandler(sslContext, ctx.bufferAllocator());
             ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
             sslHandler = null;
         } finally {
@@ -144,10 +144,10 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     }
 
     /**
-     * Returns a new {@link SslHandler} using the given {@link SslContext} and {@link ByteBufAllocator}.
+     * Returns a new {@link SslHandler} using the given {@link SslContext} and {@link BufferAllocator}.
      * Users may override this method to implement custom behavior.
      */
-    protected SslHandler newSslHandler(SslContext context, ByteBufAllocator allocator) {
+    protected SslHandler newSslHandler(SslContext context, BufferAllocator allocator) {
         return context.newHandler(allocator);
     }
 

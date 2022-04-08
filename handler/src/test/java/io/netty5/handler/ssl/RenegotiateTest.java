@@ -58,7 +58,7 @@ public abstract class RenegotiateTest {
                     .childHandler(new ChannelInitializer<>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            SslHandler handler = context.newHandler(ch.alloc());
+                            SslHandler handler = context.newHandler(ch.bufferAllocator());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelHandler() {
@@ -111,7 +111,7 @@ public abstract class RenegotiateTest {
                     .handler(new ChannelInitializer<>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            SslHandler handler = clientContext.newHandler(ch.alloc());
+                            SslHandler handler = clientContext.newHandler(ch.bufferAllocator());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelHandler() {

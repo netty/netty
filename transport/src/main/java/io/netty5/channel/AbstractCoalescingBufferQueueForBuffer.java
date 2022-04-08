@@ -298,11 +298,12 @@ public abstract class AbstractCoalescingBufferQueueForBuffer {
      * @param alloc The allocator to use to allocate the new buffer.
      * @param cumulation The current cumulation.
      * @param next The next buffer.
+     * @param minIncrement The minimum buffer size - the resulting buffer will grow by at least this much.
      * @return The result of {@code cumulation + next}.
      */
-    protected final Buffer copyAndCompose(BufferAllocator alloc, Buffer cumulation, Buffer next) {
+    protected final Buffer copyAndCompose(BufferAllocator alloc, Buffer cumulation, Buffer next, int minIncrement) {
         try (cumulation; next) {
-            int sum = cumulation.readableBytes() + next.readableBytes();
+            int sum = cumulation.readableBytes() + Math.max(minIncrement, next.readableBytes());
             return alloc.allocate(sum).writeBytes(cumulation).writeBytes(next);
         }
     }

@@ -18,12 +18,11 @@ package io.netty5.handler.ssl.ocsp;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -54,6 +53,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -117,7 +118,7 @@ public class OcspTest {
                 .sslProvider(sslProvider)
                 .build();
         try {
-            SslHandler sslHandler = context.newHandler(ByteBufAllocator.DEFAULT);
+            SslHandler sslHandler = context.newHandler(offHeapAllocator());
             final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
             try {
                 assertThrows(IllegalStateException.class, new Executable() {
@@ -151,7 +152,7 @@ public class OcspTest {
                     .sslProvider(sslProvider)
                     .build();
             try {
-                SslHandler sslHandler = context.newHandler(ByteBufAllocator.DEFAULT);
+                SslHandler sslHandler = context.newHandler(offHeapAllocator());
                 final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
                 try {
                     assertThrows(IllegalStateException.class, new Executable() {
@@ -191,7 +192,7 @@ public class OcspTest {
         ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
+                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!".getBytes(UTF_8)));
                 ctx.fireChannelActive();
             }
         };
@@ -284,7 +285,7 @@ public class OcspTest {
         ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
+                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!".getBytes(UTF_8)));
                 ctx.fireChannelActive();
             }
         };
@@ -403,6 +404,7 @@ public class OcspTest {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(group)
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(newServerHandler(context, response, handler));
 
         return bootstrap.bind(address).get();
@@ -414,6 +416,7 @@ public class OcspTest {
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
+                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(newClientHandler(context, callback, handler));
 
         return bootstrap.connect(address).get();
@@ -425,7 +428,7 @@ public class OcspTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                SslHandler sslHandler = context.newHandler(ch.alloc());
+                SslHandler sslHandler = context.newHandler(ch.bufferAllocator());
 
                 if (response != null) {
                     ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
@@ -448,7 +451,7 @@ public class OcspTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
 
-                SslHandler sslHandler = context.newHandler(ch.alloc());
+                SslHandler sslHandler = context.newHandler(ch.bufferAllocator());
                 ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
 
                 pipeline.addLast(sslHandler);

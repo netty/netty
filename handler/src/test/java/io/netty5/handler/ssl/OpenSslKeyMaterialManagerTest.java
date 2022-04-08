@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +26,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OpenSslKeyMaterialManagerTest {
@@ -70,14 +70,14 @@ public class OpenSslKeyMaterialManagerTest {
         OpenSslKeyMaterialManager manager = new OpenSslKeyMaterialManager(
                 new OpenSslKeyMaterialProvider(keyManager, null) {
             @Override
-            OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
+            OpenSslKeyMaterial chooseKeyMaterial(BufferAllocator allocator, String alias) throws Exception {
                 fail("Should not be called when alias is null");
                 return null;
             }
         });
         SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL).build();
         OpenSslEngine engine =
-                (OpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+                (OpenSslEngine) context.newEngine(offHeapAllocator());
         manager.setKeyMaterialClientSide(engine, EmptyArrays.EMPTY_STRINGS, null);
     }
 }

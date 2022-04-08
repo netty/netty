@@ -18,12 +18,12 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -101,7 +102,7 @@ public class CipherSuiteCanaryTest {
         assumeTrue(cipherSupported, "Unsupported cipher: " + cipher);
     }
 
-    private static SslHandler newSslHandler(SslContext sslCtx, ByteBufAllocator allocator, Executor executor) {
+    private static SslHandler newSslHandler(SslContext sslCtx, BufferAllocator allocator, Executor executor) {
         if (executor == null) {
             return sslCtx.newHandler(allocator);
         } else {
@@ -147,7 +148,7 @@ public class CipherSuiteCanaryTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(newSslHandler(sslServerContext, ch.alloc(), executorService));
+                        pipeline.addLast(newSslHandler(sslServerContext, ch.bufferAllocator(), executorService));
 
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
@@ -159,7 +160,7 @@ public class CipherSuiteCanaryTest {
                             @Override
                             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 if (serverPromise.trySuccess(null)) {
-                                    ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
+                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
                                 ctx.close();
                             }
@@ -183,7 +184,7 @@ public class CipherSuiteCanaryTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(newSslHandler(sslClientContext, ch.alloc(), executorService));
+                            pipeline.addLast(newSslHandler(sslClientContext, ch.bufferAllocator(), executorService));
 
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
@@ -211,7 +212,7 @@ public class CipherSuiteCanaryTest {
 
                     Channel client = client(server, clientHandler);
                     try {
-                        client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
+                        client.writeAndFlush(preferredAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
                               .syncUninterruptibly();
 
                         Future<Object> clientFuture = clientPromise.asFuture();
@@ -244,6 +245,7 @@ public class CipherSuiteCanaryTest {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(GROUP)
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(handler);
 
         return bootstrap.bind(address).get();
@@ -255,6 +257,7 @@ public class CipherSuiteCanaryTest {
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(GROUP)
+                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(handler);
 
         return bootstrap.connect(remoteAddress).get();

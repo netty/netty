@@ -40,7 +40,7 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
         if (sslCtx != null) {
-            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+            pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));

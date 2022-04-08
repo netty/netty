@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.security.cert.Certificate;
 import java.util.Map;
@@ -47,7 +47,7 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     }
 
     @Override
-    final SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
+    final SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode);
     }
 

@@ -16,8 +16,8 @@
 package io.netty5.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -74,7 +74,7 @@ import java.util.concurrent.Executor;
  * // In your {@link ChannelInitializer}:
  * {@link ChannelPipeline} p = channel.pipeline();
  * {@link SslContext} sslCtx = {@link SslContextBuilder#forServer(File, File) SslContextBuilder.forServer(...)}.build();
- * p.addLast("ssl", {@link #newHandler(ByteBufAllocator) sslCtx.newHandler(channel.alloc())});
+ * p.addLast("ssl", {@link #newHandler(BufferAllocator) sslCtx.newHandler(channel.alloc())});
  * ...
  * </pre>
  *
@@ -83,7 +83,7 @@ import java.util.concurrent.Executor;
  * // In your {@link ChannelInitializer}:
  * {@link ChannelPipeline} p = channel.pipeline();
  * {@link SslContext} sslCtx = {@link SslContextBuilder#forClient() SslContextBuilder.forClient()}.build();
- * p.addLast("ssl", {@link #newHandler(ByteBufAllocator, String, int) sslCtx.newHandler(channel.alloc(), host, port)});
+ * p.addLast("ssl", {@link #newHandler(BufferAllocator, String, int) sslCtx.newHandler(channel.alloc(), host, port)});
  * ...
  * </pre>
  */
@@ -924,22 +924,22 @@ public abstract class SslContext {
     /**
      * Creates a new {@link SSLEngine}.
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the object must be released. One way to do this is to
-     * wrap in a {@link SslHandler} and insert it into a pipeline. See {@link #newHandler(ByteBufAllocator)}.
+     * wrap in a {@link SslHandler} and insert it into a pipeline. See {@link #newHandler(BufferAllocator)}.
      * @return a new {@link SSLEngine}
      */
-    public abstract SSLEngine newEngine(ByteBufAllocator alloc);
+    public abstract SSLEngine newEngine(BufferAllocator alloc);
 
     /**
      * Creates a new {@link SSLEngine} using advisory peer information.
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the object must be released. One way to do this is to
      * wrap in a {@link SslHandler} and insert it into a pipeline.
-     * See {@link #newHandler(ByteBufAllocator, String, int)}.
+     * See {@link #newHandler(BufferAllocator, String, int)}.
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
      *
      * @return a new {@link SSLEngine}
      */
-    public abstract SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort);
+    public abstract SSLEngine newEngine(BufferAllocator alloc, String peerHost, int peerPort);
 
     /**
      * Returns the {@link SSLSessionContext} object held by this context.
@@ -948,17 +948,17 @@ public abstract class SslContext {
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator, Executor)
+     * @see #newHandler(BufferAllocator, Executor)
      */
-    public final SslHandler newHandler(ByteBufAllocator alloc) {
+    public final SslHandler newHandler(BufferAllocator alloc) {
         return newHandler(alloc, startTls);
     }
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator)
+     * @see #newHandler(BufferAllocator)
      */
-    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+    protected SslHandler newHandler(BufferAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine(alloc), startTls);
     }
 
@@ -982,37 +982,37 @@ public abstract class SslContext {
      * The underlying {@link SSLEngine} may not follow the restrictions imposed by the
      * <a href="https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html">SSLEngine javadocs</a> which
      * limits wrap/unwrap to operate on a single SSL/TLS packet.
-     * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
+     * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate Buffer objects.
      * @param delegatedTaskExecutor the {@link Executor} that will be used to execute tasks that are returned by
      *                              {@link SSLEngine#getDelegatedTask()}.
      * @return a new {@link SslHandler}
      */
-    public SslHandler newHandler(ByteBufAllocator alloc, Executor delegatedTaskExecutor) {
+    public SslHandler newHandler(BufferAllocator alloc, Executor delegatedTaskExecutor) {
         return newHandler(alloc, startTls, delegatedTaskExecutor);
     }
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator, String, int, boolean, Executor)
+     * @see #newHandler(BufferAllocator, String, int, boolean, Executor)
      */
-    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+    protected SslHandler newHandler(BufferAllocator alloc, boolean startTls, Executor executor) {
         return new SslHandler(newEngine(alloc), startTls, executor);
     }
 
     /**
      * Creates a new {@link SslHandler}
      *
-     * @see #newHandler(ByteBufAllocator, String, int, Executor)
+     * @see #newHandler(BufferAllocator, String, int, Executor)
      */
-    public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
+    public final SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort) {
         return newHandler(alloc, peerHost, peerPort, startTls);
     }
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator, String, int, boolean, Executor)
+     * @see #newHandler(BufferAllocator, String, int, boolean, Executor)
      */
-    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+    protected SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
     }
 
@@ -1036,7 +1036,7 @@ public abstract class SslContext {
      * The underlying {@link SSLEngine} may not follow the restrictions imposed by the
      * <a href="https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html">SSLEngine javadocs</a> which
      * limits wrap/unwrap to operate on a single SSL/TLS packet.
-     * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
+     * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate Buffer objects.
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
      * @param delegatedTaskExecutor the {@link Executor} that will be used to execute tasks that are returned by
@@ -1044,12 +1044,12 @@ public abstract class SslContext {
      *
      * @return a new {@link SslHandler}
      */
-    public SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+    public SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort,
                                  Executor delegatedTaskExecutor) {
         return newHandler(alloc, peerHost, peerPort, startTls, delegatedTaskExecutor);
     }
 
-    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls,
+    protected SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort, boolean startTls,
                                     Executor delegatedTaskExecutor) {
         return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls, delegatedTaskExecutor);
     }

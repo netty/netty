@@ -15,7 +15,7 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
@@ -82,11 +82,11 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
             }
         }
 
-        SSLEngine newClientEngine(ByteBufAllocator allocator, String cipher) {
+        SSLEngine newClientEngine(BufferAllocator allocator, String cipher) {
             return configureEngine(clientContext.newHandler(allocator).engine(), cipher);
         }
 
-        SSLEngine newServerEngine(ByteBufAllocator allocator, String cipher) {
+        SSLEngine newServerEngine(BufferAllocator allocator, String cipher) {
             return configureEngine(serverContext.newHandler(allocator).engine(), cipher);
         }
 
@@ -142,7 +142,7 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
     private ByteBuffer clientAppReadBuffer;
     private ByteBuffer empty;
 
-    protected final void initEngines(ByteBufAllocator allocator) {
+    protected final void initEngines(BufferAllocator allocator) {
         clientEngine = newClientEngine(allocator);
         serverEngine = newServerEngine(allocator);
     }
@@ -241,11 +241,11 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
                 serverResult.getStatus() == SSLEngineResult.Status.OK;
     }
 
-    protected final SSLEngine newClientEngine(ByteBufAllocator allocator) {
+    protected final SSLEngine newClientEngine(BufferAllocator allocator) {
         return sslProvider.newClientEngine(allocator, cipher);
     }
 
-    protected final SSLEngine newServerEngine(ByteBufAllocator allocator) {
+    protected final SSLEngine newServerEngine(BufferAllocator allocator) {
         return sslProvider.newServerEngine(allocator, cipher);
     }
 

@@ -15,10 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
@@ -28,7 +30,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 /**
  * {@link ByteToMessageDecoder} which allows to be notified once a full {@code ClientHello} was received.
  */
-public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
+public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBuffer {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslClientHelloHandler.class);
@@ -36,13 +38,15 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
     private boolean handshakeFailed;
     private boolean suppressRead;
     private boolean readPending;
-    private ByteBuf handshakeBuffer;
+    private Buffer handshakeBuffer;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
+        // TODO It ought to be possible to simplify this by using split() to grab the handshakes,
+        //  and avoid awkward copying and offsets book-keeping.
         if (!suppressRead && !handshakeFailed) {
             try {
-                int readerIndex = in.readerIndex();
+                int readerIndex = in.readerOffset();
                 int readableBytes = in.readableBytes();
                 int handshakeLength = -1;
 
@@ -60,7 +64,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                 handshakeFailed = true;
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-                                in.skipBytes(in.readableBytes());
+                                in.skipReadable(in.readableBytes());
                                 ctx.fireUserEventTriggered(new SniCompletionEvent(e));
                                 ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
                                 throw e;
@@ -120,25 +124,28 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                         // We have everything we need in one packet.
                                         // Skip the record header
                                         readerIndex += SslUtils.SSL_RECORD_HEADER_LENGTH;
-                                        select(ctx, in.retainedSlice(readerIndex, handshakeLength));
+                                        in.readerOffset(readerIndex);
+                                        select(ctx, in.readSplit(handshakeLength));
                                         return;
                                     } else {
                                         if (handshakeBuffer == null) {
-                                            handshakeBuffer = ctx.alloc().buffer(handshakeLength);
+                                            handshakeBuffer = ctx.bufferAllocator().allocate(handshakeLength);
                                         } else {
-                                            // Clear the buffer so we can aggregate into it again.
-                                            handshakeBuffer.clear();
+                                            // Reset the buffer offsets, so we can aggregate into it again.
+                                            handshakeBuffer.resetOffsets();
                                         }
                                     }
                                 }
 
                                 // Combine the encapsulated data in one buffer but not include the SSL_RECORD_HEADER
-                                handshakeBuffer.writeBytes(in, readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH,
-                                        packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH);
+                                int hsLen = packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH;
+                                in.copyInto(readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH,
+                                            handshakeBuffer, handshakeBuffer.writerOffset(), hsLen);
+                                handshakeBuffer.skipWritable(hsLen);
                                 readerIndex += packetLength;
                                 readableBytes -= packetLength;
                                 if (handshakeLength <= handshakeBuffer.readableBytes()) {
-                                    ByteBuf clientHello = handshakeBuffer.setIndex(0, handshakeLength);
+                                    Buffer clientHello = handshakeBuffer.readerOffset(0).writerOffset(handshakeLength);
                                     handshakeBuffer = null;
 
                                     select(ctx, clientHello);
@@ -167,17 +174,11 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
     }
 
     private void releaseHandshakeBuffer() {
-        releaseIfNotNull(handshakeBuffer);
+        Resource.dispose(handshakeBuffer);
         handshakeBuffer = null;
     }
 
-    private static void releaseIfNotNull(ByteBuf buffer) {
-        if (buffer != null) {
-            buffer.release();
-        }
-    }
-
-    private void select(final ChannelHandlerContext ctx, ByteBuf clientHello) {
+    private void select(final ChannelHandlerContext ctx, Buffer clientHello) {
         final Future<T> future;
         try {
             future = lookup(ctx, clientHello);
@@ -185,9 +186,9 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                 onLookupComplete(ctx, future);
             } else {
                 suppressRead = true;
-                final ByteBuf finalClientHello = clientHello;
+                final Buffer finalClientHello = clientHello;
                 future.addListener(f -> {
-                    releaseIfNotNull(finalClientHello);
+                    Resource.dispose(finalClientHello);
                     try {
                         suppressRead = false;
                         try {
@@ -213,7 +214,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
         } finally {
-            releaseIfNotNull(clientHello);
+            Resource.dispose(clientHello);
         }
     }
 
@@ -248,12 +249,12 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
      *
      * @see #onLookupComplete(ChannelHandlerContext, Future)
      */
-    protected abstract Future<T> lookup(ChannelHandlerContext ctx, ByteBuf clientHello) throws Exception;
+    protected abstract Future<T> lookup(ChannelHandlerContext ctx, Buffer clientHello) throws Exception;
 
     /**
-     * Called upon completion of the {@link #lookup(ChannelHandlerContext, ByteBuf)} {@link Future}.
+     * Called upon completion of the {@link #lookup(ChannelHandlerContext, Buffer)} {@link Future}.
      *
-     * @see #lookup(ChannelHandlerContext, ByteBuf)
+     * @see #lookup(ChannelHandlerContext, Buffer)
      */
     protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception;
 

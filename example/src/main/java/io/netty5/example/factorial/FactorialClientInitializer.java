@@ -38,7 +38,7 @@ public class FactorialClientInitializer extends ChannelInitializer<SocketChannel
         ChannelPipeline pipeline = ch.pipeline();
 
         if (sslCtx != null) {
-            pipeline.addLast(sslCtx.newHandler(ch.alloc(), FactorialClient.HOST, FactorialClient.PORT));
+            pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator(), FactorialClient.HOST, FactorialClient.PORT));
         }
 
         // Enable stream compression (you can remove these two if unnecessary)

@@ -15,7 +15,7 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 
@@ -24,14 +24,14 @@ public class SslHandlerEchoBenchmark extends AbstractSslHandlerThroughputBenchma
     public int numWrites;
 
     @Benchmark
-    public ByteBuf wrapUnwrap() throws Exception {
-        ByteBuf src = doWrite(numWrites);
+    public Buffer wrapUnwrap() throws Exception {
+        Buffer src = doWrite(numWrites);
 
         do {
             serverSslHandler.channelRead(serverCtx, src);
-        } while (src.isReadable());
+        } while (src.readableBytes() > 0);
 
-        assert !src.isReadable() && src.refCnt() == 1 : "src: " + src + " src.refCnt(): " + src.refCnt();
+        assert src.readableBytes() == 0 && src.isAccessible() : "src: " + src;
 
         return src;
     }

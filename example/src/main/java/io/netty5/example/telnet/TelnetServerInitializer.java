@@ -45,7 +45,7 @@ public class TelnetServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         if (sslCtx != null) {
-            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+            pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
 
         // Add the text line codec combination first,

@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -28,6 +29,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.adaptor.BufferConversionHandler;
 import io.netty5.handler.ssl.ApplicationProtocolConfig;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -76,12 +78,12 @@ public class Http2MultiplexTransportTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            ReferenceCountUtil.release(evt);
+            Resource.dispose(evt);
         }
     };
 
@@ -338,7 +340,8 @@ public class Http2MultiplexTransportTest {
 
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()));
+                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
@@ -371,7 +374,7 @@ public class Http2MultiplexTransportTest {
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -475,7 +478,7 @@ public class Http2MultiplexTransportTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(serverCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(serverCtx.newHandler(ch.bufferAllocator()));
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -520,7 +523,7 @@ public class Http2MultiplexTransportTest {
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {

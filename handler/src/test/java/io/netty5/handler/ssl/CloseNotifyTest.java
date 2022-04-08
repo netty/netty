@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -34,9 +34,9 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import static io.netty.buffer.ByteBufUtil.writeAscii;
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty5.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
+import static io.netty5.buffer.ByteBufUtil.writeAscii;
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class CloseNotifyTest {
 
-    private static final UnpooledByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
+    private static final BufferAllocator ALLOC = offHeapAllocator();
     private static final Object INACTIVE = new Object() {
         @Override
         public String toString() {
@@ -155,47 +155,48 @@ public class CloseNotifyTest {
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();
-        return new EmbeddedChannel(
-                // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
-                // non-JDK compatible OpenSSL engine that can process partial packets:
-                sslContext.newHandler(ALLOC),
-                new SimpleChannelInboundHandler<ByteBuf>() {
+        SimpleChannelInboundHandler<Buffer> eventHandler = new SimpleChannelInboundHandler<>() {
+            @Override
+            protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) {
+                eventQueue.add(msg.toString(US_ASCII));
+            }
 
-                    @Override
-                    protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
-                        eventQueue.add(msg.toString(US_ASCII));
-                    }
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                eventQueue.add(evt);
+            }
 
-                    @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                        eventQueue.add(evt);
-                    }
-
-                    @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                        eventQueue.add(INACTIVE);
-                        super.channelInactive(ctx);
-                    }
-                }
-        );
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                eventQueue.add(INACTIVE);
+                super.channelInactive(ctx);
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setRecvBufferAllocatorUseBuffer(true);
+        // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
+        // non-JDK compatible OpenSSL engine that can process partial packets:
+        channel.pipeline().addLast(sslContext.newHandler(ALLOC));
+        channel.pipeline().addLast(eventHandler);
+        return channel;
     }
 
     private static void forwardData(EmbeddedChannel from, EmbeddedChannel to) {
-        ByteBuf in;
+        Buffer in;
         while ((in = from.readOutbound()) != null) {
             to.writeInbound(in);
         }
     }
 
     private static void forwardAllWithCloseNotify(EmbeddedChannel from, EmbeddedChannel to) {
-        ByteBuf cumulation = EMPTY_BUFFER;
-        ByteBuf in, closeNotify = null;
+        Buffer cumulation = ALLOC.allocate(0);
+        Buffer in, closeNotify = null;
         while ((in = from.readOutbound()) != null) {
             if (closeNotify != null) {
-                closeNotify.release();
+                closeNotify.close();
             }
-            closeNotify = in.duplicate();
-            cumulation = MERGE_CUMULATOR.cumulate(ALLOC, cumulation, in.retain());
+            closeNotify = in.copy();
+            cumulation = MERGE_CUMULATOR.cumulate(ALLOC, cumulation, in);
         }
         assertCloseNotify(closeNotify);
         to.writeInbound(cumulation);
@@ -209,10 +210,10 @@ public class CloseNotifyTest {
 
     private static void discardEmptyOutboundBuffers(EmbeddedChannel channel) {
         Queue<Object> outbound = channel.outboundMessages();
-        while (outbound.peek() instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) outbound.peek();
-            if (!buf.isReadable()) {
-                buf.release();
+        while (outbound.peek() instanceof Buffer) {
+            Buffer buf = (Buffer) outbound.peek();
+            if (buf.readableBytes() == 0) {
+                buf.close();
                 outbound.poll();
             } else {
                 break;
@@ -220,13 +221,13 @@ public class CloseNotifyTest {
         }
     }
 
-    static void assertCloseNotify(@Nullable ByteBuf closeNotify) {
+    static void assertCloseNotify(@Nullable Buffer closeNotify) {
         assertThat(closeNotify, notNullValue());
         try {
             assertThat("Doesn't match expected length of close_notify alert",
                     closeNotify.readableBytes(), greaterThanOrEqualTo(7));
         } finally {
-            closeNotify.release();
+            closeNotify.close();
         }
     }
 }

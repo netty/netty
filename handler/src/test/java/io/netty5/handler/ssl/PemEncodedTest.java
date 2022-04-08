@@ -21,14 +21,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
-
+import io.netty5.buffer.api.Resource;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -58,11 +57,14 @@ public class PemEncodedTest {
             ssc.delete();
         }
 
+        assertTrue(pemKey.content().readOnly());
+        assertTrue(pemCert.content().readOnly());
+
         SslContext context = SslContextBuilder.forServer(pemKey, pemCert)
                 .sslProvider(provider)
                 .build();
-        assertEquals(1, pemKey.refCnt());
-        assertEquals(1, pemCert.refCnt());
+        assertFalse(pemKey.isDestroyed());
+        assertTrue(pemCert.isAccessible());
         try {
             assertTrue(context instanceof ReferenceCountedOpenSslContext);
         } finally {
@@ -77,7 +79,7 @@ public class PemEncodedTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                PemPrivateKey.toPEM(UnpooledByteBufAllocator.DEFAULT, true, new PrivateKey() {
+                PemPrivateKey.toPEM(new PrivateKey() {
                     @Override
                     public String getAlgorithm() {
                         return null;
@@ -98,7 +100,8 @@ public class PemEncodedTest {
     }
 
     private static void assertRelease(PemEncoded encoded) {
-        assertTrue(encoded.release());
+        encoded.close();
+        assertFalse(((Resource<?>) encoded).isAccessible());
     }
 
     private static byte[] toByteArray(File file) throws Exception {
