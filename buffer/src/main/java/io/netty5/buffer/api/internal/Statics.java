@@ -181,13 +181,7 @@ public interface Statics {
             throw new IndexOutOfBoundsException(
                     "The limit of " + newLimit + " would be greater than capacity: " + buffer.capacity() + '.');
         }
-        final int pos = buffer.position();
-        final int lim = buffer.limit();
-        try {
-            return buffer.position(fromOffset).limit(newLimit).slice();
-        } finally {
-            buffer.clear().limit(lim).position(pos);
-        }
+        return buffer.duplicate().clear().position(fromOffset).limit(newLimit).slice();
     }
 
     /**
