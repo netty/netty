@@ -17,7 +17,6 @@ package io.netty5.handler.codec.frame;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.LengthFieldBasedFrameDecoderForBuffer;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.util.CharsetUtil;
@@ -33,12 +32,9 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
 
         for (int i = 0; i < 2; i++) {
             assertFalse(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 2 })));
-            try {
-                assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
+            assertThrows(TooLongFrameException.class, () -> {
+                channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0 }));
+            });
 
             assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 1, 'A' })));
 
@@ -54,12 +50,9 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
                 new LengthFieldBasedFrameDecoderForBuffer(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i++) {
-            try {
-                assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 2 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
+            assertThrows(TooLongFrameException.class, () -> {
+                channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 2 }));
+            });
 
             assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 0, 0, 1, 'A' })));
 
