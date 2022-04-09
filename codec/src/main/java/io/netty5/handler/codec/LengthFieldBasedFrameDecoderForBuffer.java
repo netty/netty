@@ -369,7 +369,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
             }
 
             final int actualLengthFieldOffset = buffer.readerOffset() + lengthFieldOffset;
-            long frameLength = getUnadjustedFrameLength(buffer, actualLengthFieldOffset, lengthFieldLength);
+            long frameLength = getUnadjustedFrameLength(buffer, actualLengthFieldOffset, lengthFieldLength, byteOrder);
 
             if (frameLength < 0) {
                 failOnNegativeLengthField(buffer, frameLength, lengthFieldEndOffset);
@@ -414,31 +414,27 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
      *
      * @throws DecoderException if failed to decode the specified region
      */
-    protected long getUnadjustedFrameLength(Buffer buffer, int offset, int length) {
-        final long frameLength;
+    protected long getUnadjustedFrameLength(Buffer buffer, int offset, int length, ByteOrder byteOrder) {
+        final boolean reverseBytes = byteOrder == ByteOrder.LITTLE_ENDIAN;
 
         switch (length) {
         case 1:
-            frameLength = buffer.getUnsignedByte(offset);
-            break;
+            return buffer.getUnsignedByte(offset);
         case 2:
-            frameLength = buffer.getUnsignedShort(offset);
-            break;
+            final int shortLength = buffer.getUnsignedShort(offset);
+            return reverseBytes? Integer.reverseBytes(shortLength) >>> Short.SIZE : shortLength;
         case 3:
-            frameLength = buffer.getUnsignedMedium(offset);
-            break;
+            final int mediumLength = buffer.getUnsignedMedium(offset);
+            return reverseBytes? Integer.reverseBytes(mediumLength) >>> Byte.SIZE : mediumLength;
         case 4:
-            frameLength = buffer.getUnsignedInt(offset);
-            break;
+            final long intLength = buffer.getUnsignedInt(offset);
+            return reverseBytes? Long.reverseBytes(intLength) >>> Integer.SIZE : intLength;
         case 8:
-            frameLength = buffer.getLong(offset);
-            break;
+            final long longLength = buffer.getLong(offset);
+            return reverseBytes? Long.reverseBytes(longLength) : longLength;
         default:
-            throw new DecoderException(
-                    "unsupported lengthFieldLength: " + lengthFieldLength + " (expected: 1, 2, 3, 4, or 8)");
+            throw new DecoderException("unsupported lengthFieldLength: " + length + " (expected: 1, 2, 3, 4, or 8)");
         }
-
-        return byteOrder == ByteOrder.LITTLE_ENDIAN? Long.reverseBytes(frameLength) : frameLength;
     }
 
     private void failOnLengthExceededIfNecessary(boolean firstDetectionOfTooLongFrame) {
