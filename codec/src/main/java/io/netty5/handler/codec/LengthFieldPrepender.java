@@ -15,16 +15,15 @@
  */
 package io.netty5.handler.codec;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
-
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.nio.ByteOrder;
 import java.util.List;
 
+import static io.netty5.util.internal.ObjectUtil.*;
+import static java.util.Objects.*;
 
 /**
  * An encoder that prepends the length of the message.  The length value is
@@ -53,7 +52,7 @@ import java.util.List;
  * </pre>
  */
 @Sharable
-public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
+public class LengthFieldPrepender extends MessageToMessageEncoder<Buffer> {
 
     private final ByteOrder byteOrder;
     private final int lengthFieldLength;
@@ -64,10 +63,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
      * Creates a new instance.
      *
      * @param lengthFieldLength the length of the prepended length field.
-     *                          Only 1, 2, 3, 4, and 8 are allowed.
-     *
-     * @throws IllegalArgumentException
-     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     *                          Only 1, 2, 3, 4, and 8 are supported by default.
      */
     public LengthFieldPrepender(int lengthFieldLength) {
         this(lengthFieldLength, false);
@@ -76,15 +72,11 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
     /**
      * Creates a new instance.
      *
-     * @param lengthFieldLength the length of the prepended length field.
-     *                          Only 1, 2, 3, 4, and 8 are allowed.
-     * @param lengthIncludesLengthFieldLength
-     *                          if {@code true}, the length of the prepended
-     *                          length field is added to the value of the
-     *                          prepended length field.
-     *
-     * @throws IllegalArgumentException
-     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     * @param lengthFieldLength               the length of the prepended length field.
+     *                                        Only 1, 2, 3, 4, and 8 are supported by default.
+     * @param lengthIncludesLengthFieldLength if {@code true}, the length of the prepended
+     *                                        length field is added to the value of the
+     *                                        prepended length field.
      */
     public LengthFieldPrepender(int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
         this(lengthFieldLength, 0, lengthIncludesLengthFieldLength);
@@ -94,12 +86,9 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
      * Creates a new instance.
      *
      * @param lengthFieldLength the length of the prepended length field.
-     *                          Only 1, 2, 3, 4, and 8 are allowed.
+     *                          Only 1, 2, 3, 4, and 8 are supported by default.
      * @param lengthAdjustment  the compensation value to add to the value
      *                          of the length field
-     *
-     * @throws IllegalArgumentException
-     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
     public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment) {
         this(lengthFieldLength, lengthAdjustment, false);
@@ -108,17 +97,13 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
     /**
      * Creates a new instance.
      *
-     * @param lengthFieldLength the length of the prepended length field.
-     *                          Only 1, 2, 3, 4, and 8 are allowed.
-     * @param lengthAdjustment  the compensation value to add to the value
-     *                          of the length field
-     * @param lengthIncludesLengthFieldLength
-     *                          if {@code true}, the length of the prepended
-     *                          length field is added to the value of the
-     *                          prepended length field.
-     *
-     * @throws IllegalArgumentException
-     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     * @param lengthFieldLength               the length of the prepended length field.
+     *                                        Only 1, 2, 3, 4, and 8 are supported by default.
+     * @param lengthAdjustment                the compensation value to add to the value
+     *                                        of the length field
+     * @param lengthIncludesLengthFieldLength if {@code true}, the length of the prepended
+     *                                        length field is added to the value of the
+     *                                        prepended length field.
      */
     public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
         this(ByteOrder.BIG_ENDIAN, lengthFieldLength, lengthAdjustment, lengthIncludesLengthFieldLength);
@@ -127,29 +112,18 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
     /**
      * Creates a new instance.
      *
-     * @param byteOrder         the {@link ByteOrder} of the length field
-     * @param lengthFieldLength the length of the prepended length field.
-     *                          Only 1, 2, 3, 4, and 8 are allowed.
-     * @param lengthAdjustment  the compensation value to add to the value
-     *                          of the length field
-     * @param lengthIncludesLengthFieldLength
-     *                          if {@code true}, the length of the prepended
-     *                          length field is added to the value of the
-     *                          prepended length field.
-     *
-     * @throws IllegalArgumentException
-     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     * @param byteOrder                       the {@link ByteOrder} of the length field
+     * @param lengthFieldLength               the length of the prepended length field.
+     *                                        Only 1, 2, 3, 4, and 8 are supported by default.
+     * @param lengthAdjustment                the compensation value to add to the value
+     *                                        of the length field
+     * @param lengthIncludesLengthFieldLength if {@code true}, the length of the prepended
+     *                                        length field is added to the value of the
+     *                                        prepended length field.
      */
     public LengthFieldPrepender(
             ByteOrder byteOrder, int lengthFieldLength,
             int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
-        if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
-            lengthFieldLength != 3 && lengthFieldLength != 4 &&
-            lengthFieldLength != 8) {
-            throw new IllegalArgumentException(
-                    "lengthFieldLength must be either 1, 2, 3, 4, or 8: " +
-                    lengthFieldLength);
-        }
         requireNonNull(byteOrder, "byteOrder");
 
         this.byteOrder = byteOrder;
@@ -159,45 +133,63 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
-        int length = msg.readableBytes() + lengthAdjustment;
+    protected void encode(ChannelHandlerContext ctx, Buffer buffer, List<Object> out) throws Exception {
+        int length = buffer.readableBytes() + lengthAdjustment;
         if (lengthIncludesLengthFieldLength) {
             length += lengthFieldLength;
         }
 
         checkPositiveOrZero(length, "length");
 
+        out.add(getLengthFieldBuffer(ctx, length, lengthFieldLength, byteOrder));
+        out.add(buffer.split());
+    }
+
+    /**
+     * Encodes the length into a buffer which will be prepended as the length field.  The default implementation is
+     * capable of encoding the length into an 8/16/24/32/64 bit integer.  Override this method to encode the length
+     * field differently.
+     *
+     * @param ctx the {@link ChannelHandlerContext} which this {@link LengthFieldPrepender} belongs to
+     * @param length the length which should be encoded in the length field
+     * @param lengthFieldLength the length of the prepended length field
+     * @param byteOrder the {@link ByteOrder} of the length field
+     * @return A buffer containing the encoded length
+     * @throws EncoderException if failed to encode the length
+     */
+    protected Buffer getLengthFieldBuffer(
+            ChannelHandlerContext ctx, int length, int lengthFieldLength, ByteOrder byteOrder) {
+        final boolean reverseBytes = byteOrder == ByteOrder.LITTLE_ENDIAN;
+
         switch (lengthFieldLength) {
         case 1:
             if (length >= 256) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a byte: " + length);
+                throw new IllegalArgumentException("length does not fit into a byte: " + length);
             }
-            out.add(ctx.alloc().buffer(1).order(byteOrder).writeByte((byte) length));
-            break;
+            return ctx.bufferAllocator().allocate(lengthFieldLength).writeByte((byte) length);
         case 2:
             if (length >= 65536) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a short integer: " + length);
+                throw new IllegalArgumentException("length does not fit into a short integer: " + length);
             }
-            out.add(ctx.alloc().buffer(2).order(byteOrder).writeShort((short) length));
-            break;
+            return ctx.bufferAllocator().allocate(lengthFieldLength)
+                      .writeShort(reverseBytes ? Short.reverseBytes((short) length) : (short) length);
         case 3:
             if (length >= 16777216) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a medium integer: " + length);
+                throw new IllegalArgumentException("length does not fit into a medium integer: " + length);
             }
-            out.add(ctx.alloc().buffer(3).order(byteOrder).writeMedium(length));
-            break;
+
+            return ctx.bufferAllocator().allocate(lengthFieldLength)
+                      .writeMedium(reverseBytes ? Integer.reverseBytes(length) >> Byte.SIZE : length);
         case 4:
-            out.add(ctx.alloc().buffer(4).order(byteOrder).writeInt(length));
-            break;
+            return ctx.bufferAllocator().allocate(lengthFieldLength)
+                      .writeInt(reverseBytes ? Integer.reverseBytes(length) : length);
         case 8:
-            out.add(ctx.alloc().buffer(8).order(byteOrder).writeLong(length));
-            break;
+            return ctx.bufferAllocator().allocate(lengthFieldLength)
+                      .writeLong(reverseBytes ? Long.reverseBytes(length) : length);
         default:
-            throw new Error("should not reach here");
+            throw new EncoderException(
+                    "unsupported lengthFieldLength: " + lengthFieldLength + " (expected: 1, 2, 3, 4, or 8)");
         }
-        out.add(msg.retain());
     }
+
 }
