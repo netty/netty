@@ -67,7 +67,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
             }
             if (option instanceof RawUnixChannelOption) {
                 RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                ByteBuffer out = ByteBuffer.allocate(opt.level());
+                ByteBuffer out = ByteBuffer.allocate(opt.length());
                 ((AbstractKQueueChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
                 return (T) out.flip();
             }
