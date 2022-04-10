@@ -22,8 +22,8 @@ import io.netty5.channel.ChannelHandlerContext;
 import java.nio.ByteOrder;
 import java.util.List;
 
-import static io.netty5.util.internal.ObjectUtil.*;
-import static java.util.Objects.*;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An encoder that prepends the length of the message.  The length value is
