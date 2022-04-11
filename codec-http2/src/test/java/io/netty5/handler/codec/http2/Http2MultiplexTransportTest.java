@@ -344,7 +344,6 @@ public class Http2MultiplexTransportTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()));
                     ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
-                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
