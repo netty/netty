@@ -15,102 +15,100 @@
  */
 package io.netty5.handler.codec.frame;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.LengthFieldPrepender;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.buffer.Unpooled.*;
 import java.nio.ByteOrder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LengthFieldPrependerTest {
 
-    private ByteBuf msg;
+    private Buffer message;
 
     @BeforeEach
     public void setUp() throws Exception {
-        msg = copiedBuffer("A", CharsetUtil.ISO_8859_1);
+        message = DefaultBufferAllocators.onHeapAllocator().copyOf(new byte[] {50});
     }
 
     @Test
     public void testPrependLength() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
-        ch.writeOutbound(msg);
-        ByteBuf buf = ch.readOutbound();
-        assertEquals(4, buf.readableBytes());
-        assertEquals(msg.readableBytes(), buf.readInt());
-        buf.release();
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldPrepender(4));
+        assertTrue(channel.writeOutbound(message.copy()));
 
-        buf = ch.readOutbound();
-        assertSame(buf, msg);
-        buf.release();
-    }
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(4, buffer.readableBytes());
+            assertEquals(message.readableBytes(), buffer.readInt());
+        }
 
-    @Test
-    public void testPrependLengthIncludesLengthFieldLength() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
-        ch.writeOutbound(msg);
-        ByteBuf buf = ch.readOutbound();
-        assertEquals(4, buf.readableBytes());
-        assertEquals(5, buf.readInt());
-        buf.release();
-
-        buf = ch.readOutbound();
-        assertSame(buf, msg);
-        buf.release();
-    }
-
-    @Test
-    public void testPrependAdjustedLength() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
-        ch.writeOutbound(msg);
-        ByteBuf buf = ch.readOutbound();
-        assertEquals(4, buf.readableBytes());
-        assertEquals(msg.readableBytes() - 1, buf.readInt());
-        buf.release();
-
-        buf = ch.readOutbound();
-        assertSame(buf, msg);
-        buf.release();
-    }
-
-    @Test
-    public void testAdjustedLengthLessThanZero() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
-        try {
-            ch.writeOutbound(msg);
-            fail(EncoderException.class.getSimpleName() + " must be raised.");
-        } catch (EncoderException e) {
-            // Expected
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(message, buffer);
         }
     }
 
     @Test
-    public void testPrependLengthInLittleEndian() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(ByteOrder.LITTLE_ENDIAN, 4, 0, false));
-        ch.writeOutbound(msg);
-        ByteBuf buf = ch.readOutbound();
-        assertEquals(4, buf.readableBytes());
-        byte[] writtenBytes = new byte[buf.readableBytes()];
-        buf.getBytes(0, writtenBytes);
-        assertEquals(1, writtenBytes[0]);
-        assertEquals(0, writtenBytes[1]);
-        assertEquals(0, writtenBytes[2]);
-        assertEquals(0, writtenBytes[3]);
-        buf.release();
+    public void testPrependLengthIncludesLengthFieldLength() throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldPrepender(4, true));
+        assertTrue(channel.writeOutbound(message.copy()));
 
-        buf = ch.readOutbound();
-        assertSame(buf, msg);
-        buf.release();
-        assertFalse(ch.finish(), "The channel must have been completely read");
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(4, buffer.readableBytes());
+            assertEquals(message.readableBytes() + 4, buffer.readInt());
+        }
+
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(message, buffer);
+        }
+    }
+
+    @Test
+    public void testPrependAdjustedLength() throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
+        assertTrue(channel.writeOutbound(message.copy()));
+
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(4, buffer.readableBytes());
+            assertEquals(message.readableBytes() - 1, buffer.readInt());
+        }
+
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(message, buffer);
+        }
+    }
+
+    @Test
+    public void testAdjustedLengthLessThanZero() throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
+        assertThrows(EncoderException.class, () -> channel.writeOutbound(message.copy()));
+    }
+
+    @Test
+    public void testPrependLengthInLittleEndian() throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new LengthFieldPrepender(ByteOrder.LITTLE_ENDIAN, 4, 0, false));
+        assertTrue(channel.writeOutbound(message.copy()));
+
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(4, buffer.readableBytes());
+            assertEquals(1, buffer.readByte());
+            assertEquals(0, buffer.readByte());
+            assertEquals(0, buffer.readByte());
+            assertEquals(0, buffer.readByte());
+        }
+
+        try (Buffer buffer = channel.readOutbound()) {
+            assertEquals(message, buffer);
+        }
+
+        assertFalse(channel.finish(), "The channel must have been completely read");
     }
 
 }
