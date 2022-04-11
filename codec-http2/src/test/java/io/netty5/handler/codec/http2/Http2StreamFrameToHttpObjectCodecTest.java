@@ -22,6 +22,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.adaptor.BufferConversionHandler;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -440,7 +441,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-        EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(offHeapAllocator()),
+        EmbeddedChannel ch = new EmbeddedChannel(
+                ctx.newHandler(offHeapAllocator()),
+                BufferConversionHandler.bufferToByteBuf(),
                 new ChannelHandler() {
                     @Override
                     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {

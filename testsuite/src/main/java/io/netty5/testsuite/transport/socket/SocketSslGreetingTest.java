@@ -18,6 +18,7 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
@@ -125,6 +126,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     public void testSslGreeting(ServerBootstrap sb, Bootstrap cb, SslContext serverCtx,
                                 SslContext clientCtx, boolean delegate) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         final ServerHandler sh = new ServerHandler();
         final ClientHandler ch = new ClientHandler();
 
@@ -178,15 +180,15 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
     }
 
-    private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class ClientHandler extends SimpleChannelInboundHandler<Buffer> {
 
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer buf) throws Exception {
             assertEquals('a', buf.readByte());
-            assertFalse(buf.isReadable());
+            assertEquals(0, buf.readableBytes());
             latch.countDown();
             ctx.close();
         }
@@ -216,7 +218,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
-            channel.writeAndFlush(ctx.alloc().buffer().writeByte('a'));
+            channel.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] {'a'}));
         }
 
         @Override

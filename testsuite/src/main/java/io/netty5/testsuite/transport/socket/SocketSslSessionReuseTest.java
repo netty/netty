@@ -20,6 +20,8 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -88,6 +90,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb,
                                     SslContext serverCtx, SslContext clientCtx) throws Throwable {
+        enableNewBufferAPI(sb, cb);
         final ReadAndDiscardHandler sh = new ReadAndDiscardHandler(true, true);
         final ReadAndDiscardHandler ch = new ReadAndDiscardHandler(false, true);
         final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2" };
@@ -121,14 +124,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         try {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
+            Buffer msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
             Channel cc = cb.connect(sc.localAddress()).get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
-            msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
+            msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
             cc = cb.connect(sc.localAddress()).get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
@@ -165,7 +168,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     @Sharable
-    private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<Buffer> {
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         private final boolean server;
         private final boolean autoRead;
@@ -176,9 +179,10 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+            in.copyInto(in.readerOffset(), actual, 0, actual.length);
+            in.skipReadable(in.readableBytes());
             ctx.close();
         }
 
