@@ -31,6 +31,7 @@ import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.Statics;
 
 import java.io.IOException;
+import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
@@ -588,7 +589,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             return 0;
         }
         checkRead(readerOffset(), readableBytes);
-        return processor.process(initialIndex, this)? 1 : -1;
+        try {
+            return processor.process(initialIndex, this)? 1 : -1;
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     @Override
@@ -602,7 +607,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             return 0;
         }
         checkWrite(writerOffset(), writableBytes);
-        return processor.process(initialIndex, this)? 1 : -1;
+        try {
+            return processor.process(initialIndex, this)? 1 : -1;
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">
