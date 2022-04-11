@@ -36,7 +36,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
         assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buffer));
         assertTrue(channel.finish());
 
-        try (final Buffer readBuffer = channel.readInbound()) {
+        try (Buffer readBuffer = channel.readInbound()) {
             assertEquals(5, readBuffer.readableBytes());
             assertEquals(1, readBuffer.readInt());
             assertEquals(50, readBuffer.readByte());
@@ -55,7 +55,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
         assertTrue(channel.writeInbound(buffer));
         assertTrue(channel.finish());
 
-        try (final Buffer readBuffer = channel.readInbound()) {
+        try (Buffer readBuffer = channel.readInbound()) {
             assertEquals(5, readBuffer.readableBytes());
             assertEquals(1, readBuffer.readInt());
             assertEquals(50, readBuffer.readByte());
