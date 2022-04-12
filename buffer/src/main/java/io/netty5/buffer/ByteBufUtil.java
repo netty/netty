@@ -51,6 +51,42 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Reverses the byte order (endianness) of an unsigned short
+     * @param value the number with original byte order
+     * @return the number with reversed byte order
+     */
+    public static int reverseUnsignedShort(int value) {
+        return Integer.reverseBytes(value) >>> Short.SIZE;
+    }
+
+    /**
+     * Reverses the byte order (endianness) of a medium
+     * @param value the number with original byte order
+     * @return the number with reversed byte order
+     */
+    public static int reverseMedium(int value) {
+        return Integer.reverseBytes(value) >> Byte.SIZE;
+    }
+
+    /**
+     * Reverses the byte order (endianness) of an unsigned medium
+     * @param value the number with original byte order
+     * @return the number with reversed byte order
+     */
+    public static int reverseUnsignedMedium(int value) {
+        return Integer.reverseBytes(value) >>> Byte.SIZE;
+    }
+
+    /**
+     * Reverses the byte order (endianness) of an unsigned integer
+     * @param value the number with original byte order
+     * @return the number with reversed byte order
+     */
+    public static long reverseUnsignedInt(long value) {
+        return Long.reverseBytes(value) >>> Integer.SIZE;
+    }
+
+    /**
      * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
      */
