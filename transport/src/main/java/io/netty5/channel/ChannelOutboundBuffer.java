@@ -200,6 +200,9 @@ public final class ChannelOutboundBuffer {
     }
 
     private static long total(Object msg) {
+        if (msg instanceof Buffer) {
+            return ((Buffer) msg).readableBytes();
+        }
         if (msg instanceof ByteBufConvertible) {
             return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
         }
