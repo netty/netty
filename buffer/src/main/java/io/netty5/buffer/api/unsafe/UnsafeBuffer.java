@@ -675,7 +675,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             return 0;
         }
         checkRead(readerOffset(), readableBytes);
-        return processor.process(initialIndex, this)? 1 : -1;
+        try {
+            return processor.process(initialIndex, this)? 1 : -1;
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     @Override
@@ -689,7 +693,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             return 0;
         }
         checkWrite(writerOffset(), writableBytes);
-        return processor.process(initialIndex, this)? 1 : -1;
+        try {
+            return processor.process(initialIndex, this)? 1 : -1;
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">
