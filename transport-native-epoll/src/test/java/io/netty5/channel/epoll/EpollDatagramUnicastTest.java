@@ -16,16 +16,17 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.Send;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
+import io.netty5.channel.unix.BufferSegmentedDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.DatagramUnicastInetTest;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -121,9 +124,9 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 sb.option(EpollChannelOption.UDP_GRO, true);
                 sb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(bufferCapacity));
             }
-            sc = sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            sc = sb.handler(new SimpleChannelInboundHandler<BufferDatagramPacket>() {
                 @Override
-                public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) {
+                public void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket packet) {
                     if (packet.content().readableBytes() == segmentSize) {
                         latch.countDown();
                     }
@@ -138,18 +141,22 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));
             }
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
-            final ByteBuf buffer;
+            final Buffer buffer;
             if (composite) {
-                CompositeByteBuf compositeBuffer = Unpooled.compositeBuffer();
+                Buffer[] components = new Buffer[numBuffers];
                 for (int i = 0; i < numBuffers; i++) {
-                    compositeBuffer.addComponent(true,
-                            Unpooled.directBuffer(segmentSize).writeZero(segmentSize));
+                    components[i] = offHeapAllocator().allocate(segmentSize);
+                    components[i].fill((byte) 0);
+                    components[i].skipWritable(segmentSize);
                 }
-                buffer = compositeBuffer;
+                buffer = CompositeBuffer.compose(
+                        offHeapAllocator(), stream(components).map(Buffer::send).toArray(Send[]::new));
             } else {
-                buffer = Unpooled.directBuffer(bufferCapacity).writeZero(bufferCapacity);
+                buffer = offHeapAllocator().allocate(bufferCapacity);
+                buffer.fill((byte) 0);
+                buffer.skipWritable(bufferCapacity);
             }
-            cc.writeAndFlush(new io.netty5.channel.unix.SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
+            cc.writeAndFlush(new BufferSegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();

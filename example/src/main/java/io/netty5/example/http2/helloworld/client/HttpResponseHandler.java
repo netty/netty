@@ -103,8 +103,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
             if (content.readableBytes() > 0) {
                 int contentLength = content.readableBytes();
                 byte[] arr = new byte[contentLength];
-                content.copyInto(content.readerOffset(), arr, 0, contentLength);
-                content.skipReadable(contentLength);
+                content.readBytes(arr, 0, contentLength);
                 System.out.println(new String(arr, 0, contentLength, CharsetUtil.UTF_8));
             }
 

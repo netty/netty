@@ -179,8 +179,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.copyInto(in.readerOffset(), actual, 0, actual.length);
-            in.skipReadable(in.readableBytes());
+            in.readBytes(actual, 0, actual.length);
             ctx.close();
         }
 

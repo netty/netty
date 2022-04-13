@@ -233,8 +233,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.copyInto(in.readerOffset(), actual, 0, actual.length);
-            in.skipReadable(actual.length);
+            in.readBytes(actual, 0, actual.length);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {

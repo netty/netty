@@ -484,8 +484,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             byte[] actual = new byte[in.readableBytes()];
             int nb = actual.length / messageSize;
             loggerServer.info("Step: " + step + " Read: " + nb + " blocks");
-            in.copyInto(in.readerOffset(), actual, 0, actual.length);
-            in.skipReadable(actual.length);
+            in.readBytes(actual, 0, actual.length);
             long timestamp = TrafficCounter.milliSecondFromNano();
             int isAutoRead = 0;
             int laststep = step;
