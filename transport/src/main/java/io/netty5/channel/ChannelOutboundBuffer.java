@@ -200,14 +200,17 @@ public final class ChannelOutboundBuffer {
     }
 
     private static long total(Object msg) {
-        if (msg instanceof ByteBufConvertible) {
-            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
+        if (msg instanceof Buffer) {
+            return ((Buffer) msg).readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();
         }
         if (msg instanceof ByteBufHolder) {
             return ((ByteBufHolder) msg).content().readableBytes();
+        }
+        if (msg instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
         }
         return -1;
     }
