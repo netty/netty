@@ -174,8 +174,8 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     private void testGatheringWrite0(
             ServerBootstrap sb, Bootstrap cb, byte[] data, boolean composite, boolean autoRead, boolean newBufferAPI)
             throws Throwable {
-        if (newBufferAPI) {
-            enableNewBufferAPI(sb, cb);
+        if (!newBufferAPI) {
+            disableNewBufferAPI(sb, cb);
         }
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);

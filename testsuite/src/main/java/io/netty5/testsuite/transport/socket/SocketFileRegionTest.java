@@ -17,8 +17,8 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.MemoryManager;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -27,7 +27,6 @@ import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.util.internal.PlatformDependent;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -40,8 +39,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
@@ -92,9 +90,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        sb.childHandler(new SimpleChannelInboundHandler<ByteBuf>() {
+        sb.childHandler(new SimpleChannelInboundHandler<Buffer>() {
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
+            protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) {
                 // Just drop the message.
             }
         });
@@ -107,7 +105,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertThat(cc.writeAndFlush(region).await().cause(), CoreMatchers.<Throwable>instanceOf(IOException.class));
+        assertThat(cc.writeAndFlush(region).await().cause()).isInstanceOf(IOException.class);
         cc.close().sync();
         sc.close().sync();
     }
@@ -174,12 +172,14 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             region = new FileRegionWrapper(region);
             emptyRegion = new FileRegionWrapper(emptyRegion);
         }
-        // Do write ByteBuf and then FileRegion to ensure that mixed writes work
+        // Do write Buffer and then FileRegion to ensure that mixed writes work
         // Also, write an empty FileRegion to test if writing an empty FileRegion does not cause any issues.
         //
         // See https://github.com/netty/netty/issues/2769
         //     https://github.com/netty/netty/issues/2964
-        cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize));
+        try (Buffer buffer = MemoryManager.unsafeWrap(data)) {
+            cc.write(buffer.readSplit(bufferSize));
+        }
         cc.write(emptyRegion);
         cc.writeAndFlush(region);
 
@@ -208,10 +208,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         // Make sure we did not receive more than we expected.
-        assertThat(sh.counter, is(data.length));
+        assertThat(sh.counter).isEqualTo(data.length);
     }
 
-    private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class TestHandler extends SimpleChannelInboundHandler<Buffer> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -231,9 +231,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+            in.copyInto(in.readerOffset(), actual, 0, actual.length);
+            in.skipReadable(actual.length);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {

@@ -49,6 +49,7 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
     }
 
     public void testCancelWriteByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        disableNewBufferAPI(sb, cb);
         final TestHandler sh = new TestHandler();
         final TestHandler ch = new TestHandler();
         final ByteBuf a = Unpooled.buffer().writeByte('a');

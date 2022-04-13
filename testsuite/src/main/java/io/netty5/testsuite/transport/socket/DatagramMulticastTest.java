@@ -15,8 +15,8 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty5.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -55,6 +55,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     public void testMulticastByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        disableNewBufferAPI(sb, cb);
         NetworkInterface iface = multicastNetworkInterface();
         assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
                              socketInternetProtocalFamily());
@@ -75,6 +76,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
 
         DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).get();
         assertEquals(iface, sc.config().getNetworkInterface());

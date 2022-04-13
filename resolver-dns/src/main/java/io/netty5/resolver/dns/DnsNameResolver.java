@@ -452,6 +452,7 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
+        b.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false); // todo DNS is not migrated yet
         channelReadyPromise = executor().newPromise();
         final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
