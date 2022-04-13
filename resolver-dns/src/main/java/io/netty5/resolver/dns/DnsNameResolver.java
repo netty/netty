@@ -209,19 +209,6 @@ public class DnsNameResolver extends InetNameResolver {
     };
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
-    private static final MessageToMessageDecoder<BufferDatagramPacket> CONVERTER =
-            new MessageToMessageDecoder<BufferDatagramPacket>() {
-        @Override
-        protected void decode(ChannelHandlerContext ctx, BufferDatagramPacket msg) throws Exception {
-            ByteBuf content = intoByteBuf(msg.content());
-            ctx.fireChannelRead(new DatagramPacket(content, msg.recipient(), msg.sender()));
-        }
-
-        @Override
-        public boolean isSharable() {
-            return true;
-        }
-    };
 
     final Promise<Channel> channelReadyPromise;
     final Channel ch;
@@ -471,12 +458,13 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
+        b.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
         channelReadyPromise = executor().newPromise();
         final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
-                ch.pipeline().addLast(CONVERTER, DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
+                ch.pipeline().addLast(DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
                 ch.closeFuture().addListener(closeFuture -> {
                     resolveCache.clear();
                     cnameCache.clear();
@@ -1290,6 +1278,7 @@ public class DnsNameResolver extends InetNameResolver {
             bs.option(ChannelOption.SO_REUSEADDR, true)
             .group(executor())
             .channelFactory(socketChannelFactory)
+            .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false)
             .handler(TCP_ENCODER);
             bs.connect(res.sender()).addListener(future -> {
                 if (future.isFailed()) {
