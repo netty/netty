@@ -18,6 +18,7 @@ package io.netty5.resolver.dns;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;
@@ -27,11 +28,14 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
+import io.netty5.handler.codec.MessageToMessageDecoder;
+import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.handler.codec.dns.DatagramDnsQueryEncoder;
 import io.netty5.handler.codec.dns.DatagramDnsResponse;
 import io.netty5.handler.codec.dns.DatagramDnsResponseDecoder;
@@ -77,6 +81,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
+import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
@@ -203,6 +209,18 @@ public class DnsNameResolver extends InetNameResolver {
     };
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
+    private static final MessageToMessageDecoder<BufferDatagramPacket> CONVERTER = new MessageToMessageDecoder<BufferDatagramPacket>() {
+        @Override
+        protected void decode(ChannelHandlerContext ctx, BufferDatagramPacket msg) throws Exception {
+            ByteBuf content = intoByteBuf(msg.content());
+            ctx.fireChannelRead(new DatagramPacket(content, msg.recipient(), msg.sender()));
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    };
 
     final Promise<Channel> channelReadyPromise;
     final Channel ch;
@@ -452,13 +470,12 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
-        b.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false); // todo DNS is not migrated yet
         channelReadyPromise = executor().newPromise();
         final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
-                ch.pipeline().addLast(DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
+                ch.pipeline().addLast(CONVERTER, DATAGRAM_ENCODER, DATAGRAM_DECODER, responseHandler);
                 ch.closeFuture().addListener(closeFuture -> {
                     resolveCache.clear();
                     cnameCache.clear();

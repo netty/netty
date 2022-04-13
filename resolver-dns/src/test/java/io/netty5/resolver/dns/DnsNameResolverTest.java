@@ -26,6 +26,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
@@ -3061,10 +3062,10 @@ public class DnsNameResolverTest {
                 resolver.ch.pipeline().addFirst(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof DatagramPacket) {
+                        if (msg instanceof BufferDatagramPacket) {
                             // Truncate the packet by 1 byte.
-                            DatagramPacket packet = (DatagramPacket) msg;
-                            packet.content().writerIndex(packet.content().writerIndex() - 1);
+                            BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+                            packet.content().writerOffset(packet.content().writerOffset() - 1);
                         }
                         ctx.fireChannelRead(msg);
                     }
