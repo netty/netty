@@ -209,7 +209,8 @@ public class DnsNameResolver extends InetNameResolver {
     };
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
-    private static final MessageToMessageDecoder<BufferDatagramPacket> CONVERTER = new MessageToMessageDecoder<BufferDatagramPacket>() {
+    private static final MessageToMessageDecoder<BufferDatagramPacket> CONVERTER =
+            new MessageToMessageDecoder<BufferDatagramPacket>() {
         @Override
         protected void decode(ChannelHandlerContext ctx, BufferDatagramPacket msg) throws Exception {
             ByteBuf content = intoByteBuf(msg.content());
