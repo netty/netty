@@ -17,7 +17,7 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.api.Buffer;
 
-import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 
 /**
  * A set of commonly used delimiters for {@link DelimiterBasedFrameDecoder}.
@@ -30,7 +30,8 @@ public final class Delimiters {
      */
     public static Buffer[] nulDelimiter() {
         return new Buffer[] {
-                onHeapUnpooled().copyOf(new byte[] { 0 }).makeReadOnly() };
+                onHeapAllocator().copyOf(new byte[] { 0 }).makeReadOnly()
+        };
     }
 
     /**
@@ -39,8 +40,8 @@ public final class Delimiters {
      */
     public static Buffer[] lineDelimiter() {
         return new Buffer[] {
-                onHeapUnpooled().copyOf(new byte[] { '\r', '\n' }).makeReadOnly(),
-                onHeapUnpooled().copyOf(new byte[] { '\n' }).makeReadOnly(),
+                onHeapAllocator().copyOf(new byte[] { '\r', '\n' }).makeReadOnly(),
+                onHeapAllocator().copyOf(new byte[] { '\n' }).makeReadOnly(),
         };
     }
 
