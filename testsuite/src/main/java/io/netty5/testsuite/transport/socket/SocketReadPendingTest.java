@@ -60,7 +60,8 @@ public class SocketReadPendingTest extends AbstractSocketTest {
 
     public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
             throws Throwable {
-        if (newBufferAPI) {
+        if (!newBufferAPI) {
+            disableNewBufferAPI(sb, cb);
         }
         Channel serverChannel = null;
         Channel clientChannel = null;

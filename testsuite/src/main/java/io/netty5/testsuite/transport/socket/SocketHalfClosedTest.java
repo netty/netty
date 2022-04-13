@@ -70,7 +70,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(
             ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
             throws Throwable {
-        if (newBufferAPI) {
+        if (!newBufferAPI) {
+            disableNewBufferAPI(sb, cb);
         }
         Channel serverChannel = null;
         Channel clientChannel = null;
