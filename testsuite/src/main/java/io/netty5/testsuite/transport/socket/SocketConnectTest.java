@@ -161,7 +161,6 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         enableTcpFastOpen(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);

@@ -324,7 +324,6 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     @SuppressWarnings("deprecation")
     private void testSimpleSend0(Bootstrap sb, Bootstrap cb, Buffer buf, boolean bindClient,
                                 final byte[] bytes, int count) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel sc = null;
         Channel cc = null;
 
@@ -480,7 +479,6 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     private void testSimpleSendWithConnect0(Bootstrap sb, Bootstrap cb, Buffer buf, final byte[] bytes, int count)
             throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel sc = null;
         Channel cc = null;
         try (buf) {

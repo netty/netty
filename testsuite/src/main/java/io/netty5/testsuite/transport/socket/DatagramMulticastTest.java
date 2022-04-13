@@ -128,7 +128,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         NetworkInterface iface = multicastNetworkInterface();
         assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
                              socketInternetProtocalFamily());

@@ -62,7 +62,6 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         final WriteHandler serverHandler;
         final WriteHandler clientHandler;
         if (useNewBufferAPI) {
-            enableNewBufferAPI(sb, cb);
             serverHandler = new BufferWriterHandler();
             clientHandler = new BufferWriterHandler();
         } else {

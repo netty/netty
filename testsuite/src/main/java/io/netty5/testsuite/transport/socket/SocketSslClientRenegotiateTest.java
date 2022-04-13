@@ -151,7 +151,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     public void testSslRenegotiationRejected(ServerBootstrap sb, Bootstrap cb, SslContext serverCtx,
                                              SslContext clientCtx, boolean delegate) throws Throwable {
         reset();
-        enableNewBufferAPI(sb, cb);
 
         final ExecutorService executorService = delegate ? Executors.newCachedThreadPool() : null;
 

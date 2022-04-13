@@ -152,7 +152,6 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testSingleCompositeBufferWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -394,7 +393,6 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testCompositeBufferPartialWriteDoesNotCorruptData(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         // The scenario is the following:
         // Limit SO_SNDBUF so that a single buffer can be written, and part of a CompositeByteBuf at the same time.
         // We then write the single buffer, the CompositeByteBuf, and another single buffer and verify the data is not

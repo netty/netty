@@ -81,7 +81,6 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
     }
 
     public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {

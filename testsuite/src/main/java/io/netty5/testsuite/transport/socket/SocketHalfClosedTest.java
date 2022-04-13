@@ -71,7 +71,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
             throws Throwable {
         if (newBufferAPI) {
-            enableNewBufferAPI(sb, cb);
         }
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -222,7 +221,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     public void testAllDataReadAfterHalfClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testAllDataReadAfterHalfClosure(true, sb, cb, true);
         testAllDataReadAfterHalfClosure(false, sb, cb, true);
     }
@@ -360,7 +358,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     public void testAutoCloseFalseDoesShutdownOutput(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testAutoCloseFalseDoesShutdownOutput(false, false, sb, cb, true);
         testAutoCloseFalseDoesShutdownOutput(false, true, sb, cb, true);
         testAutoCloseFalseDoesShutdownOutput(true, false, sb, cb, true);
@@ -596,7 +593,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     public void testAllDataReadClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testAllDataReadClosure(true, false, sb, cb, true);
         testAllDataReadClosure(true, true, sb, cb, true);
         testAllDataReadClosure(false, false, sb, cb, true);

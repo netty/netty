@@ -112,7 +112,6 @@ public class SocketAutoReadTest extends AbstractSocketTest {
     }
 
     public void testAutoReadOffDuringReadOnlyReadsOne(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testAutoReadOffDuringReadOnlyReadsOne(true, sb, cb);
         testAutoReadOffDuringReadOnlyReadsOne(false, sb, cb);
     }

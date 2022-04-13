@@ -140,7 +140,6 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
     }
 
     public void testAutoReadOffNoDataReadUntilReadCalled(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         final int sleepMs = 100;
@@ -293,7 +292,6 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
     }
 
     public void testAutoReadOnDataReadImmediately(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {

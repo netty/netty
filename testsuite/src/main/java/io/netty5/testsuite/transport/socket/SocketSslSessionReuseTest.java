@@ -17,7 +17,6 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
@@ -90,7 +89,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb,
                                     SslContext serverCtx, SslContext clientCtx) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         final ReadAndDiscardHandler sh = new ReadAndDiscardHandler(true, true);
         final ReadAndDiscardHandler ch = new ReadAndDiscardHandler(false, true);
         final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2" };
