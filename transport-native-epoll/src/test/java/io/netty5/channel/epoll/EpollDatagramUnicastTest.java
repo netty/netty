@@ -130,12 +130,26 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                     if (msg instanceof BufferDatagramPacket) {
                         BufferDatagramPacket packet = (BufferDatagramPacket) msg;
-                        if (packet.content().readableBytes() == segmentSize) {
-                            latch.countDown();
-                        }
+                        int packetSize = packet.content().readableBytes();
+                        assertEquals(segmentSize, packetSize, "Unexpected datagram packet size");
+                        latch.countDown();
                     } else {
-                        throw new RuntimeException("Unexpected message of type " + msg.getClass() + ": " + msg);
+                        fail("Unexpected message of type " + msg.getClass() + ": " + msg);
                     }
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    do {
+                        Throwable throwable = errorRef.get();
+                        if (throwable != null) {
+                            if (throwable != cause) {
+                                throwable.addSuppressed(cause);
+                            }
+                            break;
+                        }
+                    } while (!errorRef.compareAndSet(null, cause));
+                    super.exceptionCaught(ctx, cause);
                 }
             }).bind(newSocketAddress()).get();
 
