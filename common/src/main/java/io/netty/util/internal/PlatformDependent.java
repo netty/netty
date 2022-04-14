@@ -504,6 +504,10 @@ public final class PlatformDependent {
         return PlatformDependent0.getInt(object, fieldOffset);
     }
 
+    static void safeConstructPutInt(Object object, long fieldOffset, int value) {
+        PlatformDependent0.safeConstructPutInt(object, fieldOffset, value);
+    }
+
     public static int getIntVolatile(long address) {
         return PlatformDependent0.getIntVolatile(address);
     }

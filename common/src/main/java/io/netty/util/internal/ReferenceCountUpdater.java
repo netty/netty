@@ -59,6 +59,15 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         return 2;
     }
 
+    public void setInitialValue(T instance) {
+        final long offset = unsafeOffset();
+        if (offset == -1) {
+            updater().set(instance, initialValue());
+        } else {
+            PlatformDependent.safeConstructPutInt(instance, offset, initialValue());
+        }
+    }
+
     private static int realRefCnt(int rawCnt) {
         return rawCnt != 2 && rawCnt != 4 && (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
     }
