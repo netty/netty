@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -46,6 +46,8 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -70,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class Http2MultiplexTransportTest {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(Http2MultiplexTransportTest.class);
     private static final ChannelHandler DISCARD_HANDLER = new ChannelHandlerAdapter() {
 
         @Override
@@ -269,27 +272,27 @@ public class Http2MultiplexTransportTest {
     }
 
     @Test
-    @Timeout(value = 5000L, unit = MILLISECONDS)
+    @Timeout(value = 10000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv12() throws Exception {
         testSslException(SslProvider.OPENSSL, false);
     }
 
     @Test
-    @Timeout(value = 5000L, unit = MILLISECONDS)
+    @Timeout(value = 10000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv13() throws Exception {
         testSslException(SslProvider.OPENSSL, true);
     }
 
     @Disabled("JDK SSLEngine does not produce an alert")
     @Test
-    @Timeout(value = 5000L, unit = MILLISECONDS)
+    @Timeout(value = 10000L, unit = MILLISECONDS)
     public void testSSLExceptionJDKTLSv12() throws Exception {
         testSslException(SslProvider.JDK, false);
     }
 
     @Disabled("JDK SSLEngine does not produce an alert")
     @Test
-    @Timeout(value = 5000L, unit = MILLISECONDS)
+    @Timeout(value = 10000L, unit = MILLISECONDS)
     public void testSSLExceptionJDKTLSv13() throws Exception {
         testSslException(SslProvider.JDK, true);
     }
@@ -401,6 +404,8 @@ public class Http2MultiplexTransportTest {
                                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                             if (cause.getCause() instanceof SSLException) {
                                                 latch.countDown();
+                                            } else {
+                                                LOGGER.debug("Got unexpected exception in h2Boostrap handler", cause);
                                             }
                                         }
 
@@ -424,7 +429,13 @@ public class Http2MultiplexTransportTest {
                                     }
                                     latch.countDown();
                                     latch.countDown();
+                                } else {
+                                    LOGGER.debug(
+                                            "Got unexpected handshake completion event in client bootstrap handler: {}",
+                                            handshakeCompletionEvent);
                                 }
+                            } else {
+                                LOGGER.debug("Got unexpected user event in client bootstrap handler: {}", evt);
                             }
                         }
                     });
