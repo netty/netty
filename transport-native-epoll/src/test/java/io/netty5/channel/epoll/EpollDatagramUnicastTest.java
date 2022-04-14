@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.BufferSegmentedDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
@@ -124,11 +125,16 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 sb.option(EpollChannelOption.UDP_GRO, true);
                 sb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(bufferCapacity));
             }
-            sc = sb.handler(new SimpleChannelInboundHandler<BufferDatagramPacket>() {
+            sc = sb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
-                public void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket packet) {
-                    if (packet.content().readableBytes() == segmentSize) {
-                        latch.countDown();
+                public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                    if (msg instanceof BufferDatagramPacket) {
+                        BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+                        if (packet.content().readableBytes() == segmentSize) {
+                            latch.countDown();
+                        }
+                    } else {
+                        throw new RuntimeException("Unexpected message of type " + msg.getClass() + ": " + msg);
                     }
                 }
             }).bind(newSocketAddress()).get();
