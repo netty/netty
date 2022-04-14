@@ -76,14 +76,17 @@ final class NativeDatagramPacketArray {
         return 0 != buf.forEachWritable(0, (index, component) -> {
             int writableBytes = component.writableBytes();
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            if (iovArray.process(component, byteCount)) {
+            boolean addedAny = false;
+            while (byteCount > 0 && iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
                 p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
                 count++;
                 component.skipWritable(byteCount);
-                return true;
+                writableBytes = component.writableBytes();
+                byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+                addedAny = true;
             }
-            return false;
+            return addedAny;
         });
     }
 
@@ -93,7 +96,7 @@ final class NativeDatagramPacketArray {
             // recvmmsg(...) / sendmmsg(...) call, we will try again later.
             return false;
         }
-        if (buf.writableBytes() == 0) {
+        if (buf.readableBytes() == 0) {
             return true;
         }
         int offset = iovArray.count();
@@ -103,14 +106,17 @@ final class NativeDatagramPacketArray {
         return 0 != buf.forEachReadable(0, (index, component) -> {
             int writableBytes = component.readableBytes();
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            if (iovArray.process(component, byteCount)) {
+            boolean addedAny = false;
+            while (byteCount > 0 && iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
                 p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
                 count++;
                 component.skipReadable(byteCount);
-                return true;
+                writableBytes = component.readableBytes();
+                byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+                addedAny = true;
             }
-            return false;
+            return addedAny;
         });
     }
 
