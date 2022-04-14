@@ -3062,10 +3062,10 @@ public class DnsNameResolverTest {
                 resolver.ch.pipeline().addFirst(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof BufferDatagramPacket) {
+                        if (msg instanceof DatagramPacket) {
                             // Truncate the packet by 1 byte.
-                            BufferDatagramPacket packet = (BufferDatagramPacket) msg;
-                            packet.content().writerOffset(packet.content().writerOffset() - 1);
+                            DatagramPacket packet = (DatagramPacket) msg;
+                            packet.content().writerIndex(packet.content().writerIndex() - 1);
                         }
                         ctx.fireChannelRead(msg);
                     }
