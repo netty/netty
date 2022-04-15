@@ -69,24 +69,21 @@ final class NativeDatagramPacketArray {
         if (buf.writableBytes() == 0) {
             return true;
         }
-        int offset = iovArray.count();
-        if (offset == Limits.IOV_MAX) {
+        int iovArrayStart = iovArray.count();
+        if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
         return 0 != buf.forEachWritable(0, (index, component) -> {
             int writableBytes = component.writableBytes();
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            boolean addedAny = false;
-            while (byteCount > 0 && iovArray.process(component, byteCount)) {
+            if (iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
                 component.skipWritable(byteCount);
-                writableBytes = component.writableBytes();
-                byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-                addedAny = true;
+                return true;
             }
-            return addedAny;
+            return false;
         });
     }
 
@@ -99,8 +96,8 @@ final class NativeDatagramPacketArray {
         if (buf.readableBytes() == 0) {
             return true;
         }
-        int offset = iovArray.count();
-        if (offset == Limits.IOV_MAX) {
+        int iovArrayStart = iovArray.count();
+        if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
         return 0 != buf.forEachReadable(0, (index, component) -> {
@@ -109,7 +106,7 @@ final class NativeDatagramPacketArray {
             boolean addedAny = false;
             while (byteCount > 0 && iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
                 component.skipReadable(byteCount);
                 writableBytes = component.readableBytes();
