@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec;
 
+import io.netty5.buffer.ByteBufUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -177,9 +178,8 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<Buffer> {
             if (length >= 16777216) {
                 throw new IllegalArgumentException("length does not fit into a medium integer: " + length);
             }
-
             return ctx.bufferAllocator().allocate(lengthFieldLength)
-                      .writeMedium(reverseBytes ? Integer.reverseBytes(length) >> Byte.SIZE : length);
+                      .writeMedium(reverseBytes ? ByteBufUtil.reverseMedium(length) : length);
         case 4:
             return ctx.bufferAllocator().allocate(lengthFieldLength)
                       .writeInt(reverseBytes ? Integer.reverseBytes(length) : length);
