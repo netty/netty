@@ -191,10 +191,14 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     private int findNextAvail0(int i, long bits) {
         final int maxNumElems = this.maxNumElems;
+        //确定当前i位置是第多少位
         final int baseVal = i << 6;
         //从低位开始遍历，对应的值表示这位已分配
         for (int j = 0; j < 64; j ++) {
+            //(bits & 1) == 0，检查最低bit位是否为0（可用），为0则返回val。
             if ((bits & 1) == 0) {
+                //val等于 (i << 6) | j，即i * 64 + j，该bit位在bitmap中是第几个bit位。
+                //相当于baseVal + j
                 int val = baseVal | j;
                 if (val < maxNumElems) {
                     return val;
@@ -202,6 +206,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                     break;
                 }
             }
+            //bits >>>= 1，右移一位，处理下一个bit位。
             bits >>>= 1;
         }
         return -1;

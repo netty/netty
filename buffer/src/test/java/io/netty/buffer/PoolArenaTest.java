@@ -42,7 +42,7 @@ public class PoolArenaTest {
         logger.info("{}", Long.toBinaryString(2048l));
         long initHandle = (long) pages << 34;
         logger.info("{}, lenth: {}", Long.toBinaryString(initHandle), Long.toBinaryString(initHandle).length());
-
+        /*
         PooledByteBufAllocator aDefault = PooledByteBufAllocator.DEFAULT;
         ByteBuf byteBuf = aDefault.newDirectBuffer(4 * 8196, 4 * 8196);
         ByteBuf byteBuf1 = aDefault.newDirectBuffer(8 * 8196, 8 * 8196);
@@ -54,11 +54,6 @@ public class PoolArenaTest {
         byteBuf2.release();
         byteBuf3.release();
         byteBuf4.release();
-        /*
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
-        PooledByteBuf<ByteBuffer> allocate = arena.allocate(null, 4 * 8196, 4 * 8196);
-        PooledByteBuf<ByteBuffer> allocate1 = arena.allocate(null, 8 * 8196, 8 * 8196);
-        PooledByteBuf<ByteBuffer> allocate2 = arena.allocate(null, 16 * 8196, 16 * 8196);
          */
     }
 
