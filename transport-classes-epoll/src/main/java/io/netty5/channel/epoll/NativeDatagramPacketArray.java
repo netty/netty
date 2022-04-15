@@ -103,17 +103,15 @@ final class NativeDatagramPacketArray {
         return 0 != buf.forEachReadable(0, (index, component) -> {
             int writableBytes = component.readableBytes();
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            boolean addedAny = false;
-            while (byteCount > 0 && iovArray.process(component, byteCount)) {
+            if (iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
+                long packetAddr = iovArray.memoryAddress(iovArrayStart);
+                p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
                 component.skipReadable(byteCount);
-                writableBytes = component.readableBytes();
-                byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-                addedAny = true;
+                return true;
             }
-            return addedAny;
+            return false;
         });
     }
 
@@ -190,7 +188,11 @@ final class NativeDatagramPacketArray {
                         segmentSize = seg;
                     }
                 }
-                added = addReadable(buf, segmentSize, packet.recipient());
+                boolean addedAny = false;
+                while (buf.readableBytes() > 0 && addReadable(buf, segmentSize, packet.recipient())) {
+                    addedAny = true;
+                }
+                added = addedAny;
             } else if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
@@ -206,7 +208,11 @@ final class NativeDatagramPacketArray {
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
             } else if (msg instanceof Buffer && connected) {
                 Buffer buf = (Buffer) msg;
-                added = addReadable(buf, 0, null);
+                boolean addedAny = false;
+                while (buf.readableBytes() > 0 && addReadable(buf, 0, null)) {
+                    addedAny = true;
+                }
+                added = addedAny;
             } else if (msg instanceof ByteBufConvertible && connected) {
                 ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
