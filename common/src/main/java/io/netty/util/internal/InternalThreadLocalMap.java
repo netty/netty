@@ -78,7 +78,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private BitSet cleanerFlags;
 
     /** @deprecated These padding fields will be removed in the future. */
-    public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8, rp9;
+    public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8;
 
     static {
         STRING_BUILDER_INITIAL_SIZE =
