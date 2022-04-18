@@ -16,8 +16,7 @@
 package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,6 +40,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -67,7 +67,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
-            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
+            ch.writeAndFlush(onHeapAllocator().copyOf(new byte[] { 1 })).sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -157,7 +157,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             s = ss.accept();
 
             byte[] expectedBytes = { 1, 2, 3, 4, 5, 6 };
-            Future<Void> writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
+            Future<Void> writeFuture = ch.write(onHeapAllocator().copyOf(expectedBytes));
             h.assertWritability(false);
             ch.flush();
             writeFuture.sync();
@@ -182,7 +182,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             try {
                 // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{ 2 })).sync();
+                ch.writeAndFlush(onHeapAllocator().copyOf(new byte[]{ 2 })).sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
@@ -252,7 +252,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static final class TestHandler extends SimpleChannelInboundHandler<Buffer> {
         volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<>();
         final BlockingDeque<Boolean> writabilityQueue = new LinkedBlockingDeque<>();
@@ -268,7 +268,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
             queue.offer(msg.readByte());
         }
 

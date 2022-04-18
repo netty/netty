@@ -69,8 +69,8 @@ final class NativeDatagramPacketArray {
         if (buf.writableBytes() == 0) {
             return true;
         }
-        int offset = iovArray.count();
-        if (offset == Limits.IOV_MAX) {
+        int iovArrayStart = iovArray.count();
+        if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
         return 0 != buf.forEachWritable(0, (index, component) -> {
@@ -78,7 +78,7 @@ final class NativeDatagramPacketArray {
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
             if (iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
                 component.skipWritable(byteCount);
                 return true;
@@ -93,11 +93,11 @@ final class NativeDatagramPacketArray {
             // recvmmsg(...) / sendmmsg(...) call, we will try again later.
             return false;
         }
-        if (buf.writableBytes() == 0) {
+        if (buf.readableBytes() == 0) {
             return true;
         }
-        int offset = iovArray.count();
-        if (offset == Limits.IOV_MAX) {
+        int iovArrayStart = iovArray.count();
+        if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
         return 0 != buf.forEachReadable(0, (index, component) -> {
@@ -105,7 +105,8 @@ final class NativeDatagramPacketArray {
             int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
             if (iovArray.process(component, byteCount)) {
                 NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+                long packetAddr = iovArray.memoryAddress(iovArrayStart);
+                p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
                 component.skipReadable(byteCount);
                 return true;
@@ -187,7 +188,11 @@ final class NativeDatagramPacketArray {
                         segmentSize = seg;
                     }
                 }
-                added = addReadable(buf, segmentSize, packet.recipient());
+                boolean addedAny = false;
+                while (buf.readableBytes() > 0 && addReadable(buf, segmentSize, packet.recipient())) {
+                    addedAny = true;
+                }
+                added = addedAny;
             } else if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
@@ -203,7 +208,11 @@ final class NativeDatagramPacketArray {
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
             } else if (msg instanceof Buffer && connected) {
                 Buffer buf = (Buffer) msg;
-                added = addReadable(buf, 0, null);
+                boolean addedAny = false;
+                while (buf.readableBytes() > 0 && addReadable(buf, 0, null)) {
+                    addedAny = true;
+                }
+                added = addedAny;
             } else if (msg instanceof ByteBufConvertible && connected) {
                 ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);

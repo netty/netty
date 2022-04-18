@@ -14,8 +14,8 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -131,139 +131,139 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testNoTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testNoTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST NO TRAFFIC";
         currentTestRun = 0;
-        run(testInfo, this::testNoTrafficShapping);
+        run(testInfo, this::testNoTrafficShaping);
     }
 
-    public void testNoTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testNoTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 2, 1 };
         long[] minimalWaitBetween = null;
-        testTrafficShapping0(sb, cb, false, false, false, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, false, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testWriteTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testWriteTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST WRITE";
         currentTestRun = 0;
-        run(testInfo, this::testWriteTrafficShapping);
+        run(testInfo, this::testWriteTrafficShaping);
     }
 
-    public void testWriteTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testWriteTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 2, 1, 1 };
         long[] minimalWaitBetween = computeWaitWrite(multipleMessage);
-        testTrafficShapping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testReadTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testReadTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST READ";
         currentTestRun = 0;
-        run(testInfo, this::testReadTrafficShapping);
+        run(testInfo, this::testReadTrafficShaping);
     }
 
-    public void testReadTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testReadTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 2, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
-        testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testWrite1TrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testWrite1TrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST WRITE";
         currentTestRun = 0;
-        run(testInfo, this::testWrite1TrafficShapping);
+        run(testInfo, this::testWrite1TrafficShaping);
     }
 
-    public void testWrite1TrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testWrite1TrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 1, 1 };
         long[] minimalWaitBetween = computeWaitWrite(multipleMessage);
-        testTrafficShapping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, false, true, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testRead1TrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testRead1TrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST READ";
         currentTestRun = 0;
-        run(testInfo, this::testRead1TrafficShapping);
+        run(testInfo, this::testRead1TrafficShaping);
     }
 
-    public void testRead1TrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testRead1TrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
-        testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testWriteGlobalTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testWriteGlobalTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST GLOBAL WRITE";
         currentTestRun = 0;
-        run(testInfo, this::testWriteGlobalTrafficShapping);
+        run(testInfo, this::testWriteGlobalTrafficShaping);
     }
 
-    public void testWriteGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testWriteGlobalTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 2, 1, 1 };
         long[] minimalWaitBetween = computeWaitWrite(multipleMessage);
-        testTrafficShapping0(sb, cb, false, false, true, true, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, false, true, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testReadGlobalTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testReadGlobalTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST GLOBAL READ";
         currentTestRun = 0;
-        run(testInfo, this::testReadGlobalTrafficShapping);
+        run(testInfo, this::testReadGlobalTrafficShaping);
     }
 
-    public void testReadGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testReadGlobalTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = null;
         int[] multipleMessage = { 1, 2, 1, 1 };
         long[] minimalWaitBetween = computeWaitRead(multipleMessage);
-        testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testAutoReadTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testAutoReadTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST AUTO READ";
         currentTestRun = 0;
-        run(testInfo, this::testAutoReadTrafficShapping);
+        run(testInfo, this::testAutoReadTrafficShaping);
     }
 
-    public void testAutoReadTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testAutoReadTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
         int[] multipleMessage = new int[autoRead.length];
         Arrays.fill(multipleMessage, 1);
         long[] minimalWaitBetween = computeWaitAutoRead(autoRead);
-        testTrafficShapping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, true, false, false, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testAutoReadGlobalTrafficShapping(TestInfo testInfo) throws Throwable {
+    public void testAutoReadGlobalTrafficShaping(TestInfo testInfo) throws Throwable {
         currentTestName = "TEST AUTO READ GLOBAL";
         currentTestRun = 0;
-        run(testInfo, this::testAutoReadGlobalTrafficShapping);
+        run(testInfo, this::testAutoReadGlobalTrafficShaping);
     }
 
-    public void testAutoReadGlobalTrafficShapping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testAutoReadGlobalTrafficShaping(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         int[] autoRead = { 1, -1, -1, 1, -2, 0, 1, 0, -3, 0, 1, 2, 0 };
         int[] multipleMessage = new int[autoRead.length];
         Arrays.fill(multipleMessage, 1);
         long[] minimalWaitBetween = computeWaitAutoRead(autoRead);
-        testTrafficShapping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
+        testTrafficShaping0(sb, cb, false, true, false, true, autoRead, minimalWaitBetween, multipleMessage);
     }
 
     /**
@@ -284,7 +284,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
      *            ensure correct testing)
      * @throws Throwable if something goes wrong, and the test fails.
      */
-    private static void testTrafficShapping0(
+    private static void testTrafficShaping0(
             ServerBootstrap sb, Bootstrap cb, final boolean additionalExecutor,
             final boolean limitRead, final boolean limitWrite, final boolean globalLimit, int[] autoRead,
             long[] minimalWaitBetween, int[] multipleMessage) throws Throwable {
@@ -392,7 +392,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
     }
 
-    private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class ClientHandler extends SimpleChannelInboundHandler<Buffer> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int step;
@@ -417,10 +417,10 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
             long lastTimestamp = 0;
             loggerClient.debug("Step: " + step + " Read: " + in.readableBytes() / 8 + " blocks");
-            while (in.isReadable()) {
+            while (in.readableBytes() > 0) {
                 lastTimestamp = in.readLong();
                 multipleMessage[step]--;
             }
@@ -462,7 +462,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
     }
 
-    private static class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static class ServerHandler extends SimpleChannelInboundHandler<Buffer> {
         private final int[] autoRead;
         private final int[] multipleMessage;
         volatile Channel channel;
@@ -480,11 +480,11 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(final ChannelHandlerContext ctx, Buffer in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             int nb = actual.length / messageSize;
             loggerServer.info("Step: " + step + " Read: " + nb + " blocks");
-            in.readBytes(actual);
+            in.readBytes(actual, 0, actual.length);
             long timestamp = TrafficCounter.milliSecondFromNano();
             int isAutoRead = 0;
             int laststep = step;

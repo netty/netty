@@ -144,6 +144,7 @@ public class StreamBufferingEncoderTest {
                 .when(ctx).newFailedFuture(any(Throwable.class));
 
         when(ctx.executor()).thenReturn(executor);
+        when(ctx.close()).thenReturn(newPromise().asFuture());
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
         when(channel.isWritable()).thenReturn(true);

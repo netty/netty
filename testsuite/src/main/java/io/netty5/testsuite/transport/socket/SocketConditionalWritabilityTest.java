@@ -42,6 +42,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
     }
 
     public void testConditionalWritabilityByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        disableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -134,7 +135,6 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
     }
 
     public void testConditionalWritability(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {

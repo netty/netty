@@ -21,7 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.AbstractDatagramTest;
 import io.netty5.util.concurrent.Future;
@@ -118,7 +118,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             ThreadLocalRandom.current().nextBytes(bytes);
 
             final CountDownLatch latch = new CountDownLatch(numPackets);
-            sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            sb.handler(new SimpleChannelInboundHandler<BufferDatagramPacket>() {
                 private int counter;
                 @Override
                 public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -128,12 +128,12 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
 
                 @Override
-                protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
+                protected void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket msg) {
                     assertEquals(ccAddress, msg.sender());
 
                     assertEquals(bytes.length, msg.content().readableBytes());
                     byte[] receivedBytes = new byte[bytes.length];
-                    msg.content().readBytes(receivedBytes);
+                    msg.content().readBytes(receivedBytes, 0, receivedBytes.length);
                     assertArrayEquals(bytes, receivedBytes);
 
                     counter++;
@@ -157,7 +157,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             List<Future<Void>> futures = new ArrayList<>(numPackets);
             for (int i = 0; i < numPackets; i++) {
-                futures.add(cc.write(new DatagramPacket(cc.alloc().directBuffer().writeBytes(bytes), addr)));
+                futures.add(cc.write(new BufferDatagramPacket(cc.bufferAllocator().copyOf(bytes), addr)));
             }
 
             cc.flush();
@@ -228,15 +228,15 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             ThreadLocalRandom.current().nextBytes(bytes);
 
             final CountDownLatch latch = new CountDownLatch(1);
-            sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            sb.handler(new SimpleChannelInboundHandler<BufferDatagramPacket>() {
 
                 @Override
-                protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
+                protected void messageReceived(ChannelHandlerContext ctx, BufferDatagramPacket msg) {
                     assertEquals(ccAddress, msg.sender());
 
                     assertEquals(bytes.length, msg.content().readableBytes());
                     byte[] receivedBytes = new byte[bytes.length];
-                    msg.content().readBytes(receivedBytes);
+                    msg.content().readBytes(receivedBytes, 0, receivedBytes.length);
                     assertArrayEquals(bytes, receivedBytes);
 
                     latch.countDown();
@@ -256,7 +256,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
 
-            cc.writeAndFlush(new DatagramPacket(cc.alloc().directBuffer().writeBytes(bytes), addr)).sync();
+            cc.writeAndFlush(new BufferDatagramPacket(cc.bufferAllocator().copyOf(bytes), addr)).sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();

@@ -73,7 +73,6 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testSimpleEcho0(sb, cb, true, true);
     }
 
@@ -84,7 +83,6 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testSimpleEcho0(sb, cb, false, true);
     }
 

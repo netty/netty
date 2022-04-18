@@ -150,8 +150,7 @@ public class WebSocketFrameAggregatorTest {
 
     private static byte[] toBytes(Buffer buf) {
         byte[] bytes = new byte[buf.readableBytes()];
-        buf.copyInto(buf.readerOffset(), bytes, 0, bytes.length);
-        buf.skipReadable(bytes.length);
+        buf.readBytes(bytes, 0, bytes.length);
         return bytes;
     }
 }

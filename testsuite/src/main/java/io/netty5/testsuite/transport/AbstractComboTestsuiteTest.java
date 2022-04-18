@@ -62,12 +62,12 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
 
     protected abstract void configure(SB sb, CB cb, ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator);
 
-    public void enableNewBufferAPI(AbstractBootstrap<?, ?, ?> sb, Bootstrap cb) {
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+    public void disableNewBufferAPI(AbstractBootstrap<?, ?, ?> sb, Bootstrap cb) {
+        sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
         if (sb instanceof ServerBootstrap) {
-            ((ServerBootstrap) sb).childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+            ((ServerBootstrap) sb).childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
         }
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
     }
 
     public interface Runner<SB extends AbstractBootstrap<?, ?, ?>, CB extends AbstractBootstrap<?, ?, ?>> {

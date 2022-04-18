@@ -19,6 +19,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
@@ -56,6 +57,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -78,11 +80,17 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
-                    futures.add(ctx.write(ctx.alloc().buffer().writeZero(1024))
-                                   .addListener(ctx, ChannelFutureListeners.CLOSE));
-                    futures.add(ctx.write(ctx.alloc().buffer().writeZero(1048576)));
-                    ctx.flush();
-                    futures.add(ctx.write(ctx.alloc().buffer().writeZero(1024)));
+                    int firstSize = 1024;
+                    int secondSize = 1048576;
+                    int thirdSize = 1024;
+                    try (Buffer buf = ctx.bufferAllocator().allocate(firstSize + secondSize + thirdSize)) {
+                        buf.fill((byte) 0);
+                        buf.writerOffset(buf.capacity());
+                        futures.add(ctx.write(buf.readSplit(firstSize)).addListener(ctx, ChannelFutureListeners.CLOSE));
+                        futures.add(ctx.write(buf.readSplit(secondSize)));
+                        ctx.flush();
+                        futures.add(ctx.write(buf.readSplit(thirdSize)));
+                    }
                     ctx.flush();
                 }
             });
@@ -128,11 +136,11 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 @Override
                 public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                     // Trigger a gathering write by writing two buffers.
-                    ctx.write(Unpooled.wrappedBuffer(new byte[] { 'a' }));
-                    Future<Void> f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
+                    ctx.write(onHeapAllocator().copyOf(new byte[] { 'a' }));
+                    Future<Void> f = ctx.write(onHeapAllocator().copyOf(new byte[] { 'b' }));
                     f.addListener(future -> {
                         // This message must be flushed
-                        ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
+                        ctx.writeAndFlush(onHeapAllocator().copyOf(new byte[]{'c'}));
                     });
                     ctx.flush();
                 }
@@ -176,9 +184,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                  @Override
                  protected void initChannel(final Channel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();
-                     pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                     pipeline.addLast(new SimpleChannelInboundHandler<Buffer>() {
                          @Override
-                         protected void messageReceived(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+                         protected void messageReceived(ChannelHandlerContext ctx, Buffer byteBuf) {
                              // We were able to read something from the Channel after re-register.
                              latch.countDown();
                          }
@@ -205,7 +213,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             bootstrap.group(group).channel(NioSocketChannel.class);
             bootstrap.handler(new ChannelHandler() { });
             cc = bootstrap.connect(sc.localAddress()).get();
-            cc.writeAndFlush(Unpooled.wrappedBuffer(bytes)).syncUninterruptibly();
+            cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).syncUninterruptibly();
             latch.await();
         } finally {
             if (cc != null) {

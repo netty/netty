@@ -24,7 +24,6 @@ import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -49,6 +48,7 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
     }
 
     public void testCancelWriteByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        disableNewBufferAPI(sb, cb);
         final TestHandler sh = new TestHandler();
         final TestHandler ch = new TestHandler();
         final ByteBuf a = Unpooled.buffer().writeByte('a');
@@ -113,7 +113,6 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
     }
 
     public void testCancelWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         final TestHandler sh = new TestHandler();
         final TestHandler ch = new TestHandler();
         final Buffer a = preferredAllocator().allocate(1).writeByte((byte) 'a');

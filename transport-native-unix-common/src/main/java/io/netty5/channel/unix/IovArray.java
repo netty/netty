@@ -207,10 +207,10 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
     }
 
     /**
-     * Returns the {@code memoryAddress} for the given {@code offset}.
+     * Returns the {@code memoryAddress} for the given {@code index}.
      */
-    public long memoryAddress(int offset) {
-        return memoryAddress + idx(offset);
+    public long memoryAddress(int index) {
+        return memoryAddress + idx(index);
     }
 
     /**

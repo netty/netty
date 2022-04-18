@@ -26,6 +26,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;

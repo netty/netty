@@ -53,12 +53,10 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
     }
 
     public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testFixedLengthEcho(sb, cb, true);
     }
 
     public void testFixedLengthEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         testFixedLengthEcho(sb, cb, false);
     }
 

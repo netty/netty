@@ -131,7 +131,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     private void testStartTls(ServerBootstrap sb, Bootstrap cb,
                                      SslContext serverCtx, SslContext clientCtx, boolean autoRead) throws Throwable {
-        enableNewBufferAPI(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 

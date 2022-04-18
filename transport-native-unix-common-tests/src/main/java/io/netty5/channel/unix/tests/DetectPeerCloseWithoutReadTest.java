@@ -17,7 +17,7 @@ package io.netty5.channel.unix.tests;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
@@ -87,8 +87,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
             cb.channel(clientChannel());
             cb.handler(new ChannelHandler() { });
             Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
-            ByteBuf buf = clientChannel.alloc().buffer(expectedBytes);
-            buf.writerIndex(buf.writerIndex() + expectedBytes);
+            Buffer buf = clientChannel.bufferAllocator().allocate(expectedBytes);
+            buf.skipWritable(expectedBytes);
             clientChannel.writeAndFlush(buf).addListener(clientChannel, ChannelFutureListeners.CLOSE);
 
             latch.await();
@@ -138,8 +138,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
-                            ByteBuf buf = ctx.alloc().buffer(expectedBytes);
-                            buf.writerIndex(buf.writerIndex() + expectedBytes);
+                            Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
+                            buf.skipWritable(expectedBytes);
                             ctx.writeAndFlush(buf).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                             ctx.fireChannelActive();
                         }
@@ -183,7 +183,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
         }
     }
 
-    private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static final class TestHandler extends SimpleChannelInboundHandler<Buffer> {
         private final AtomicInteger bytesRead;
         private final boolean extraReadRequested;
         private final CountDownLatch latch;
@@ -195,7 +195,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
+        protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) {
             bytesRead.addAndGet(msg.readableBytes());
 
             if (extraReadRequested) {

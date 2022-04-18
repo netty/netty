@@ -642,7 +642,7 @@ public class Http2ConnectionRoundtripTest {
                         // Ensure we update the window size so we will try to write the rest of the frame while
                         // processing the flush.
                         http2Client.encoder().flowController().initialWindowSize(8);
-                        return ctx.newFailedFuture(new IllegalStateException());
+                        return ctx.newFailedFuture(new IllegalStateException("Exception for test"));
                     } catch (Http2Exception e) {
                         return ctx.newFailedFuture(e);
                     }

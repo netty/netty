@@ -314,7 +314,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
                 if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1 ||
                         // We only handle UDP_SEGMENT in sendmmsg.
-                        in.current() instanceof SegmentedDatagramPacket) {
+                        in.current() instanceof SegmentedDatagramPacket ||
+                        in.current() instanceof BufferSegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
                     array.add(in, isConnected(), maxMessagesPerWrite);
                     int cnt = array.count();

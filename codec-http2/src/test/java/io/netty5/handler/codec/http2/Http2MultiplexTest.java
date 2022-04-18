@@ -929,7 +929,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 ctx.close();
-                throw new Exception("exception");
+                throw new Exception("Exception for test");
             }
         });
 
