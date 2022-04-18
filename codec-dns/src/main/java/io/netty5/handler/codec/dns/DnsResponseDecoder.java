@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.CorruptedFrameException;
 
 import java.net.SocketAddress;
@@ -32,7 +32,7 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
         this.recordDecoder = Objects.requireNonNull(recordDecoder, "recordDecoder");
     }
 
-    final DnsResponse decode(A sender, A recipient, ByteBuf buffer) throws Exception {
+    final DnsResponse decode(A sender, A recipient, Buffer buffer) throws Exception {
         final int id = buffer.readUnsignedShort();
 
         final int flags = buffer.readUnsignedShort();
@@ -82,14 +82,14 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
     protected abstract DnsResponse newResponse(A sender, A recipient, int id,
                                                DnsOpCode opCode, DnsResponseCode responseCode) throws Exception;
 
-    private void decodeQuestions(DnsResponse response, ByteBuf buf, int questionCount) throws Exception {
+    private void decodeQuestions(DnsResponse response, Buffer buf, int questionCount) throws Exception {
         for (int i = questionCount; i > 0; i --) {
             response.addRecord(DnsSection.QUESTION, recordDecoder.decodeQuestion(buf));
         }
     }
 
     private boolean decodeRecords(
-            DnsResponse response, DnsSection section, ByteBuf buf, int count) throws Exception {
+            DnsResponse response, DnsSection section, Buffer buf, int count) throws Exception {
         for (int i = count; i > 0; i --) {
             final DnsRecord r = recordDecoder.decodeRecord(buf);
             if (r == null) {

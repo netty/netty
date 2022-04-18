@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.internal.UnstableApi;
 
@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Encodes a {@link DatagramDnsResponse} (or an {@link AddressedEnvelope} of {@link DnsResponse}} into a
- * {@link DatagramPacket}.
+ * {@link BufferDatagramPacket}.
  */
 @UnstableApi
 @ChannelHandler.Sharable
@@ -59,20 +59,20 @@ public class DatagramDnsResponseEncoder
 
         final InetSocketAddress recipient = in.recipient();
         final DnsResponse response = in.content();
-        final ByteBuf buf = allocateBuffer(ctx, in);
+        final Buffer buf = allocateBuffer(ctx, in);
 
         DnsMessageUtil.encodeDnsResponse(recordEncoder, response, buf);
 
-        out.add(new DatagramPacket(buf, recipient, null));
+        out.add(new BufferDatagramPacket(buf, recipient, null));
     }
 
     /**
-     * Allocate a {@link ByteBuf} which will be used for constructing a datagram packet.
-     * Sub-classes may override this method to return a {@link ByteBuf} with a perfect matching initial capacity.
+     * Allocate a {@link Buffer} which will be used for constructing a datagram packet.
+     * Sub-classes may override this method to return a {@link Buffer} with a perfect matching initial capacity.
      */
-    protected ByteBuf allocateBuffer(
+    protected Buffer allocateBuffer(
         ChannelHandlerContext ctx,
         @SuppressWarnings("unused") AddressedEnvelope<DnsResponse, InetSocketAddress> msg) throws Exception {
-        return ctx.alloc().ioBuffer(1024);
+        return ctx.bufferAllocator().allocate(1024);
     }
 }

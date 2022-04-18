@@ -16,8 +16,6 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
@@ -30,12 +28,9 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
-import io.netty5.handler.codec.MessageToMessageDecoder;
-import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.handler.codec.dns.DatagramDnsQueryEncoder;
 import io.netty5.handler.codec.dns.DatagramDnsResponse;
 import io.netty5.handler.codec.dns.DatagramDnsResponseDecoder;
@@ -81,8 +76,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
@@ -190,9 +184,9 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder() {
         @Override
-        protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+        protected DnsResponse decodeResponse(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
             DnsResponse response = super.decodeResponse(ctx, packet);
-            if (packet.content().isReadable()) {
+            if (packet.content().readableBytes() > 0) {
                 // If there is still something to read we did stop parsing because of a truncated message.
                 // This can happen if we enabled EDNS0 but our MTU is not big enough to handle all the
                 // data.
@@ -458,7 +452,6 @@ public class DnsNameResolver extends InetNameResolver {
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
-        b.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
         channelReadyPromise = executor().newPromise();
         final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {
@@ -843,14 +836,14 @@ public class DnsNameResolver extends InetNameResolver {
             if (hostsFileEntries != null) {
                 List<DnsRecord> result = new ArrayList<DnsRecord>();
                 for (InetAddress hostsFileEntry : hostsFileEntries) {
-                    ByteBuf content = null;
+                    Buffer content = null;
                     if (hostsFileEntry instanceof Inet4Address) {
                         if (type == DnsRecordType.A) {
-                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                            content = onHeapAllocator().copyOf(hostsFileEntry.getAddress());
                         }
                     } else if (hostsFileEntry instanceof Inet6Address) {
                         if (type == DnsRecordType.AAAA) {
-                            content = Unpooled.wrappedBuffer(hostsFileEntry.getAddress());
+                            content = onHeapAllocator().copyOf(hostsFileEntry.getAddress());
                         }
                     }
                     if (content != null) {
@@ -1278,7 +1271,6 @@ public class DnsNameResolver extends InetNameResolver {
             bs.option(ChannelOption.SO_REUSEADDR, true)
             .group(executor())
             .channelFactory(socketChannelFactory)
-            .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false)
             .handler(TCP_ENCODER);
             bs.connect(res.sender()).addListener(future -> {
                 if (future.isFailed()) {

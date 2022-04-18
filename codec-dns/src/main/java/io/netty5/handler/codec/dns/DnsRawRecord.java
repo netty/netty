@@ -17,33 +17,16 @@ package io.netty5.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.util.internal.UnstableApi;
 
 /**
  * A generic {@link DnsRecord} that contains an undecoded {@code RDATA}.
  */
 @UnstableApi
-public interface DnsRawRecord extends DnsRecord, ByteBufHolder {
-    @Override
-    DnsRawRecord copy();
-
-    @Override
-    DnsRawRecord duplicate();
-
-    @Override
-    DnsRawRecord retainedDuplicate();
-
-    @Override
-    DnsRawRecord replace(ByteBuf content);
-
-    @Override
-    DnsRawRecord retain();
-
-    @Override
-    DnsRawRecord retain(int increment);
-
-    @Override
-    DnsRawRecord touch();
+public interface DnsRawRecord extends DnsRecord, Resource<DnsRawRecord> {
+    Buffer content();
 
     @Override
     DnsRawRecord touch(Object hint);

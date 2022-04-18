@@ -15,14 +15,13 @@
  */
 package io.netty5.resolver.dns;
 
+import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.dns.DnsRawRecord;
+import io.netty5.handler.codec.dns.DnsRecord;
+
 import java.net.IDN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty5.handler.codec.dns.DnsRawRecord;
-import io.netty5.handler.codec.dns.DnsRecord;
 
 /**
  * Decodes an {@link InetAddress} from an A or AAAA {@link DnsRawRecord}.
@@ -46,14 +45,14 @@ final class DnsAddressDecoder {
         if (!(record instanceof DnsRawRecord)) {
             return null;
         }
-        final ByteBuf content = ((ByteBufHolder) record).content();
+        final Buffer content = ((DnsRawRecord) record).content();
         final int contentLen = content.readableBytes();
         if (contentLen != INADDRSZ4 && contentLen != INADDRSZ6) {
             return null;
         }
 
         final byte[] addrBytes = new byte[contentLen];
-        content.getBytes(content.readerIndex(), addrBytes);
+        content.copyInto(content.readerOffset(), addrBytes, 0, addrBytes.length);
 
         try {
             return InetAddress.getByAddress(decodeIdn ? IDN.toUnicode(name) : name, addrBytes);

@@ -15,15 +15,15 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty5.handler.codec.LengthFieldBasedFrameDecoderForBuffer;
 import io.netty5.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 
 @UnstableApi
-public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoder {
+public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoderForBuffer {
 
     private final DnsResponseDecoder<SocketAddress> responseDecoder;
 
@@ -52,21 +52,17 @@ public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected Object decode0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        ByteBuf frame = (ByteBuf) super.decode0(ctx, in);
-        if (frame == null) {
-            return null;
-        }
-
-        try {
-            return responseDecoder.decode(ctx.channel().remoteAddress(), ctx.channel().localAddress(), frame.slice());
-        } finally {
-            frame.release();
+    protected Object decode0(ChannelHandlerContext ctx, Buffer in) throws Exception {
+        try (Buffer frame = (Buffer) super.decode0(ctx, in)) {
+            if (frame == null) {
+                return null;
+            }
+            return responseDecoder.decode(ctx.channel().remoteAddress(), ctx.channel().localAddress(), frame.split());
         }
     }
 
-    @Override
-    protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
-        return buffer.copy(index, length);
-    }
+//    @Override
+//    protected Buffer extractFrame(ChannelHandlerContext ctx, Buffer buffer, int length) {
+//        return buffer.copy(buffer.readerOffset(), length);
+//    }
 }

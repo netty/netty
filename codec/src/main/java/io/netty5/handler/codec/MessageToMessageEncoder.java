@@ -99,8 +99,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                                 StringUtil.simpleClassName(this) + " must produce at least one message.");
                     }
                 } finally {
-                    final int sizeMinusOne = out.size() - 1;
-                    if (sizeMinusOne == 0) {
+                    if (out.size() == 1) {
                         ctx.write(out.getUnsafe(0)).cascadeTo(promise);
                     } else {
                         writePromiseCombiner(ctx, out, promise);

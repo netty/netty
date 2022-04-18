@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.handler.codec.CorruptedFrameException;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -77,21 +77,23 @@ public class DnsResponseTest {
     public void readResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         for (byte[] p: packets) {
-            ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
-            embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
+            BufferAllocator allocator = embedder.bufferAllocator();
+            Buffer packet = allocator.copyOf(p);
+            embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0)));
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = embedder.readInbound();
             assertThat(envelope, is(instanceOf(DatagramDnsResponse.class)));
             DnsResponse response = envelope.content();
-            assertThat(response, is(sameInstance((Object) envelope)));
+            assertThat(response, is(sameInstance(envelope)));
 
-            ByteBuf raw = Unpooled.wrappedBuffer(p);
-            assertThat(response.id(), is(raw.getUnsignedShort(0)));
-            assertThat(response.count(DnsSection.QUESTION), is(raw.getUnsignedShort(4)));
-            assertThat(response.count(DnsSection.ANSWER), is(raw.getUnsignedShort(6)));
-            assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));
-            assertThat(response.count(DnsSection.ADDITIONAL), is(raw.getUnsignedShort(10)));
+            try (Buffer raw = allocator.copyOf(p)) {
+                assertThat(response.id(), is(raw.getUnsignedShort(0)));
+                assertThat(response.count(DnsSection.QUESTION), is(raw.getUnsignedShort(4)));
+                assertThat(response.count(DnsSection.ANSWER), is(raw.getUnsignedShort(6)));
+                assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));
+                assertThat(response.count(DnsSection.ADDITIONAL), is(raw.getUnsignedShort(10)));
+            }
 
-            ReferenceCountUtil.release(envelope);
+            Resource.dispose(envelope);
         }
         assertFalse(embedder.finish());
     }
@@ -99,10 +101,10 @@ public class DnsResponseTest {
     @Test
     public void readMalformedResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
-        ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
+        Buffer packet = embedder.bufferAllocator().allocate(512).writeBytes(malformedLoopPacket);
         try {
             assertThrows(CorruptedFrameException.class,
-                () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
+                () -> embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }
@@ -111,10 +113,10 @@ public class DnsResponseTest {
     @Test
     public void readIncompleteResponseTest() {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
-        ByteBuf packet = embedder.alloc().buffer(512);
+        Buffer packet = embedder.bufferAllocator().allocate(512);
         try {
             assertThrows(CorruptedFrameException.class,
-                () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
+                () -> embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }

@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 import java.util.Objects;
 
@@ -31,9 +31,9 @@ final class DnsQueryEncoder {
     }
 
     /**
-     * Encodes the given {@link DnsQuery} into a {@link ByteBuf}.
+     * Encodes the given {@link DnsQuery} into a {@link Buffer}.
      */
-    void encode(DnsQuery query, ByteBuf out) throws Exception {
+    void encode(DnsQuery query, Buffer out) throws Exception {
         encodeHeader(query, out);
         encodeQuestions(query, out);
         encodeRecords(query, DnsSection.ADDITIONAL, out);
@@ -45,28 +45,29 @@ final class DnsQueryEncoder {
      * @param query the query header being encoded
      * @param buf   the buffer the encoded data should be written to
      */
-    private static void encodeHeader(DnsQuery query, ByteBuf buf) {
-        buf.writeShort(query.id());
-        int flags = 0;
+    private static void encodeHeader(DnsQuery query, Buffer buf) {
+        buf.ensureWritable(12);
+        buf.writeShort((short) query.id());
+        short flags = 0;
         flags |= (query.opCode().byteValue() & 0xFF) << 14;
         if (query.isRecursionDesired()) {
             flags |= 1 << 8;
         }
         buf.writeShort(flags);
-        buf.writeShort(query.count(DnsSection.QUESTION));
-        buf.writeShort(0); // answerCount
-        buf.writeShort(0); // authorityResourceCount
-        buf.writeShort(query.count(DnsSection.ADDITIONAL));
+        buf.writeShort((short) query.count(DnsSection.QUESTION));
+        buf.writeShort((short) 0); // answerCount
+        buf.writeShort((short) 0); // authorityResourceCount
+        buf.writeShort((short) query.count(DnsSection.ADDITIONAL));
     }
 
-    private void encodeQuestions(DnsQuery query, ByteBuf buf) throws Exception {
+    private void encodeQuestions(DnsQuery query, Buffer buf) throws Exception {
         final int count = query.count(DnsSection.QUESTION);
         for (int i = 0; i < count; i++) {
-            recordEncoder.encodeQuestion((DnsQuestion) query.recordAt(DnsSection.QUESTION, i), buf);
+            recordEncoder.encodeQuestion(query.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 
-    private void encodeRecords(DnsQuery query, DnsSection section, ByteBuf buf) throws Exception {
+    private void encodeRecords(DnsQuery query, DnsSection section, Buffer buf) throws Exception {
         final int count = query.count(section);
         for (int i = 0; i < count; i++) {
             recordEncoder.encodeRecord(query.recordAt(section, i), buf);

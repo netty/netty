@@ -16,24 +16,32 @@
 
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.util.CharsetUtil;
 
-import static io.netty5.handler.codec.dns.DefaultDnsRecordDecoder.*;
+import java.nio.charset.StandardCharsets;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
 final class DnsCodecUtil {
     private DnsCodecUtil() {
         // Util class
     }
 
-    static void encodeDomainName(String name, ByteBuf buf) {
+    static void encodeDomainName(String name, Buffer buf) {
         if (ROOT.equals(name)) {
             // Root domain
-            buf.writeByte(0);
+            buf.ensureWritable(1);
+            buf.writeByte((byte) 0);
             return;
         }
+
+        // Buffer size: For every name part, a dot is replaced by a length, with +1 for terminal NUL byte.
+        buf.ensureWritable(name.length() + 1);
 
         final String[] labels = name.split("\\.");
         for (String label : labels) {
@@ -42,18 +50,17 @@ final class DnsCodecUtil {
                 // zero-length label means the end of the name.
                 break;
             }
-
-            buf.writeByte(labelLen);
-            ByteBufUtil.writeAscii(buf, label);
+            buf.writeByte((byte) labelLen);
+            buf.writeBytes(label.getBytes(StandardCharsets.US_ASCII));
         }
 
-        buf.writeByte(0); // marks end of name field
+        buf.writeByte((byte) 0); // marks end of name field
     }
 
-    static String decodeDomainName(ByteBuf in) {
+    static String decodeDomainName(Buffer in) {
         int position = -1;
         int checked = 0;
-        final int end = in.writerIndex();
+        final int end = in.writerOffset();
         final int readable = in.readableBytes();
 
         // Looking at the spec we should always have at least enough readable bytes to read a byte here but it seems
@@ -68,15 +75,15 @@ final class DnsCodecUtil {
         }
 
         final StringBuilder name = new StringBuilder(readable << 1);
-        while (in.isReadable()) {
+        while (in.readableBytes() > 0) {
             final int len = in.readUnsignedByte();
             final boolean pointer = (len & 0xc0) == 0xc0;
             if (pointer) {
                 if (position == -1) {
-                    position = in.readerIndex() + 1;
+                    position = in.readerOffset() + 1;
                 }
 
-                if (!in.isReadable()) {
+                if (in.readableBytes() == 0) {
                     throw new CorruptedFrameException("truncated pointer in a name");
                 }
 
@@ -84,7 +91,7 @@ final class DnsCodecUtil {
                 if (next >= end) {
                     throw new CorruptedFrameException("name has an out-of-range pointer");
                 }
-                in.readerIndex(next);
+                in.readerOffset(next);
 
                 // check for loops
                 checked += 2;
@@ -92,18 +99,19 @@ final class DnsCodecUtil {
                     throw new CorruptedFrameException("name contains a loop.");
                 }
             } else if (len != 0) {
-                if (!in.isReadable(len)) {
+                if (in.readableBytes() < len) {
                     throw new CorruptedFrameException("truncated label in a name");
                 }
-                name.append(in.toString(in.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
-                in.skipBytes(len);
+                byte[] nameBytes = new byte[len];
+                in.readBytes(nameBytes, 0, len);
+                name.append(new String(nameBytes, CharsetUtil.UTF_8)).append('.');
             } else { // len == 0
                 break;
             }
         }
 
         if (position != -1) {
-            in.readerIndex(position);
+            in.readerOffset(position);
         }
 
         if (name.length() == 0) {
@@ -122,9 +130,10 @@ final class DnsCodecUtil {
      * @param compression compressed data
      * @return decompressed data
      */
-    static ByteBuf decompressDomainName(ByteBuf compression) {
+    static Buffer decompressDomainName(Buffer compression) {
         String domainName = decodeDomainName(compression);
-        ByteBuf result = compression.alloc().buffer(domainName.length() << 1);
+        BufferAllocator allocator = compression.isDirect()? offHeapAllocator() : onHeapAllocator();
+        Buffer result = allocator.allocate(domainName.length() << 1);
         encodeDomainName(domainName, result);
         return result;
     }
