@@ -38,6 +38,24 @@
 
   <dependencies>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-transport-classes-epoll</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-transport-classes-kqueue</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-resolver-dns-classes-macos</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
     </dependency>
@@ -54,6 +72,7 @@
       <artifactId>junit</artifactId>
     </dependency>
   </dependencies>
+
   <profiles>
     <profile>
       <id>skipTests</id>
@@ -65,33 +84,6 @@
       <properties>
         <skipNativeTestsuite>true</skipNativeTestsuite>
       </properties>
-    </profile>
-
-    <profile>
-      <id>default</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty5-transport-native-epoll</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty5-transport-native-kqueue</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty5-resolver-dns-native-macos</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
     </profile>
 
     <profile>
