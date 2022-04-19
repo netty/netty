@@ -284,7 +284,7 @@ public abstract class BufferTestSupport {
                             return allocator.allocate(size);
                         }
                         var buf = allocator.allocate(size - 1);
-                        buf.ensureWritable(size);
+                        buf.ensureWritable(size, 1, true);
                         return buf;
                     }
 

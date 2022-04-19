@@ -58,7 +58,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             ThreadLocalRandom.current().nextBytes(array);
             try (Buffer buffer = allocator.copyOf(array)) {
                 assertFalse(buffer.readOnly());
-                buffer.ensureWritable(Long.BYTES);
+                buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
                 assertThat(buffer.capacity()).isEqualTo(array.length + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(array.length + Long.BYTES);
@@ -137,7 +137,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             ThreadLocalRandom.current().nextBytes(byteBuffer.array());
             try (Buffer buffer = allocator.copyOf(byteBuffer)) {
                 assertFalse(buffer.readOnly());
-                buffer.ensureWritable(Long.BYTES);
+                buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
                 assertThat(buffer.capacity()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
@@ -235,7 +235,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
 
             try (Buffer buffer = allocator.copyOf(byteBuffer)) {
                 assertFalse(buffer.readOnly());
-                buffer.ensureWritable(Long.BYTES);
+                buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
                 assertThat(buffer.capacity()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
