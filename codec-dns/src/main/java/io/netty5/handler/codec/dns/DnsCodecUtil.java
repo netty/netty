@@ -128,9 +128,8 @@ final class DnsCodecUtil {
      * @param compression compressed data
      * @return decompressed data
      */
-    static Buffer decompressDomainName(Buffer compression) {
+    static Buffer decompressDomainName(BufferAllocator allocator, Buffer compression) {
         String domainName = decodeDomainName(compression);
-        BufferAllocator allocator = compression.isDirect()? offHeapAllocator() : onHeapAllocator();
         Buffer result = allocator.allocate(domainName.length() << 1);
         encodeDomainName(domainName, result);
         return result;

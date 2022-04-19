@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -38,9 +39,9 @@ public interface DnsRecordDecoder {
     /**
      * Decodes a DNS record into its object representation.
      *
-     * @param in the input buffer which contains a DNS record at its reader index
-     *
+     * @param allocator
+     * @param in        the input buffer which contains a DNS record at its reader index
      * @return the decoded record, or {@code null} if there are not enough data in the input buffer
      */
-    <T extends DnsRecord> T decodeRecord(Buffer in) throws Exception;
+    <T extends DnsRecord> T decodeRecord(BufferAllocator allocator, Buffer in) throws Exception;
 }

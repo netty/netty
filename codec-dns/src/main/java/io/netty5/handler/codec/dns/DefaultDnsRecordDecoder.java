@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -42,7 +43,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     }
 
     @Override
-    public final <T extends DnsRecord> T decodeRecord(Buffer in) throws Exception {
+    public final <T extends DnsRecord> T decodeRecord(BufferAllocator allocator, Buffer in) throws Exception {
         final int startOffset = in.readerOffset();
         final String name = decodeName(in);
 
@@ -66,13 +67,14 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         }
 
         @SuppressWarnings("unchecked")
-        T record = (T) decodeRecord(name, type, aClass, ttl, in, offset, length);
+        T record = (T) decodeRecord(name, type, aClass, ttl, allocator, in, offset, length);
         in.readerOffset(offset + length);
         return record;
     }
 
     /**
-     * Decodes a record from the information decoded so far by {@link #decodeRecord(Buffer)}.
+     * Decodes a record from the information decoded so far by
+     * {@link DnsRecordDecoder#decodeRecord(BufferAllocator, Buffer)}.
      *
      * @param name the domain name of the record
      * @param type the type of the record
@@ -86,7 +88,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
      */
     protected DnsRecord decodeRecord(
             String name, DnsRecordType type, int dnsClass, long timeToLive,
-            Buffer in, int offset, int length) throws Exception {
+            BufferAllocator allocator, Buffer in, int offset, int length) throws Exception {
 
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
@@ -102,7 +104,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
             if (type == DnsRecordType.CNAME || type == DnsRecordType.NS) {
                 return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive,
-                                               DnsCodecUtil.decompressDomainName(in));
+                                               DnsCodecUtil.decompressDomainName(allocator, in));
             }
             return new DefaultDnsRawRecord(
                     name, type, dnsClass, timeToLive, in.copy());

@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.util.internal.StringUtil;
@@ -179,7 +180,9 @@ final class DnsMessageUtil {
         }
     }
 
-    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder, Buffer buf, DnsQueryFactory supplier) throws Exception {
+    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder,
+                                   BufferAllocator allocator, Buffer buf,
+                                   DnsQueryFactory supplier) throws Exception {
         DnsQuery query = newQuery(buf, supplier);
         boolean success = false;
         try {
@@ -188,9 +191,9 @@ final class DnsMessageUtil {
             int authorityRecordCount = buf.readUnsignedShort();
             int additionalRecordCount = buf.readUnsignedShort();
             decodeQuestions(decoder, query, buf, questionCount);
-            decodeRecords(decoder, query, DnsSection.ANSWER, buf, answerCount);
-            decodeRecords(decoder, query, DnsSection.AUTHORITY, buf, authorityRecordCount);
-            decodeRecords(decoder, query, DnsSection.ADDITIONAL, buf, additionalRecordCount);
+            decodeRecords(decoder, query, DnsSection.ANSWER, allocator, buf, answerCount);
+            decodeRecords(decoder, query, DnsSection.AUTHORITY, allocator, buf, authorityRecordCount);
+            decodeRecords(decoder, query, DnsSection.ADDITIONAL, allocator, buf, additionalRecordCount);
             success = true;
             return query;
         } finally {
@@ -221,9 +224,11 @@ final class DnsMessageUtil {
     }
 
     private static void decodeRecords(DnsRecordDecoder decoder,
-                                      DnsQuery query, DnsSection section, Buffer buf, int count) throws Exception {
+                                      DnsQuery query, DnsSection section,
+                                      BufferAllocator allocator, Buffer buf,
+                                      int count) throws Exception {
         for (int i = count; i > 0; --i) {
-            DnsRecord r = decoder.decodeRecord(buf);
+            DnsRecord r = decoder.decodeRecord(allocator, buf);
             if (r == null) {
                 break;
             }

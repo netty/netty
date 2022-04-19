@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.CorruptedFrameException;
 
 import java.net.SocketAddress;
@@ -32,7 +33,7 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
         this.recordDecoder = Objects.requireNonNull(recordDecoder, "recordDecoder");
     }
 
-    final DnsResponse decode(A sender, A recipient, Buffer buffer) throws Exception {
+    final DnsResponse decode(A sender, A recipient, BufferAllocator allocator, Buffer buffer) throws Exception {
         final int id = buffer.readUnsignedShort();
 
         final int flags = buffer.readUnsignedShort();
@@ -60,16 +61,16 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
             final int additionalRecordCount = buffer.readUnsignedShort();
 
             decodeQuestions(response, buffer, questionCount);
-            if (!decodeRecords(response, DnsSection.ANSWER, buffer, answerCount)) {
+            if (!decodeRecords(response, DnsSection.ANSWER, allocator, buffer, answerCount)) {
                 success = true;
                 return response;
             }
-            if (!decodeRecords(response, DnsSection.AUTHORITY, buffer, authorityRecordCount)) {
+            if (!decodeRecords(response, DnsSection.AUTHORITY, allocator, buffer, authorityRecordCount)) {
                 success = true;
                 return response;
             }
 
-            decodeRecords(response, DnsSection.ADDITIONAL, buffer, additionalRecordCount);
+            decodeRecords(response, DnsSection.ADDITIONAL, allocator, buffer, additionalRecordCount);
             success = true;
             return response;
         } finally {
@@ -88,10 +89,10 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
         }
     }
 
-    private boolean decodeRecords(
-            DnsResponse response, DnsSection section, Buffer buf, int count) throws Exception {
+    private boolean decodeRecords(DnsResponse response, DnsSection section,
+                                  BufferAllocator allocator, Buffer buf, int count) throws Exception {
         for (int i = count; i > 0; i --) {
-            final DnsRecord r = recordDecoder.decodeRecord(buf);
+            final DnsRecord r = recordDecoder.decodeRecord(allocator, buf);
             if (r == null) {
                 // Truncated response
                 return false;

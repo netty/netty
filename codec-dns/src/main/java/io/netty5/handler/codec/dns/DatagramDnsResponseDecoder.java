@@ -65,6 +65,6 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<BufferDa
     }
 
     protected DnsResponse decodeResponse(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
-        return responseDecoder.decode(packet.sender(), packet.recipient(), packet.content());
+        return responseDecoder.decode(packet.sender(), packet.recipient(), ctx.bufferAllocator(), packet.content());
     }
 }
