@@ -16,6 +16,8 @@
 package io.netty5.buffer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.util.internal.MathUtil;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.AsciiString;
@@ -128,6 +130,40 @@ public final class ByteBufUtil {
      */
     public static Buffer writeAscii(BufferAllocator alloc, CharSequence seq) {
         return alloc.copyOf(seq.toString().getBytes(StandardCharsets.US_ASCII));
+    }
+
+    /**
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
+     * The copy will start at {@link Buffer#readerOffset()} and copy {@link Buffer#readableBytes()} bytes.
+     */
+    public static byte[] getBytes(Buffer buf) {
+        return getBytes(buf,  buf.readerOffset(), buf.readableBytes());
+    }
+
+    /**
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
+     * The copy will start at {@code start} and copy {@code length} bytes.
+     */
+    public static byte[] getBytes(Buffer buf, int start, int length) {
+        return getBytes(buf, start, length, true);
+    }
+
+    /**
+     * Return an array of the underlying storage from {@code buf} into a byte array.
+     * The copy will start at {@code start} and copy {@code length} bytes.
+     * If {@code copy} is true a copy will be made of the memory.
+     * If {@code copy} is false the underlying storage will be shared, if possible.
+     */
+    public static byte[] getBytes(Buffer buf, int start, int length, boolean copy) {
+        int capacity = buf.capacity();
+        if (MathUtil.isOutOfBounds(start, length, capacity)) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
+                                                + ") <= " + "buf.capacity(" + capacity + ')');
+        }
+
+        byte[] bytes = PlatformDependent.allocateUninitializedArray(length);
+        buf.copyInto(start, bytes, 0, length);
+        return bytes;
     }
 
     /**
