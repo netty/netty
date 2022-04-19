@@ -60,9 +60,4 @@ public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoderFor
             return responseDecoder.decode(ctx.channel().remoteAddress(), ctx.channel().localAddress(), frame.split());
         }
     }
-
-//    @Override
-//    protected Buffer extractFrame(ChannelHandlerContext ctx, Buffer buffer, int length) {
-//        return buffer.copy(buffer.readerOffset(), length);
-//    }
 }

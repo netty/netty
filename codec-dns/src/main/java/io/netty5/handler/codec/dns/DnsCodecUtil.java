@@ -102,9 +102,7 @@ final class DnsCodecUtil {
                 if (in.readableBytes() < len) {
                     throw new CorruptedFrameException("truncated label in a name");
                 }
-                byte[] nameBytes = new byte[len];
-                in.readBytes(nameBytes, 0, len);
-                name.append(new String(nameBytes, CharsetUtil.UTF_8)).append('.');
+                name.append(in.readCharSequence(len, StandardCharsets.UTF_8)).append('.');
             } else { // len == 0
                 break;
             }

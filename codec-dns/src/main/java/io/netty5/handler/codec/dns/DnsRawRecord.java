@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Resource;
 import io.netty5.util.internal.UnstableApi;
@@ -26,6 +24,13 @@ import io.netty5.util.internal.UnstableApi;
  */
 @UnstableApi
 public interface DnsRawRecord extends DnsRecord, Resource<DnsRawRecord> {
+    /**
+     * Get a reference to the {@link Buffer} backing this raw DNS record.
+     * Care must be taken with the returned buffer, as changes to the buffer offsets or its contents will reflect on
+     * the raw DNS record contents.
+     *
+     * @return The {@link Buffer} instance backing this raw DNS record.
+     */
     Buffer content();
 
     @Override

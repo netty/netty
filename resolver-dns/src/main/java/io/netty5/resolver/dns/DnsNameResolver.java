@@ -76,7 +76,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
@@ -839,11 +838,11 @@ public class DnsNameResolver extends InetNameResolver {
                     Buffer content = null;
                     if (hostsFileEntry instanceof Inet4Address) {
                         if (type == DnsRecordType.A) {
-                            content = onHeapAllocator().copyOf(hostsFileEntry.getAddress());
+                            content = ch.bufferAllocator().copyOf(hostsFileEntry.getAddress());
                         }
                     } else if (hostsFileEntry instanceof Inet6Address) {
                         if (type == DnsRecordType.AAAA) {
-                            content = onHeapAllocator().copyOf(hostsFileEntry.getAddress());
+                            content = ch.bufferAllocator().copyOf(hostsFileEntry.getAddress());
                         }
                     }
                     if (content != null) {
