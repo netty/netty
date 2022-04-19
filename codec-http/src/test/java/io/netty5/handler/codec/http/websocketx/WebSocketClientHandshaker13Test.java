@@ -119,7 +119,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
             sentNonce = request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         }
 
-        var fakeAccept = WebSocketUtil.base64(WebSocketUtil.randomBytes(16));
+        String fakeAccept = WebSocketUtil.base64(WebSocketUtil.randomBytes(16));
         var response = websocketUpgradeResponse();
         response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, fakeAccept);
 
@@ -129,7 +129,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
                                      () -> handshaker.finishHandshake(null, response));
         }
 
-        var expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
+        String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
         assertEquals("Invalid handshake response sec-websocket-accept: " + fakeAccept + ", expected: "
                      + expectedAccept, exception.getMessage());
         assertNotNull(exception.response());

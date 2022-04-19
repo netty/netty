@@ -51,14 +51,13 @@ public class WebSocketUtilTest {
     void testCalculateV13Accept() throws Exception {
         var random = new byte[16];
         ThreadLocalRandom.current().nextBytes(random);
-        var nonce = Base64.getEncoder().encodeToString(random);
+        String nonce = Base64.getEncoder().encodeToString(random);
 
-        var concat = nonce + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-        var sha1Digest = MessageDigest.getInstance("SHA-1");
-        var sha1 = sha1Digest.digest(concat.getBytes(StandardCharsets.US_ASCII));
-        var expectedAccept = Base64.getEncoder().encodeToString(sha1);
+        String concat = nonce + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        MessageDigest sha1Digest = MessageDigest.getInstance("SHA-1");
+        byte[] sha1 = sha1Digest.digest(concat.getBytes(StandardCharsets.US_ASCII));
+        String expectedAccept = Base64.getEncoder().encodeToString(sha1);
 
         assertEquals(expectedAccept, WebSocketUtil.calculateV13Accept(nonce));
     }
 }
-

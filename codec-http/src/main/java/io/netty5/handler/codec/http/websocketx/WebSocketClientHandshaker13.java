@@ -31,8 +31,8 @@ import java.net.URI;
 
 /**
  * <p>
- * Performs client side opening and closing handshakes for web socket specification version <a
- * href="https://datatracker.ietf.org/doc/html/rfc6455">websocketprotocol-v13</a>
+ * Performs client side opening and closing handshakes for web socket specification version
+ * <a href="https://datatracker.ietf.org/doc/html/rfc6455">websocketprotocol-v13</a>
  * </p>
  */
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
@@ -198,7 +198,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             headers.set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
         }
 
-        var nonce = createNonce();
+        String nonce = createNonce();
         headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, nonce);
@@ -232,12 +232,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        var status = response.status();
+        HttpResponseStatus status = response.status();
         if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
             throw new WebSocketClientHandshakeException("Invalid handshake response status: " + status, response);
         }
 
-        var headers = response.headers();
+        HttpHeaders headers = response.headers();
         CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
         if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
             throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
@@ -248,13 +248,13 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                     + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
-        var accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
+        String accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
         if (accept == null) {
             throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: null",
                                                         response);
         }
 
-        var expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
+        String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
         if (!expectedAccept.equals(accept.trim())) {
             throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: " + accept +
                                                         ", expected: " + expectedAccept, response);

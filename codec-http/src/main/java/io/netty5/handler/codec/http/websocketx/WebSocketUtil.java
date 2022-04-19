@@ -52,7 +52,7 @@ final class WebSocketUtil {
      * @return the hashed data
      */
     static byte[] sha1(byte[] data) {
-        var sha1Digest = SHA1.get();
+        MessageDigest sha1Digest = SHA1.get();
         sha1Digest.reset();
         return sha1Digest.digest(data);
     }
@@ -80,12 +80,11 @@ final class WebSocketUtil {
     }
 
     static String calculateV13Accept(String nonce) {
-        var concat = nonce + V13_ACCEPT_GUID;
-        var sha1 = WebSocketUtil.sha1(concat.getBytes(CharsetUtil.US_ASCII));
+        String concat = nonce + V13_ACCEPT_GUID;
+        byte[] sha1 = WebSocketUtil.sha1(concat.getBytes(CharsetUtil.US_ASCII));
         return WebSocketUtil.base64(sha1);
     }
 
     private WebSocketUtil() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 }

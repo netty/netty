@@ -311,10 +311,10 @@ public abstract class WebSocketClientHandshakerTest {
 
     @Test
     void testSetOriginFromCustomHeaders() {
-        HttpHeaders customHeaders = new DefaultHttpHeaders().set(HttpHeaderNames.ORIGIN, "http://example.com");
-        WebSocketClientHandshaker handshaker = newHandshaker(URI.create("ws://server.example.com/chat"), null,
+        var customHeaders = new DefaultHttpHeaders().set(HttpHeaderNames.ORIGIN, "http://example.com");
+        var handshaker = newHandshaker(URI.create("ws://server.example.com/chat"), null,
                                                              customHeaders, false);
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
+        try (var request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals("http://example.com", request.headers().get(HttpHeaderNames.ORIGIN));
         }
     }
@@ -341,8 +341,8 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     private void testHostHeader(String uri, String expected) {
-        WebSocketClientHandshaker handshaker = newHandshaker(URI.create(uri));
-        try (FullHttpRequest request = handshaker.newHandshakeRequest(preferredAllocator())) {
+        var handshaker = newHandshaker(URI.create(uri));
+        try (var request = handshaker.newHandshakeRequest(preferredAllocator())) {
             assertEquals(expected, request.headers().get(HttpHeaderNames.HOST));
         }
     }
