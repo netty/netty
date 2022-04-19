@@ -34,8 +34,9 @@
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
-    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
-    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <jni.compiler.args.cflags>CFLAGS=-O2 -pipe -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -D_FORTIFY_SOURCE=2 -ffunction-sections -fdata-sections -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+    <jni.compiler.args.ldflags>LDFLAGS=-Wl,-z,relro -Wl,-z,now -Wl,--as-needed -Wl,--gc-sections -L${unix.common.lib.unpacked.dir}</jni.compiler.args.ldflags>
+    <jni.compiler.args.libs>LIBS=-Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive -ldl</jni.compiler.args.libs>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
     <japicmp.skip>true</japicmp.skip>
@@ -157,6 +158,7 @@
                   <platform>.</platform>
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
+                    <arg>${jni.compiler.args.libs}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>
@@ -306,6 +308,7 @@
                   <platform>.</platform>
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
+                    <arg>${jni.compiler.args.libs}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                     <configureArg>--host=aarch64-linux-gnu</configureArg>
