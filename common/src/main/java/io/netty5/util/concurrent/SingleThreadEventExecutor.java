@@ -19,6 +19,8 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Async.Execute;
+import org.jetbrains.annotations.Async.Schedule;
 
 import java.lang.Thread.State;
 import java.util.ArrayList;
@@ -321,7 +323,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
             do {
                 try {
-                    task.run();
+                    runTask(task);
                 } catch (Throwable t) {
                     logger.warn("A task raised an exception.", t);
                 }
@@ -330,6 +332,10 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
         updateLastExecutionTime();
         return true;
+    }
+
+    private void runTask(@Execute Runnable task) {
+        task.run();
     }
 
     /**
@@ -352,7 +358,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                 }
 
                 try {
-                    task.run();
+                    runTask(task);
                 } catch (Throwable t) {
                     logger.warn("A task raised an exception.", t);
                 }
@@ -422,7 +428,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         do {
             Runnable task = takeTask();
             if (task != null) {
-                task.run();
+                runTask(task);
                 updateLastExecutionTime();
             }
         } while (!confirmShutdown());
@@ -479,7 +485,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             shutdownHooks.clear();
             for (Runnable task: copy) {
                 try {
-                    task.run();
+                    runTask(task);
                 } catch (Throwable t) {
                     logger.warn("Shutdown hook raised an exception.", t);
                 } finally {
@@ -650,7 +656,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public void execute(Runnable task) {
+    public void execute(@Schedule Runnable task) {
         requireNonNull(task, "task");
 
         boolean inEventLoop = inEventLoop();
