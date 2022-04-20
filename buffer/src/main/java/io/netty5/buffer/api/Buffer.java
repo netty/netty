@@ -566,7 +566,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * If this buffer does not already have the necessary space, then it will be expanded using the
      * {@link BufferAllocator} the buffer was created with.
      * This method is the same as calling {@link #ensureWritable(int, int, boolean)} where {@code allowCompaction} is
-     * {@code false}.
+     * {@code true}.
      *
      * @param size The requested number of bytes of space that should be available for writing.
      * @return This buffer instance.
@@ -575,7 +575,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
     default Buffer ensureWritable(int size) {
-        ensureWritable(size, 1, true);
+        ensureWritable(size, capacity(), true);
         return this;
     }
 
