@@ -16,11 +16,10 @@
 package io.netty5.buffer;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.util.internal.MathUtil;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -145,18 +144,8 @@ public final class ByteBufUtil {
      * The copy will start at {@code start} and copy {@code length} bytes.
      */
     public static byte[] getBytes(Buffer buf, int start, int length) {
-        return getBytes(buf, start, length, true);
-    }
-
-    /**
-     * Return an array of the underlying storage from {@code buf} into a byte array.
-     * The copy will start at {@code start} and copy {@code length} bytes.
-     * If {@code copy} is true a copy will be made of the memory.
-     * If {@code copy} is false the underlying storage will be shared, if possible.
-     */
-    public static byte[] getBytes(Buffer buf, int start, int length, boolean copy) {
         int capacity = buf.capacity();
-        if (MathUtil.isOutOfBounds(start, length, capacity)) {
+        if (isOutOfBounds(start, length, capacity)) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
                                                 + ") <= " + "buf.capacity(" + capacity + ')');
         }
@@ -249,7 +238,7 @@ public final class ByteBufUtil {
             for (i = 0; i < HEXDUMP_ROWPREFIXES.length; i++) {
                 StringBuilder buf = new StringBuilder(12);
                 buf.append(NEWLINE);
-                buf.append(Long.toHexString(i << 4 & 0xFFFFFFFFL | 0x100000000L));
+                buf.append(Long.toHexString(i << 4L & 0xFFFFFFFFL | 0x100000000L));
                 buf.setCharAt(buf.length() - 9, '|');
                 buf.append('|');
                 HEXDUMP_ROWPREFIXES[i] = buf.toString();
