@@ -53,7 +53,7 @@
     </dependency>
     <dependency>
       <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
+      <artifactId>annotations-java5</artifactId>
       <scope>provided</scope>
     </dependency>
     <!-- Logging frameworks - completely optional -->

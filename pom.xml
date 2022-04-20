@@ -789,7 +789,7 @@
       <!-- Annotations for IDE integration and analysis -->
       <dependency>
         <groupId>org.jetbrains</groupId>
-        <artifactId>annotations</artifactId>
+        <artifactId>annotations-java5</artifactId>
         <version>23.0.0</version>
         <scope>provided</scope>
       </dependency>
