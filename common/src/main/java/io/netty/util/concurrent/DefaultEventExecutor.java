@@ -63,7 +63,7 @@ public final class DefaultEventExecutor extends SingleThreadEventExecutor {
         for (;;) {
             Runnable task = takeTask();
             if (task != null) {
-                task.run();
+                runTask(task);
                 updateLastExecutionTime();
             }
 
