@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import io.netty5.util.internal.ThreadExecutorMap;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Async.Execute;
+import org.jetbrains.annotations.Async.Schedule;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -199,7 +201,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public void execute(Runnable task) {
+    public void execute(@Schedule Runnable task) {
         requireNonNull(task, "task");
 
         addTask(task);
@@ -236,7 +238,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 Runnable task = takeTask();
                 if (task != null) {
                     try {
-                        task.run();
+                        runTask(task);
                     } catch (Throwable t) {
                         logger.warn("Unexpected exception from the global event executor: ", t);
                     }
@@ -277,6 +279,10 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     // -> keep this thread alive to handle the newly added entries.
                 }
             }
+        }
+
+        private void runTask(@Execute Runnable task) {
+            task.run();
         }
     }
 }
