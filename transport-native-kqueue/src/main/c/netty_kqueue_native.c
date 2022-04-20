@@ -404,9 +404,7 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
         goto error;
     }
 
-    if (packagePrefix != NULL) {
-        staticPackagePrefix = strdup(packagePrefix);
-    }
+    staticPackagePrefix = packagePrefix;
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
    if (staticallyRegistered == 1) {
