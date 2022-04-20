@@ -51,7 +51,11 @@
       <!-- Need compile scope to be taken into account by shade plugin -->
       <scope>compile</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations-java5</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <!-- Logging frameworks - completely optional -->
     <dependency>
       <groupId>org.slf4j</groupId>

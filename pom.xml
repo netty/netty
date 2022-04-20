@@ -786,6 +786,14 @@
         <version>3.1.0</version>
       </dependency>
 
+      <!-- Annotations for IDE integration and analysis -->
+      <dependency>
+        <groupId>org.jetbrains</groupId>
+        <artifactId>annotations-java5</artifactId>
+        <version>23.0.0</version>
+        <scope>provided</scope>
+      </dependency>
+
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
