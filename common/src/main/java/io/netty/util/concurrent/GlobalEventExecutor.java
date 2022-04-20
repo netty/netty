@@ -202,7 +202,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    public void execute(@Schedule Runnable task) {
+    public void execute(Runnable task) {
+        execute0(task);
+    }
+
+    private void execute0(@Schedule Runnable task) {
         addTask(ObjectUtil.checkNotNull(task, "task"));
         if (!inEventLoop()) {
             startThread();

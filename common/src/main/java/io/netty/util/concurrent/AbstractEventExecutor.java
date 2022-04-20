@@ -184,7 +184,11 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      * The default implementation just delegates to {@link #execute(Runnable)}.
      */
     @UnstableApi
-    public void lazyExecute(@Schedule Runnable task) {
+    public void lazyExecute(Runnable task) {
+        lazyExecute0(task);
+    }
+
+    private void lazyExecute0(@Schedule Runnable task) {
         execute(task);
     }
 

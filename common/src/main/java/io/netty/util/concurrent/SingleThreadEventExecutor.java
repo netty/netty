@@ -811,13 +811,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     @Override
-    public void execute(@Schedule Runnable task) {
+    public void execute(Runnable task) {
+        execute0(task);
+    }
+
+    @Override
+    public void lazyExecute(Runnable task) {
+        lazyExecute0(task);
+    }
+
+    private void execute0(@Schedule Runnable task) {
         ObjectUtil.checkNotNull(task, "task");
         execute(task, !(task instanceof LazyRunnable) && wakesUpForTask(task));
     }
 
-    @Override
-    public void lazyExecute(@Schedule Runnable task) {
+    private void lazyExecute0(@Schedule Runnable task) {
         execute(ObjectUtil.checkNotNull(task, "task"), false);
     }
 
