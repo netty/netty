@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.internal.UnstableApi;
 
@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
- * {@link DatagramPacket}.
+ * {@link BufferDatagramPacket}.
  */
 @UnstableApi
 @ChannelHandler.Sharable
@@ -47,7 +47,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
     public DatagramDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
-        this.encoder = new DnsQueryEncoder(recordEncoder);
+        encoder = new DnsQueryEncoder(recordEncoder);
     }
 
     @Override
@@ -57,28 +57,19 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
 
         final InetSocketAddress recipient = in.recipient();
         final DnsQuery query = in.content();
-        final ByteBuf buf = allocateBuffer(ctx, in);
-
-        boolean success = false;
-        try {
+        try (Buffer buf = allocateBuffer(ctx, in)) {
             encoder.encode(query, buf);
-            success = true;
-        } finally {
-            if (!success) {
-                buf.release();
-            }
+            out.add(new BufferDatagramPacket(buf.split(), recipient, null));
         }
-
-        out.add(new DatagramPacket(buf, recipient, null));
     }
 
     /**
-     * Allocate a {@link ByteBuf} which will be used for constructing a datagram packet.
-     * Sub-classes may override this method to return a {@link ByteBuf} with a perfect matching initial capacity.
+     * Allocate a {@link Buffer} which will be used for constructing a datagram packet.
+     * Sub-classes may override this method to return a {@link Buffer} with a perfect matching initial capacity.
      */
-    protected ByteBuf allocateBuffer(
+    protected Buffer allocateBuffer(
         ChannelHandlerContext ctx,
         @SuppressWarnings("unused") AddressedEnvelope<DnsQuery, InetSocketAddress> msg) throws Exception {
-        return ctx.alloc().ioBuffer(1024);
+        return ctx.bufferAllocator().allocate(1024);
     }
 }

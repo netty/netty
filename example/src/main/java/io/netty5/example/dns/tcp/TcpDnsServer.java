@@ -17,8 +17,7 @@ package io.netty5.example.dns.tcp;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.ByteBufUtil;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -77,10 +76,11 @@ public final class TcpDnsServer {
                                         System.out.println("Query domain: " + question);
 
                                         //always return 192.168.1.1
-                                        ctx.writeAndFlush(newResponse(msg, question, 600, QUERY_RESULT));
+                                        ctx.writeAndFlush(newResponse(ctx, msg, question, 600, QUERY_RESULT));
                                     }
 
-                                    private DefaultDnsResponse newResponse(DnsQuery query,
+                                    private DefaultDnsResponse newResponse(ChannelHandlerContext ctx,
+                                                                           DnsQuery query,
                                                                            DnsQuestion question,
                                                                            long ttl, byte[]... addresses) {
                                         DefaultDnsResponse response = new DefaultDnsResponse(query.id());
@@ -89,7 +89,7 @@ public final class TcpDnsServer {
                                         for (byte[] address : addresses) {
                                             DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(
                                                     question.name(),
-                                                    DnsRecordType.A, ttl, Unpooled.wrappedBuffer(address));
+                                                    DnsRecordType.A, ttl, ctx.bufferAllocator().copyOf(address));
                                             response.addRecord(DnsSection.ANSWER, queryAnswer);
                                         }
                                         return response;

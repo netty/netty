@@ -15,7 +15,8 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -27,7 +28,7 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawRecord {
 
-    private final ByteBuf content;
+    private final Buffer content;
 
     /**
      * Creates a new {@link #CLASS_IN IN-class} record.
@@ -36,7 +37,7 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
      * @param type the type of the record
      * @param timeToLive the TTL value of the record
      */
-    public DefaultDnsRawRecord(String name, DnsRecordType type, long timeToLive, ByteBuf content) {
+    public DefaultDnsRawRecord(String name, DnsRecordType type, long timeToLive, Buffer content) {
         this(name, type, DnsRecord.CLASS_IN, timeToLive, content);
     }
 
@@ -57,72 +58,44 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
      * @param timeToLive the TTL value of the record
      */
     public DefaultDnsRawRecord(
-            String name, DnsRecordType type, int dnsClass, long timeToLive, ByteBuf content) {
+            String name, DnsRecordType type, int dnsClass, long timeToLive, Buffer content) {
         super(name, type, dnsClass, timeToLive);
         this.content = requireNonNull(content, "content");
     }
 
+    public DefaultDnsRawRecord(
+            String name, DnsRecordType type, int dnsClass, long timeToLive, Send<Buffer> content) {
+        super(name, type, dnsClass, timeToLive);
+        this.content = requireNonNull(content, "content").receive();
+    }
+
     @Override
-    public ByteBuf content() {
+    public Buffer content() {
         return content;
     }
 
-    @Override
-    public DnsRawRecord copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public DnsRawRecord duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public DnsRawRecord retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public DnsRawRecord replace(ByteBuf content) {
+    public DnsRawRecord replace(Buffer content) {
         return new DefaultDnsRawRecord(name(), type(), dnsClass(), timeToLive(), content);
     }
 
     @Override
-    public int refCnt() {
-        return content().refCnt();
+    public Send<DnsRawRecord> send() {
+        return content.send().map(DnsRawRecord.class, this::replace);
     }
 
     @Override
-    public DnsRawRecord retain() {
-        content().retain();
-        return this;
+    public void close() {
+        content.close();
     }
 
     @Override
-    public DnsRawRecord retain(int increment) {
-        content().retain(increment);
-        return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content().release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content().release(decrement);
-    }
-
-    @Override
-    public DnsRawRecord touch() {
-        content().touch();
-        return this;
+    public boolean isAccessible() {
+        return content.isAccessible();
     }
 
     @Override
     public DnsRawRecord touch(Object hint) {
-        content().touch(hint);
+        content.touch(hint);
         return this;
     }
 

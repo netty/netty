@@ -15,15 +15,15 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.MessageToByteEncoder;
+import io.netty5.handler.codec.MessageToByteEncoderForBuffer;
 import io.netty5.util.internal.UnstableApi;
 
 @ChannelHandler.Sharable
 @UnstableApi
-public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
+public final class TcpDnsQueryEncoder extends MessageToByteEncoderForBuffer<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
 
@@ -38,27 +38,23 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
     public TcpDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
-        this.encoder = new DnsQueryEncoder(recordEncoder);
+        encoder = new DnsQueryEncoder(recordEncoder);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, DnsQuery msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, DnsQuery msg, Buffer out) throws Exception {
         // Length is two octets as defined by RFC-7766
         // See https://tools.ietf.org/html/rfc7766#section-8
-        out.writerIndex(out.writerIndex() + 2);
+        int initialOffset = out.writerOffset();
+        out.skipWritable(2);
         encoder.encode(msg, out);
 
         // Now fill in the correct length based on the amount of data that we wrote the ByteBuf.
-        out.setShort(0, out.readableBytes() - 2);
+        out.setShort(initialOffset, (short) (out.writerOffset() - initialOffset - 2));
     }
 
     @Override
-    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, @SuppressWarnings("unused") DnsQuery msg,
-                                     boolean preferDirect) {
-        if (preferDirect) {
-            return ctx.alloc().ioBuffer(1024);
-        } else {
-            return ctx.alloc().heapBuffer(1024);
-        }
+    protected Buffer allocateBuffer(ChannelHandlerContext ctx, @SuppressWarnings("unused") DnsQuery msg) {
+        return ctx.bufferAllocator().allocate(1024);
     }
 }

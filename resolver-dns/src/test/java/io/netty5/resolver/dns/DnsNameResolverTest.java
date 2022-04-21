@@ -17,6 +17,7 @@ package io.netty5.resolver.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelHandler;
@@ -28,7 +29,6 @@ import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -681,7 +681,7 @@ public class DnsNameResolverTest {
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+                    Buffer recordContent = ((DnsRawRecord) r).content();
 
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
@@ -1109,7 +1109,7 @@ public class DnsNameResolverTest {
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+                    Buffer recordContent = ((DnsRawRecord) r).content();
 
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
@@ -1152,13 +1152,13 @@ public class DnsNameResolverTest {
         assertThat(records.get(0), instanceOf(DnsRawRecord.class));
 
         final DnsRawRecord record = (DnsRawRecord) records.get(0);
-        final ByteBuf content = record.content();
-        assertThat(record.name(), is("foo.com."));
-        assertThat(record.dnsClass(), is(DnsRecord.CLASS_IN));
-        assertThat(record.type(), is(A));
-        assertThat(content.readableBytes(), is(4));
-        assertThat(content.readInt(), is(0x01020304));
-        record.release();
+        try (Buffer content = record.content()) {
+            assertThat(record.name(), is("foo.com."));
+            assertThat(record.dnsClass(), is(DnsRecord.CLASS_IN));
+            assertThat(record.type(), is(A));
+            assertThat(content.readableBytes(), is(4));
+            assertThat(content.readInt(), is(0x01020304));
+        }
     }
 
     @Test
@@ -2788,12 +2788,14 @@ public class DnsNameResolverTest {
             return Collections.emptyList();
         }
         List<String> list = new ArrayList<String>();
-        ByteBuf data = ((DnsRawRecord) record).content();
-        int idx = data.readerIndex();
-        int wIdx = data.writerIndex();
+        Buffer data = ((DnsRawRecord) record).content();
+        int idx = data.readerOffset();
+        int wIdx = data.writerOffset();
         while (idx < wIdx) {
             int len = data.getUnsignedByte(idx++);
-            list.add(data.toString(idx, len, CharsetUtil.UTF_8));
+            byte[] bytes = new byte[len];
+            data.copyInto(idx, bytes, 0, len);
+            list.add(new String(bytes, CharsetUtil.UTF_8));
             idx += len;
         }
         return list;
@@ -3062,10 +3064,10 @@ public class DnsNameResolverTest {
                 resolver.ch.pipeline().addFirst(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof DatagramPacket) {
+                        if (msg instanceof BufferDatagramPacket) {
                             // Truncate the packet by 1 byte.
-                            DatagramPacket packet = (DatagramPacket) msg;
-                            packet.content().writerIndex(packet.content().writerIndex() - 1);
+                            BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+                            packet.content().writerOffset(packet.content().writerOffset() - 1);
                         }
                         ctx.fireChannelRead(msg);
                     }

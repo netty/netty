@@ -15,7 +15,8 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.util.internal.StringUtil;
@@ -179,7 +180,9 @@ final class DnsMessageUtil {
         }
     }
 
-    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder, ByteBuf buf, DnsQueryFactory supplier) throws Exception {
+    static DnsQuery decodeDnsQuery(DnsRecordDecoder decoder,
+                                   BufferAllocator allocator, Buffer buf,
+                                   DnsQueryFactory supplier) throws Exception {
         DnsQuery query = newQuery(buf, supplier);
         boolean success = false;
         try {
@@ -188,9 +191,9 @@ final class DnsMessageUtil {
             int authorityRecordCount = buf.readUnsignedShort();
             int additionalRecordCount = buf.readUnsignedShort();
             decodeQuestions(decoder, query, buf, questionCount);
-            decodeRecords(decoder, query, DnsSection.ANSWER, buf, answerCount);
-            decodeRecords(decoder, query, DnsSection.AUTHORITY, buf, authorityRecordCount);
-            decodeRecords(decoder, query, DnsSection.ADDITIONAL, buf, additionalRecordCount);
+            decodeRecords(decoder, query, DnsSection.ANSWER, allocator, buf, answerCount);
+            decodeRecords(decoder, query, DnsSection.AUTHORITY, allocator, buf, authorityRecordCount);
+            decodeRecords(decoder, query, DnsSection.ADDITIONAL, allocator, buf, additionalRecordCount);
             success = true;
             return query;
         } finally {
@@ -200,7 +203,7 @@ final class DnsMessageUtil {
         }
     }
 
-    private static DnsQuery newQuery(ByteBuf buf, DnsQueryFactory supplier) {
+    private static DnsQuery newQuery(Buffer buf, DnsQueryFactory supplier) {
         int id = buf.readUnsignedShort();
         int flags = buf.readUnsignedShort();
         if (flags >> 15 == 1) {
@@ -214,16 +217,18 @@ final class DnsMessageUtil {
     }
 
     private static void decodeQuestions(DnsRecordDecoder decoder,
-                                        DnsQuery query, ByteBuf buf, int questionCount) throws Exception {
+                                        DnsQuery query, Buffer buf, int questionCount) throws Exception {
         for (int i = questionCount; i > 0; --i) {
             query.addRecord(DnsSection.QUESTION, decoder.decodeQuestion(buf));
         }
     }
 
     private static void decodeRecords(DnsRecordDecoder decoder,
-                                      DnsQuery query, DnsSection section, ByteBuf buf, int count) throws Exception {
+                                      DnsQuery query, DnsSection section,
+                                      BufferAllocator allocator, Buffer buf,
+                                      int count) throws Exception {
         for (int i = count; i > 0; --i) {
-            DnsRecord r = decoder.decodeRecord(buf);
+            DnsRecord r = decoder.decodeRecord(allocator, buf);
             if (r == null) {
                 break;
             }
@@ -231,7 +236,7 @@ final class DnsMessageUtil {
         }
     }
 
-    static void encodeDnsResponse(DnsRecordEncoder encoder, DnsResponse response, ByteBuf buf) throws Exception {
+    static void encodeDnsResponse(DnsRecordEncoder encoder, DnsResponse response, Buffer buf) throws Exception {
         boolean success = false;
         try {
             encodeHeader(response, buf);
@@ -242,7 +247,7 @@ final class DnsMessageUtil {
             success = true;
         } finally {
             if (!success) {
-                buf.release();
+                buf.close();
             }
         }
     }
@@ -253,8 +258,8 @@ final class DnsMessageUtil {
      * @param response the response header being encoded
      * @param buf      the buffer the encoded data should be written to
      */
-    private static void encodeHeader(DnsResponse response, ByteBuf buf) {
-        buf.writeShort(response.id());
+    private static void encodeHeader(DnsResponse response, Buffer buf) {
+        buf.writeShort((short) response.id());
         int flags = 32768;
         flags |= (response.opCode().byteValue() & 0xFF) << 11;
         if (response.isAuthoritativeAnswer()) {
@@ -271,22 +276,22 @@ final class DnsMessageUtil {
         }
         flags |= response.z() << 4;
         flags |= response.code().intValue();
-        buf.writeShort(flags);
-        buf.writeShort(response.count(DnsSection.QUESTION));
-        buf.writeShort(response.count(DnsSection.ANSWER));
-        buf.writeShort(response.count(DnsSection.AUTHORITY));
-        buf.writeShort(response.count(DnsSection.ADDITIONAL));
+        buf.writeShort((short) flags);
+        buf.writeShort((short) response.count(DnsSection.QUESTION));
+        buf.writeShort((short) response.count(DnsSection.ANSWER));
+        buf.writeShort((short) response.count(DnsSection.AUTHORITY));
+        buf.writeShort((short) response.count(DnsSection.ADDITIONAL));
     }
 
-    private static void encodeQuestions(DnsRecordEncoder encoder, DnsResponse response, ByteBuf buf) throws Exception {
+    private static void encodeQuestions(DnsRecordEncoder encoder, DnsResponse response, Buffer buf) throws Exception {
         int count = response.count(DnsSection.QUESTION);
         for (int i = 0; i < count; ++i) {
-            encoder.encodeQuestion(response.<DnsQuestion>recordAt(DnsSection.QUESTION, i), buf);
+            encoder.encodeQuestion(response.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 
     private static void encodeRecords(DnsRecordEncoder encoder,
-                                      DnsResponse response, DnsSection section, ByteBuf buf) throws Exception {
+                                      DnsResponse response, DnsSection section, Buffer buf) throws Exception {
         int count = response.count(section);
         for (int i = 0; i < count; ++i) {
             encoder.encodeRecord(response.recordAt(section, i), buf);

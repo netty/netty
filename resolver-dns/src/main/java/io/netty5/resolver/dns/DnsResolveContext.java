@@ -16,8 +16,7 @@
 
 package io.netty5.resolver.dns;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.CorruptedFrameException;
@@ -899,7 +898,7 @@ abstract class DnsResolveContext<T> {
                 continue;
             }
 
-            final ByteBuf recordContent = ((ByteBufHolder) r).content();
+            final Buffer recordContent = ((DnsRawRecord) r).content();
             final String domainName = decodeDomainName(recordContent);
             if (domainName == null) {
                 continue;
@@ -1033,15 +1032,15 @@ abstract class DnsResolveContext<T> {
         promise.tryFailure(unknownHostException);
     }
 
-    static String decodeDomainName(ByteBuf in) {
-        int readerIndex = in.readerIndex();
+    static String decodeDomainName(Buffer in) {
+        int readerIndex = in.readerOffset();
         try {
             return DefaultDnsRecordDecoder.decodeName(in);
         } catch (CorruptedFrameException e) {
             // In this case we just return null.
             return null;
         } finally {
-            in.readerIndex(readerIndex);
+            in.readerOffset(readerIndex);
         }
     }
 
@@ -1182,7 +1181,7 @@ abstract class DnsResolveContext<T> {
                 return;
             }
 
-            final ByteBuf recordContent = ((ByteBufHolder) r).content();
+            final Buffer recordContent = ((DnsRawRecord) r).content();
             final String domainName = decodeDomainName(recordContent);
             if (domainName == null) {
                 // Could not be parsed, ignore.

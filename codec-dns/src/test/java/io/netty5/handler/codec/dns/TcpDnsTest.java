@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -62,7 +63,7 @@ public class TcpDnsTest {
         DnsResponse readResponse = channel.readInbound();
         assertThat(readResponse.recordAt(DnsSection.QUESTION), is((DnsRecord) question));
         DnsRawRecord record = new DefaultDnsRawRecord(question.name(),
-                DnsRecordType.A, TTL, Unpooled.wrappedBuffer(QUERY_RESULT));
+                DnsRecordType.A, TTL, onHeapAllocator().copyOf(QUERY_RESULT));
         assertThat(readResponse.recordAt(DnsSection.ANSWER), is((DnsRecord) record));
         assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
         ReferenceCountUtil.release(readResponse);
@@ -77,7 +78,7 @@ public class TcpDnsTest {
 
         for (byte[] address : addresses) {
             DefaultDnsRawRecord queryAnswer = new DefaultDnsRawRecord(question.name(),
-                    DnsRecordType.A, TTL, Unpooled.wrappedBuffer(address));
+                    DnsRecordType.A, TTL, onHeapAllocator().copyOf(address));
             response.addRecord(DnsSection.ANSWER, queryAnswer);
         }
         return response;

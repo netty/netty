@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.util.internal.StringUtil;
@@ -36,14 +36,15 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     protected DefaultDnsRecordEncoder() { }
 
     @Override
-    public final void encodeQuestion(DnsQuestion question, ByteBuf out) throws Exception {
+    public final void encodeQuestion(DnsQuestion question, Buffer out) throws Exception {
         encodeName(question.name(), out);
-        out.writeShort(question.type().intValue());
-        out.writeShort(question.dnsClass());
+        out.ensureWritable(4);
+        out.writeShort((short) question.type().intValue());
+        out.writeShort((short) question.dnsClass());
     }
 
     @Override
-    public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
+    public void encodeRecord(DnsRecord record, Buffer out) throws Exception {
         if (record instanceof DnsQuestion) {
             encodeQuestion((DnsQuestion) record, out);
         } else if (record instanceof DnsPtrRecord) {
@@ -59,24 +60,26 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         }
     }
 
-    private void encodeRecord0(DnsRecord record, ByteBuf out) throws Exception {
+    private void encodeRecord0(DnsRecord record, Buffer out) throws Exception {
         encodeName(record.name(), out);
-        out.writeShort(record.type().intValue());
-        out.writeShort(record.dnsClass());
+        out.ensureWritable(8);
+        out.writeShort((short) record.type().intValue());
+        out.writeShort((short) record.dnsClass());
         out.writeInt((int) record.timeToLive());
     }
 
-    private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
+    private void encodePtrRecord(DnsPtrRecord record, Buffer out) throws Exception {
         encodeRecord0(record, out);
         encodeName(record.hostname(), out);
     }
 
-    private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
+    private void encodeOptPseudoRecord(DnsOptPseudoRecord record, Buffer out) throws Exception {
         encodeRecord0(record, out);
-        out.writeShort(0);
+        out.ensureWritable(2);
+        out.writeShort((short) 0);
     }
 
-    private void encodeOptEcsRecord(DnsOptEcsRecord record, ByteBuf out) throws Exception {
+    private void encodeOptEcsRecord(DnsOptEcsRecord record, Buffer out) throws Exception {
         encodeRecord0(record, out);
 
         int sourcePrefixLength = record.sourcePrefixLength();
@@ -102,13 +105,14 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
                 1 + // SCOPE PREFIX-LENGTH
                 payloadLength; //  ADDRESS...
 
-        out.writeShort(fullPayloadLength);
-        out.writeShort(8); // This is the defined type for ECS.
+        out.ensureWritable(fullPayloadLength);
+        out.writeShort((short) fullPayloadLength);
+        out.writeShort((short) 8); // This is the defined type for ECS.
 
-        out.writeShort(fullPayloadLength - 4); // Not include OPTION-CODE and OPTION-LENGTH
+        out.writeShort((short) (fullPayloadLength - 4)); // Not include OPTION-CODE and OPTION-LENGTH
         out.writeShort(addressNumber);
-        out.writeByte(sourcePrefixLength);
-        out.writeByte(scopePrefixLength); // Must be 0 in queries.
+        out.writeByte((byte) sourcePrefixLength);
+        out.writeByte((byte) scopePrefixLength); // Must be 0 in queries.
 
         if (lowOrderBitsToPreserve > 0) {
             int bytesLength = payloadLength - 1;
@@ -127,17 +131,19 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0 ? 1 : 0);
     }
 
-    private void encodeRawRecord(DnsRawRecord record, ByteBuf out) throws Exception {
+    private void encodeRawRecord(DnsRawRecord record, Buffer out) throws Exception {
         encodeRecord0(record, out);
 
-        ByteBuf content = record.content();
+        Buffer content = record.content();
         int contentLen = content.readableBytes();
 
-        out.writeShort(contentLen);
-        out.writeBytes(content, content.readerIndex(), contentLen);
+        out.ensureWritable(2 + contentLen);
+        out.writeShort((short) contentLen);
+        content.copyInto(content.readerOffset(), out, out.writerOffset(), contentLen);
+        out.skipWritable(contentLen);
     }
 
-    protected void encodeName(String name, ByteBuf buf) throws Exception {
+    protected void encodeName(String name, Buffer buf) throws Exception {
         DnsCodecUtil.encodeDomainName(name, buf);
     }
 

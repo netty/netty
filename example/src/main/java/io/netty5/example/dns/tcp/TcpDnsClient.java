@@ -16,7 +16,7 @@
 package io.netty5.example.dns.tcp;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.ByteBufUtil;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;

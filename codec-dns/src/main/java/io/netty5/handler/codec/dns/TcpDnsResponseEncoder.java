@@ -15,14 +15,15 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.MessageToMessageEncoder;
-import static java.util.Objects.requireNonNull;
 import io.netty5.util.internal.UnstableApi;
 
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 @ChannelHandler.Sharable
@@ -45,11 +46,11 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsResponse response, List<Object> out) throws Exception {
-        ByteBuf buf = ctx.alloc().ioBuffer(1024);
+        Buffer buf = ctx.bufferAllocator().allocate(1024);
 
-        buf.writerIndex(buf.writerIndex() + 2);
+        buf.skipWritable(2);
         DnsMessageUtil.encodeDnsResponse(encoder, response, buf);
-        buf.setShort(0, buf.readableBytes() - 2);
+        buf.setShort(0, (short) (buf.readableBytes() - 2));
 
         out.add(buf);
     }

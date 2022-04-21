@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -33,12 +33,12 @@ public interface DnsRecordEncoder {
      *
      * @param out the output buffer where the encoded question will be written to
      */
-    void encodeQuestion(DnsQuestion question, ByteBuf out) throws Exception;
+    void encodeQuestion(DnsQuestion question, Buffer out) throws Exception;
 
     /**
      * Encodes a {@link DnsRecord}.
      *
      * @param out the output buffer where the encoded record will be written to
      */
-    void encodeRecord(DnsRecord record, ByteBuf out) throws Exception;
+    void encodeRecord(DnsRecord record, Buffer out) throws Exception;
 }

@@ -16,14 +16,11 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
-
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -40,44 +37,43 @@ public class DnsQueryTest {
         EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
 
-        List<DnsQuery> queries = new ArrayList<>(5);
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        verifyEncodeAndDecode(writeChannel, readChannel, new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("1.0.0.127.in-addr.arpa", DnsRecordType.PTR)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        verifyEncodeAndDecode(writeChannel, readChannel, new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("www.example.com", DnsRecordType.A)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        verifyEncodeAndDecode(writeChannel, readChannel, new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.AAAA)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        verifyEncodeAndDecode(writeChannel, readChannel, new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.MX)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        verifyEncodeAndDecode(writeChannel, readChannel, new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.CNAME)));
 
-        for (DnsQuery query: queries) {
-            assertThat(query.count(DnsSection.QUESTION), is(1));
-            assertThat(query.count(DnsSection.ANSWER), is(0));
-            assertThat(query.count(DnsSection.AUTHORITY), is(0));
-            assertThat(query.count(DnsSection.ADDITIONAL), is(0));
-
-            assertTrue(writeChannel.writeOutbound(query));
-
-            DatagramPacket packet = writeChannel.readOutbound();
-            assertTrue(packet.content().isReadable());
-            assertTrue(readChannel.writeInbound(packet));
-
-            DnsQuery decodedDnsQuery = readChannel.readInbound();
-            assertEquals(query, decodedDnsQuery);
-            assertTrue(decodedDnsQuery.release());
-
-            assertNull(writeChannel.readOutbound());
-            assertNull(readChannel.readInbound());
-        }
-
         assertFalse(writeChannel.finish());
         assertFalse(readChannel.finish());
+    }
+
+    private static void verifyEncodeAndDecode(EmbeddedChannel writeChan, EmbeddedChannel readChan, DnsQuery query) {
+        assertThat(query.count(DnsSection.QUESTION), is(1));
+        assertThat(query.count(DnsSection.ANSWER), is(0));
+        assertThat(query.count(DnsSection.AUTHORITY), is(0));
+        assertThat(query.count(DnsSection.ADDITIONAL), is(0));
+
+        assertTrue(writeChan.writeOutbound(query));
+
+        BufferDatagramPacket packet = writeChan.readOutbound();
+        assertTrue(packet.content().readableBytes() > 0);
+        assertTrue(readChan.writeInbound(packet));
+
+        DnsQuery decodedDnsQuery = readChan.readInbound();
+        assertEquals(query, decodedDnsQuery);
+        assertTrue(decodedDnsQuery.release());
+
+        assertNull(writeChan.readOutbound());
+        assertNull(readChan.readInbound());
     }
 }

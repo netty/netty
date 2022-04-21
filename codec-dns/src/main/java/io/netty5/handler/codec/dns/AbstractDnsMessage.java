@@ -401,14 +401,10 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
         }
 
         if (this instanceof DnsQuery) {
-            if (!(that instanceof DnsQuery)) {
-                return false;
-            }
-        } else if (that instanceof DnsQuery) {
-            return false;
+            return that instanceof DnsQuery;
+        } else {
+            return !(that instanceof DnsQuery);
         }
-
-        return true;
     }
 
     @Override

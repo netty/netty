@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -131,6 +132,30 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
+     * The copy will start at {@link Buffer#readerOffset()} and copy {@link Buffer#readableBytes()} bytes.
+     */
+    public static byte[] getBytes(Buffer buf) {
+        return getBytes(buf,  buf.readerOffset(), buf.readableBytes());
+    }
+
+    /**
+     * Create a copy of the underlying storage from {@code buf} into a byte array.
+     * The copy will start at {@code start} and copy {@code length} bytes.
+     */
+    public static byte[] getBytes(Buffer buf, int start, int length) {
+        int capacity = buf.capacity();
+        if (isOutOfBounds(start, length, capacity)) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
+                                                + ") <= " + "buf.capacity(" + capacity + ')');
+        }
+
+        byte[] bytes = PlatformDependent.allocateUninitializedArray(length);
+        buf.copyInto(start, bytes, 0, length);
+        return bytes;
+    }
+
+    /**
      * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#setBytes(int, byte[], int, int)}.
      * Unlike the {@link #copy(AsciiString, ByteBuf)} and {@link #copy(AsciiString, int, ByteBuf, int)} methods,
      * this method do not increase a {@code writerIndex} of {@code dst} buffer.
@@ -213,7 +238,7 @@ public final class ByteBufUtil {
             for (i = 0; i < HEXDUMP_ROWPREFIXES.length; i++) {
                 StringBuilder buf = new StringBuilder(12);
                 buf.append(NEWLINE);
-                buf.append(Long.toHexString(i << 4 & 0xFFFFFFFFL | 0x100000000L));
+                buf.append(Long.toHexString(i << 4L & 0xFFFFFFFFL | 0x100000000L));
                 buf.setCharAt(buf.length() - 9, '|');
                 buf.append('|');
                 HEXDUMP_ROWPREFIXES[i] = buf.toString();

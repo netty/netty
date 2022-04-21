@@ -17,7 +17,7 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.util.internal.UnstableApi;
@@ -25,11 +25,11 @@ import io.netty5.util.internal.UnstableApi;
 import java.net.InetSocketAddress;
 
 /**
- * Decodes a {@link DatagramPacket} into a {@link DatagramDnsResponse}.
+ * Decodes a {@link BufferDatagramPacket} into a {@link DatagramDnsResponse}.
  */
 @UnstableApi
 @ChannelHandler.Sharable
-public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
+public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<BufferDatagramPacket> {
 
     private final DnsResponseDecoder<InetSocketAddress> responseDecoder;
 
@@ -44,7 +44,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsResponseDecoder(DnsRecordDecoder recordDecoder) {
-        this.responseDecoder = new DnsResponseDecoder<InetSocketAddress>(recordDecoder) {
+        responseDecoder = new DnsResponseDecoder<InetSocketAddress>(recordDecoder) {
             @Override
             protected DnsResponse newResponse(InetSocketAddress sender, InetSocketAddress recipient,
                                               int id, DnsOpCode opCode, DnsResponseCode responseCode) {
@@ -54,7 +54,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
         final DnsResponse response;
         try {
             response = decodeResponse(ctx, packet);
@@ -64,7 +64,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
         ctx.fireChannelRead(response);
     }
 
-    protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
-        return responseDecoder.decode(packet.sender(), packet.recipient(), packet.content());
+    protected DnsResponse decodeResponse(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
+        return responseDecoder.decode(packet.sender(), packet.recipient(), ctx.bufferAllocator(), packet.content());
     }
 }

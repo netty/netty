@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
@@ -25,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultDnsRecordEncoderTest {
@@ -57,14 +57,10 @@ public class DefaultDnsRecordEncoderTest {
 
     private static void testEncodeName(byte[] expected, String name) throws Exception {
         DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
-        ByteBuf out = Unpooled.buffer();
-        ByteBuf expectedBuf = Unpooled.wrappedBuffer(expected);
-        try {
+        try (Buffer out = onHeapAllocator().allocate(expected.length * 2);
+             Buffer expectedBuf = onHeapAllocator().copyOf(expected)) {
             encoder.encodeName(name, out);
             assertEquals(expectedBuf, out);
-        } finally {
-            out.release();
-            expectedBuf.release();
         }
     }
 
@@ -90,15 +86,15 @@ public class DefaultDnsRecordEncoderTest {
     private static void testIp(InetAddress address, int prefix) throws Exception {
         int lowOrderBitsToPreserve = prefix % Byte.SIZE;
 
-        ByteBuf addressPart = Unpooled.wrappedBuffer(address.getAddress(), 0,
-                DefaultDnsRecordEncoder.calculateEcsAddressLength(prefix, lowOrderBitsToPreserve));
+        int ecsAddressLength = DefaultDnsRecordEncoder.calculateEcsAddressLength(prefix, lowOrderBitsToPreserve);
+        Buffer addressPart = onHeapAllocator().copyOf(address.getAddress()).writerOffset(ecsAddressLength);
 
         if (lowOrderBitsToPreserve > 0) {
             // Pad the leftover of the last byte with zeros.
-            int idx = addressPart.writerIndex() - 1;
+            int idx = addressPart.writerOffset() - 1;
             byte lastByte = addressPart.getByte(idx);
             int paddingMask = -1 << 8 - lowOrderBitsToPreserve;
-            addressPart.setByte(idx, lastByte & paddingMask);
+            addressPart.setByte(idx, (byte) (lastByte & paddingMask));
         }
 
         int payloadSize = nextInt(Short.MAX_VALUE);
@@ -106,8 +102,7 @@ public class DefaultDnsRecordEncoderTest {
         int version = nextInt(Byte.MAX_VALUE * 2); // Unsigned
 
         DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
-        ByteBuf out = Unpooled.buffer();
-        try {
+        try (Buffer out = onHeapAllocator().allocate(1024)) {
             DnsOptEcsRecord record = new DefaultDnsOptEcsRecord(
                     payloadSize, extendedRcode, version, prefix, address.getAddress());
             encoder.encodeRecord(record, out);
@@ -115,7 +110,7 @@ public class DefaultDnsRecordEncoderTest {
             assertEquals(0, out.readByte()); // Name
             assertEquals(DnsRecordType.OPT.intValue(), out.readUnsignedShort()); // Opt
             assertEquals(payloadSize, out.readUnsignedShort()); // payload
-            assertEquals(record.timeToLive(), out.getUnsignedInt(out.readerIndex()));
+            assertEquals(record.timeToLive(), out.getUnsignedInt(out.readerOffset()));
 
             // Read unpacked TTL.
             assertEquals(extendedRcode, out.readUnsignedByte());
@@ -140,8 +135,7 @@ public class DefaultDnsRecordEncoderTest {
             assertEquals(0, out.readUnsignedByte()); // This must be 0 for requests.
             assertEquals(addressPart, out);
         } finally {
-            addressPart.release();
-            out.release();
+            addressPart.close();
         }
     }
 
