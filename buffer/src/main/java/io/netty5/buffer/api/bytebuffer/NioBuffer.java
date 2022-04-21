@@ -29,6 +29,7 @@ import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
@@ -114,7 +115,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (readOnly()) {
             throw bufferIsReadOnly(this);
         }
-        checkWrite(offset, 0);
+        checkWrite(offset, 0, false);
         woff = offset;
         return this;
     }
@@ -606,7 +607,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (writableBytes == 0) {
             return 0;
         }
-        checkWrite(writerOffset(), writableBytes);
+        checkWrite(writerOffset(), writableBytes, false);
         try {
             return processor.process(initialIndex, this)? 1 : -1;
         } finally {
@@ -641,6 +642,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeByte(byte value) {
+        checkWrite(woff, Byte.BYTES, true);
         try {
             wmem.put(woff, value);
             woff += Byte.BYTES;
@@ -666,6 +668,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeUnsignedByte(int value) {
+        checkWrite(woff, Byte.BYTES, true);
         try {
             wmem.put(woff, (byte) (value & 0xFF));
             woff += Byte.BYTES;
@@ -705,6 +708,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeChar(char value) {
+        checkWrite(woff, Character.BYTES, true);
         try {
             wmem.putChar(woff, value);
             woff += Character.BYTES;
@@ -758,6 +762,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeShort(short value) {
+        checkWrite(woff, Short.BYTES, true);
         try {
             wmem.putShort(woff, value);
             woff += Short.BYTES;
@@ -783,6 +788,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeUnsignedShort(int value) {
+        checkWrite(woff, Short.BYTES, true);
         try {
             wmem.putShort(woff, (short) (value & 0xFFFF));
             woff += Short.BYTES;
@@ -836,7 +842,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeMedium(int value) {
-        checkWrite(woff, 3);
+        checkWrite(woff, 3, true);
         wmem.put(woff, (byte) (value >> 16));
         wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
         wmem.put(woff + 2, (byte) (value & 0xFF));
@@ -855,7 +861,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeUnsignedMedium(int value) {
-        checkWrite(woff, 3);
+        checkWrite(woff, 3, true);
         wmem.put(woff, (byte) (value >> 16));
         wmem.put(woff + 1, (byte) (value >> 8 & 0xFF));
         wmem.put(woff + 2, (byte) (value & 0xFF));
@@ -902,6 +908,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeInt(int value) {
+        checkWrite(woff, Integer.BYTES, true);
         try {
             wmem.putInt(woff, value);
             woff += Integer.BYTES;
@@ -927,6 +934,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeUnsignedInt(long value) {
+        checkWrite(woff, Integer.BYTES, true);
         try {
             wmem.putInt(woff, (int) (value & 0xFFFFFFFFL));
             woff += Integer.BYTES;
@@ -966,6 +974,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeFloat(float value) {
+        checkWrite(woff, Float.BYTES, true);
         try {
             wmem.putFloat(woff, value);
             woff += Float.BYTES;
@@ -1005,6 +1014,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeLong(long value) {
+        checkWrite(woff, Long.BYTES, true);
         try {
             wmem.putLong(woff, value);
             woff += Long.BYTES;
@@ -1044,6 +1054,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer writeDouble(double value) {
+        checkWrite(woff, Double.BYTES, true);
         try {
             wmem.putDouble(woff, value);
             woff += Double.BYTES;
@@ -1110,15 +1121,15 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         }
     }
 
-    private void checkWrite(int index, int size) {
+    private void checkWrite(int index, int size, boolean mayExpand) {
         if (index < roff | wmem.capacity() < index + size) {
-            throw writeAccessCheckException(index, size);
+            writeAccessCheckException(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 | wmem.capacity() < index + size) {
-            throw writeAccessCheckException(index, size);
+            writeAccessCheckException(index, size, false);
         }
     }
 
@@ -1137,23 +1148,30 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     private RuntimeException readAccessCheckException(int index, int size) {
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            return bufferIsClosed(this);
         }
         return outOfBounds(index, size);
     }
 
-    private RuntimeException writeAccessCheckException(int index, int size) {
+    private void writeAccessCheckException(int index, int size, boolean mayExpand) {
         if (rmem == CLOSED_BUFFER) {
             throw bufferIsClosed(this);
         }
         if (wmem != rmem) {
-            return bufferIsReadOnly(this);
+            throw bufferIsReadOnly(this);
         }
-        return outOfBounds(index, size);
+        int capacity = capacity();
+        if (mayExpand && index > 0 && index <= capacity && capacity < 131072 /* 128k */) {
+            int minimumGrowth = PlatformDependent.roundToPowerOfTwo(capacity * 2) - capacity; // Grow into power-of-two.
+            ensureWritable(size, minimumGrowth, false);
+            checkSet(index, size); // Verify writing is now possible, without recursing.
+            return;
+        }
+        throw outOfBounds(index, size);
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {
-        return new IndexOutOfBoundsException(
+        throw new IndexOutOfBoundsException(
                 "Access at index " + index + " of size " + size + " is out of bounds: " +
                 "[read 0 to " + woff + ", write 0 to " + rmem.capacity() + "].");
     }

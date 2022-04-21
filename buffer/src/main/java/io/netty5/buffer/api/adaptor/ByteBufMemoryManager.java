@@ -50,12 +50,11 @@ public final class ByteBufMemoryManager implements MemoryManager {
                                  AllocationType allocationType) {
         int capacity = Math.toIntExact(size);
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
-            ByteBuf byteBuf = unpooledDirectAllocator.directBuffer(capacity, capacity);
-            byteBuf.setZero(0, capacity);
+            ByteBuf byteBuf = unpooledDirectAllocator.directBuffer(capacity, Math.max(capacity, 131072 /* 128k */));
             return ByteBufBuffer.wrap(byteBuf, control, convert(dropDecorator.apply(drop())));
         }
         if (allocationType == StandardAllocationTypes.ON_HEAP) {
-            ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[capacity]);
+            ByteBuf byteBuf = Unpooled.buffer(capacity, Math.max(capacity, 131072 /* 128k */));
             byteBuf.setIndex(0, 0);
             return ByteBufBuffer.wrap(byteBuf, control, convert(dropDecorator.apply(drop())));
         }
