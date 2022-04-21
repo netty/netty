@@ -51,7 +51,7 @@ static jclass    quiche_logger_class;
 static jmethodID quiche_logger_class_log;
 static jobject   quiche_logger;
 static JavaVM     *global_vm = NULL;
-static char* staticPackagePrefix = NULL;
+static char const* staticPackagePrefix = NULL;
 
 jint quic_get_java_env(JNIEnv **env)
 {
@@ -775,7 +775,7 @@ error:
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Quiche to reflect that.
-static jint netty_quiche_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     int ret = JNI_ERR;
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
@@ -817,9 +817,8 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     }
     boringsslLoaded = 1;
 
-    if (packagePrefix) {
-        staticPackagePrefix = strdup(packagePrefix);
-    }
+    staticPackagePrefix = packagePrefix;
+
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
@@ -851,7 +850,7 @@ static void netty_quiche_JNI_OnUnload(JNIEnv* env) {
         (*env)->DeleteGlobalRef(env, quiche_logger);
         quiche_logger = NULL;
     }
-    free(staticPackagePrefix);
+    free((void*) staticPackagePrefix);
     staticPackagePrefix = NULL;
 }
 
