@@ -592,7 +592,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeByte(byte value) {
         try {
-            ensureWritable(Byte.BYTES, 1, false);
+            checkWrite(Byte.BYTES);
             delegate.writeByte(value);
             return this;
         } catch (RuntimeException e) {
@@ -613,7 +613,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedByte(int value) {
         try {
-            ensureWritable(Byte.BYTES, 1, false);
+            checkWrite(Byte.BYTES);
             delegate.writeByte((byte) (value & 0xFF));
             return this;
         } catch (RuntimeException e) {
@@ -652,7 +652,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeChar(char value) {
         try {
-            ensureWritable(Character.BYTES, 1, false);
+            checkWrite(Character.BYTES);
             delegate.writeChar(value);
             return this;
         } catch (RuntimeException e) {
@@ -710,7 +710,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeShort(short value) {
         try {
-            ensureWritable(Short.BYTES, 1, false);
+            checkWrite(Short.BYTES);
             delegate.writeShort(value);
             return this;
         } catch (RuntimeException e) {
@@ -732,7 +732,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedShort(int value) {
         try {
-            ensureWritable(Short.BYTES, 1, false);
+            checkWrite(Short.BYTES);
             delegate.writeShort((short) (value & 0xFFFF));
             return this;
         } catch (RuntimeException e) {
@@ -790,7 +790,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeMedium(int value) {
         try {
-            ensureWritable(3, 1, false);
+            checkWrite(3);
             delegate.writeMedium(value);
             return this;
         } catch (RuntimeException e) {
@@ -812,7 +812,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedMedium(int value) {
         try {
-            ensureWritable(3, 1, false);
+            checkWrite(3);
             delegate.writeMedium(value);
             return this;
         } catch (RuntimeException e) {
@@ -870,7 +870,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeInt(int value) {
         try {
-            ensureWritable(Integer.BYTES, 1, false);
+            checkWrite(Integer.BYTES);
             delegate.writeInt(value);
             return this;
         } catch (RuntimeException e) {
@@ -892,7 +892,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedInt(long value) {
         try {
-            ensureWritable(Integer.BYTES, 1, false);
+            checkWrite(Integer.BYTES);
             delegate.writeInt((int) (value & 0xFFFFFFFFL));
             return this;
         } catch (RuntimeException e) {
@@ -932,7 +932,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeFloat(float value) {
         try {
-            ensureWritable(Float.BYTES, 1, false);
+            checkWrite(Float.BYTES);
             delegate.writeFloat(value);
             return this;
         } catch (RuntimeException e) {
@@ -972,7 +972,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeLong(long value) {
         try {
-            ensureWritable(Long.BYTES, 1, false);
+            checkWrite(Long.BYTES);
             delegate.writeLong(value);
             return this;
         } catch (RuntimeException e) {
@@ -1012,11 +1012,20 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeDouble(double value) {
         try {
-            ensureWritable(Double.BYTES, 1, false);
+            int size = Double.BYTES;
+            checkWrite(size);
             delegate.writeDouble(value);
             return this;
         } catch (RuntimeException e) {
             throw accessException(e, true);
+        }
+    }
+
+    private void checkWrite(int size) {
+        if (writableBytes() < size && isOwned()) {
+            ensureWritable(size, 1, false);
+        } else {
+            delegate.getByte(writerOffset() + size - 1); // Force bounds check
         }
     }
 

@@ -1386,7 +1386,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private BufferAccessor prepWrite(int size) {
-        if (writableBytes() < size) {
+        if (writableBytes() < size && isOwned()) {
             ensureWritable(size, bufs.length == 0? 128 : capacity() / bufs.length, false);
         }
         var buf = prepWrite(woff, size);

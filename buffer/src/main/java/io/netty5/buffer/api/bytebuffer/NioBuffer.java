@@ -1161,7 +1161,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw bufferIsReadOnly(this);
         }
         int capacity = capacity();
-        if (mayExpand && index > 0 && index <= capacity && capacity < 131072 /* 128k */) {
+        if (mayExpand && index > 0 && index <= capacity && capacity < 131072 /* 128k */ && isOwned()) {
             int minimumGrowth = PlatformDependent.roundToPowerOfTwo(capacity * 2) - capacity; // Grow into power-of-two.
             ensureWritable(size, minimumGrowth, false);
             checkSet(index, size); // Verify writing is now possible, without recursing.

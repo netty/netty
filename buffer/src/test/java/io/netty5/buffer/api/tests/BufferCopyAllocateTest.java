@@ -60,7 +60,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
                 assertFalse(buffer.readOnly());
                 buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
-                assertThat(buffer.capacity()).isEqualTo(array.length + Long.BYTES);
+                assertThat(buffer.capacity()).isGreaterThanOrEqualTo(array.length + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(array.length + Long.BYTES);
                 for (int i = 0; i < array.length; i++) {
                     byte b = array[i];
@@ -94,7 +94,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);
-            assertThat(buffer.capacity()).isEqualTo(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
         }
     }
 
@@ -139,7 +139,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
                 assertFalse(buffer.readOnly());
                 buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
-                assertThat(buffer.capacity()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
+                assertThat(buffer.capacity()).isGreaterThanOrEqualTo(byteBuffer.capacity() + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
                 while (byteBuffer.hasRemaining()) {
                     byte b = byteBuffer.get();
@@ -173,7 +173,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);
-            assertThat(buffer.capacity()).isEqualTo(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
         }
     }
 
@@ -185,7 +185,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);
-            assertThat(buffer.capacity()).isEqualTo(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
         }
     }
 
@@ -237,7 +237,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
                 assertFalse(buffer.readOnly());
                 buffer.ensureWritable(Long.BYTES, 1, true);
                 buffer.writeLong(0x0102030405060708L);
-                assertThat(buffer.capacity()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
+                assertThat(buffer.capacity()).isGreaterThanOrEqualTo(byteBuffer.capacity() + Long.BYTES);
                 assertThat(buffer.readableBytes()).isEqualTo(byteBuffer.capacity() + Long.BYTES);
                 while (byteBuffer.hasRemaining()) {
                     byte b = byteBuffer.get();
@@ -274,7 +274,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);
-            assertThat(buffer.capacity()).isEqualTo(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
         }
     }
 
@@ -286,7 +286,7 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);
-            assertThat(buffer.capacity()).isEqualTo(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
         }
     }
 }
