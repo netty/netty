@@ -16,30 +16,48 @@
 package io.netty5.handler.codec.http.websocketx;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class WebSocketUtilTest {
 
-    // how many times do we want to run each random variable checker
-    private static final int NUM_ITERATIONS = 1000;
-
-    private static void assertRandomWithinBoundaries(int min, int max) {
-        int r = ThreadLocalRandom.current().nextInt(min, max + 1);
-        assertTrue(min <= r && r <= max);
+    @ParameterizedTest
+    @ValueSource(ints = {2, 4, 8, 16, 24, 48, 64, 128 })
+    void testRandomBytes(int size) {
+        var random1 = WebSocketUtil.randomBytes(size);
+        var random2 = WebSocketUtil.randomBytes(size);
+        assertEquals(size, random1.length);
+        assertEquals(size, random2.length);
+        assertFalse(Arrays.equals(random1, random2));
     }
 
     @Test
-    public void testRandomNumberGenerator() {
-        int iteration = 0;
-        while (++iteration < NUM_ITERATIONS) {
-            assertRandomWithinBoundaries(0, 1);
-            assertRandomWithinBoundaries(0, 1);
-            assertRandomWithinBoundaries(-1, 1);
-            assertRandomWithinBoundaries(-1, 0);
-        }
+    void testBase64() {
+        var random = WebSocketUtil.randomBytes(8);
+        String expected = Base64.getEncoder().encodeToString(random);
+        assertEquals(expected, WebSocketUtil.base64(random));
     }
 
+    @Test
+    void testCalculateV13Accept() throws Exception {
+        var random = new byte[16];
+        ThreadLocalRandom.current().nextBytes(random);
+        String nonce = Base64.getEncoder().encodeToString(random);
+
+        String concat = nonce + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        MessageDigest sha1Digest = MessageDigest.getInstance("SHA-1");
+        byte[] sha1 = sha1Digest.digest(concat.getBytes(StandardCharsets.US_ASCII));
+        String expectedAccept = Base64.getEncoder().encodeToString(sha1);
+
+        assertEquals(expectedAccept, WebSocketUtil.calculateV13Accept(nonce));
+    }
 }

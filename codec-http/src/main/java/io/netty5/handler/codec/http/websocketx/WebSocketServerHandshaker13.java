@@ -23,9 +23,8 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
-import io.netty5.util.CharsetUtil;
 
-import static io.netty5.handler.codec.http.HttpVersion.*;
+import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * <p>
@@ -34,8 +33,6 @@ import static io.netty5.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
-
-    public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     /**
      * Constructor specifying the destination web socket location
@@ -136,7 +133,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     @Override
     protected FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
                                                     HttpHeaders headers) {
-        CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        String key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
@@ -147,14 +144,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-        String accept = WebSocketUtil.base64(sha1);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
-        }
-
+        String accept = WebSocketUtil.calculateV13Accept(key);
         res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                      .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                      .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);

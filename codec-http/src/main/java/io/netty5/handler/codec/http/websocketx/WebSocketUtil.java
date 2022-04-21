@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
+import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 
 import java.security.MessageDigest;
@@ -23,67 +24,67 @@ import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * A utility class mainly for use by web sockets
+ * A utility class mainly for use by web sockets.
  */
 final class WebSocketUtil {
 
-    private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
+    private static final String V13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+    private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<>() {
         @Override
         protected MessageDigest initialValue() throws Exception {
             try {
-                //Try to get a MessageDigest that uses SHA1
-                //Suppress a warning about weak hash algorithm
-                //since it's defined in draft-ietf-hybi-thewebsocketprotocol-00
-                return MessageDigest.getInstance("SHA1"); // lgtm [java/weak-cryptographic-algorithm]
+                // Try to get a MessageDigest that uses SHA1.
+                // Suppress a warning about weak hash algorithm
+                // since it's defined in https://datatracker.ietf.org/doc/html/rfc6455#section-10.8.
+                return MessageDigest.getInstance("SHA-1"); // lgtm [java/weak-cryptographic-algorithm]
             } catch (NoSuchAlgorithmException e) {
-                //This shouldn't happen! How old is the computer?
-                throw new InternalError("SHA-1 not supported on this platform - Outdated?");
+                // This shouldn't happen! How old is the computer ?
+                throw new InternalError("SHA-1 not supported on this platform - Outdated ?");
             }
         }
     };
 
     /**
-     * Performs a SHA-1 hash on the specified data
+     * Performs a SHA-1 hash on the specified data.
      *
      * @param data The data to hash
-     * @return The hashed data
+     * @return the hashed data
      */
     static byte[] sha1(byte[] data) {
-        // TODO(normanmaurer): Create sha1 method that not need MessageDigest.
-        return digest(SHA1, data);
-    }
-
-    private static byte[] digest(FastThreadLocal<MessageDigest> digestFastThreadLocal, byte[] data) {
-        MessageDigest digest = digestFastThreadLocal.get();
-        digest.reset();
-        return digest.digest(data);
+        MessageDigest sha1Digest = SHA1.get();
+        sha1Digest.reset();
+        return sha1Digest.digest(data);
     }
 
     /**
-     * Performs base64 encoding on the specified data
+     * Performs base64 encoding on the specified data.
      *
      * @param data The data to encode
-     * @return An encoded string containing the data
+     * @return an encoded string containing the data
      */
     static String base64(byte[] data) {
         return Base64.getEncoder().encodeToString(data);
     }
+
     /**
-     * Creates an arbitrary number of random bytes
+     * Creates an arbitrary number of random bytes.
      *
      * @param size the number of random bytes to create
-     * @return An array of random bytes
+     * @return an array of random bytes
      */
     static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
+        var bytes = new byte[size];
         ThreadLocalRandom.current().nextBytes(bytes);
         return bytes;
     }
 
-    /**
-     * A private constructor to ensure that instances of this class cannot be made
-     */
+    static String calculateV13Accept(String nonce) {
+        String concat = nonce + V13_ACCEPT_GUID;
+        byte[] sha1 = WebSocketUtil.sha1(concat.getBytes(CharsetUtil.US_ASCII));
+        return WebSocketUtil.base64(sha1);
+    }
+
     private WebSocketUtil() {
-        // Unused
     }
 }

@@ -25,30 +25,23 @@ import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.util.CharsetUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import io.netty5.util.internal.StringUtil;
 
 import java.net.URI;
 
 /**
  * <p>
- * Performs client side opening and closing handshakes for web socket specification version <a
- * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
- * 17</a>
+ * Performs client side opening and closing handshakes for web socket specification version
+ * <a href="https://datatracker.ietf.org/doc/html/rfc6455">websocketprotocol-v13</a>
  * </p>
  */
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker13.class);
-
-    public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    private String expectedChallengeResponseString;
-
     private final boolean allowExtensions;
     private final boolean performMasking;
     private final boolean allowMaskMismatch;
+
+    private volatile String sentNonce;
 
     /**
      * Creates a new instance.
@@ -56,8 +49,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
@@ -67,9 +58,9 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
-    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+    public WebSocketClientHandshaker13(URI webSocketURL, String subprotocol,
                                        boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
+        this(webSocketURL, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
                 true, false);
     }
 
@@ -79,8 +70,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
@@ -97,10 +86,10 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            When set to true, frames which are not masked properly according to the standard will still be
      *            accepted.
      */
-    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+    public WebSocketClientHandshaker13(URI webSocketURL, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
             boolean performMasking, boolean allowMaskMismatch) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
+        this(webSocketURL, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
                 performMasking, allowMaskMismatch, DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
     }
 
@@ -110,8 +99,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
@@ -130,11 +117,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param forceCloseTimeoutMillis
      *            Close the connection if it was not closed by the server after timeout specified.
      */
-    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+    public WebSocketClientHandshaker13(URI webSocketURL, String subprotocol,
                                        boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
                                        boolean performMasking, boolean allowMaskMismatch,
                                        long forceCloseTimeoutMillis) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, performMasking,
+        this(webSocketURL, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, performMasking,
                 allowMaskMismatch, forceCloseTimeoutMillis, false);
     }
 
@@ -144,8 +131,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
@@ -167,12 +152,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
      *            clear HTTP
      */
-    WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+    WebSocketClientHandshaker13(URI webSocketURL, String subprotocol,
                                 boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
                                 boolean performMasking, boolean allowMaskMismatch,
                                 long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
-        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
-                absoluteUpgradeUrl);
+        super(webSocketURL, WebSocketVersion.V13, subprotocol, customHeaders, maxFramePayloadLength,
+              forceCloseTimeoutMillis, absoluteUpgradeUrl);
         this.allowExtensions = allowExtensions;
         this.performMasking = performMasking;
         this.allowMaskMismatch = allowMaskMismatch;
@@ -190,7 +175,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
@@ -199,22 +183,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     @Override
     protected FullHttpRequest newHandshakeRequest(BufferAllocator allocator) {
         URI wsURL = uri();
-
-        // Get 16 bit nonce and base 64 encode it
-        byte[] nonce = WebSocketUtil.randomBytes(16);
-        String key = WebSocketUtil.base64(nonce);
-
-        String acceptSeed = key + MAGIC_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-        expectedChallengeResponseString = WebSocketUtil.base64(sha1);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                    "WebSocket version 13 client handshake key: {}, expected response: {}",
-                    key, expectedChallengeResponseString);
-        }
-
-        // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
                 allocator.allocate(0));
         HttpHeaders headers = request.headers();
@@ -223,24 +191,21 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             headers.add(customHeaders);
             if (!headers.contains(HttpHeaderNames.HOST)) {
                 // Only add HOST header if customHeaders did not contain it.
-                //
-                // See https://github.com/netty/netty/issues/10101
+                // See https://github.com/netty/netty/issues/10101.
                 headers.set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
             }
         } else {
             headers.set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
         }
 
+        String nonce = createNonce();
         headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
-               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key);
+               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, nonce);
 
-        if (!headers.contains(HttpHeaderNames.ORIGIN)) {
-            headers.set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL));
-        }
-
+        sentNonce = nonce;
         String expectedSubprotocol = expectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
+        if (!StringUtil.isNullOrEmpty(expectedSubprotocol)) {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
@@ -269,7 +234,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     protected void verify(FullHttpResponse response) {
         HttpResponseStatus status = response.status();
         if (!HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status)) {
-            throw new WebSocketClientHandshakeException("Invalid handshake response getStatus: " + status, response);
+            throw new WebSocketClientHandshakeException("Invalid handshake response status: " + status, response);
         }
 
         HttpHeaders headers = response.headers();
@@ -283,10 +248,16 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                     + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
-        CharSequence accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
-        if (accept == null || !accept.equals(expectedChallengeResponseString)) {
-            throw new WebSocketClientHandshakeException(String.format(
-                    "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString), response);
+        String accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
+        if (accept == null) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: null",
+                                                        response);
+        }
+
+        String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
+        if (!expectedAccept.equals(accept.trim())) {
+            throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: " + accept +
+                                                        ", expected: " + expectedAccept, response);
         }
     }
 
@@ -306,4 +277,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         return this;
     }
 
+    /**
+     * Creates a nonce consisting of a randomly selected 16-byte value
+     * that has been base64-encoded.
+     */
+    private static String createNonce() {
+        var nonce = WebSocketUtil.randomBytes(16);
+        return WebSocketUtil.base64(nonce);
+    }
 }

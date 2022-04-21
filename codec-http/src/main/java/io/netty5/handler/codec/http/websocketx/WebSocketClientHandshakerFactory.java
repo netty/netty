@@ -144,7 +144,7 @@ public final class WebSocketClientHandshakerFactory {
             boolean performMasking, boolean allowMaskMismatch, long forceCloseTimeoutMillis) {
         if (version == V13) {
             return new WebSocketClientHandshaker13(
-                    webSocketURL, V13, subprotocol, allowExtensions, customHeaders,
+                    webSocketURL, subprotocol, allowExtensions, customHeaders,
                     maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis);
         }
 
@@ -187,7 +187,7 @@ public final class WebSocketClientHandshakerFactory {
         boolean performMasking, boolean allowMaskMismatch, long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
         if (version == V13) {
             return new WebSocketClientHandshaker13(
-                webSocketURL, V13, subprotocol, allowExtensions, customHeaders,
+                webSocketURL, subprotocol, allowExtensions, customHeaders,
                 maxFramePayloadLength, performMasking, allowMaskMismatch, forceCloseTimeoutMillis, absoluteUpgradeUrl);
         }
 
