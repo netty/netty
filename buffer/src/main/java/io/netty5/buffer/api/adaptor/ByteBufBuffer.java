@@ -384,7 +384,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (readOnly()) {
             throw bufferIsReadOnly(this);
         }
-        if (writableBytes() > size) {
+        if (writableBytes() >= size) {
             return this;
         }
         if (allowCompaction) {
