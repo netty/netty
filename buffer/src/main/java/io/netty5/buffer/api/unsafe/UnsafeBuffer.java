@@ -1263,13 +1263,13 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     private void checkWrite(int index, int size, boolean mayExpand) {
         if (index < roff | wsize < index + size) {
-            writeAccessCheckException(index, size, mayExpand);
+            handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 | wsize < index + size) {
-            writeAccessCheckException(index, size, false);
+            handleWriteAccessBoundsFailure(index, size, false);
         }
     }
 
@@ -1280,7 +1280,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         return outOfBounds(index, size);
     }
 
-    private void writeAccessCheckException(int index, int size, boolean mayExpand) {
+    private void handleWriteAccessBoundsFailure(int index, int size, boolean mayExpand) {
         if (rsize == CLOSED_SIZE) {
             throw attachTrace(bufferIsClosed(this));
         }

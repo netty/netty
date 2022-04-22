@@ -81,6 +81,19 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
     };
     private static final Buffer[] EMPTY_BUFFER_ARRAY = new Buffer[0];
+    /**
+     * The various write*() methods may automatically grow the buffer, if there is not enough capacity to service the
+     * write operation.
+     * When this happens, we have to choose some reasonable amount to grow the buffer by. For normal buffers, we just
+     * double their capacity to amortise this cost. For composite buffers, this doubling doesn't quite make as much
+     * sense, as we are adding components rather than reallocating the entire innards of the buffer.
+     * In the normal case, the composite buffer will grow by the average size of its components.
+     * However, when the composite buffer is empty, we have no basis on which to compute an average.
+     * We have to pick a number out of thin air.
+     * We have chosen a size of 256 bytes for this purpose. This is the same as the initial capacity used, when
+     * allocating a ByteBuf of an unspecified size, in Netty 4.1.
+     */
+    private static final int FIRST_AUTOMATIC_COMPONENT_SIZE = 256;
 
     private final BufferAllocator allocator;
     private final TornBufferAccessor tornBufAccessors;
@@ -1387,7 +1400,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     private BufferAccessor prepWrite(int size) {
         if (writableBytes() < size && isOwned()) {
-            ensureWritable(size, bufs.length == 0? 128 : capacity() / bufs.length, false);
+            ensureWritable(size, bufs.length == 0? FIRST_AUTOMATIC_COMPONENT_SIZE : capacity() / bufs.length, false);
         }
         var buf = prepWrite(woff, size);
         woff += size;

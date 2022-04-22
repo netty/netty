@@ -1123,13 +1123,13 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     private void checkWrite(int index, int size, boolean mayExpand) {
         if (index < roff | wmem.capacity() < index + size) {
-            writeAccessCheckException(index, size, mayExpand);
+            handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 | wmem.capacity() < index + size) {
-            writeAccessCheckException(index, size, false);
+            handleWriteAccessBoundsFailure(index, size, false);
         }
     }
 
@@ -1153,7 +1153,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         return outOfBounds(index, size);
     }
 
-    private void writeAccessCheckException(int index, int size, boolean mayExpand) {
+    private void handleWriteAccessBoundsFailure(int index, int size, boolean mayExpand) {
         if (rmem == CLOSED_BUFFER) {
             throw bufferIsClosed(this);
         }
@@ -1171,7 +1171,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {
-        throw new IndexOutOfBoundsException(
+        return new IndexOutOfBoundsException(
                 "Access at index " + index + " of size " + size + " is out of bounds: " +
                 "[read 0 to " + woff + ", write 0 to " + rmem.capacity() + "].");
     }
