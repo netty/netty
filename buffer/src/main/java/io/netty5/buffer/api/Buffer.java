@@ -364,10 +364,13 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      */
     default Buffer writeBytes(Buffer source) {
         int size = source.readableBytes();
+        if (writableBytes() < size) {
+            ensureWritable(size, 1, false);
+        }
         int woff = writerOffset();
         source.copyInto(source.readerOffset(), this, woff, size);
-        source.readerOffset(source.readerOffset() + size);
-        writerOffset(woff + size);
+        source.skipReadable(size);
+        skipWritable(size);
         return this;
     }
 
@@ -392,11 +395,15 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeBytes(byte[] source, int srcPos, int length) {
+        if (source.length < srcPos + length) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        ensureWritable(length, 1, false);
         int woff = writerOffset();
-        writerOffset(woff + length);
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
         }
+        skipWritable(length);
         return this;
     }
 
@@ -418,7 +425,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
             int woff = writerOffset();
             int length = source.remaining();
             writerOffset(woff + source.remaining());
-            // Try to reduce bounce-checking by using long and int when possible.
+            // Try to reduce bounds-checking by using long and int when possible.
             boolean needReverse = source.order() != ByteOrder.BIG_ENDIAN;
             for (; length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {
                 setLong(woff, needReverse ? Long.reverseBytes(source.getLong()) : source.getLong());

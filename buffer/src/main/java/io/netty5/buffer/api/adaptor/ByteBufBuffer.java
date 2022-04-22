@@ -397,7 +397,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         delegate.ensureWritable(growBy, true);
         if (writableBytes() < size) {
             // The ensureWritable call is not guaranteed to work, in which case we'll have to re-allocate ourselves.
-            int newSize = readableBytes() + writableBytes() + growBy;
+            int newSize = capacity() + growBy;
             Statics.assertValidBufferSize(newSize);
             ByteBufBuffer buffer = (ByteBufBuffer) control.getAllocator().allocate(newSize);
 

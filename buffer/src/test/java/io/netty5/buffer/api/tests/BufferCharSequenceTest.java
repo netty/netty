@@ -22,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class BufferCharSequenceTest extends BufferTestSupport {
 
@@ -56,6 +57,17 @@ public class BufferCharSequenceTest extends BufferTestSupport {
             Assertions.assertEquals(data.toString(), new String(read, US_ASCII));
             assertEquals(data.length(), buf.writerOffset());
             assertEquals(data.length(), buf.readerOffset());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeCharSequenceMustExpandCapacityIfBufferIsTooSmall(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(4)) {
+            String string = "Hello World";
+            buffer.writeCharSequence(string, US_ASCII);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(string.length());
         }
     }
 

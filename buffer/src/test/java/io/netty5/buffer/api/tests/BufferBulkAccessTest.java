@@ -22,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.CompositeBuffer.compose;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -391,7 +392,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(source.position()).isEqualTo(source.limit());
             assertThat(buffer.writerOffset()).isEqualTo(7);
             assertThat(buffer.readerOffset()).isZero();
-            assertThat(toByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7, 0);
+            assertThat(readByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7);
         }
     }
 
@@ -407,7 +408,93 @@ public class BufferBulkAccessTest extends BufferTestSupport {
 
             assertThat(buffer.writerOffset()).isEqualTo(7);
             assertThat(buffer.readerOffset()).isZero();
-            assertThat(toByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7, 0);
+            assertThat(readByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteBufferMustExpandCapacityIfBufferIsTooSmall(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7});
+            buffer.writeBytes(source);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(source.capacity());
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(16);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7});
+            buffer.writeByte((byte) -1).readByte();
+            buffer.writeBytes(source);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(source.capacity() + 1);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(17);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteArrayMustExpandCapacityIfTooSmall(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expected = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            assertThat(expected.length).isEqualTo(16);
+            buffer.writeBytes(expected);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expected.length);
+            byte[] actual = new byte[expected.length];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly(expected);
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.length).isEqualTo(16);
+            buffer.writeBytes(expected);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expected.length + 1);
+            byte[] actual = new byte[expected.length];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly(expected);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesBufferMustExpandCapacityIfTooSmall(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expectedByteArray = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8);
+             Buffer expected = allocator.copyOf(expectedByteArray)) {
+            assertThat(expected.readableBytes()).isEqualTo(16);
+            buffer.writeBytes(expected);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expectedByteArray.length);
+            byte[] actual = new byte[expectedByteArray.length];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly(expectedByteArray);
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8);
+             Buffer expected = allocator.copyOf(expectedByteArray)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.readableBytes()).isEqualTo(16);
+            buffer.writeBytes(expected);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expectedByteArray.length + 1);
+            byte[] actual = new byte[expectedByteArray.length];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly(expectedByteArray);
         }
     }
 
