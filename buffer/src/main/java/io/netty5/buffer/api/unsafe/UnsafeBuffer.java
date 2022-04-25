@@ -20,6 +20,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
+import io.netty5.buffer.api.ComponentIterator;
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.ReadableComponent;
@@ -28,6 +30,7 @@ import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
+import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -50,7 +53,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
-        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
+        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
@@ -675,6 +678,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         }
         return buf;
     }
+
+    @Override
+    public <N extends Next> N next() {
+        return null; // There is no "next" component in our external-iteration of components.
+    }
     // </editor-fold>
 
     @Override
@@ -693,6 +701,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         } finally {
             Reference.reachabilityFence(this);
         }
+    }
+
+    @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        return new SingleComponentIterator<T>(acquire());
     }
 
     @Override

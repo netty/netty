@@ -25,6 +25,8 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
+import io.netty5.buffer.api.ComponentIterator;
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.ReadableComponent;
@@ -542,6 +544,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             }
         }
         return byteBuffers.length;
+    }
+
+    @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        return null; // TODO not yet implemented
     }
 
     @Override

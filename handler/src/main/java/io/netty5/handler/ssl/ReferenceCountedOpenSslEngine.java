@@ -17,6 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.ComponentIterator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.ReadableComponent;
 import io.netty5.buffer.api.ReadableComponentProcessor;
@@ -176,7 +177,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     private boolean sessionSet;
 
     // Buffer IO helpers
-    private SslWrite write;
     private SslRead read;
     private final SslBioSetByteBuffer setBioByteBuffer = new SslBioSetByteBuffer();
 
@@ -352,7 +352,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
 
-        write = new SslWrite(ssl);
         read = new SslRead(ssl);
     }
 
@@ -510,7 +509,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             destroyed = true;
             engineMap.remove(ssl);
             read = null;
-            write = null;
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
 
@@ -540,33 +538,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         } else {
             try (Buffer buf = alloc.allocate(len)) {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                write.len = len;
-                buf.forEachReadable(0, write);
-                sslWrote = write.sslWrote;
-                if (sslWrote > 0) {
-                    src.position(pos + sslWrote);
-                } else {
-                    src.position(pos);
+                try (var iterator = buf.forEachReadable()) {
+                    var c = iterator.first();
+                    sslWrote = SSL.writeToSSL(ssl, c.readableNativeAddress(), len);
+                    if (sslWrote > 0) {
+                        src.position(pos + sslWrote);
+                    }
+                    assert c.next() == null : "Unexpected composite buffer";
                 }
             }
         }
         return sslWrote;
-    }
-
-    static final class SslWrite implements ReadableComponentProcessor<RuntimeException> {
-        private final long ssl;
-        int len;
-        int sslWrote;
-
-        SslWrite(long ssl) {
-            this.ssl = ssl;
-        }
-
-        @Override
-        public boolean process(int index, ReadableComponent component) {
-            sslWrote = SSL.writeToSSL(ssl, component.readableNativeAddress(), len);
-            return false;
-        }
     }
 
     /**

@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.internal.Statics;
 
 import java.io.IOException;
@@ -1010,6 +1011,32 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * In any case, the number of components processed may be less than {@link #countComponents()}.
      */
     <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor) throws E;
+
+    /**
+     * Create a {@linkplain ComponentIterator component iterator} for all readable components in this buffer.
+     * <p>
+     * Unlike the {@link #forEachReadable(int, ReadableComponentProcessor)} method, this API permits <em>external</em>
+     * iteration of the components, while at the same time protecting the life-cycle of the buffer.
+     * <p>
+     * The typical code pattern for using this API looks like the following:
+     * <pre>{@code
+     *      try (var iteration = buffer.forEachReadable()) {
+     *          for (var c = iteration.first(); c != null; c = c.next()) {
+     *              ByteBuffer componentBuffer = c.readableBuffer();
+     *              // ...
+     *          }
+     *      }
+     * }</pre>
+     * Note the use of the {@code var} keyword for local variables, which are required for correctly expressing the
+     * generic types used in the iteration.
+     * Following this code pattern will ensure that the components, and their parent buffer, will be correctly
+     * life-cycled.
+     *
+     * @return A component iterator of {@linkplain ReadableComponent readable components}.
+     * @param <T> An intersection type that presents both the {@link ReadableComponent} interface,
+     *          <em>and</em> the ability to progress the iteration via the {@link Next#next()} method.
+     */
+    <T extends ReadableComponent & ComponentIterator.Next> ComponentIterator<T> forEachReadable();
 
     /**
      * Process all writable components of this buffer, and return the number of components processed.

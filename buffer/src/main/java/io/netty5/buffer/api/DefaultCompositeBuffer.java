@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 
@@ -987,6 +988,104 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
         }
         return visited;
+    }
+
+    @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        acquire();
+        class ReadableNext implements ReadableComponent, Next, AutoCloseable {
+            int nextIndex = 1;
+            ComponentIterator<T> currentItr = bufs[0].forEachReadable();
+            T currentComponent = currentItr.first();
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public <N extends Next> N next() {
+                if (currentComponent == null) {
+                    return null; // Already at the end of the iteration.
+                }
+                currentComponent = currentComponent.next();
+                if (currentComponent == null) {
+                    currentItr.close();
+                    if (nextIndex < bufs.length) {
+                        currentItr = bufs[nextIndex].forEachReadable();
+                        currentComponent = currentItr.first();
+                        nextIndex++;
+                        return (N) currentComponent;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public boolean hasReadableArray() {
+                return currentComponent.hasReadableArray();
+            }
+
+            @Override
+            public byte[] readableArray() {
+                return currentComponent.readableArray();
+            }
+
+            @Override
+            public int readableArrayOffset() {
+                return currentComponent.readableArrayOffset();
+            }
+
+            @Override
+            public int readableArrayLength() {
+                return currentComponent.readableArrayLength();
+            }
+
+            @Override
+            public long readableNativeAddress() {
+                return currentComponent.readableNativeAddress();
+            }
+
+            @Override
+            public ByteBuffer readableBuffer() {
+                return currentComponent.readableBuffer();
+            }
+
+            @Override
+            public int readableBytes() {
+                return currentComponent.readableBytes();
+            }
+
+            @Override
+            public ByteCursor openCursor() {
+                return currentComponent.openCursor();
+            }
+
+            @Override
+            public void skipReadable(int byteCount) {
+                DefaultCompositeBuffer.this.skipReadable(byteCount);
+            }
+
+            @Override
+            public void close() {
+                currentComponent = null;
+                currentItr.close();
+                currentItr = null;
+            }
+        }
+        return new ComponentIterator<T>() {
+            ReadableNext readableNext;
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public T first() {
+                return bufs.length > 0 ? (T) (readableNext = new ReadableNext()) : null;
+            }
+
+            @Override
+            public void close() {
+                if (readableNext != null) {
+                    readableNext.close();
+                }
+                DefaultCompositeBuffer.this.close();
+            }
+        };
     }
 
     @Override
