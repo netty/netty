@@ -361,7 +361,7 @@ public class HttpPostMultiPartRequestDecoderTest {
             assertTrue(Arrays.equals(body, data.get()));
         }
         // To not be done since will load full file on memory: assertEquals(data.get().length, fileSize);
-        // Not mandatory since implicitely called during destroy of decoder
+        // Not mandatory since implicitly called during destroy of decoder
         for (InterfaceHttpData httpData: decoder.getBodyHttpDatas()) {
             httpData.release();
             factory.removeHttpDataFromClean(request, httpData);

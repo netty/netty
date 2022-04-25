@@ -104,7 +104,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       # Setup some env to re-use later.
-      - name: Prepare enviroment variables
+      - name: Prepare environment variables
         run: |
           echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
 
