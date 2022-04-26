@@ -1017,9 +1017,28 @@ public class HttpPostRequestDecoderTest {
          * you need to create a temporary file Therefore, a file creation exception will appear.
          */
 
-        for (int i = 0 ;i<300 ;i++){
-            sb.append("aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc");
+        /**
+         * json request start
+         */
+        sb.append("{");
+        /**
+         * the remarks contains error char the '\' before '='
+         */
+        sb.append("\"remarks\":\"渠道/电商  商品编号=23\",");
+        /**
+         * Other messages must be used for business acceptance,
+         * For example, when there are enough items in the shopping cart, the message length will be too long
+         * I use a loop to build an ultra long message, but it does not contain '&'
+         */
+        sb.append("\"otherContent\":");
+        sb.append("\"");
+        for (int i = 0;i<500;i++){
+            sb.append("Have a nice evening and good health ");
         }
+        sb.append("\"");
+
+        sb.append("}");
+
         byte[] bodyBytes = sb.toString().getBytes();
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
