@@ -25,7 +25,7 @@ import io.netty5.channel.socket.DuplexChannelConfig;
 
 import java.util.Map;
 
-import static io.netty5.channel.ChannelOption.*;
+import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 
 public class EpollDuplexChannelConfig extends EpollChannelConfig implements DuplexChannelConfig {
     private volatile boolean allowHalfClosure;

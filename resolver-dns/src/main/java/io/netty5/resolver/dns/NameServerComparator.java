@@ -15,13 +15,13 @@
  */
 package io.netty5.resolver.dns;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Comparator;
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Special {@link Comparator} implementation to sort the nameservers to use when follow redirects.

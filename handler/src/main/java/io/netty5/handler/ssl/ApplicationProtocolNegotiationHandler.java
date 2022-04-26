@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -29,6 +27,8 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of

@@ -15,8 +15,6 @@
  */
 package io.netty5.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.ThreadExecutorMap;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -33,6 +31,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Single-thread singleton {@link EventExecutor}.  It starts the thread automatically and stops it when there is no

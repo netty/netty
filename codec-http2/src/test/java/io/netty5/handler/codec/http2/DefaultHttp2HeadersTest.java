@@ -23,7 +23,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.Map.Entry;
 
-import static io.netty5.util.AsciiString.*;
+import static io.netty5.util.AsciiString.of;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

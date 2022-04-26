@@ -16,13 +16,13 @@
 
 package io.netty5.resolver;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal {@link NameResolver} implementation.

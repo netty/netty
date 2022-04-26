@@ -15,15 +15,15 @@
  */
 package io.netty5.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import io.netty5.util.ByteProcessor.IndexOfProcessor;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Test the underlying memory methods for the {@link AsciiString} class.

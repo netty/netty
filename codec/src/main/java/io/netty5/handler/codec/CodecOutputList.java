@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.MathUtil;
 
 import java.util.AbstractList;
 import java.util.RandomAccess;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Special {@link AbstractList} implementation which is used within our codec base classes.

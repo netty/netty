@@ -15,10 +15,10 @@
  */
 package io.netty5.buffer.api.pool;
 
+import static io.netty5.buffer.api.pool.PoolChunk.IS_SUBPAGE_SHIFT;
+import static io.netty5.buffer.api.pool.PoolChunk.IS_USED_SHIFT;
 import static io.netty5.buffer.api.pool.PoolChunk.RUN_OFFSET_SHIFT;
 import static io.netty5.buffer.api.pool.PoolChunk.SIZE_SHIFT;
-import static io.netty5.buffer.api.pool.PoolChunk.IS_USED_SHIFT;
-import static io.netty5.buffer.api.pool.PoolChunk.IS_SUBPAGE_SHIFT;
 import static io.netty5.buffer.api.pool.SizeClasses.LOG2_QUANTUM;
 
 final class PoolSubpage implements PoolSubpageMetric {

@@ -15,17 +15,17 @@
  */
 package io.netty5.handler.codec.http;
 
-import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
-import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
-import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
-import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
-import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
-
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.BrotliDecompressor;
 import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
+
+import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
+import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in

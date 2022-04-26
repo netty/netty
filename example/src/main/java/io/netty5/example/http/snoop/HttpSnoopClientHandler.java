@@ -18,9 +18,9 @@ package io.netty5.example.http.snoop;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.CharsetUtil;
 

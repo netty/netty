@@ -25,7 +25,8 @@ import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilt
 import java.util.Collections;
 import java.util.Objects;
 
-import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker.*;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker.DEFLATE_FRAME_EXTENSION;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker.X_WEBKIT_DEFLATE_FRAME_EXTENSION;
 
 /**
  * <a href="https://tools.ietf.org/id/draft-tyoshino-hybi-websocket-perframe-deflate-06.txt">perframe-deflate</a>

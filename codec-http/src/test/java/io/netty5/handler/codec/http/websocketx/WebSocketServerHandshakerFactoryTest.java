@@ -19,8 +19,8 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 

@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.bytes.ByteArrayDecoder;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A decoder that decodes the content of the received {@link DatagramPacket} using

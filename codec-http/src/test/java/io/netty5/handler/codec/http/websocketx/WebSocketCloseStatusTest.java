@@ -12,23 +12,38 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
+import org.assertj.core.api.ThrowableAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.assertj.core.api.ThrowableAssert;
-import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Test;
-
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.ABNORMAL_CLOSURE;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.BAD_GATEWAY;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.EMPTY;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.ENDPOINT_UNAVAILABLE;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.INVALID_MESSAGE_TYPE;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.INVALID_PAYLOAD_DATA;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.MANDATORY_EXTENSION;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.MESSAGE_TOO_BIG;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.NORMAL_CLOSURE;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.POLICY_VIOLATION;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.PROTOCOL_ERROR;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.SERVICE_RESTART;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.TLS_HANDSHAKE_FAILED;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.TRY_AGAIN_LATER;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.isValidStatusCode;
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.valueOf;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-
-import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.*;
 
 public class WebSocketCloseStatusTest {
 

@@ -15,12 +15,12 @@
  */
 package io.netty5.example.http.websocketx.server;
 
-import java.util.Locale;
-
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
+
+import java.util.Locale;
 
 /**
  * Echoes uppercase content of text frames.

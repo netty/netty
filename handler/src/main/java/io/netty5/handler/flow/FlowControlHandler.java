@@ -15,9 +15,6 @@
  */
 package io.netty5.handler.flow;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -28,6 +25,9 @@ import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * The {@link FlowControlHandler} ensures that only one message per {@code read()} is sent downstream.

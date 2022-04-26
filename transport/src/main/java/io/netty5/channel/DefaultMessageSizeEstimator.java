@@ -15,12 +15,12 @@
  */
 package io.netty5.channel;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default {@link MessageSizeEstimator} implementation which supports the estimation of the size of

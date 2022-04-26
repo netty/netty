@@ -16,7 +16,6 @@
 package io.netty5.util;
 
 import io.netty5.util.concurrent.FastThreadLocal;
-import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -25,6 +24,8 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.IdentityHashMap;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A utility class that provides various common operations and constants

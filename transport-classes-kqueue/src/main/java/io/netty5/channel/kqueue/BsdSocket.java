@@ -17,7 +17,6 @@ package io.netty5.channel.kqueue;
 
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.socket.InternetProtocolFamily;
-
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;

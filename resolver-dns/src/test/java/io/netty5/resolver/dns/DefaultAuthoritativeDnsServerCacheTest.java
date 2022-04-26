@@ -15,9 +15,9 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.util.NetUtil;

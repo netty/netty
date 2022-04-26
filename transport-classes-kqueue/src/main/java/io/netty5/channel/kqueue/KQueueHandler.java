@@ -22,7 +22,6 @@ import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
-
 import io.netty5.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;

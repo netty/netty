@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChunkedInput} that fetches data from an {@link InputStream} chunk by

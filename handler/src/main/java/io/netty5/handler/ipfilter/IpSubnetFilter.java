@@ -18,7 +18,6 @@ package io.netty5.handler.ipfilter;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
-import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
@@ -28,6 +27,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * <p>

@@ -15,9 +15,9 @@
  */
 package io.netty5.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.Executor;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link Executor} which execute tasks in the callers thread.

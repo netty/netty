@@ -16,9 +16,9 @@
 
 package io.netty5.util.internal;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Iterator;
+
+import static java.util.Objects.requireNonNull;
 
 public final class ReadOnlyIterator<T> implements Iterator<T> {
     private final Iterator<? extends T> iterator;

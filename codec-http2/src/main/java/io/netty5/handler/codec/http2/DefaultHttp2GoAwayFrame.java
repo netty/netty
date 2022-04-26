@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * The default {@link Http2GoAwayFrame} implementation.

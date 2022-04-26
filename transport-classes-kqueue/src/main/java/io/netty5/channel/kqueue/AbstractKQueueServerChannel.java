@@ -15,8 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
@@ -29,6 +27,8 @@ import io.netty5.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {

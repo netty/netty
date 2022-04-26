@@ -15,17 +15,16 @@
  */
 package io.netty5.handler.ssl;
 
-import java.io.File;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.Provider;
-import java.security.cert.X509Certificate;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.cert.X509Certificate;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.

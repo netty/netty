@@ -14,11 +14,11 @@
  */
 package io.netty5.handler.codec.http2;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides a decorator around a {@link Http2FrameListener} and delegates all method calls

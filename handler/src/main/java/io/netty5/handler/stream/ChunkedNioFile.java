@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelHandlerContext;
@@ -27,6 +25,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk using

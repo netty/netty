@@ -16,14 +16,14 @@
 
 package io.netty5.util.concurrent;
 
+import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.FutureTask;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.concurrent.FutureTask;
-
-import org.junit.jupiter.api.Test;
 
 public class ImmediateExecutorTest {
 

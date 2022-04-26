@@ -14,11 +14,11 @@
  */
 package io.netty5.handler.codec.http2;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decorator around another {@link Http2ConnectionDecoder} instance.

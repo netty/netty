@@ -21,7 +21,9 @@ import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
-import static com.ning.compress.lzf.LZFChunk.*;
+import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_NON_COMPRESSED;
+import static com.ning.compress.lzf.LZFChunk.BYTE_V;
+import static com.ning.compress.lzf.LZFChunk.BYTE_Z;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LzfDecoderTest extends AbstractDecoderTest {

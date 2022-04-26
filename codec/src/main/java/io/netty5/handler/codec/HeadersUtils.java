@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.AbstractCollection;
 import java.util.AbstractList;
 import java.util.Collection;
@@ -24,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides utility methods related to {@link Headers}.

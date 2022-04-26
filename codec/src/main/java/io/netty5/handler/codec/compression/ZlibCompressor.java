@@ -24,8 +24,8 @@ import java.util.function.Supplier;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
-import static java.util.Objects.requireNonNull;
 import static io.netty5.util.internal.ObjectUtil.checkInRange;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.

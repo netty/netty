@@ -24,16 +24,14 @@ import io.netty5.handler.codec.compression.CompressionOptions;
 import io.netty5.handler.codec.compression.Compressor;
 import io.netty5.handler.codec.compression.DeflateOptions;
 import io.netty5.handler.codec.compression.GzipOptions;
-import io.netty5.handler.codec.compression.ZlibCompressor;
 import io.netty5.handler.codec.compression.StandardCompressionOptions;
+import io.netty5.handler.codec.compression.ZlibCompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.compression.ZstdCompressor;
 import io.netty5.handler.codec.compression.ZstdOptions;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -46,6 +44,7 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.ZSTD;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each

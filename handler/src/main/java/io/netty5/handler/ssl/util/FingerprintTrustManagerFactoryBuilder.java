@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.ssl.util;
 
-import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
-import static java.util.Objects.requireNonNull;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A builder for creating {@link FingerprintTrustManagerFactory}.

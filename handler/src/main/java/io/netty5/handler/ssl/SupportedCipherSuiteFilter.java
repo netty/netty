@@ -17,12 +17,12 @@ package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.EmptyArrays;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class will filter all requested ciphers out that are not supported by the current {@link SSLEngine}.

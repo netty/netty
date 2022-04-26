@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.codec.string;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufUtil;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A class to represent line separators in different environments.

@@ -23,10 +23,10 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.ThreadLocalRandom;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEngineBenchmark {
 

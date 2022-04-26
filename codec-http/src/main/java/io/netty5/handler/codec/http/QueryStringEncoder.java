@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 
@@ -25,6 +23,8 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Creates a URL-encoded URI from a path string and key-value parameter pairs.

@@ -15,11 +15,10 @@
  */
 package io.netty5.handler.timeout;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
-
 import io.netty5.util.internal.StringUtil;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A user event triggered by {@link IdleStateHandler} when a {@link Channel} is idle.

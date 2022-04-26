@@ -14,14 +14,14 @@
  */
 package io.netty5.microbench.http2;
 
-import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.Http2FrameWriter;
 import io.netty5.handler.codec.http2.Http2LocalFlowController;
 import io.netty5.handler.codec.http2.Http2Stream;
+
+import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 
 public final class NoopHttp2LocalFlowController implements Http2LocalFlowController {
     public static final NoopHttp2LocalFlowController INSTANCE = new NoopHttp2LocalFlowController();

@@ -15,20 +15,19 @@
  */
 package io.netty5.util.internal.logging;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
+import io.netty5.util.internal.ReflectionUtil;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
-
-import io.netty5.util.internal.ReflectionUtil;
 import org.junit.jupiter.api.Assumptions;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * {@linkplain Log4J2Logger} extends {@linkplain ExtendedLoggerWrapper} implements {@linkplain InternalLogger}.<br>

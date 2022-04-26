@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.ssl.util;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509KeyManager;
 import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Objects;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509KeyManager;
 
 final class X509KeyManagerWrapper extends X509ExtendedKeyManager {
 

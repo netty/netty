@@ -15,9 +15,6 @@
 
 package io.netty5.example.http2.helloworld.multiplex.server;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty5.channel.ChannelHandler;
@@ -30,6 +27,10 @@ import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import io.netty5.util.CharsetUtil;
+
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 
 /**
  * A simple handler that responds with the message "Hello World!".

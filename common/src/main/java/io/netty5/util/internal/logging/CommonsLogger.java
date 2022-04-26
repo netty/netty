@@ -39,9 +39,9 @@
  */
 package io.netty5.util.internal.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import org.apache.commons.logging.Log;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * <a href="https://commons.apache.org/logging/">Apache Commons Logging</a>

@@ -15,9 +15,6 @@
  */
 package io.netty5.channel;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.IllegalReferenceCountException;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -28,6 +25,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.

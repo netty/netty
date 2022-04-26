@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl.ocsp;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.ReferenceCountedOpenSslContext;
@@ -25,6 +23,8 @@ import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.util.internal.UnstableApi;
 
 import javax.net.ssl.SSLHandshakeException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A handler for SSL clients to handle and act upon stapled OCSP responses.

@@ -29,7 +29,14 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Map;
 
-import static io.netty5.channel.ChannelOption.*;
+import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty5.channel.ChannelOption.IP_TOS;
+import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
+import static io.netty5.channel.ChannelOption.SO_LINGER;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
+import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static java.util.Objects.requireNonNull;
 
 /**

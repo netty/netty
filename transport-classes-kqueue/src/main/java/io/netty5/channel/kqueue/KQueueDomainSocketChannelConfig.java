@@ -28,10 +28,10 @@ import io.netty5.util.internal.UnstableApi;
 import java.io.IOException;
 import java.util.Map;
 
-import static java.util.Objects.requireNonNull;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDomainSocketChannelConfig extends KQueueDuplexChannelConfig

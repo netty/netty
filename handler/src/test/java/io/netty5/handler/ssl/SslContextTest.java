@@ -19,6 +19,9 @@ import io.netty5.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -27,14 +30,10 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SslContextTest {
 

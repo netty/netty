@@ -21,10 +21,8 @@ import io.netty5.channel.IoExecutionContext;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
-
 import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.SingleThreadEventLoop;
-
 import io.netty5.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
@@ -37,7 +35,6 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;

@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.microbench.util.AbstractMicrobenchmark;
+import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -29,8 +30,6 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.concurrent.TimeUnit;
-
-import io.netty5.util.AsciiString;
 
 @Fork(1)
 @Threads(1)

@@ -34,7 +34,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;
@@ -42,9 +41,9 @@ import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_MAX_AGE;
-import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD;
+import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty5.handler.codec.http.HttpHeaderNames.DATE;

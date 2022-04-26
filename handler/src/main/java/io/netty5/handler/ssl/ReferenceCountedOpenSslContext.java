@@ -15,10 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.SensitiveBufferAllocator;
-import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.internal.tcnative.CertificateVerifier;
@@ -26,6 +22,10 @@ import io.netty.internal.tcnative.ResultCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SSLPrivateKeyMethod;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.SensitiveBufferAllocator;
+import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.ResourceLeakDetector;

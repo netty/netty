@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.handler.codec.DecoderResult;
+
+import static java.util.Objects.requireNonNull;
 
 public class DefaultHttpObject implements HttpObject {
 

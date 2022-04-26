@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -25,6 +23,7 @@ import org.junit.rules.TestName;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
+import javax.management.MBeanServer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,7 +36,8 @@ import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
-import javax.management.MBeanServer;
+
+import static java.util.Objects.requireNonNull;
 
 public final class TestUtils {
 

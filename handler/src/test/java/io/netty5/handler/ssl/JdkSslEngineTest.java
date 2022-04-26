@@ -21,19 +21,18 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import java.security.Provider;
-
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLHandshakeException;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;

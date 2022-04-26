@@ -15,9 +15,6 @@
  */
 package io.netty5.channel;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.concurrent.RejectedExecutionHandler;
 import io.netty5.util.concurrent.RejectedExecutionHandlers;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -27,6 +24,9 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link EventLoop} that execute all its submitted tasks in a single thread and uses an {@link IoHandler} for

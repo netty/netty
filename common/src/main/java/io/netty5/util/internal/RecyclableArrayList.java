@@ -16,14 +16,14 @@
 
 package io.netty5.util.internal;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.ObjectPool.Handle;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.RandomAccess;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A simple list which is recyclable. This implementation does not allow {@code null} elements to be added.

@@ -26,15 +26,15 @@ import static io.netty5.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MA
 import static io.netty5.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_2;
 import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
 import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
-import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_MINIMUM_TABLES;
-import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
 import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_MAXIMUM_TABLES;
+import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
+import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_MINIMUM_TABLES;
 import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_SELECTOR_LIST_MAX_LENGTH;
 import static io.netty5.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RANGE_SIZE;
 import static io.netty5.handler.codec.compression.Bzip2Constants.MAGIC_NUMBER;
-import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.Bzip2Constants.MAX_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.Bzip2Constants.MAX_SELECTORS;
+import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.

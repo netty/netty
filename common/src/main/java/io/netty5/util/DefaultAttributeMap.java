@@ -15,11 +15,11 @@
  */
 package io.netty5.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default {@link AttributeMap} implementation which not exibit any blocking behaviour on attribute lookup while using a

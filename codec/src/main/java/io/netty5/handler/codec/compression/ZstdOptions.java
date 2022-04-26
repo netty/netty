@@ -17,10 +17,10 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.util.internal.ObjectUtil;
 
-import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
-import static io.netty5.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
+import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty5.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
+import static io.netty5.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 
 /**
  * {@link ZstdOptions} holds compressionLevel for

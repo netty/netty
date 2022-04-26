@@ -20,7 +20,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Calendar;
 import java.util.Date;
 
-import static io.netty5.handler.codec.DateFormatter.*;
+import static io.netty5.handler.codec.DateFormatter.append;
+import static io.netty5.handler.codec.DateFormatter.format;
+import static io.netty5.handler.codec.DateFormatter.parseHttpDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 

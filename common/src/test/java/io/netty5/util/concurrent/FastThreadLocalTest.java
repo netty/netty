@@ -17,9 +17,9 @@
 package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.ObjectCleaner;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 

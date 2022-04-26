@@ -24,8 +24,8 @@ import org.junit.jupiter.api.condition.OS;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @EnabledOnOs(OS.MAC)
 class MacOSDnsServerAddressStreamProviderTest {

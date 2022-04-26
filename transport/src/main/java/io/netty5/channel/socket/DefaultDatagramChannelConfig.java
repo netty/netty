@@ -36,7 +36,16 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Map;
 
-import static io.netty5.channel.ChannelOption.*;
+import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
+import static io.netty5.channel.ChannelOption.IP_MULTICAST_ADDR;
+import static io.netty5.channel.ChannelOption.IP_MULTICAST_IF;
+import static io.netty5.channel.ChannelOption.IP_MULTICAST_LOOP_DISABLED;
+import static io.netty5.channel.ChannelOption.IP_MULTICAST_TTL;
+import static io.netty5.channel.ChannelOption.IP_TOS;
+import static io.netty5.channel.ChannelOption.SO_BROADCAST;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static java.util.Objects.requireNonNull;
 
 /**

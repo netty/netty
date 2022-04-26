@@ -15,10 +15,10 @@
  */
 package io.netty5.util.internal;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import java.util.Arrays;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 public final class AppendableCharSequence implements CharSequence, Appendable {
     private char[] chars;

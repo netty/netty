@@ -15,10 +15,10 @@
  */
 package io.netty5.channel.group;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  */

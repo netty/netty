@@ -16,13 +16,13 @@
 
 package io.netty5.resolver.dns;
 
-import static java.util.Objects.requireNonNull;
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides an infinite sequence of DNS server addresses to {@link DnsNameResolver}.

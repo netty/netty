@@ -16,8 +16,8 @@
 package io.netty5.buffer.api.pool;
 
 import io.netty5.buffer.api.AllocatorControl;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.internal.ArcDrop;

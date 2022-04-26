@@ -15,14 +15,13 @@
  */
 package io.netty5.handler.ssl;
 
-import java.security.Provider;
-
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLSessionContext;
+import java.security.Provider;
 
 
 @DisabledIf("checkConscryptDisabled")

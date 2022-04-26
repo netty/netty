@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
+import io.netty.internal.tcnative.SSL;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty.internal.tcnative.SSL;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.AssumptionViolatedException;
@@ -58,10 +58,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
-import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.codec;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
+import io.netty.buffer.ByteBuf;
+import io.netty5.channel.ChannelHandlerContext;
 
 import java.nio.ByteOrder;
 
-import io.netty.buffer.ByteBuf;
-import io.netty5.channel.ChannelHandlerContext;
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the

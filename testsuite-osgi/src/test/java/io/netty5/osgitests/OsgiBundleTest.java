@@ -16,12 +16,12 @@
 
 package io.netty5.osgitests;
 
-import static org.junit.Assert.assertFalse;
-import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
-import static org.ops4j.pax.exam.CoreOptions.junitBundles;
-import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.CoreOptions.url;
-import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
+import io.netty5.util.internal.PlatformDependent;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.junit.PaxExam;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,12 +29,12 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.ops4j.pax.exam.Configuration;
-import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.junit.PaxExam;
-import io.netty5.util.internal.PlatformDependent;
+import static org.junit.Assert.assertFalse;
+import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
+import static org.ops4j.pax.exam.CoreOptions.junitBundles;
+import static org.ops4j.pax.exam.CoreOptions.systemProperty;
+import static org.ops4j.pax.exam.CoreOptions.url;
+import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
 
 @RunWith(PaxExam.class)
 public class OsgiBundleTest {

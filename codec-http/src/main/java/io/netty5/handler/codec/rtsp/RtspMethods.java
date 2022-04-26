@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.rtsp;
 
-import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
-
 import io.netty5.handler.codec.http.HttpMethod;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * The request getMethod of RTSP.

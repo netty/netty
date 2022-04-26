@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.kqueue;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.UnstableApi;
+
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class AcceptFilter {

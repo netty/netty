@@ -16,21 +16,21 @@
 
 package io.netty5.handler.codec;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
-import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class MessageAggregatorTest {
     private static final class ReadCounter implements ChannelHandler {

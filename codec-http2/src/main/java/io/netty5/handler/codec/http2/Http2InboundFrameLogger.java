@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.http2;
 
-import static io.netty5.handler.codec.http2.Http2FrameLogger.Direction.INBOUND;
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
+
+import static io.netty5.handler.codec.http2.Http2FrameLogger.Direction.INBOUND;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decorator around a {@link Http2FrameReader} that logs all inbound frames before calling

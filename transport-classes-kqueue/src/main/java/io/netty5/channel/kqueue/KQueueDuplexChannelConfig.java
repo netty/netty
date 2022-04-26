@@ -25,7 +25,9 @@ import io.netty5.channel.socket.DuplexChannelConfig;
 
 import java.util.Map;
 
-import static io.netty5.channel.ChannelOption.*;
+import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 public class KQueueDuplexChannelConfig extends KQueueChannelConfig implements DuplexChannelConfig {

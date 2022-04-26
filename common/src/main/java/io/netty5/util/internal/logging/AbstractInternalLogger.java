@@ -15,12 +15,12 @@
  */
 package io.netty5.util.internal.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.StringUtil;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal implementation of {@link InternalLogger}.  This class implements

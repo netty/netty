@@ -15,10 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
-import static java.lang.Math.min;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.StandardAllocationTypes;
@@ -26,20 +22,24 @@ import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.conscrypt.AllocatedBuffer;
 import org.conscrypt.BufferAllocator;
 import org.conscrypt.Conscrypt;
 import org.conscrypt.HandshakeListener;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
+import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link JdkSslEngine} that uses the Conscrypt provider or SSL with ALPN.

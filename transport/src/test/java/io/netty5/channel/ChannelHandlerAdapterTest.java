@@ -15,12 +15,11 @@
  */
 package io.netty5.channel;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import io.netty5.channel.ChannelHandler.Sharable;
 import org.junit.jupiter.api.Test;
 
-import io.netty5.channel.ChannelHandler.Sharable;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelHandlerAdapterTest {
 

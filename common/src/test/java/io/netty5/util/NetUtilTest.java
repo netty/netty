@@ -27,7 +27,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static io.netty5.util.NetUtil.*;
+import static io.netty5.util.NetUtil.LOCALHOST;
+import static io.netty5.util.NetUtil.LOOPBACK_IF;
+import static io.netty5.util.NetUtil.bytesToIpAddress;
+import static io.netty5.util.NetUtil.createByteArrayFromIpAddressString;
+import static io.netty5.util.NetUtil.getByName;
+import static io.netty5.util.NetUtil.ipv4AddressToInt;
+import static io.netty5.util.NetUtil.isValidIpV4Address;
+import static io.netty5.util.NetUtil.isValidIpV6Address;
+import static io.netty5.util.NetUtil.toAddressString;
+import static io.netty5.util.NetUtil.toSocketAddressString;
+import static io.netty5.util.NetUtil.validIpV4ToBytes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

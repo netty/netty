@@ -15,8 +15,8 @@
  */
 package io.netty5.example.qotm;
 
-import io.netty5.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;

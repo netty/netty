@@ -16,10 +16,10 @@
 
 package io.netty5.handler.codec.http2;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link Http2SettingsFrame} implementation.

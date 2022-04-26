@@ -26,7 +26,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;

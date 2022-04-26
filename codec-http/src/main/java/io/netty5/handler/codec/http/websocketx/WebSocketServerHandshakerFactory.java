@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.channel.Channel;
-
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;

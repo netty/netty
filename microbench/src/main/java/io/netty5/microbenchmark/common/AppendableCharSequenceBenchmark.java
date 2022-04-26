@@ -14,8 +14,7 @@
  */
 package io.netty5.microbenchmark.common;
 
-import java.util.Random;
-
+import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
@@ -24,7 +23,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
-import io.netty5.microbench.util.AbstractMicrobenchmark;
+import java.util.Random;
 
 @Threads(1)
 @Warmup(iterations = 5)

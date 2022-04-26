@@ -45,7 +45,6 @@ import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ResourcesUtil;
-
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Timeout;

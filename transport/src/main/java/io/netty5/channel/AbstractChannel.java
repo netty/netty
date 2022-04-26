@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.socket.ChannelOutputShutdownEvent;
 import io.netty5.channel.socket.ChannelOutputShutdownException;
 import io.netty5.util.DefaultAttributeMap;
@@ -41,6 +39,8 @@ import java.nio.channels.NotYetConnectedException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal {@link Channel} implementation.

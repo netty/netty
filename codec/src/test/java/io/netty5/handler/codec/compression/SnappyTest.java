@@ -21,11 +21,15 @@ import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.handler.codec.compression.Snappy.*;
+import java.nio.CharBuffer;
+
+import static io.netty5.handler.codec.compression.Snappy.calculateChecksum;
+import static io.netty5.handler.codec.compression.Snappy.decodeLiteral;
+import static io.netty5.handler.codec.compression.Snappy.encodeLiteral;
+import static io.netty5.handler.codec.compression.Snappy.maskChecksum;
+import static io.netty5.handler.codec.compression.Snappy.validateChecksum;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.nio.CharBuffer;
 
 public class SnappyTest {
     private final Snappy snappy = new Snappy();

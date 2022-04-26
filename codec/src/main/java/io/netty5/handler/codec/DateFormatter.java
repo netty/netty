@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.FastThreadLocal;
 
@@ -25,6 +23,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A formatter for HTTP header dates, such as "Expires" and "Date" headers, or "expires" field in "Set-Cookie".

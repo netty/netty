@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl.util;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
@@ -38,6 +36,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 public final class LazyX509Certificate extends X509Certificate {
 

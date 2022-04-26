@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
 /**
