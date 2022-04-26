@@ -1024,7 +1024,7 @@ public class HttpPostRequestDecoderTest {
         /**
          * the remarks contains error char the '\' before '='
          */
-        sb.append("\"remarks\":\"渠道/电商  商品编号=23\",");
+        sb.append("\"remarks\":\"渠道\\电商  商品编号=23\",");
         /**
          * Other messages must be used for business acceptance,
          * For example, when there are enough items in the shopping cart, the message length will be too long
