@@ -1002,4 +1002,30 @@ public class HttpPostRequestDecoderTest {
             assertTrue(req.release());
         }
     }
+
+    /**
+     * when diskFilename contain "\" create temp file error
+     */
+    @Test
+    void testHttpPostStandardRequestDecoderBySize(){
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0 ;i<300 ;i++){
+            sb.append("aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc");
+        }
+        byte[] bodyBytes = sb.toString().getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        try {
+            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(req);
+            decoder.offer(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertEquals("java.lang.IllegalArgumentException: Invalid prefix or suffix", e.getMessage());
+        } finally {
+            assertTrue(req.release());
+        }
+    }
+
 }
