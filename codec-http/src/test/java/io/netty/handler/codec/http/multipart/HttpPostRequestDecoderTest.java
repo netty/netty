@@ -1009,6 +1009,14 @@ public class HttpPostRequestDecoderTest {
     @Test
     void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar(){
         StringBuffer sb = new StringBuffer();
+        /**
+         *The reason for using StringBuffer is When initializing the mixedattribute object with defaulthttpdatafactory，
+         * Only when the request message size exceeds 16kb,
+         * the MixedAttribute can level up DiskAttribute ，
+         * When upgrading to DiskAttribute,
+         * you need to create a temporary file Therefore, a file creation exception will appear.
+         */
+
         for (int i = 0 ;i<300 ;i++){
             sb.append("aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc");
         }
