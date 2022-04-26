@@ -1007,7 +1007,7 @@ public class HttpPostRequestDecoderTest {
      * when diskFilename contain "\" create temp file error
      */
     @Test
-    void testHttpPostStandardRequestDecoderBySize(){
+    void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar(){
         StringBuffer sb = new StringBuffer();
         for (int i = 0 ;i<300 ;i++){
             sb.append("aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc,aaaa/bbbb=cccc");
