@@ -90,7 +90,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     @Override
     public int compareTo(IpSubnetFilterRule ipSubnetFilterRule) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
-            return compareInt(((Ip4SubnetFilterRule) filterRule).networkAddress,
+            return Integer.compare(((Ip4SubnetFilterRule) filterRule).networkAddress,
                     ((Ip4SubnetFilterRule) ipSubnetFilterRule.filterRule).networkAddress);
         } else {
             return ((Ip6SubnetFilterRule) filterRule).networkAddress
@@ -108,7 +108,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     int compareTo(InetSocketAddress inetSocketAddress) {
         if (filterRule instanceof Ip4SubnetFilterRule) {
             Ip4SubnetFilterRule ip4SubnetFilterRule = (Ip4SubnetFilterRule) filterRule;
-            return compareInt(ip4SubnetFilterRule.networkAddress, NetUtil.ipv4AddressToInt((Inet4Address)
+            return Integer.compare(ip4SubnetFilterRule.networkAddress, NetUtil.ipv4AddressToInt((Inet4Address)
                     inetSocketAddress.getAddress()) & ip4SubnetFilterRule.subnetMask);
         } else {
             Ip6SubnetFilterRule ip6SubnetFilterRule = (Ip6SubnetFilterRule) filterRule;
@@ -116,13 +116,6 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
                     .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress())
                             .and(ip6SubnetFilterRule.networkAddress));
         }
-    }
-
-    /**
-     * Equivalent to {@link Integer#compare(int, int)}
-     */
-    private static int compareInt(int x, int y) {
-        return (x < y) ? -1 : ((x == y) ? 0 : 1);
     }
 
     static final class Ip4SubnetFilterRule implements IpFilterRule {
