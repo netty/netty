@@ -166,9 +166,10 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-        int indexOf = Collections.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
+        int indexOf;
 
         if (remoteAddress.getAddress() instanceof Inet4Address) {
+            indexOf = Collections.binarySearch(ipv4Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv4 == null) {
                     return ipv4Rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
@@ -177,6 +178,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
                 }
             }
         } else {
+            indexOf = Collections.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv6 == null) {
                     return ipv6Rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
