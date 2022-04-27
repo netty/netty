@@ -107,8 +107,8 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         int numAcceptIPv6 = 0;
         int numRejectIPv6 = 0;
 
-        List<IpSubnetFilterRule> unsortedIPv4Rules = new ArrayList<IpSubnetFilterRule>();
-        List<IpSubnetFilterRule> unsortedIPv6Rules = new ArrayList<IpSubnetFilterRule>();
+        List<IpSubnetFilterRule> unsortedIPv4Rules = new ArrayList<>();
+        List<IpSubnetFilterRule> unsortedIPv6Rules = new ArrayList<>();
 
         // Iterate over rules and check for `null` rule.
         for (IpSubnetFilterRule ipSubnetFilterRule : rules) {
@@ -200,7 +200,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     private static List<IpSubnetFilterRule> sortAndFilter(List<IpSubnetFilterRule> rules) {
         Collections.sort(rules);
         Iterator<IpSubnetFilterRule> iterator = rules.iterator();
-        List<IpSubnetFilterRule> toKeep = new ArrayList<IpSubnetFilterRule>();
+        List<IpSubnetFilterRule> toKeep = new ArrayList<>();
 
         IpSubnetFilterRule parentRule = iterator.hasNext() ? iterator.next() : null;
         if (parentRule != null) {
@@ -213,7 +213,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             IpSubnetFilterRule childRule = iterator.next();
 
             // If parentRule matches childRule, then there's no need to keep the child rule.
-            // Otherwise, the rules are distinct and we need both.
+            // Otherwise, the rules are distinct, and we need both.
             if (!parentRule.matches(new InetSocketAddress(childRule.getIpAddress(), 1))) {
                 toKeep.add(childRule);
                 // Then we'll keep the child rule around as the parent for the next round.
