@@ -136,6 +136,7 @@ static jfieldID packetCountFieldId = NULL;
 
 static const char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
+static int epoll_pwait2_supported = 0;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -267,8 +268,8 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
             // Let's try to reduce the syscalls as much as possible as timerfd_settime(...) can be expensive:
             // See https://github.com/netty/netty/issues/11695
 
-            if (epoll_pwait2) {
-                // We have epoll_pwait2(...), this means we can just pass in the itimerspec directly and not need an
+            if (epoll_pwait2_supported == 1) {
+                // We have epoll_pwait2(...) and it is supported, this means we can just pass in the itimerspec directly and not need an
                 // extra syscall even for very small timeouts.
                 struct timespec ts = { tvSec, tvNsec };
                 struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
@@ -807,6 +808,21 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 
     staticPackagePrefix = packagePrefix;
+
+    // Check if there is an epoll_pwait2 system call and also if it works. One some systems it might be there
+    // but actually is not implemented and so fail with ENOSYS.
+    // See https://github.com/netty/netty/issues/12343
+    if (epoll_pwait2) {
+        int efd = epoll_create(1);
+        if (efd != -1) {
+            struct timespec ts = { 0, 0 };
+            struct epoll_event ev[1];
+            if (epoll_pwait2(efd, &ev, 1, &ts, NULL) != -1) {
+                epoll_pwait2_supported = 1;
+            }
+            close(efd);
+        }
+    }
 done:
 
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
