@@ -125,6 +125,19 @@ public interface Statics {
         }
     }
 
+    static void checkImplicitCapacity(int implicitCapacity, int currentCapacity) {
+        if (implicitCapacity < currentCapacity) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + implicitCapacity +
+                    ") cannot be less than capacity (" + currentCapacity + ')');
+        }
+        if (implicitCapacity > MAX_BUFFER_SIZE) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + implicitCapacity +
+                    ") cannot be greater than max buffer size (" + MAX_BUFFER_SIZE + ')');
+        }
+    }
+
     static void checkLength(int length) {
         if (length < 0) {
             throw new IllegalArgumentException("The length cannot be negative: " + length + '.');

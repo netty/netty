@@ -43,6 +43,7 @@ import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -191,15 +192,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer implicitCapacityLimit(int limit) {
-        if (limit < capacity()) {
-            throw new IndexOutOfBoundsException(
-                    "Implicit capacity limit (" + limit + ") cannot be less than capacity (" + capacity() + ')');
-        }
-        if (limit > MAX_BUFFER_SIZE) {
-            throw new IndexOutOfBoundsException(
-                    "Implicit capacity limit (" + limit +
-                    ") cannot be greater than max buffer size (" + MAX_BUFFER_SIZE + ')');
-        }
+        checkImplicitCapacity(limit,  capacity());
         implicitCapacityLimit = limit;
         return this;
     }
