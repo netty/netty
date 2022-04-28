@@ -18,8 +18,7 @@ package io.netty5.buffer.api;
 /**
  * This interface is just the primitive data accessor methods that {@link Buffer} exposes.
  * It can be useful if you only need the data access methods, and perhaps wish to decorate or modify their behaviour.
- * Usually, you'd use the {@link Buffer} interface directly, since this lets you properly control the buffer reference
- * count.
+ * Usually, you'd use the {@link Buffer} interface directly, since this lets you properly control the buffer life cycle.
  */
 public interface BufferAccessor {
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors interface.">
@@ -63,7 +62,8 @@ public interface BufferAccessor {
      *
      * @param value The boolean value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     default Buffer writeBoolean(boolean value) {
         return writeByte((byte) (value ? 1 :0));
@@ -143,7 +143,8 @@ public interface BufferAccessor {
      *
      * @param value The byte value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeByte(byte value);
 
@@ -168,7 +169,8 @@ public interface BufferAccessor {
      *
      * @param value The int value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Byte#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeUnsignedByte(int value);
 
@@ -217,7 +219,8 @@ public interface BufferAccessor {
      *
      * @param value The char value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 2.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 2,
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeChar(char value);
 
@@ -290,7 +293,8 @@ public interface BufferAccessor {
      *
      * @param value The short value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Short#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Short#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeShort(short value);
 
@@ -315,7 +319,8 @@ public interface BufferAccessor {
      *
      * @param value The int value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Short#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Short#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeUnsignedShort(int value);
 
@@ -388,7 +393,8 @@ public interface BufferAccessor {
      *
      * @param value The int value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 3.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 3,
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeMedium(int value);
 
@@ -413,7 +419,8 @@ public interface BufferAccessor {
      *
      * @param value The int value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 3.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than 3,
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeUnsignedMedium(int value);
 
@@ -486,7 +493,8 @@ public interface BufferAccessor {
      *
      * @param value The int value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Integer#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Integer#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeInt(int value);
 
@@ -511,7 +519,8 @@ public interface BufferAccessor {
      *
      * @param value The long value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Integer#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Integer#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeUnsignedInt(long value);
 
@@ -560,7 +569,8 @@ public interface BufferAccessor {
      *
      * @param value The float value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Float#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Float#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeFloat(float value);
 
@@ -609,7 +619,8 @@ public interface BufferAccessor {
      *
      * @param value The long value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Long#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Long#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeLong(long value);
 
@@ -658,7 +669,8 @@ public interface BufferAccessor {
      *
      * @param value The double value to write.
      * @return This Buffer.
-     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Double#BYTES}.
+     * @throws IndexOutOfBoundsException If {@link Buffer#writableBytes} is less than {@link Double#BYTES},
+     * and the {@linkplain Buffer#capacity() buffer capacity} cannot be automatically increased.
      */
     Buffer writeDouble(double value);
 

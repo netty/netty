@@ -223,6 +223,27 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     boolean isDirect();
 
     /**
+     * Set an upper limit to the implicit capacity growth. Buffer {@code write*} methods may implicitly grow the buffer
+     * capacity instead of throwing a bounds check exception. The implicit capacity limit restricts this growth so the
+     * buffer capacity does not automatically grow beyond the given limit. When the limit is reached, and there is no
+     * more writable space left, then the {@code write*} methods will start throwing exceptions.
+     * <p>
+     * The default limit is the maximum buffer size.
+     * <p>
+     * The limit is carried through {@link #send()} calls, but the buffer instances returned from the various
+     * {@code split} and {@code copy} methods will have the default limit set.
+     * <p>
+     * The limit is not impacted by calls to {@code split} methods on this buffer. In other words, even though
+     * {@code split} methods reduce the capacity of this buffer, the set limit, if any, remains the same.
+     *
+     * @param limit The maximum size this buffers capacity will implicitly grow to via {@code write*} methods.
+     * @return This buffer instance.
+     * @throws IndexOutOfBoundsException if the limit is negative, greater than the maximum buffer size, or if the
+     *                                   {@linkplain #capacity() capacity} is already greater than the given limit.
+     */
+    Buffer implicitCapacityLimit(int limit);
+
+    /**
      * Copies the given length of data from this buffer into the given destination array, beginning at the given source
      * position in this buffer, and the given destination position in the destination array.
      * <p>
@@ -364,10 +385,13 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      */
     default Buffer writeBytes(Buffer source) {
         int size = source.readableBytes();
+        if (writableBytes() < size) {
+            ensureWritable(size, 1, false);
+        }
         int woff = writerOffset();
         source.copyInto(source.readerOffset(), this, woff, size);
-        source.readerOffset(source.readerOffset() + size);
-        writerOffset(woff + size);
+        source.skipReadable(size);
+        skipWritable(size);
         return this;
     }
 
@@ -392,11 +416,15 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeBytes(byte[] source, int srcPos, int length) {
+        if (source.length < srcPos + length) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        ensureWritable(length, 1, false);
         int woff = writerOffset();
-        writerOffset(woff + length);
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
         }
+        skipWritable(length);
         return this;
     }
 
@@ -418,7 +446,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
             int woff = writerOffset();
             int length = source.remaining();
             writerOffset(woff + source.remaining());
-            // Try to reduce bounce-checking by using long and int when possible.
+            // Try to reduce bounds-checking by using long and int when possible.
             boolean needReverse = source.order() != ByteOrder.BIG_ENDIAN;
             for (; length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {
                 setLong(woff, needReverse ? Long.reverseBytes(source.getLong()) : source.getLong());

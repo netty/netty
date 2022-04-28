@@ -47,8 +47,10 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.function.Supplier;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressOfDirectByteBuffer;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
@@ -68,6 +70,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     private final AllocatorControl control;
     private ByteBuf delegate;
+    private int implicitCapacityLimit = MAX_BUFFER_SIZE;
 
     private ByteBufBuffer(AllocatorControl control, ByteBuf delegate, Drop<ByteBufBuffer> drop) {
         super(drop);
@@ -129,10 +132,13 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     protected Owned<ByteBufBuffer> prepareSend() {
         final ByteBuf delegate = this.delegate;
+        final int implicitCapacityLimit = this.implicitCapacityLimit;
         return new Owned<ByteBufBuffer>() {
             @Override
             public ByteBufBuffer transferOwnership(Drop<ByteBufBuffer> drop) {
-                return new ByteBufBuffer(control, delegate, drop);
+                ByteBufBuffer buffer = new ByteBufBuffer(control, delegate, drop);
+                buffer.implicitCapacityLimit(implicitCapacityLimit);
+                return buffer;
             }
         };
     }
@@ -224,6 +230,13 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public boolean isDirect() {
         return delegate.isDirect();
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        checkImplicitCapacity(limit,  capacity());
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -384,7 +397,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (readOnly()) {
             throw bufferIsReadOnly(this);
         }
-        if (writableBytes() > size) {
+        if (writableBytes() >= size) {
             return this;
         }
         if (allowCompaction) {
@@ -397,7 +410,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         delegate.ensureWritable(growBy, true);
         if (writableBytes() < size) {
             // The ensureWritable call is not guaranteed to work, in which case we'll have to re-allocate ourselves.
-            int newSize = readableBytes() + writableBytes() + growBy;
+            int newSize = capacity() + growBy;
             Statics.assertValidBufferSize(newSize);
             ByteBufBuffer buffer = (ByteBufBuffer) control.getAllocator().allocate(newSize);
 
@@ -420,6 +433,15 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
+        if (readOnly && readOnly()) {
+            ByteBufBuffer copy = newConstChild();
+            if (offset > 0 || length < capacity()) {
+                copy.delegate = delegate.slice(offset, length);
+            }
+            copy.readerOffset(0);
+            copy.delegate.writerIndex(length);
+            return copy;
+        }
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
@@ -592,6 +614,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeByte(byte value) {
         try {
+            checkWrite(Byte.BYTES);
             delegate.writeByte(value);
             return this;
         } catch (RuntimeException e) {
@@ -612,6 +635,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedByte(int value) {
         try {
+            checkWrite(Byte.BYTES);
             delegate.writeByte((byte) (value & 0xFF));
             return this;
         } catch (RuntimeException e) {
@@ -650,7 +674,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeChar(char value) {
         try {
-            delegate.getChar(writerOffset()); // Force a bounds check
+            checkWrite(Character.BYTES);
             delegate.writeChar(value);
             return this;
         } catch (RuntimeException e) {
@@ -708,7 +732,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeShort(short value) {
         try {
-            delegate.getShort(writerOffset()); // Force a bounds check
+            checkWrite(Short.BYTES);
             delegate.writeShort(value);
             return this;
         } catch (RuntimeException e) {
@@ -730,7 +754,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedShort(int value) {
         try {
-            delegate.getShort(writerOffset()); // Force a bounds check
+            checkWrite(Short.BYTES);
             delegate.writeShort((short) (value & 0xFFFF));
             return this;
         } catch (RuntimeException e) {
@@ -788,7 +812,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeMedium(int value) {
         try {
-            delegate.getMedium(writerOffset()); // Force a bounds check
+            checkWrite(3);
             delegate.writeMedium(value);
             return this;
         } catch (RuntimeException e) {
@@ -810,7 +834,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedMedium(int value) {
         try {
-            delegate.getMedium(writerOffset()); // Force a bounds check
+            checkWrite(3);
             delegate.writeMedium(value);
             return this;
         } catch (RuntimeException e) {
@@ -868,7 +892,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeInt(int value) {
         try {
-            delegate.getInt(writerOffset()); // Force a bounds check
+            checkWrite(Integer.BYTES);
             delegate.writeInt(value);
             return this;
         } catch (RuntimeException e) {
@@ -890,7 +914,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeUnsignedInt(long value) {
         try {
-            delegate.getInt(writerOffset()); // Force a bounds check
+            checkWrite(Integer.BYTES);
             delegate.writeInt((int) (value & 0xFFFFFFFFL));
             return this;
         } catch (RuntimeException e) {
@@ -930,7 +954,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeFloat(float value) {
         try {
-            delegate.getFloat(writerOffset()); // Force a bounds check
+            checkWrite(Float.BYTES);
             delegate.writeFloat(value);
             return this;
         } catch (RuntimeException e) {
@@ -970,7 +994,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeLong(long value) {
         try {
-            delegate.getLong(writerOffset()); // Force a bounds check
+            checkWrite(Long.BYTES);
             delegate.writeLong(value);
             return this;
         } catch (RuntimeException e) {
@@ -1010,11 +1034,20 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public Buffer writeDouble(double value) {
         try {
-            delegate.getDouble(writerOffset()); // Force a bounds check
+            int size = Double.BYTES;
+            checkWrite(size);
             delegate.writeDouble(value);
             return this;
         } catch (RuntimeException e) {
             throw accessException(e, true);
+        }
+    }
+
+    private void checkWrite(int size) {
+        if (writableBytes() < size && writerOffset() + size <= implicitCapacityLimit && isOwned()) {
+            ensureWritable(size, 1, false);
+        } else {
+            delegate.getByte(writerOffset() + size - 1); // Force bounds check
         }
     }
 
@@ -1042,7 +1075,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         return Statics.hashCode(this);
     }
 
-    Buffer newConstChild() {
+    ByteBufBuffer newConstChild() {
         assert readOnly();
         var drop = unsafeGetDrop().fork();
         var child = new ByteBufBuffer(control, delegate.duplicate(), drop);

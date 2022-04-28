@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -195,16 +196,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfByteMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfByteMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(8);
             byte value = 0x01;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeByte(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeByte(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(8);
+            assertEquals(value, buf.readByte());
         }
     }
 
@@ -229,16 +230,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfUnsignedByteMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfUnsignedByteMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(8);
             int value = 0x01;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeUnsignedByte(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeUnsignedByte(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(8);
+            assertEquals(value, buf.readUnsignedByte());
         }
     }
 
@@ -330,16 +331,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfCharMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfCharMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(7);
             char value = 0x0102;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeChar(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeChar(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(7);
+            assertEquals(value, buf.readChar());
         }
     }
 
@@ -498,16 +499,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfShortMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfShortMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(7);
             short value = 0x0102;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeShort(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeShort(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(7);
+            assertEquals(value, buf.readShort());
         }
     }
 
@@ -532,16 +533,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfUnsignedShortMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfUnsignedShortMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(7);
             int value = 0x0102;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeUnsignedShort(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeUnsignedShort(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(7);
+            assertEquals(value, buf.readUnsignedShort());
         }
     }
 
@@ -700,16 +701,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfMediumMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfMediumMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(6);
             int value = 0x010203;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeMedium(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeMedium(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(6);
+            assertEquals(value, buf.readMedium());
         }
     }
 
@@ -734,16 +735,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfUnsignedMediumMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfUnsignedMediumMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(6);
             int value = 0x010203;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeUnsignedMedium(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeUnsignedMedium(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(6);
+            assertEquals(value, buf.readMedium());
         }
     }
 
@@ -902,16 +903,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfIntMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfIntMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(5);
             int value = 0x01020304;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeInt(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeInt(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(5);
+            assertEquals(value, buf.readInt());
         }
     }
 
@@ -936,16 +937,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfUnsignedIntMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfUnsignedIntMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(5);
             long value = 0x01020304;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeUnsignedInt(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeUnsignedInt(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(5);
+            assertEquals(value, buf.readUnsignedInt());
         }
     }
 
@@ -1037,16 +1038,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfFloatMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfFloatMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(5);
             float value = Float.intBitsToFloat(0x01020304);
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeFloat(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeFloat(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(5);
+            assertEquals(value, buf.readFloat());
         }
     }
 
@@ -1138,16 +1139,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfLongMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfLongMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(1);
             long value = 0x0102030405060708L;
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeLong(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeLong(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(1);
+            assertEquals(value, buf.readLong());
         }
     }
 
@@ -1239,16 +1240,16 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    void relativeWriteOfDoubleMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
+    void relativeWriteOfDoubleMustExpandCapacityWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertEquals(Long.BYTES, buf.capacity());
             buf.writerOffset(1);
             double value = Double.longBitsToDouble(0x0102030405060708L);
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.writeDouble(value));
-            buf.writerOffset(Long.BYTES);
-            // Verify contents are unchanged.
-            assertEquals(0, buf.readLong());
+            buf.writeDouble(value);
+            assertThat(buf.capacity()).isGreaterThan(Long.BYTES);
+            buf.readerOffset(1);
+            assertEquals(value, buf.readDouble());
         }
     }
 

@@ -68,7 +68,15 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class BufferTestSupport {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferTestSupport.class);
-    public static ExecutorService executor;
+    public static ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = Executors.defaultThreadFactory().newThread(r);
+            thread.setName("BufferTest-" + thread.getName());
+            thread.setDaemon(true); // Do not prevent shut down of test runner.
+            return thread;
+        }
+    });
 
     private static final Memoize<Fixture[]> INITIAL_COMBINATIONS = new Memoize<>(
             () -> initialFixturesForEachImplementation().toArray(Fixture[]::new));
@@ -136,6 +144,7 @@ public abstract class BufferTestSupport {
     static List<Fixture> initialAllocators() {
         return List.of(
                 new Fixture("heap", BufferAllocator::onHeapUnpooled, HEAP),
+                new Fixture("copyOf", () -> new CopyOfAllocator(BufferAllocator.onHeapUnpooled()), HEAP),
                 new Fixture("direct", BufferAllocator::offHeapUnpooled, DIRECT),
                 new Fixture("sensitive", SensitiveBufferAllocator::sensitiveOffHeapAllocator, DIRECT, UNCLOSEABLE),
                 new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
@@ -193,6 +202,43 @@ public abstract class BufferTestSupport {
         public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
             Buffer base = allocate(bytes.length).writeBytes(bytes).makeReadOnly();
             return () -> base; // Technically off-spec.
+        }
+    }
+
+    private static final class CopyOfAllocator extends TestAllocator {
+        private final BufferAllocator delegate;
+
+        private CopyOfAllocator(BufferAllocator delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean isPooling() {
+            return delegate.isPooling();
+        }
+
+        @Override
+        public AllocationType getAllocationType() {
+            return delegate.getAllocationType();
+        }
+
+        @Override
+        public Buffer allocate(int size) {
+            if (size < 0) {
+                throw new IllegalArgumentException();
+            }
+            return delegate.copyOf(new byte[size]).writerOffset(0);
+        }
+
+        @Override
+        public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+            Buffer parent = delegate.copyOf(bytes).makeReadOnly();
+            return () -> parent.copy(0, parent.readableBytes(), true);
+        }
+
+        @Override
+        public void close() {
+            delegate.close();
         }
     }
 
@@ -372,24 +418,6 @@ public abstract class BufferTestSupport {
             };
         }, f.getProperties()));
         return builder.build();
-    }
-
-    @BeforeAll
-    static void startExecutor() throws IOException, ParseException {
-        executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread thread = Executors.defaultThreadFactory().newThread(r);
-                thread.setName("BufferTest-" + thread.getName());
-                thread.setDaemon(true); // Do not prevent shut down of test runner.
-                return thread;
-            }
-        });
-    }
-
-    @AfterAll
-    static void stopExecutor() throws IOException {
-        executor.shutdown();
     }
 
     static void writeRandomBytes(Buffer buf, int length) {

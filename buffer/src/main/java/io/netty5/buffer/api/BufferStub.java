@@ -110,6 +110,12 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        delegate.implicitCapacityLimit(limit);
+        return this;
+    }
+
+    @Override
     public void copyInto(int srcPos, byte[] dest, int destPos, int length) {
         delegate.copyInto(srcPos, dest, destPos, length);
     }

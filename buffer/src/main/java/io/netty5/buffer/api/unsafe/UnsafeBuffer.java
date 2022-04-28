@@ -39,12 +39,15 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
@@ -60,6 +63,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     private boolean readOnly;
     private int roff;
     private int woff;
+    private int implicitCapacityLimit;
 
     UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl control,
                         Drop<UnsafeBuffer> drop) {
@@ -70,6 +74,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         address = memory.address + offset;
         rsize = size;
         wsize = size;
+        implicitCapacityLimit = MAX_BUFFER_SIZE;
     }
 
     /**
@@ -77,6 +82,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
      */
     private UnsafeBuffer(UnsafeBuffer parent, Drop<UnsafeBuffer> drop) {
         super(drop, parent.control);
+        implicitCapacityLimit = parent.implicitCapacityLimit;
         memory = parent.memory;
         base = parent.base;
         baseOffset = parent.baseOffset;
@@ -122,7 +128,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writerOffset(int offset) {
-        checkWrite(offset, 0);
+        checkWrite(offset, 0, false);
         woff = offset;
         return this;
     }
@@ -182,6 +188,13 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public boolean isDirect() {
         return base == null;
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        checkImplicitCapacity(limit,  capacity());
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -692,7 +705,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         if (writableBytes == 0) {
             return 0;
         }
-        checkWrite(writerOffset(), writableBytes);
+        checkWrite(writerOffset(), writableBytes, false);
         try {
             return processor.process(initialIndex, this)? 1 : -1;
         } finally {
@@ -735,7 +748,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeByte(byte value) {
-        checkWrite(woff, Byte.BYTES);
+        checkWrite(woff, Byte.BYTES, true);
         long offset = address + woff;
         woff += Byte.BYTES;
         try {
@@ -760,7 +773,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeUnsignedByte(int value) {
-        checkWrite(woff, Byte.BYTES);
+        checkWrite(woff, Byte.BYTES, true);
         long offset = address + woff;
         woff += Byte.BYTES;
         try {
@@ -808,7 +821,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeChar(char value) {
-        checkWrite(woff, Character.BYTES);
+        checkWrite(woff, Character.BYTES, true);
         long offset = address + woff;
         woff += Character.BYTES;
         try {
@@ -866,7 +879,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeShort(short value) {
-        checkWrite(woff, Short.BYTES);
+        checkWrite(woff, Short.BYTES, true);
         long offset = address + woff;
         woff += Short.BYTES;
         try {
@@ -891,7 +904,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeUnsignedShort(int value) {
-        checkWrite(woff, Short.BYTES);
+        checkWrite(woff, Short.BYTES, true);
         long offset = address + woff;
         woff += Short.BYTES;
         try {
@@ -949,7 +962,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeMedium(int value) {
-        checkWrite(woff, 3);
+        checkWrite(woff, 3, true);
         long offset = address + woff;
         storeByte(offset, (byte) (value >> 16));
         storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
@@ -970,7 +983,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeUnsignedMedium(int value) {
-        checkWrite(woff, 3);
+        checkWrite(woff, 3, true);
         long offset = address + woff;
         storeByte(offset, (byte) (value >> 16));
         storeByte(offset + 1, (byte) (value >> 8 & 0xFF));
@@ -1024,7 +1037,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeInt(int value) {
-        checkWrite(woff, Integer.BYTES);
+        checkWrite(woff, Integer.BYTES, true);
         long offset = address + woff;
         woff += Integer.BYTES;
         try {
@@ -1049,7 +1062,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeUnsignedInt(long value) {
-        checkWrite(woff, Integer.BYTES);
+        checkWrite(woff, Integer.BYTES, true);
         long offset = address + woff;
         woff += Integer.BYTES;
         try {
@@ -1097,7 +1110,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeFloat(float value) {
-        checkWrite(woff, Float.BYTES);
+        checkWrite(woff, Float.BYTES, true);
         long offset = address + woff;
         woff += Float.BYTES;
         try {
@@ -1145,7 +1158,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeLong(long value) {
-        checkWrite(woff, Long.BYTES);
+        checkWrite(woff, Long.BYTES, true);
         long offset = address + woff;
         woff += Long.BYTES;
         try {
@@ -1193,7 +1206,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public Buffer writeDouble(double value) {
-        checkWrite(woff, Double.BYTES);
+        checkWrite(woff, Double.BYTES, true);
         long offset = address + woff;
         woff += Double.BYTES;
         try {
@@ -1219,9 +1232,10 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     protected Owned<UnsafeBuffer> prepareSend() {
-        var roff = this.roff;
-        var woff = this.woff;
-        var readOnly = readOnly();
+        int roff = this.roff;
+        int woff = this.woff;
+        boolean readOnly = readOnly();
+        int implicitCapacityLimit = this.implicitCapacityLimit;
         UnsafeMemory memory = this.memory;
         AllocatorControl control = this.control;
         long baseOffset = this.baseOffset;
@@ -1232,6 +1246,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
                 UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
                 copy.roff = roff;
                 copy.woff = woff;
+                copy.implicitCapacityLimit = implicitCapacityLimit;
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
@@ -1261,15 +1276,15 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         }
     }
 
-    private void checkWrite(int index, int size) {
+    private void checkWrite(int index, int size, boolean mayExpand) {
         if (index < roff | wsize < index + size) {
-            throw writeAccessCheckException(index, size);
+            handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
         if (index < 0 | wsize < index + size) {
-            throw writeAccessCheckException(index, size);
+            handleWriteAccessBoundsFailure(index, size, false);
         }
     }
 
@@ -1280,14 +1295,24 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         return outOfBounds(index, size);
     }
 
-    private RuntimeException writeAccessCheckException(int index, int size) {
+    private void handleWriteAccessBoundsFailure(int index, int size, boolean mayExpand) {
         if (rsize == CLOSED_SIZE) {
             throw attachTrace(bufferIsClosed(this));
         }
         if (wsize != rsize) {
-            return bufferIsReadOnly(this);
+            throw bufferIsReadOnly(this);
         }
-        return outOfBounds(index, size);
+        int capacity = capacity();
+        if (mayExpand && index >= 0 && index <= capacity && woff + size <= implicitCapacityLimit && isOwned()) {
+            // Grow into next power-of-two, but not beyond the implicit limit.
+            int minimumGrowth = Math.min(
+                    Math.max(roundToPowerOfTwo(capacity * 2), size),
+                    implicitCapacityLimit) - capacity;
+            ensureWritable(size, minimumGrowth, false);
+            checkSet(index, size); // Verify writing is now possible, without recursing.
+            return;
+        }
+        throw outOfBounds(index, size);
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {

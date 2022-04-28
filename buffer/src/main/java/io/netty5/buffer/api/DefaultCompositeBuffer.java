@@ -32,10 +32,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 import static java.lang.Math.addExact;
 import static java.lang.Math.toIntExact;
 
@@ -43,12 +46,6 @@ import static java.lang.Math.toIntExact;
  * The default implementation of the {@link CompositeBuffer} interface.
  */
 final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompositeBuffer> implements CompositeBuffer {
-    /**
-     * The max array size is JVM implementation dependant, but most seem to settle on {@code Integer.MAX_VALUE - 8}.
-     * We set the max composite buffer capacity to the same, since it would otherwise be impossible to create a
-     * non-composite copy of the buffer.
-     */
-    private static final int MAX_CAPACITY = Integer.MAX_VALUE - 8;
     private static final Drop<DefaultCompositeBuffer> COMPOSITE_DROP = new Drop<>() {
         @Override
         public void drop(DefaultCompositeBuffer buf) {
@@ -81,6 +78,19 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
     };
     private static final Buffer[] EMPTY_BUFFER_ARRAY = new Buffer[0];
+    /**
+     * The various write*() methods may automatically grow the buffer, if there is not enough capacity to service the
+     * write operation.
+     * When this happens, we have to choose some reasonable amount to grow the buffer by. For normal buffers, we just
+     * double their capacity to amortise this cost. For composite buffers, this doubling doesn't quite make as much
+     * sense, as we are adding components rather than reallocating the entire innards of the buffer.
+     * In the normal case, the composite buffer will grow by the average size of its components.
+     * However, when the composite buffer is empty, we have no basis on which to compute an average.
+     * We have to pick a number out of thin air.
+     * We have chosen a size of 256 bytes for this purpose. This is the same as the initial capacity used, when
+     * allocating a ByteBuf of an unspecified size, in Netty 4.1.
+     */
+    private static final int FIRST_AUTOMATIC_COMPONENT_SIZE = 256;
 
     private final BufferAllocator allocator;
     private final TornBufferAccessor tornBufAccessors;
@@ -92,6 +102,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     private int subOffset; // The next offset *within* a constituent buffer to read from or write to.
     private boolean closed;
     private boolean readOnly;
+    private int implicitCapacityLimit;
 
     /**
      * @see CompositeBuffer#compose(BufferAllocator, Send[])
@@ -201,6 +212,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
             this.bufs = bufs;
             computeBufferOffsets();
+            implicitCapacityLimit = MAX_BUFFER_SIZE;
             tornBufAccessors = new TornBufferAccessor(this);
         } catch (Exception e) {
             // Always close bufs on exception, since we've taken ownership of them at this point.
@@ -260,10 +272,10 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             offsets[i] = (int) cap;
             cap += bufs[i].capacity();
         }
-        if (cap > MAX_CAPACITY) {
+        if (cap > MAX_BUFFER_SIZE) {
             throw new IllegalArgumentException(
                     "Combined size of the constituent buffers is too big. " +
-                    "The maximum buffer capacity is " + MAX_CAPACITY + " (Integer.MAX_VALUE - 8), " +
+                    "The maximum buffer capacity is " + MAX_BUFFER_SIZE + " (Integer.MAX_VALUE - 8), " +
                     "but the sum of the constituent buffer capacities was " + cap + '.');
         }
         capacity = (int) cap;
@@ -374,6 +386,13 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
         }
         return true;
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        checkImplicitCapacity(limit,  capacity());
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -1290,6 +1309,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             throw throwable;
         }
         boolean readOnly = this.readOnly;
+        int implicitCapacityLimit = this.implicitCapacityLimit;
         return drop -> {
             Buffer[] received = new Buffer[sends.length];
             for (int i = 0; i < sends.length; i++) {
@@ -1297,6 +1317,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
             var composite = new DefaultCompositeBuffer(allocator, received, drop);
             composite.readOnly = readOnly;
+            composite.implicitCapacityLimit = implicitCapacityLimit;
             drop.attach(composite);
             return composite;
         };
@@ -1386,6 +1407,17 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private BufferAccessor prepWrite(int size) {
+        if (writableBytes() < size && woff + size <= implicitCapacityLimit && isOwned()) {
+            final int minGrowth;
+            if (bufs.length == 0) {
+                minGrowth = Math.min(implicitCapacityLimit, FIRST_AUTOMATIC_COMPONENT_SIZE);
+            } else {
+                minGrowth = Math.min(
+                        Math.max(roundToPowerOfTwo(capacity() / bufs.length), size),
+                        implicitCapacityLimit - capacity);
+            }
+            ensureWritable(size, minGrowth, false);
+        }
         var buf = prepWrite(woff, size);
         woff += size;
         return buf;
