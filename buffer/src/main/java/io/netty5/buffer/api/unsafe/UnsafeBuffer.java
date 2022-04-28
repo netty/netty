@@ -39,12 +39,14 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
@@ -60,6 +62,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     private boolean readOnly;
     private int roff;
     private int woff;
+    private int implicitCapacityLimit;
 
     UnsafeBuffer(UnsafeMemory memory, long offset, int size, AllocatorControl control,
                         Drop<UnsafeBuffer> drop) {
@@ -70,6 +73,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         address = memory.address + offset;
         rsize = size;
         wsize = size;
+        implicitCapacityLimit = MAX_BUFFER_SIZE;
     }
 
     /**
@@ -77,6 +81,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
      */
     private UnsafeBuffer(UnsafeBuffer parent, Drop<UnsafeBuffer> drop) {
         super(drop, parent.control);
+        implicitCapacityLimit = parent.implicitCapacityLimit;
         memory = parent.memory;
         base = parent.base;
         baseOffset = parent.baseOffset;
@@ -182,6 +187,21 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public boolean isDirect() {
         return base == null;
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        if (limit < capacity()) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit + ") cannot be less than capacity (" + capacity() + ')');
+        }
+        if (limit > MAX_BUFFER_SIZE) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit +
+                    ") cannot be greater than max buffer size (" + MAX_BUFFER_SIZE + ')');
+        }
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -1219,9 +1239,10 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     protected Owned<UnsafeBuffer> prepareSend() {
-        var roff = this.roff;
-        var woff = this.woff;
-        var readOnly = readOnly();
+        int roff = this.roff;
+        int woff = this.woff;
+        boolean readOnly = readOnly();
+        int implicitCapacityLimit = this.implicitCapacityLimit;
         UnsafeMemory memory = this.memory;
         AllocatorControl control = this.control;
         long baseOffset = this.baseOffset;
@@ -1232,6 +1253,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
                 UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
                 copy.roff = roff;
                 copy.woff = woff;
+                copy.implicitCapacityLimit = implicitCapacityLimit;
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
@@ -1288,8 +1310,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             throw bufferIsReadOnly(this);
         }
         int capacity = capacity();
-        if (mayExpand && index > 0 && index <= capacity && capacity < 131072 /* 128k */ && isOwned()) {
-            int minimumGrowth = PlatformDependent.roundToPowerOfTwo(capacity * 2) - capacity; // Grow into power-of-two.
+        if (mayExpand && index >= 0 && index <= capacity && woff + size <= implicitCapacityLimit && isOwned()) {
+            // Grow into next power-of-two, but not beyond the implicit limit.
+            int minimumGrowth = Math.min(
+                    Math.max(roundToPowerOfTwo(capacity * 2), size),
+                    implicitCapacityLimit) - capacity;
             ensureWritable(size, minimumGrowth, false);
             checkSet(index, size); // Verify writing is now possible, without recursing.
             return;

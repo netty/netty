@@ -63,6 +63,11 @@ public interface Statics {
     };
     MethodHandle BB_SLICE_OFFSETS = getByteBufferSliceOffsetsMethodHandle();
     MethodHandle BB_PUT_OFFSETS = getByteBufferPutOffsetsMethodHandle();
+    /**
+     * The maximum buffer size we support is the maximum array length generally supported by JVMs,
+     * because on-heap buffers will be backed by byte-arrays.
+     */
+    int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
 
     static MethodHandle getByteBufferSliceOffsetsMethodHandle() {
         try {
@@ -114,11 +119,9 @@ public interface Statics {
         if (size < 0) {
             throw new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
         }
-        // We use max array size because on-heap buffers will be backed by byte-arrays.
-        int maxArraySize = Integer.MAX_VALUE - 8;
-        if (size > maxArraySize) {
+        if (size > MAX_BUFFER_SIZE) {
             throw new IllegalArgumentException(
-                    "Buffer size cannot be greater than " + maxArraySize + ", but was " + size + '.');
+                    "Buffer size cannot be greater than " + MAX_BUFFER_SIZE + ", but was " + size + '.');
         }
     }
 

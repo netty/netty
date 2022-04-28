@@ -223,6 +223,27 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     boolean isDirect();
 
     /**
+     * Set an upper limit to the implicit capacity growth. Buffer {@code write*} methods may implicitly grow the buffer
+     * capacity instead of throwing a bounds check exception. The implicit capacity limit restricts this growth so the
+     * buffer capacity does not automatically grow beyond the given limit. When the limit is reached, and there is no
+     * more writable space left, then the {@code write*} methods will start throwing exceptions.
+     * <p>
+     * The default limit is the maximum buffer size.
+     * <p>
+     * The limit is carried through {@link #send()} calls, but the buffer instances returned from the various
+     * {@code split} and {@code copy} methods will have the default limit set.
+     * <p>
+     * The limit is not impacted by calls to {@code split} methods on this buffer. In other words, even though
+     * {@code split} methods reduce the capacity of this buffer, the set limit, if any, remains the same.
+     *
+     * @param limit The maximum size this buffers capacity will implicitly grow to via {@code write*} methods.
+     * @return This buffer instance.
+     * @throws IndexOutOfBoundsException if the limit is negative, greater than the maximum buffer size, or if the
+     *                                   {@linkplain #capacity() capacity} is already greater than the given limit.
+     */
+    Buffer implicitCapacityLimit(int limit);
+
+    /**
      * Copies the given length of data from this buffer into the given destination array, beginning at the given source
      * position in this buffer, and the given destination position in the destination array.
      * <p>

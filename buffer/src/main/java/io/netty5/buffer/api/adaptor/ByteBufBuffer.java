@@ -47,6 +47,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.function.Supplier;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
@@ -68,6 +69,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     private final AllocatorControl control;
     private ByteBuf delegate;
+    private int implicitCapacityLimit = MAX_BUFFER_SIZE;
 
     private ByteBufBuffer(AllocatorControl control, ByteBuf delegate, Drop<ByteBufBuffer> drop) {
         super(drop);
@@ -129,10 +131,13 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     protected Owned<ByteBufBuffer> prepareSend() {
         final ByteBuf delegate = this.delegate;
+        final int implicitCapacityLimit = this.implicitCapacityLimit;
         return new Owned<ByteBufBuffer>() {
             @Override
             public ByteBufBuffer transferOwnership(Drop<ByteBufBuffer> drop) {
-                return new ByteBufBuffer(control, delegate, drop);
+                ByteBufBuffer buffer = new ByteBufBuffer(control, delegate, drop);
+                buffer.implicitCapacityLimit(implicitCapacityLimit);
+                return buffer;
             }
         };
     }
@@ -224,6 +229,21 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public boolean isDirect() {
         return delegate.isDirect();
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        if (limit < capacity()) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit + ") cannot be less than capacity (" + capacity() + ')');
+        }
+        if (limit > MAX_BUFFER_SIZE) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit +
+                    ") cannot be greater than max buffer size (" + MAX_BUFFER_SIZE + ')');
+        }
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -1022,7 +1042,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     private void checkWrite(int size) {
-        if (writableBytes() < size && isOwned()) {
+        if (writableBytes() < size && writerOffset() + size <= implicitCapacityLimit && isOwned()) {
             ensureWritable(size, 1, false);
         } else {
             delegate.getByte(writerOffset() + size - 1); // Force bounds check

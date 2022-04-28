@@ -40,6 +40,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 
+import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bbput;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
 import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
@@ -47,6 +48,7 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 final class NioBuffer extends AdaptableBuffer<NioBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
@@ -58,12 +60,14 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     private int roff;
     private int woff;
+    private int implicitCapacityLimit;
 
     NioBuffer(ByteBuffer base, ByteBuffer memory, AllocatorControl control, Drop<NioBuffer> drop) {
         super(drop, control);
         this.base = base;
         rmem = memory;
         wmem = memory;
+        implicitCapacityLimit = MAX_BUFFER_SIZE;
     }
 
     /**
@@ -71,6 +75,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
      */
     private NioBuffer(NioBuffer parent, Drop<NioBuffer> drop) {
         super(drop, parent.control);
+        implicitCapacityLimit = parent.implicitCapacityLimit;
         base = parent.base;
         rmem = parent.rmem.duplicate();
         wmem = CLOSED_BUFFER;
@@ -191,6 +196,21 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public boolean isDirect() {
         return rmem.isDirect();
+    }
+
+    @Override
+    public Buffer implicitCapacityLimit(int limit) {
+        if (limit < capacity()) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit + ") cannot be less than capacity (" + capacity() + ')');
+        }
+        if (limit > MAX_BUFFER_SIZE) {
+            throw new IndexOutOfBoundsException(
+                    "Implicit capacity limit (" + limit +
+                    ") cannot be greater than max buffer size (" + MAX_BUFFER_SIZE + ')');
+        }
+        implicitCapacityLimit = limit;
+        return this;
     }
 
     @Override
@@ -1081,9 +1101,10 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     protected Owned<NioBuffer> prepareSend() {
-        var roff = this.roff;
-        var woff = this.woff;
-        var readOnly = readOnly();
+        int roff = this.roff;
+        int woff = this.woff;
+        boolean readOnly = readOnly();
+        int implicitCapacityLimit = this.implicitCapacityLimit;
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
         return new Owned<NioBuffer>() {
@@ -1092,6 +1113,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
                 NioBuffer copy = new NioBuffer(base, rmem, control, drop);
                 copy.roff = roff;
                 copy.woff = woff;
+                copy.implicitCapacityLimit = implicitCapacityLimit;
                 if (readOnly) {
                     copy.makeReadOnly();
                 }
@@ -1161,8 +1183,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw bufferIsReadOnly(this);
         }
         int capacity = capacity();
-        if (mayExpand && index > 0 && index <= capacity && capacity < 131072 /* 128k */ && isOwned()) {
-            int minimumGrowth = PlatformDependent.roundToPowerOfTwo(capacity * 2) - capacity; // Grow into power-of-two.
+        if (mayExpand && index >= 0 && index <= capacity && woff + size <= implicitCapacityLimit && isOwned()) {
+            // Grow into next power-of-two, but not beyond the implicit limit.
+            int minimumGrowth = Math.min(
+                    Math.max(roundToPowerOfTwo(capacity * 2), size),
+                    implicitCapacityLimit) - capacity;
             ensureWritable(size, minimumGrowth, false);
             checkSet(index, size); // Verify writing is now possible, without recursing.
             return;
