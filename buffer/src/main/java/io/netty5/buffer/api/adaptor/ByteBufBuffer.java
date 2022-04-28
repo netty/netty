@@ -440,6 +440,15 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
+        if (readOnly && readOnly()) {
+            ByteBufBuffer copy = newConstChild();
+            if (offset > 0 || length < capacity()) {
+                copy.delegate = delegate.slice(offset, length);
+            }
+            copy.readerOffset(0);
+            copy.delegate.writerIndex(length);
+            return copy;
+        }
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
@@ -1073,7 +1082,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         return Statics.hashCode(this);
     }
 
-    Buffer newConstChild() {
+    ByteBufBuffer newConstChild() {
         assert readOnly();
         var drop = unsafeGetDrop().fork();
         var child = new ByteBufBuffer(control, delegate.duplicate(), drop);
