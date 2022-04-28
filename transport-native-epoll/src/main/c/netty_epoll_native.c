@@ -817,9 +817,12 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         if (efd != -1) {
             struct timespec ts = { 0, 0 };
             struct epoll_event ev;
-            if (epoll_pwait2(efd, &ev, 1, &ts, NULL) != -1) {
-                epoll_pwait2_supported = 1;
-            }
+            do {
+                if (epoll_pwait2(efd, &ev, 1, &ts, NULL) != -1) {
+                    epoll_pwait2_supported = 1;
+                    break;
+                }
+            } while(errno == EINTR);
             close(efd);
         }
     }
