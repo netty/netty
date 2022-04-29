@@ -620,7 +620,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
-        return new SingleComponentIterator<T>(acquire());
+        return new SingleComponentIterator<T>(acquire(), readableBytes() > 0? this : null);
     }
 
     @Override
@@ -639,6 +639,12 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         } finally {
             Reference.reachabilityFence(this);
         }
+    }
+
+    @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        checkWrite(writerOffset(), writableBytes());
+        return new SingleComponentIterator<T>(acquire(), writableBytes() > 0? this : null);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">

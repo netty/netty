@@ -991,8 +991,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The {@link ByteBuffer} instances obtained from the component, share lifetime with that internal component.
      * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
-     * such changes are {@link #split(int)}, {@link #split()}, {@link #compact()}, {@link #ensureWritable(int)},
-     * {@link #ensureWritable(int, int, boolean)}, and {@link #send()}.
+     * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
+     * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
+     * and {@link #send()}.
      * <p>
      * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>
@@ -1031,6 +1032,23 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * generic types used in the iteration.
      * Following this code pattern will ensure that the components, and their parent buffer, will be correctly
      * life-cycled.
+     * <p>
+     * <strong>Note</strong> that the {@link ReadableComponent} instances exposed by the iterator could be reused for
+     * multiple calls, so the data must be extracted from the component in the context of the iteration.
+     * <p>
+     * The {@link ByteBuffer} instances obtained from the component, share lifetime with that internal component.
+     * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
+     * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
+     * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
+     * and {@link #send()}.
+     * <p>
+     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
+     * <p>
+     * <strong>Note</strong> that the arrays, memory addresses, and byte buffers exposed as components by this method,
+     * should not be used for changing the buffer contents. Doing so may cause undefined behaviour.
+     * <p>
+     * Changes to position and limit of the byte buffers exposed via the processed components, are not reflected back to
+     * this buffer instance.
      *
      * @return A component iterator of {@linkplain ReadableComponent readable components}.
      * @param <T> An intersection type that presents both the {@link ReadableComponent} interface,
@@ -1059,8 +1077,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The {@link ByteBuffer} instances obtained from the component, share lifetime with that internal component.
      * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
-     * such changes are {@link #split(int)}, {@link #split()}, {@link #compact()}, {@link #ensureWritable(int)},
-     * {@link #ensureWritable(int, int, boolean)}, and {@link #send()}.
+     * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
+     * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
+     * and {@link #send()}.
      * <p>
      * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>
@@ -1076,6 +1095,50 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * In any case, the number of components processed may be less than {@link #countComponents()}.
      */
     <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor) throws E;
+
+    /**
+     * Create a {@linkplain ComponentIterator component iterator} for all writable components in this buffer.
+     * <p>
+     * Unlike the {@link #forEachWritable(int, WritableComponentProcessor)} method, this API permits <em>external</em>
+     * iteration of the components, while at the same time protecting the life-cycle of the buffer.
+     * <p>
+     * The typical code pattern for using this API looks like the following:
+     * <pre>{@code
+     *      try (var iteration = buffer.forEachWritable()) {
+     *          for (var c = iteration.first(); c != null; c = c.next()) {
+     *              ByteBuffer componentBuffer = c.writableBuffer();
+     *              // ...
+     *          }
+     *      }
+     * }</pre>
+     * Note the use of the {@code var} keyword for local variables, which are required for correctly expressing the
+     * generic types used in the iteration.
+     * Following this code pattern will ensure that the components, and their parent buffer, will be correctly
+     * life-cycled.
+     * <p>
+     * <strong>Note</strong> that the {@link WritableComponent} instances exposed by the iterator could be reused for
+     * multiple calls, so the data must be extracted from the component in the context of the iteration.
+     * <p>
+     * The {@link ByteBuffer} instances obtained from the component, share lifetime with that internal component.
+     * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
+     * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
+     * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
+     * and {@link #send()}.
+     * <p>
+     * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
+     * <p>
+     * <strong>Note</strong> that the arrays, memory addresses, and byte buffers exposed as components by this method,
+     * should not be used for changing the buffer contents beyond the respective array offset and length,
+     * or buffer position and limit. Doing so may cause undefined behaviour.
+     * <p>
+     * Changes to position and limit of the byte buffers exposed via the processed components, are not reflected back to
+     * this buffer instance.
+     *
+     * @return A component iterator of {@linkplain ReadableComponent readable components}.
+     * @param <T> An intersection type that presents both the {@link ReadableComponent} interface,
+     *          <em>and</em> the ability to progress the iteration via the {@link Next#next()} method.
+     */
+    <T extends WritableComponent & ComponentIterator.Next> ComponentIterator<T> forEachWritable();
 
     /**
      * Decodes this buffer's readable bytes into a string with the specified {@linkplain Charset}.

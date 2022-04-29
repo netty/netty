@@ -59,7 +59,6 @@ import static io.netty5.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty5.buffer.api.tests.Fixture.Properties.HEAP;
 import static io.netty5.buffer.api.tests.Fixture.Properties.POOLED;
 import static io.netty5.buffer.api.tests.Fixture.Properties.UNCLOSEABLE;
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -807,74 +806,6 @@ public abstract class BufferTestSupport {
             assertEquals(1, a.readInt());
             assertEquals(2, buf.readInt());
         }
-    }
-
-    public static void verifyForEachReadableSingleComponent(Fixture fixture, Buffer buf) {
-        buf.forEachReadable(0, (index, component) -> {
-            var buffer = component.readableBuffer();
-            assertThat(buffer.position()).isZero();
-            assertThat(buffer.limit()).isEqualTo(8);
-            assertThat(buffer.capacity()).isEqualTo(8);
-            assertEquals(0x0102030405060708L, buffer.getLong());
-
-            if (fixture.isDirect()) {
-                assertThat(component.readableNativeAddress()).isNotZero();
-            } else {
-                assertThat(component.readableNativeAddress()).isZero();
-            }
-
-            if (component.hasReadableArray()) {
-                byte[] array = component.readableArray();
-                byte[] arrayCopy = new byte[component.readableArrayLength()];
-                System.arraycopy(array, component.readableArrayOffset(), arrayCopy, 0, arrayCopy.length);
-                if (buffer.order() == BIG_ENDIAN) {
-                    assertThat(arrayCopy).containsExactly(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
-                } else {
-                    assertThat(arrayCopy).containsExactly(0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
-                }
-            }
-
-            assertThrows(ReadOnlyBufferException.class, () -> buffer.put(0, (byte) 0xFF));
-            return true;
-        });
-    }
-
-    public static void verifyForEachWritableSingleComponent(Fixture fixture, Buffer buf) {
-        buf.forEachWritable(0, (index, component) -> {
-            var buffer = component.writableBuffer();
-            assertThat(buffer.position()).isZero();
-            assertThat(buffer.limit()).isEqualTo(8);
-            assertThat(buffer.capacity()).isEqualTo(8);
-            buffer.putLong(0x0102030405060708L);
-            buffer.flip();
-            assertEquals(0x0102030405060708L, buffer.getLong());
-            buf.writerOffset(8);
-            assertEquals(0x0102030405060708L, buf.getLong(0));
-
-            if (fixture.isDirect()) {
-                assertThat(component.writableNativeAddress()).isNotZero();
-            } else {
-                assertThat(component.writableNativeAddress()).isZero();
-            }
-
-            buf.writerOffset(0);
-            if (component.hasWritableArray()) {
-                byte[] array = component.writableArray();
-                int offset = component.writableArrayOffset();
-                byte[] arrayCopy = new byte[component.writableArrayLength()];
-                System.arraycopy(array, offset, arrayCopy, 0, arrayCopy.length);
-                if (buffer.order() == BIG_ENDIAN) {
-                    assertThat(arrayCopy).containsExactly(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
-                } else {
-                    assertThat(arrayCopy).containsExactly(0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
-                }
-            }
-
-            buffer.put(0, (byte) 0xFF);
-            assertEquals((byte) 0xFF, buffer.get(0));
-            assertEquals((byte) 0xFF, buf.getByte(0));
-            return true;
-        });
     }
 
     public static byte[] toByteArray(Buffer buf) {

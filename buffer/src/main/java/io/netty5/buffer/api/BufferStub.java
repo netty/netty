@@ -256,6 +256,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        return delegate.forEachWritable();
+    }
+
+    @Override
     public byte readByte() {
         return delegate.readByte();
     }

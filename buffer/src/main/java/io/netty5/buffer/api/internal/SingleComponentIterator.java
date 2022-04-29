@@ -22,10 +22,12 @@ import io.netty5.buffer.api.Resource;
 import java.lang.ref.Reference;
 
 public final class SingleComponentIterator<T extends Next> implements ComponentIterator<T> {
+    private final Resource<?> lifecycle;
     private final T singleComponent;
 
     @SuppressWarnings("unchecked")
-    public SingleComponentIterator(Object singleComponent) {
+    public SingleComponentIterator(Resource<?> lifecycle, Object singleComponent) {
+        this.lifecycle = lifecycle;
         this.singleComponent = (T) singleComponent;
     }
 
@@ -36,7 +38,7 @@ public final class SingleComponentIterator<T extends Next> implements ComponentI
 
     @Override
     public void close() {
-        ((Resource<?>) singleComponent).close();
-        Reference.reachabilityFence(singleComponent);
+        lifecycle.close();
+        Reference.reachabilityFence(lifecycle);
     }
 }
