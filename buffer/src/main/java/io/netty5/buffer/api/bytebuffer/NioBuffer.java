@@ -643,7 +643,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
-        checkWrite(writerOffset(), writableBytes());
+        checkWrite(writerOffset(), writableBytes(), false);
         return new SingleComponentIterator<T>(acquire(), writableBytes() > 0? this : null);
     }
 
