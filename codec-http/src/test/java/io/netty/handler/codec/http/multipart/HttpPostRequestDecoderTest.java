@@ -35,6 +35,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
@@ -1007,45 +1008,15 @@ public class HttpPostRequestDecoderTest {
      * when diskFilename contain "\" create temp file error
      */
     @Test
-    void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar(){
+    void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar() throws UnsupportedEncodingException {
         StringBuffer sb = new StringBuffer();
-        /**
-         *The reason for using StringBuffer is When initializing the mixedattribute object with defaulthttpdatafactory，
-         * Only when the request message size exceeds 16kb,
-         * the MixedAttribute can level up DiskAttribute ，
-         * When upgrading to DiskAttribute,
-         * you need to create a temporary file Therefore, a file creation exception will appear.
-         */
-
-        /**
-         * json request start
-         */
-        sb.append("{");
-        /**
-         * the remarks contains error char the '\' before '='
-         */
-        sb.append("\"remarks\":\"渠道\\电商  商品编号=23\",");
-        /**
-         * Other messages must be used for business acceptance,
-         * For example, when there are enough items in the shopping cart, the message length will be too long
-         * I use a loop to build an ultra long message, but it does not contain '&'
-         */
-        sb.append("\"otherContent\":");
-        sb.append("\"");
-        for (int i = 0;i<500;i++){
-            sb.append("Have a nice evening and good health ");
-        }
-        sb.append("\"");
-
-        sb.append("}");
-
-        byte[] bodyBytes = sb.toString().getBytes();
+        byte[] bodyBytes ="aaaa/bbbb=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
         try {
-            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(req);
+            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(new DefaultHttpDataFactory(true), req);
             decoder.offer(req);
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             assertEquals("java.lang.IllegalArgumentException: Invalid prefix or suffix", e.getMessage());
