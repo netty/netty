@@ -486,7 +486,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void headersUsingHigherValuedStreamIdPreventsUsingLowerStreamId() throws Exception {
-        bootstrapEnv(1, 1, 1, 0);
+        bootstrapEnv(1, 1, 2, 0);
 
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {

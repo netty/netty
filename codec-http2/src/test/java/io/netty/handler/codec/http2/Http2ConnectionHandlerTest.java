@@ -282,6 +282,7 @@ public class Http2ConnectionHandlerTest {
         doAnswer(verifier).when(ctx).fireUserEventTriggered(evt);
 
         handler.channelActive(ctx);
+        verify(ctx).flush();
         assertTrue(verified.get());
     }
 

@@ -250,6 +250,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // The channel just became active - send the connection preface to the remote endpoint.
             sendPreface(ctx);
+
+            // As we don't know if any channelReadComplete() events will be triggered at all we need to ensure we
+            // also flush. Otherwise the remote peer might never see the preface / settings frame.
+            // See https://github.com/netty/netty/issues/12089
+            ctx.flush();
         }
 
         @Override
