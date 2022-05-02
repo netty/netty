@@ -103,7 +103,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         implements ReferenceCounted, ApplicationProtocolAccessor, VectoredUnwrap {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
-
+    private static final ByteBuffer EMPTY = ByteBuffer.allocateDirect(0);
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2 = 0;
@@ -686,11 +686,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             int bytesProduced = 0;
             final Buffer bioReadCopyBuf;
             // Setup the BIO buffer so that we directly write the encryption results into dst.
-            if (dst.isDirect()) {
-                SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), dst.remaining(), true);
+            int len = dst.remaining();
+            if (len == 0) {
+                SSL.bioSetByteBuffer(networkBIO, bufferAddress(EMPTY), 0, true);
+                bioReadCopyBuf = null;
+            } else if (dst.isDirect()) {
+                SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), len, true);
                 bioReadCopyBuf = null;
             } else {
-                int len = dst.remaining();
                 bioReadCopyBuf = alloc.allocate(len);
                 try (var iterator = bioReadCopyBuf.forEachWritable()) {
                     var component = iterator.first();
