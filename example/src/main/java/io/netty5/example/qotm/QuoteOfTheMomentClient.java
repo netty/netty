@@ -15,8 +15,9 @@
  */
 package io.netty5.example.qotm;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
@@ -50,9 +51,8 @@ public final class QuoteOfTheMomentClient {
             Channel ch = b.bind(0).get();
 
             // Broadcast the QOTM request to port 8080.
-            ch.writeAndFlush(new DatagramPacket(
-                    Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
-                    SocketUtils.socketAddress("255.255.255.255", PORT))).sync();
+            Buffer message = DefaultBufferAllocators.preferredAllocator().copyOf("QOTM?".getBytes(CharsetUtil.UTF_8));
+            ch.writeAndFlush(new DatagramPacket(message, SocketUtils.socketAddress("255.255.255.255", PORT))).sync();
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
             // response is received.  If the channel is not closed within 5 seconds,

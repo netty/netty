@@ -14,8 +14,8 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCountUtil;
@@ -35,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class CoalescingBufferQueueTest {
 
-    private ByteBuf cat;
-    private ByteBuf mouse;
+    private Buffer cat;
+    private Buffer mouse;
 
     private Promise<Void> catPromise, emptyPromise;
     private FutureListener<Void> mouseListener;
@@ -60,8 +60,8 @@ public class CoalescingBufferQueueTest {
         };
         emptyPromise = newPromise();
 
-        cat = Unpooled.wrappedBuffer("cat".getBytes(CharsetUtil.US_ASCII));
-        mouse = Unpooled.wrappedBuffer("mouse".getBytes(CharsetUtil.US_ASCII));
+        cat = BufferAllocator.offHeapUnpooled().copyOf("cat".getBytes(CharsetUtil.US_ASCII));
+        mouse = BufferAllocator.offHeapUnpooled().copyOf("mouse".getBytes(CharsetUtil.US_ASCII));
     }
 
     @AfterEach
@@ -77,15 +77,15 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(8, false);
         Promise<Void> aggregatePromise = newPromise();
         assertEquals("catmous", dequeue(7, aggregatePromise));
-        ByteBuf remainder = Unpooled.wrappedBuffer("mous".getBytes(CharsetUtil.US_ASCII));
+        Buffer remainder = BufferAllocator.offHeapUnpooled().copyOf("mous".getBytes(CharsetUtil.US_ASCII));
         writeQueue.addFirst(remainder, aggregatePromise);
         Promise<Void> aggregatePromise2 = newPromise();
         assertEquals("mouse", dequeue(5, aggregatePromise2));
         aggregatePromise2.setSuccess(null);
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(mouse.isAccessible());
     }
 
     @Test
@@ -102,8 +102,8 @@ public class CoalescingBufferQueueTest {
         aggregatePromise.setSuccess(null);
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(mouse.isAccessible());
     }
 
     @Test
@@ -125,8 +125,8 @@ public class CoalescingBufferQueueTest {
         assertFalse(mouseDone);
         aggregatePromise.setSuccess(null);
         assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(mouse.isAccessible());
     }
 
     @Test
@@ -139,23 +139,23 @@ public class CoalescingBufferQueueTest {
         assertFalse(catPromise.isSuccess());
         aggregatePromise.setSuccess(null);
         assertTrue(catPromise.isSuccess());
-        assertEquals(1, cat.refCnt());
-        cat.release();
+        assertTrue(cat.isAccessible());
+        cat.close();
 
         aggregatePromise = newPromise();
         assertSame(mouse, writeQueue.remove(5, aggregatePromise));
         assertFalse(mouseDone);
         aggregatePromise.setSuccess(null);
         assertTrue(mouseSuccess);
-        assertEquals(1, mouse.refCnt());
-        mouse.release();
+        assertTrue(mouse.isAccessible());
+        mouse.close();
     }
 
     @Test
     public void testReadEmptyQueueReturnsEmptyBuffer() {
         // Not used in this test.
-        cat.release();
-        mouse.release();
+        cat.close();
+        mouse.close();
 
         assertQueueSize(0, true);
         Promise<Void> aggregatePromise = newPromise();
@@ -171,8 +171,8 @@ public class CoalescingBufferQueueTest {
         writeQueue.releaseAndFailAll(cause);
         Promise<Void> aggregatePromise = newPromise();
         assertQueueSize(0, true);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(mouse.isAccessible());
         assertSame(cause, catPromise.cause());
         assertEquals("", dequeue(Integer.MAX_VALUE, aggregatePromise));
         assertQueueSize(0, true);
@@ -180,7 +180,8 @@ public class CoalescingBufferQueueTest {
 
     @Test
     public void testEmptyBuffersAreCoalesced() {
-        ByteBuf empty = Unpooled.buffer(0, 1);
+        mouse.close(); // Not used
+        Buffer empty = BufferAllocator.offHeapUnpooled().allocate(0);
         assertQueueSize(0, true);
         writeQueue.add(cat, catPromise);
         writeQueue.add(empty, emptyPromise);
@@ -193,8 +194,8 @@ public class CoalescingBufferQueueTest {
         aggregatePromise.setSuccess(null);
         assertTrue(catPromise.isSuccess());
         assertTrue(emptyPromise.isSuccess());
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, empty.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(empty.isAccessible());
     }
 
     @Test
@@ -212,8 +213,8 @@ public class CoalescingBufferQueueTest {
         aggregatePromise.setSuccess(null);
         assertTrue(catPromise.isSuccess());
         assertTrue(mouseSuccess);
-        assertEquals(0, cat.refCnt());
-        assertEquals(0, mouse.refCnt());
+        assertFalse(cat.isAccessible());
+        assertFalse(mouse.isAccessible());
     }
 
     @Test
@@ -229,28 +230,28 @@ public class CoalescingBufferQueueTest {
     private void testWritabilityChanged0(boolean fail) {
         channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(3, 4));
         assertTrue(channel.isWritable());
-        writeQueue.add(Unpooled.wrappedBuffer(new byte[] {1 , 2, 3}));
+        writeQueue.add(BufferAllocator.offHeapUnpooled().copyOf(new byte[] { 1, 2, 3 }));
         assertTrue(channel.isWritable());
-        writeQueue.add(Unpooled.wrappedBuffer(new byte[] {4, 5}));
+        writeQueue.add(BufferAllocator.offHeapUnpooled().copyOf(new byte[] { 4, 5 }));
         assertFalse(channel.isWritable());
         assertEquals(5, writeQueue.readableBytes());
 
         if (fail) {
             writeQueue.releaseAndFailAll(new IllegalStateException());
         } else {
-            ByteBuf buffer = writeQueue.removeFirst(channel.newPromise());
+            Buffer buffer = writeQueue.removeFirst(channel.newPromise());
             assertEquals(1, buffer.readByte());
             assertEquals(2, buffer.readByte());
             assertEquals(3, buffer.readByte());
-            assertFalse(buffer.isReadable());
-            buffer.release();
+            assertEquals(0, buffer.readableBytes());
+            buffer.close();
             assertTrue(channel.isWritable());
 
             buffer = writeQueue.removeFirst(channel.newPromise());
             assertEquals(4, buffer.readByte());
             assertEquals(5, buffer.readByte());
-            assertFalse(buffer.isReadable());
-            buffer.release();
+            assertEquals(0, buffer.readableBytes());
+            buffer.close();
         }
 
         assertTrue(channel.isWritable());
@@ -271,7 +272,7 @@ public class CoalescingBufferQueueTest {
     }
 
     private String dequeue(int numBytes, Promise<Void> aggregatePromise) {
-        ByteBuf removed = writeQueue.remove(numBytes, aggregatePromise);
+        Buffer removed = writeQueue.remove(numBytes, aggregatePromise);
         String result = removed.toString(CharsetUtil.US_ASCII);
         ReferenceCountUtil.safeRelease(removed);
         return result;

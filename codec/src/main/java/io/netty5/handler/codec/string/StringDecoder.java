@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.string;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -29,7 +29,7 @@ import java.nio.charset.Charset;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decodes a received {@link ByteBuf} into a {@link String}.  Please
+ * Decodes a received {@link Buffer} into a {@link String}.  Please
  * note that this decoder must be used with a proper {@link ByteToMessageDecoder}
  * such as {@link DelimiterBasedFrameDecoder} or {@link LineBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical setup for a
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ByteBuf}
+ * and then you can use a {@link String} instead of a {@link Buffer}
  * as a message:
  * <pre>
  * void channelRead({@link ChannelHandlerContext} ctx, {@link String} msg) {
@@ -53,7 +53,7 @@ import static java.util.Objects.requireNonNull;
  * </pre>
  */
 @Sharable
-public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
+public class StringDecoder extends MessageToMessageDecoder<Buffer> {
 
     // TODO Use CharsetDecoder instead.
     private final Charset charset;
@@ -74,7 +74,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer msg) throws Exception {
         ctx.fireChannelRead(msg.toString(charset));
     }
 }

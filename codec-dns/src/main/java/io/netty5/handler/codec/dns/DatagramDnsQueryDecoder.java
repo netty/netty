@@ -17,18 +17,18 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.util.internal.UnstableApi;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decodes a {@link BufferDatagramPacket} into a {@link DatagramDnsQuery}.
+ * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
  */
 @UnstableApi
 @ChannelHandler.Sharable
-public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<BufferDatagramPacket> {
+public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsRecordDecoder recordDecoder;
 
@@ -47,7 +47,7 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<BufferDatag
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         DnsQuery query = DnsMessageUtil.decodeDnsQuery(recordDecoder, ctx.bufferAllocator(), packet.content(),
                                                        new DnsMessageUtil.DnsQueryFactory() {
             @Override

@@ -56,7 +56,7 @@ public final class EpollEventArray {
         }
         this.length = length;
         memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
-        memoryAddress = Buffer.memoryAddress(memory);
+        memoryAddress = Buffer.nativeAddressOf(memory);
     }
 
     /**
@@ -84,7 +84,7 @@ public final class EpollEventArray {
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
         Buffer.free(memory);
         memory = buffer;
-        memoryAddress = Buffer.memoryAddress(buffer);
+        memoryAddress = Buffer.nativeAddressOf(buffer);
     }
 
     /**

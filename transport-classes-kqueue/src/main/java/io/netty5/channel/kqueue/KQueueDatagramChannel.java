@@ -15,19 +15,15 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
-import io.netty5.channel.DefaultByteBufAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramChannelConfig;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
@@ -57,9 +53,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
+                    StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
-                    StringUtil.simpleClassName(ByteBuf.class) + ')';
+                    StringUtil.simpleClassName(Buffer.class) + ')';
 
     private volatile boolean connected;
     private final KQueueDatagramChannelConfig config;
@@ -256,10 +252,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             remoteAddress = null;
         }
 
-        if (data instanceof Buffer) {
-            return doWriteBufferMessage((Buffer) data, remoteAddress);
-        }
-        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
+        return doWriteBufferMessage((Buffer) data, remoteAddress);
     }
 
     private boolean doWriteBufferMessage(Buffer data, InetSocketAddress remoteAddress) throws IOException {
@@ -301,66 +294,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         }
     }
 
-    private boolean doWriteByteBufMessage(ByteBuf data, InetSocketAddress remoteAddress) throws IOException {
-        if (data.readableBytes() == 0) {
-            return true;
-        }
-
-        final long writtenBytes;
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            } else {
-                writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                                                    remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        } else if (data.nioBufferCount() > 1) {
-            IovArray array = registration().cleanArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            if (remoteAddress == null) {
-                writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-            } else {
-                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
-                                                      remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        } else  {
-            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            if (remoteAddress == null) {
-                writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
-            } else {
-                writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                                             remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        }
-
-        return writtenBytes > 0;
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            ByteBuf content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-        if (msg instanceof BufferDatagramPacket) {
-            BufferDatagramPacket packet = (BufferDatagramPacket) msg;
             Buffer content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new BufferDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
         if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-        if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
@@ -380,12 +324,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                         }
                     }
                     return e;
-                }
-                if (e.content() instanceof ByteBufConvertible) {
-                    ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
-                    return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                            new DefaultByteBufAddressedEnvelope<>(
-                                    newDirectBuffer(e, content), inetRecipient) : e;
                 }
             }
         }
@@ -432,23 +370,23 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
+            final BufferAllocator allocator = config.getBufferAllocator();
             allocHandle.reset(config);
             readReadyBefore();
 
             Throwable exception = null;
             try {
-                ByteBuf byteBuf = null;
+                Buffer buffer = null;
                 try {
                     boolean connected = isConnected();
                     do {
-                        byteBuf = allocHandle.allocate(allocator);
-                        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+                        buffer = allocHandle.allocate(allocator);
+                        allocHandle.attemptedBytesRead(buffer.writableBytes());
 
                         final DatagramPacket packet;
                         if (connected) {
                             try {
-                                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                                allocHandle.lastBytesRead(doReadBytes(buffer));
                             } catch (Errors.NativeIoException e) {
                                 // We need to correctly translate connect errors to match NIO behaviour.
                                 if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
@@ -460,28 +398,30 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                             }
                             if (allocHandle.lastBytesRead() <= 0) {
                                 // nothing was read, release the buffer.
-                                byteBuf.release();
-                                byteBuf = null;
+                                buffer.close();
+                                buffer = null;
                                 break;
                             }
-                            packet = new DatagramPacket(byteBuf,
+                            packet = new DatagramPacket(buffer,
                                     (InetSocketAddress) localAddress(), (InetSocketAddress) remoteAddress());
                         } else {
                             final DatagramSocketAddress remoteAddress;
-                            if (byteBuf.hasMemoryAddress()) {
-                                // has a memory address so use optimized call
-                                remoteAddress = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
-                                        byteBuf.capacity());
-                            } else {
-                                ByteBuffer nioData = byteBuf.internalNioBuffer(
-                                        byteBuf.writerIndex(), byteBuf.writableBytes());
-                                remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
+                            try (var iterator = buffer.forEachWritable()) {
+                                var component = iterator.first();
+                                long addr = component.writableNativeAddress();
+                                if (addr != 0) {
+                                    // has a memory address so use optimized call
+                                    remoteAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
+                                } else {
+                                    ByteBuffer nioData = component.writableBuffer();
+                                    remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
+                                }
                             }
 
                             if (remoteAddress == null) {
                                 allocHandle.lastBytesRead(-1);
-                                byteBuf.release();
-                                byteBuf = null;
+                                buffer.close();
+                                buffer = null;
                                 break;
                             }
                             InetSocketAddress localAddress = remoteAddress.localAddress();
@@ -489,9 +429,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                                 localAddress = (InetSocketAddress) localAddress();
                             }
                             allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+                            buffer.skipWritable(allocHandle.lastBytesRead());
 
-                            packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
+                            packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                         }
 
                         allocHandle.incMessagesRead(1);
@@ -499,14 +439,14 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                         readPending = false;
                         pipeline.fireChannelRead(packet);
 
-                        byteBuf = null;
+                        buffer = null;
 
                     // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
                     // as we read anything).
                     } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
                 } catch (Throwable t) {
-                    if (byteBuf != null) {
-                        byteBuf.release();
+                    if (buffer != null) {
+                        buffer.close();
                     }
                     exception = t;
                 }

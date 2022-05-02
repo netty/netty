@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 
@@ -424,13 +424,13 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
             return buffer.getUnsignedByte(offset);
         case 2:
             final int shortLength = buffer.getUnsignedShort(offset);
-            return reverseBytes? ByteBufUtil.reverseUnsignedShort(shortLength) : shortLength;
+            return reverseBytes? BufferUtil.reverseUnsignedShort(shortLength) : shortLength;
         case 3:
             final int mediumLength = buffer.getUnsignedMedium(offset);
-            return reverseBytes? ByteBufUtil.reverseUnsignedMedium(mediumLength) : mediumLength;
+            return reverseBytes? BufferUtil.reverseUnsignedMedium(mediumLength) : mediumLength;
         case 4:
             final long intLength = buffer.getUnsignedInt(offset);
-            return reverseBytes? ByteBufUtil.reverseUnsignedInt(intLength) : intLength;
+            return reverseBytes? BufferUtil.reverseUnsignedInt(intLength) : intLength;
         case 8:
             final long longLength = buffer.getLong(offset);
             return reverseBytes? Long.reverseBytes(longLength) : longLength;

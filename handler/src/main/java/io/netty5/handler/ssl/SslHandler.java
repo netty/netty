@@ -15,15 +15,14 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.Resource;
 import io.netty5.buffer.api.StandardAllocationTypes;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty5.channel.AbstractCoalescingBufferQueueForBuffer;
+import io.netty5.channel.AbstractCoalescingBufferQueue;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
@@ -1048,7 +1047,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             if (packetLength == SslUtils.NOT_ENCRYPTED) {
                 // Not an SSL/TLS packet
                 NotSslRecordException e = new NotSslRecordException(
-                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                        "not an SSL/TLS record: " + BufferUtil.hexDump(in));
                 in.skipReadable(in.readableBytes());
 
                 // First fail the handshake promise as we may need to have access to the SSLEngine which may
@@ -1317,11 +1316,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     private static void executeChannelRead(final ChannelHandlerContext ctx, final Buffer decodedOut) {
         try {
             ctx.executor().execute(() -> {
-                if (ctx.channel().config().getRecvBufferAllocatorUseBuffer()) {
-                    ctx.fireChannelRead(decodedOut);
-                } else {
-                    ctx.fireChannelRead(ByteBufAdaptor.intoByteBuf(decodedOut));
-                }
+                ctx.fireChannelRead(decodedOut);
             });
         } catch (RejectedExecutionException e) {
             decodedOut.close();
@@ -2082,7 +2077,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
      * goodput by aggregating the plaintext in chunks of {@link #wrapDataSize}. If many small chunks are written
      * this can increase goodput, decrease the amount of calls to SSL_write, and decrease overall encryption operations.
      */
-    private final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueueForBuffer {
+    private final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
         SslHandlerCoalescingBufferQueue(Channel channel, int initSize) {
             super(channel, initSize);

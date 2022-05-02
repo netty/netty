@@ -15,7 +15,7 @@
  */
 
 /**
- * This package contains a handler that can convert {@link io.netty5.buffer.ByteBuf} instances into
+ * This package contains a handler that can convert {@link io.netty.buffer.ByteBuf} instances into
  * {@link io.netty5.buffer.api.Buffer}, and vice versa.
  * <p>
  * This can be used to build pipelines that contain handlers that operate on different buffer types.

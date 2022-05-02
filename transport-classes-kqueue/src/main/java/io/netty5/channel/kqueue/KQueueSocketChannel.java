@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
@@ -79,13 +79,13 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
             ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
             outbound.addFlush();
             Object curr;
-            if ((curr = outbound.current()) instanceof ByteBuf) {
-                ByteBuf initialData = (ByteBuf) curr;
+            if ((curr = outbound.current()) instanceof Buffer) {
+                Buffer initialData = (Buffer) curr;
                 // Don't bother with TCP FastOpen if we don't have any initial data to send anyway.
-                if (initialData.isReadable()) {
-                    IovArray iov = new IovArray(config.getAllocator().directBuffer());
+                if (initialData.readableBytes() > 0) {
+                    IovArray iov = new IovArray();
                     try {
-                        iov.add(initialData, initialData.readerIndex(), initialData.readableBytes());
+                        initialData.forEachReadable(0, iov);
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);

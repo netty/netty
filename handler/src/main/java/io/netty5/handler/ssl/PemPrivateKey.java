@@ -84,7 +84,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
                 success = true;
                 return value;
             } finally {
-                // Make sure we never leak that PEM ByteBuf if there's an Exception.
+                // Make sure we never leak that PEM Buffer if there's an Exception.
                 if (!success) {
                     pem.close();
                 }

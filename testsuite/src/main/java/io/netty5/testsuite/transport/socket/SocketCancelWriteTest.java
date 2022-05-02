@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -40,72 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketCancelWriteTest extends AbstractSocketTest {
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testCancelWriteByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testCancelWriteByteBuf);
-    }
-
-    public void testCancelWriteByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        disableNewBufferAPI(sb, cb);
-        final TestHandler sh = new TestHandler();
-        final TestHandler ch = new TestHandler();
-        final ByteBuf a = Unpooled.buffer().writeByte('a');
-        final ByteBuf b = Unpooled.buffer().writeByte('b');
-        final ByteBuf c = Unpooled.buffer().writeByte('c');
-        final ByteBuf d = Unpooled.buffer().writeByte('d');
-        final ByteBuf e = Unpooled.buffer().writeByte('e');
-
-        cb.handler(ch);
-        sb.childHandler(sh);
-
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
-
-        Future<Void> f = cc.write(a);
-        assertTrue(f.cancel());
-        cc.writeAndFlush(b);
-        cc.write(c);
-        Future<Void> f2 = cc.write(d);
-        assertTrue(f2.cancel());
-        cc.writeAndFlush(e);
-
-        while (sh.counter.get() < 3) {
-            if (sh.exception.get() != null) {
-                break;
-            }
-            if (ch.exception.get() != null) {
-                break;
-            }
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException ignore) {
-                // Ignore.
-            }
-        }
-        sh.channel.close().sync();
-        ch.channel.close().sync();
-        sc.close().sync();
-
-        if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-            throw sh.exception.get();
-        }
-        if (sh.exception.get() != null) {
-            throw sh.exception.get();
-        }
-        if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
-            throw ch.exception.get();
-        }
-        if (ch.exception.get() != null) {
-            throw ch.exception.get();
-        }
-        assertEquals(0, ch.counter.get());
-        assertNull(ch.received);
-        assertEquals(Unpooled.wrappedBuffer(new byte[]{'b', 'c', 'e'}), sh.received);
-        Resource.dispose(sh.received);
-    }
-
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testCancelWrite(TestInfo testInfo) throws Throwable {
@@ -170,11 +102,11 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         Resource.dispose(sh.received);
     }
 
-    private static class TestHandler extends SimpleChannelInboundHandler<Object> {
+    private static class TestHandler extends SimpleChannelInboundHandler<Buffer> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         final AtomicInteger counter = new AtomicInteger();
-        Object received;
+        Buffer received;
         @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
@@ -182,22 +114,12 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object in) throws Exception {
-            if (in instanceof Buffer) {
-                Buffer buf = (Buffer) in;
-                counter.getAndAdd(buf.readableBytes());
-                if (received == null) {
-                    received = preferredAllocator().allocate(32);
-                }
-                ((Buffer) received).writeBytes(buf);
-            } else {
-                ByteBuf buf = (ByteBuf) in;
-                counter.getAndAdd(buf.readableBytes());
-                if (received == null) {
-                    received = ctx.alloc().buffer();
-                }
-                ((ByteBuf) received).writeBytes(buf);
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
+            counter.getAndAdd(in.readableBytes());
+            if (received == null) {
+                received = preferredAllocator().allocate(32);
             }
+            received.writeBytes(in);
         }
 
         @Override

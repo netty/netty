@@ -14,6 +14,6 @@
  * under the License.
  */
 /**
- * Benchmarks for search ({@link io.netty5.buffer.search} and {@link io.netty5.buffer.ByteBufUtil#indexOf}).
+ * Benchmarks for search ({@link io.netty5.buffer.search} and {@link io.netty5.buffer.BufferUtil#indexOf}).
  */
 package io.netty5.microbench.search;

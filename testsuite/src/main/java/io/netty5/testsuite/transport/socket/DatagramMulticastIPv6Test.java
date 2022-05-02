@@ -24,14 +24,6 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
 
     @Override
-    public void testMulticastByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
-        // Not works on windows atm.
-        // See https://github.com/netty/netty/issues/11285
-        assumeFalse(PlatformDependent.isWindows());
-        super.testMulticastByteBuf(sb, cb);
-    }
-
-    @Override
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         // Not works on windows atm.
         // See https://github.com/netty/netty/issues/11285

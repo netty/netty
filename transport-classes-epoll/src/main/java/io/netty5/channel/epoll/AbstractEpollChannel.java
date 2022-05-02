@@ -15,10 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
@@ -39,14 +35,12 @@ import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
@@ -289,47 +283,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected abstract AbstractEpollUnsafe newUnsafe();
 
     /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
-     */
-    protected final ByteBuf newDirectBuffer(ByteBuf buf) {
-        return newDirectBuffer(buf, buf);
-    }
-
-    /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the specified holder.
-     * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
-     * this method.
-     */
-    protected final ByteBuf newDirectBuffer(Object holder, ByteBuf buf) {
-        final int readableBytes = buf.readableBytes();
-        if (readableBytes == 0) {
-            ReferenceCountUtil.release(holder);
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        final ByteBufAllocator alloc = alloc();
-        if (alloc.isDirectBufferPooled()) {
-            return newDirectBuffer0(holder, buf, alloc, readableBytes);
-        }
-
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf == null) {
-            return newDirectBuffer0(holder, buf, alloc, readableBytes);
-        }
-
-        directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-        ReferenceCountUtil.safeRelease(holder);
-        return directBuf;
-    }
-
-    private static ByteBuf newDirectBuffer0(Object holder, ByteBuf buf, ByteBufAllocator alloc, int capacity) {
-        final ByteBuf directBuf = alloc.directBuffer(capacity);
-        directBuf.writeBytes(buf, buf.readerIndex(), capacity);
-        ReferenceCountUtil.safeRelease(holder);
-        return directBuf;
-    }
-
-    /**
      * Returns an off-heap copy of, and then closes, the given {@link Buffer}.
      */
     protected final Buffer newDirectBuffer(Buffer buf) {
@@ -362,25 +315,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     /**
-     * Read bytes into the given {@link ByteBuf} and return the amount.
-     */
-    protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
-        int writerIndex = byteBuf.writerIndex();
-        int localReadAmount;
-        unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
-        if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
-        } else {
-            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = socket.read(buf, buf.position(), buf.limit());
-        }
-        if (localReadAmount > 0) {
-            byteBuf.writerIndex(writerIndex + localReadAmount);
-        }
-        return localReadAmount;
-    }
-
-    /**
      * Read bytes into the given {@link Buffer} and return the amount.
      */
     protected final void doReadBytes(Buffer buffer) throws Exception {
@@ -395,26 +329,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
             return false;
         });
-    }
-
-    protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
-        if (buf.hasMemoryAddress()) {
-            int localFlushedAmount = socket.writeAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
-            if (localFlushedAmount > 0) {
-                in.removeBytes(localFlushedAmount);
-                return 1;
-            }
-        } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
-                    buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
-            int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
-            if (localFlushedAmount > 0) {
-                nioBuf.position(nioBuf.position() + localFlushedAmount);
-                in.removeBytes(localFlushedAmount);
-                return 1;
-            }
-        }
-        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
@@ -436,43 +350,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return 1; // Some data was written to the socket.
         }
         return WRITE_STATUS_SNDBUF_FULL;
-    }
-
-    /**
-     * Write bytes to the socket, with or without a remote address.
-     * Used for datagram and TCP client fast open writes.
-     */
-    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
-            throws IOException {
-        assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                return socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            }
-            return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
-        }
-
-        if (data.nioBufferCount() > 1) {
-            IovArray array = registration().cleanIovArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            if (remoteAddress == null) {
-                return socket.writevAddresses(array.memoryAddress(0), cnt);
-            }
-            return socket.sendToAddresses(array.memoryAddress(0), cnt,
-                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
-        }
-
-        ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-        if (remoteAddress == null) {
-            return socket.write(nioData, nioData.position(), nioData.limit());
-        }
-        return socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
     }
 
     /**

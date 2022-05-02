@@ -15,9 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
@@ -25,9 +22,7 @@ import io.netty5.buffer.api.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
-import io.netty5.channel.DefaultByteBufAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.unix.BufferDomainDatagramPacket;
 import io.netty5.channel.unix.DomainDatagramChannel;
 import io.netty5.channel.unix.DomainDatagramChannelConfig;
 import io.netty5.channel.unix.DomainDatagramPacket;
@@ -43,7 +38,6 @@ import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDomainDgram;
 import static io.netty5.util.CharsetUtil.UTF_8;
@@ -55,9 +49,9 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
             " (expected: " +
                     StringUtil.simpleClassName(DomainDatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
+                    StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
-                    StringUtil.simpleClassName(ByteBuf.class) + ')';
+                    StringUtil.simpleClassName(Buffer.class) + ')';
 
     private volatile boolean connected;
     private volatile DomainSocketAddress local;
@@ -131,10 +125,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
             remoteAddress = null;
         }
 
-        if (data instanceof Buffer) {
-            return doWriteBufferMessage((Buffer) data, remoteAddress);
-        }
-        return doWriteByteBufMessage((ByteBuf) data, remoteAddress);
+        return doWriteBufferMessage((Buffer) data, remoteAddress);
     }
 
     private boolean doWriteBufferMessage(Buffer data, DomainSocketAddress remoteAddress) throws IOException {
@@ -177,68 +168,18 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
         }
     }
 
-    private boolean doWriteByteBufMessage(ByteBuf data, DomainSocketAddress remoteAddress) throws IOException {
-        final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
-        final long writtenBytes;
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            } else {
-                writtenBytes = socket.sendToAddressDomainSocket(memoryAddress, data.readerIndex(), data.writerIndex(),
-                                                                remoteAddress.path().getBytes(UTF_8));
-            }
-        } else if (data.nioBufferCount() > 1) {
-            IovArray array = registration().cleanArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            if (remoteAddress == null) {
-                writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-            } else {
-                writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
-                                                                  remoteAddress.path().getBytes(UTF_8));
-            }
-        } else {
-            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            if (remoteAddress == null) {
-                writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
-            } else {
-                writtenBytes = socket.sendToDomainSocket(nioData, nioData.position(), nioData.limit(),
-                                                         remoteAddress.path().getBytes(UTF_8));
-            }
-        }
-
-        return writtenBytes > 0;
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DomainDatagramPacket) {
             DomainDatagramPacket packet = (DomainDatagramPacket) msg;
-            ByteBuf content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    new DomainDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-        if (msg instanceof BufferDomainDatagramPacket) {
-            BufferDomainDatagramPacket packet = (BufferDomainDatagramPacket) msg;
             Buffer content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new BufferDomainDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+                    new DomainDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
         if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-        if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
@@ -257,11 +198,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         }
                     }
                     return e;
-                }
-                if (e.content() instanceof ByteBufConvertible) {
-                    ByteBuf content = ((ByteBufConvertible) e.content()).asByteBuf();
-                    return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                            new DefaultByteBufAddressedEnvelope<>(newDirectBuffer(e, content), domainRecipient) : e;
                 }
             }
         }
@@ -324,14 +260,11 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
-            final boolean useBufferApi = config.getRecvBufferAllocatorUseBuffer();
             allocHandle.reset(config);
             readReadyBefore();
 
             try {
-                Throwable exception = useBufferApi ?
-                        doReadBuffer(allocHandle, pipeline) :
-                        doReadByteBuf(allocHandle, pipeline);
+                Throwable exception = doReadBuffer(allocHandle, pipeline);
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -358,7 +291,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                     buf = allocHandle.allocate(allocator);
                     allocHandle.attemptedBytesRead(buf.writableBytes());
 
-                    final BufferDomainDatagramPacket packet;
+                    final DomainDatagramPacket packet;
                     if (connected) {
                         doReadBytes(buf);
                         if (allocHandle.lastBytesRead() <= 0) {
@@ -366,7 +299,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                             buf.close();
                             break;
                         }
-                        packet = new BufferDomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
+                        packet = new DomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
                                                           (DomainSocketAddress) remoteAddress());
                     } else {
                         final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
@@ -385,72 +318,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                         buf.skipWritable(allocHandle.lastBytesRead());
 
-                        packet = new BufferDomainDatagramPacket(buf, localAddress, remoteAddress);
-                    }
-
-                    allocHandle.incMessagesRead(1);
-
-                    readPending = false;
-                    pipeline.fireChannelRead(packet);
-
-                    buf = null;
-
-                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                    // as we read anything).
-                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-            } catch (Throwable t) {
-                if (buf != null) {
-                    buf.close();
-                }
-                return t;
-            }
-            return null;
-        }
-
-        private Throwable doReadByteBuf(KQueueRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
-            ByteBufAllocator allocator = config().getAllocator();
-            ByteBuf buf = null;
-            try {
-                boolean connected = isConnected();
-                do {
-                    buf = allocHandle.allocate(allocator);
-                    allocHandle.attemptedBytesRead(buf.writableBytes());
-
-                    final DomainDatagramPacket packet;
-                    if (connected) {
-                        allocHandle.lastBytesRead(doReadBytes(buf));
-                        if (allocHandle.lastBytesRead() <= 0) {
-                            // nothing was read, release the buffer.
-                            buf.release();
-                            break;
-                        }
-                        packet = new DomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
-                                (DomainSocketAddress) remoteAddress());
-                    } else {
-                        final DomainDatagramSocketAddress remoteAddress;
-                        if (buf.hasMemoryAddress()) {
-                            // has a memory address so use optimized call
-                            remoteAddress = socket.recvFromAddressDomainSocket(buf.memoryAddress(),
-                                    buf.writerIndex(), buf.capacity());
-                        } else {
-                            ByteBuffer nioData = buf.internalNioBuffer(
-                                    buf.writerIndex(), buf.writableBytes());
-                            remoteAddress =
-                                    socket.recvFromDomainSocket(nioData, nioData.position(), nioData.limit());
-                        }
-
-                        if (remoteAddress == null) {
-                            allocHandle.lastBytesRead(-1);
-                            buf.release();
-                            break;
-                        }
-                        DomainSocketAddress localAddress = remoteAddress.localAddress();
-                        if (localAddress == null) {
-                            localAddress = (DomainSocketAddress) localAddress();
-                        }
-                        allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                        buf.writerIndex(buf.writerIndex() + allocHandle.lastBytesRead());
-
                         packet = new DomainDatagramPacket(buf, localAddress, remoteAddress);
                     }
 
@@ -466,7 +333,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                 } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
             } catch (Throwable t) {
                 if (buf != null) {
-                    buf.release();
+                    buf.close();
                 }
                 return t;
             }

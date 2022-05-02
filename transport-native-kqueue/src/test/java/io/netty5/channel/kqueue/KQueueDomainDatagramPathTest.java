@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -54,7 +53,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
                                       .bind(KQueueSocketTestPermutation.newSocketAddress()).get();
                 ch.writeAndFlush(new DomainDatagramPacket(
-                        Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
+                        ch.bufferAllocator().copyOf("test".getBytes(CharsetUtil.US_ASCII)),
                         KQueueSocketTestPermutation.newSocketAddress())).sync();
                 fail("Expected FileNotFoundException");
             } catch (Exception e) {

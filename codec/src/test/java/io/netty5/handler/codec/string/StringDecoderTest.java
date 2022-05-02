@@ -15,12 +15,13 @@
  */
 package io.netty5.handler.codec.string;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -31,9 +32,9 @@ public class StringDecoderTest {
     @Test
     public void testDecode() {
         String msg = "abc123";
-        ByteBuf byteBuf = Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8);
+        Buffer buffer = preferredAllocator().copyOf(msg.getBytes(StandardCharsets.UTF_8));
         EmbeddedChannel channel = new EmbeddedChannel(new StringDecoder());
-        assertTrue(channel.writeInbound(byteBuf));
+        assertTrue(channel.writeInbound(buffer));
         String result = channel.readInbound();
         assertEquals(msg, result);
         assertNull(channel.readInbound());

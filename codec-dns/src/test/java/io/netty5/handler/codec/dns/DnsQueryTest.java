@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
@@ -65,7 +65,7 @@ public class DnsQueryTest {
 
         assertTrue(writeChan.writeOutbound(query));
 
-        BufferDatagramPacket packet = writeChan.readOutbound();
+        DatagramPacket packet = writeChan.readOutbound();
         assertTrue(packet.content().readableBytes() > 0);
         assertTrue(readChan.writeInbound(packet));
 

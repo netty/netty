@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
@@ -36,7 +35,6 @@ import java.net.PortUnreachableException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -45,38 +43,6 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.datagramSocket();
-    }
-
-    @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testConnectNotExistsByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testConnectNotExistsByteBuf);
-    }
-
-    public void testConnectNotExistsByteBuf(Bootstrap cb) throws Throwable {
-        // Currently, not works on windows
-        // See https://github.com/netty/netty/issues/11285
-        assumeFalse(PlatformDependent.isWindows());
-        final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        cb.handler(new ChannelHandler() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                promise.trySuccess(cause);
-            }
-        });
-        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, SocketTestPermutation.BAD_PORT);
-        Channel datagramChannel = null;
-        try {
-            datagramChannel = future.get();
-            assertTrue(datagramChannel.isActive());
-            datagramChannel.writeAndFlush(
-                    Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            assertThat(promise.asFuture().syncUninterruptibly().getNow()).isInstanceOf(PortUnreachableException.class);
-        } finally {
-            if (datagramChannel != null) {
-                datagramChannel.close();
-            }
-        }
     }
 
     @Test

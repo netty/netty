@@ -23,7 +23,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -406,7 +405,6 @@ public class SniHandlerTest {
                 ServerBootstrap sb = new ServerBootstrap();
                 sb.group(group);
                 sb.channel(NioServerSocketChannel.class);
-                sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
                 sb.childHandler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
@@ -428,7 +426,6 @@ public class SniHandlerTest {
                 Bootstrap cb = new Bootstrap();
                 cb.group(group);
                 cb.channel(NioSocketChannel.class);
-                cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
                 cb.handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
@@ -540,7 +537,6 @@ public class SniHandlerTest {
 
                     ServerBootstrap sb = new ServerBootstrap();
                     sc = sb.group(group).channel(LocalServerChannel.class)
-                            .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                             .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -553,7 +549,6 @@ public class SniHandlerTest {
 
                     Bootstrap cb = new Bootstrap();
                     cc = cb.group(group).channel(LocalChannel.class)
-                           .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                            .handler(new SslHandler(
                                    sslContext.newEngine(offHeapAllocator(), sniHost, -1)))
                            .connect(address).get();

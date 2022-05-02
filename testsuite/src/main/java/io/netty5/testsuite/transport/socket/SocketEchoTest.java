@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -48,32 +46,12 @@ public class SocketEchoTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSimpleEchoByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testSimpleEchoByteBuf);
-    }
-
-    public void testSimpleEchoByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false);
-    }
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSimpleEchoNotAutoReadByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testSimpleEchoNotAutoReadByteBuf);
-    }
-
-    public void testSimpleEchoNotAutoReadByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false);
-    }
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSimpleEcho(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testSimpleEcho);
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, true);
+        testSimpleEcho0(sb, cb, true);
     }
 
     @Test
@@ -83,11 +61,11 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true);
+        testSimpleEcho0(sb, cb, false);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean autoRead, boolean newBufferAPI)
+            ServerBootstrap sb, Bootstrap cb, boolean autoRead)
             throws Throwable {
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
@@ -106,19 +84,10 @@ public class SocketEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
 
-        if (newBufferAPI) {
-            try (Buffer src = DefaultBufferAllocators.preferredAllocator().copyOf(data)) {
-                for (int i = 0; i < data.length;) {
-                    int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-                    cc.writeAndFlush(src.readSplit(length));
-                    i += length;
-                }
-            }
-        } else {
+        try (Buffer src = DefaultBufferAllocators.preferredAllocator().copyOf(data)) {
             for (int i = 0; i < data.length;) {
                 int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-                ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
-                cc.writeAndFlush(buf);
+                cc.writeAndFlush(src.readSplit(length));
                 i += length;
             }
         }
@@ -171,7 +140,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<Buffer> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -191,38 +160,20 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object in) throws Exception {
-            if (in instanceof Buffer) {
-                Buffer buf = (Buffer) in;
-                byte[] actual = new byte[buf.readableBytes()];
-                buf.readBytes(actual, 0, actual.length);
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual, 0, actual.length);
 
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(data[i + lastIdx], actual[i]);
-                }
-
-                if (channel.parent() != null) {
-                    channel.write(ctx.bufferAllocator().copyOf(actual));
-                }
-
-                counter += actual.length;
-            } else {
-                ByteBuf buf = (ByteBuf) in;
-                byte[] actual = new byte[buf.readableBytes()];
-                buf.readBytes(actual);
-
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(data[i + lastIdx], actual[i]);
-                }
-
-                if (channel.parent() != null) {
-                    channel.write(Unpooled.wrappedBuffer(actual));
-                }
-
-                counter += actual.length;
+            int lastIdx = counter;
+            for (int i = 0; i < actual.length; i ++) {
+                assertEquals(data[i + lastIdx], actual[i]);
             }
+
+            if (channel.parent() != null) {
+                channel.write(ctx.bufferAllocator().copyOf(actual));
+            }
+
+            counter += actual.length;
         }
 
         @Override

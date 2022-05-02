@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -25,6 +25,7 @@ import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.socket.DatagramChannelConfig;
+import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     EpollDatagramChannelConfig(EpollDatagramChannel channel) {
         super(channel);
-        this.setRecvBufferAllocator(DEFAULT_RCVBUF_ALLOCATOR);
+        setRecvBufferAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
     @Override
@@ -51,7 +52,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.SO_REUSEADDR, ChannelOption.IP_MULTICAST_LOOP_DISABLED,
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
-                EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
+                UnixChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
                 EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
                 EpollChannelOption.UDP_GRO);
     }
@@ -89,7 +90,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             return (T) Boolean.valueOf(activeOnOpen);
         }
-        if (option == EpollChannelOption.SO_REUSEPORT) {
+        if (option == UnixChannelOption.SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
         }
         if (option == EpollChannelOption.IP_TRANSPARENT) {
@@ -135,7 +136,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             setTrafficClass((Integer) value);
         } else if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             setActiveOnOpen((Boolean) value);
-        } else if (option == EpollChannelOption.SO_REUSEPORT) {
+        } else if (option == UnixChannelOption.SO_REUSEPORT) {
             setReusePort((Boolean) value);
         } else if (option == EpollChannelOption.IP_FREEBIND) {
             setFreeBind((Boolean) value);
@@ -518,7 +519,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Set the maximum {@link io.netty5.channel.socket.DatagramPacket} size. This will be used to determine if
      * {@code recvmmsg} should be used when reading from the underlying socket. When {@code recvmmsg} is used
      * we may be able to read multiple {@link io.netty5.channel.socket.DatagramPacket}s with one syscall and so
-     * greatly improve the performance. This number will be used to slice {@link ByteBuf}s returned by the used
+     * greatly improve the performance. This number will be used to split {@link Buffer}s returned by the used
      * {@link RecvBufferAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
      * will enable it.
      */

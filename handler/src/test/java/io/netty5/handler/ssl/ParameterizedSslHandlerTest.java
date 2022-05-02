@@ -72,7 +72,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty5.buffer.ByteBufUtil.writeAscii;
+import static io.netty5.buffer.BufferUtil.writeAscii;
 import static java.util.concurrent.ThreadLocalRandom.current;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -156,7 +156,6 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -214,7 +213,6 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -329,7 +327,6 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -347,7 +344,6 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -433,7 +429,6 @@ public class ParameterizedSslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -454,7 +449,6 @@ public class ParameterizedSslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -590,7 +584,6 @@ public class ParameterizedSslHandlerTest {
                     .group(group)
                     .channel(serverClass)
                     .childOption(ChannelOption.AUTO_READ, serverAutoRead)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -605,7 +598,6 @@ public class ParameterizedSslHandlerTest {
                     .group(group)
                     .channel(clientClass)
                     .option(ChannelOption.AUTO_READ, clientAutoRead)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {

@@ -467,7 +467,7 @@ public class Socket extends FileDescriptor {
         int limit = optvalue.limit();
         if (optvalue.isDirect()) {
             setRawOptAddress(fd, level, optname,
-                    Buffer.memoryAddress(optvalue) + optvalue.position(), optvalue.remaining());
+                             Buffer.nativeAddressOf(optvalue) + optvalue.position(), optvalue.remaining());
         } else if (optvalue.hasArray()) {
             setRawOptArray(fd, level, optname,
                     optvalue.array(), optvalue.arrayOffset() + optvalue.position(), optvalue.remaining());
@@ -485,7 +485,7 @@ public class Socket extends FileDescriptor {
 
     public void getRawOpt(int level, int optname, ByteBuffer out) throws IOException {
         if (out.isDirect()) {
-            getRawOptAddress(fd, level, optname, Buffer.memoryAddress(out) + out.position() , out.remaining());
+            getRawOptAddress(fd, level, optname, Buffer.nativeAddressOf(out) + out.position() , out.remaining());
         } else if (out.hasArray()) {
             getRawOptArray(fd, level, optname, out.array(), out.position() + out.arrayOffset(), out.remaining());
         } else {

@@ -15,22 +15,20 @@
  */
 package io.netty5.handler.codec.string;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * Encodes the requested {@link String} into a {@link ByteBuf}.
+ * Encodes the requested {@link String} into a {@link Buffer}.
  * A typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -42,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ByteBuf}
+ * and then you can use a {@link String} instead of a {@link Buffer}
  * as a message:
  * <pre>
  * void channelRead({@link ChannelHandlerContext} ctx, {@link String} msg) {
@@ -76,6 +74,6 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
             return;
         }
 
-        out.add(ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset));
+        out.add(ctx.bufferAllocator().copyOf(msg.toString().getBytes(charset)));
     }
 }

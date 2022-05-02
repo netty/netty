@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
@@ -186,6 +187,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                 .when(ctx).newFailedFuture(any(Throwable.class));
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         when(channel.alloc()).thenReturn(PooledByteBufAllocator.DEFAULT);
+        when(channel.bufferAllocator()).thenReturn(DefaultBufferAllocators.preferredAllocator());
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newFailedFuture(in.getArgument(0)))
                 .when(channel).newFailedFuture(any(Throwable.class));
         // Use a server-side connection so we can test server push.

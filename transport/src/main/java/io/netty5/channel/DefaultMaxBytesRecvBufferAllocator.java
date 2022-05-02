@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
@@ -45,11 +43,6 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
                 return attemptBytesRead == lastBytesRead;
             }
         };
-
-        @Override
-        public ByteBuf allocate(ByteBufAllocator alloc) {
-            return alloc.ioBuffer(guess());
-        }
 
         @Override
         public Buffer allocate(BufferAllocator alloc) {

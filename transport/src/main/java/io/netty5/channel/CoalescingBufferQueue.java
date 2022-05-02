@@ -14,19 +14,18 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.util.concurrent.Promise;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link ByteBuf} and consumers take bytes in
- * arbitrary lengths. This allows producers to add lots of small buffers and the consumer to take all the bytes
- * out in a single buffer. Conversely the producer may add larger buffers and the consumer could take the bytes in
- * many small buffers.
+ * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link Buffer} and consumers take bytes in
+ * arbitrary lengths. This allows producers to add lots of small buffers and the consumer to take all the bytes out in a
+ * single buffer. Conversely, the producer may add larger buffers and the consumer could take the bytes in many small
+ * buffers.
  *
  * <p>Bytes are added and removed with promises. If the last byte of a buffer added with a promise is removed then
  * that promise will complete when the promise passed to {@link #remove} completes.
@@ -51,17 +50,16 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
     }
 
     /**
-     * Remove a {@link ByteBuf} from the queue with the specified number of bytes. Any added buffer who's bytes are
-     * fully consumed during removal will have it's promise completed when the passed aggregate {@link Promise}
-     * completes.
+     * Remove a {@link Buffer} from the queue with the specified number of bytes. Any added buffer whose bytes are fully
+     * consumed during removal will have it's promise completed when the passed aggregate {@link Promise} completes.
      *
-     * @param bytes the maximum number of readable bytes in the returned {@link ByteBuf}, if {@code bytes} is greater
+     * @param bytes the maximum number of readable bytes in the returned {@link Buffer}, if {@code bytes} is greater
      *              than {@link #readableBytes()} then a buffer of length {@link #readableBytes()} is returned.
      * @param aggregatePromise used to aggregate the promises and listeners for the constituent buffers.
-     * @return a {@link ByteBuf} composed of the enqueued buffers.
+     * @return a {@link Buffer} composed of the enqueued buffers.
      */
-    public ByteBuf remove(int bytes, Promise<Void> aggregatePromise) {
-        return remove(channel.alloc(), bytes, aggregatePromise);
+    public Buffer remove(int bytes, Promise<Void> aggregatePromise) {
+        return remove(channel.bufferAllocator(), bytes, aggregatePromise);
     }
 
     /**
@@ -72,17 +70,17 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
     }
 
     @Override
-    protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
-        if (cumulation instanceof CompositeByteBuf) {
-            CompositeByteBuf composite = (CompositeByteBuf) cumulation;
-            composite.addComponent(true, next);
+    protected Buffer compose(BufferAllocator alloc, Buffer cumulation, Buffer next) {
+        if (cumulation instanceof CompositeBuffer) {
+            CompositeBuffer composite = (CompositeBuffer) cumulation;
+            composite.extendWith(next.send());
             return composite;
         }
         return composeIntoComposite(alloc, cumulation, next);
     }
 
     @Override
-    protected ByteBuf removeEmptyValue() {
-        return Unpooled.EMPTY_BUFFER;
+    protected Buffer removeEmptyValue() {
+        return BufferAllocator.offHeapUnpooled().allocate(0);
     }
 }

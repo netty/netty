@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.internal.UnstableApi;
 
@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
- * {@link BufferDatagramPacket}.
+ * {@link DatagramPacket}.
  */
 @UnstableApi
 @ChannelHandler.Sharable
@@ -59,7 +59,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
         final DnsQuery query = in.content();
         try (Buffer buf = allocateBuffer(ctx, in)) {
             encoder.encode(query, buf);
-            out.add(new BufferDatagramPacket(buf.split(), recipient, null));
+            out.add(new DatagramPacket(buf.split(), recipient, null));
         }
     }
 

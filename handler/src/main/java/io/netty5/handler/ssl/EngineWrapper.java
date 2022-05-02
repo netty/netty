@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.ReadableComponent;
 import io.netty5.buffer.api.ReadableComponentProcessor;
@@ -54,7 +53,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
 
     /**
      * Used if {@link SSLEngine#wrap(ByteBuffer[], ByteBuffer)} and {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer[])}
-     * should be called with a {@link ByteBuf} that is only backed by one {@link ByteBuffer} to reduce the object
+     * should be called with a {@link Buffer} that is only backed by one {@link ByteBuffer} to reduce the object
      * creation.
      */
     private final ByteBuffer[] singleEmptyBuffer;

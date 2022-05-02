@@ -15,14 +15,10 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -31,7 +27,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -41,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,21 +44,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SocketReadPendingTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
-    public void testReadPendingIsResetAfterEachReadByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb, false));
-    }
-
-    @Test
-    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb, true));
+        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb));
     }
 
-    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
+    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb)
             throws Throwable {
-        if (!newBufferAPI) {
-            disableNewBufferAPI(sb, cb);
-        }
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -84,15 +71,11 @@ public class SocketReadPendingTest extends AbstractSocketTest {
             clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
-            clientChannel.writeAndFlush(newBufferAPI ?
-                                                DefaultBufferAllocators.preferredAllocator().copyOf(new byte[4]) :
-                                                Unpooled.wrappedBuffer(new byte[4]));
+            clientChannel.writeAndFlush(preferredAllocator().copyOf(new byte[4]));
 
             // 4 bytes means 2 read loops for TestNumReadsRecvBufferAllocator
             assertTrue(serverInitializer.channelInitLatch.await(5, TimeUnit.SECONDS));
-            serverInitializer.channel.writeAndFlush(
-                    newBufferAPI ? DefaultBufferAllocators.preferredAllocator().copyOf(new byte[4]) :
-                            Unpooled.wrappedBuffer(new byte[4]));
+            serverInitializer.channel.writeAndFlush(preferredAllocator().copyOf(new byte[4]));
 
             serverInitializer.channel.read();
             serverInitializer.readPendingHandler.assertAllRead();
@@ -129,11 +112,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof Resource<?>) {
-                ((Resource<?>) msg).close();
-            } else {
-                ReferenceCountUtil.release(msg);
-            }
+            Resource.dispose(msg);
             if (count.incrementAndGet() == 1) {
                 // Call read the first time, to ensure it is not reset the second time.
                 ctx.read();
@@ -169,11 +148,6 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 private int attemptedBytesRead;
                 private int lastBytesRead;
                 private int numMessagesRead;
-
-                @Override
-                public ByteBuf allocate(ByteBufAllocator alloc) {
-                    return alloc.ioBuffer(guess(), guess());
-                }
 
                 @Override
                 public Buffer allocate(BufferAllocator alloc) {

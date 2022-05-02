@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;
@@ -53,7 +53,7 @@ public class DatagramPacketDecoderTest {
     public void testDecode() {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
-        ByteBuf content = Unpooled.wrappedBuffer("netty".getBytes(CharsetUtil.UTF_8));
+        Buffer content = DefaultBufferAllocators.preferredAllocator().copyOf("netty".getBytes(CharsetUtil.UTF_8));
         assertTrue(channel.writeInbound(new DatagramPacket(content, recipient, sender)));
         assertEquals("netty", channel.readInbound());
     }
@@ -69,12 +69,12 @@ public class DatagramPacketDecoderTest {
     }
 
     private static void testIsSharable(boolean sharable) {
-        MessageToMessageDecoder<ByteBuf> wrapped = new TestMessageToMessageDecoder(sharable);
+        MessageToMessageDecoder<Buffer> wrapped = new TestMessageToMessageDecoder(sharable);
         DatagramPacketDecoder decoder = new DatagramPacketDecoder(wrapped);
         assertEquals(wrapped.isSharable(), decoder.isSharable());
     }
 
-    private static final class TestMessageToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
+    private static final class TestMessageToMessageDecoder extends MessageToMessageDecoder<Buffer> {
 
         private final boolean sharable;
 
@@ -83,7 +83,7 @@ public class DatagramPacketDecoderTest {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, Buffer msg) throws Exception {
             // NOOP
         }
 

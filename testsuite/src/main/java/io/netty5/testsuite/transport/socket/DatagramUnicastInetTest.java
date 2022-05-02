@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
@@ -23,7 +22,6 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.socket.BufferDatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.concurrent.Future;
@@ -63,41 +61,23 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
     @Override
     protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
                                          final AtomicReference<Throwable> errorRef) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<Object>() {
+        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
                 try {
-                    if (msg instanceof BufferDatagramPacket) {
-                        BufferDatagramPacket packet = (BufferDatagramPacket) msg;
-                        Buffer buf = packet.content();
-                        assertEquals(bytes.length, buf.readableBytes());
-                        for (int i = 0; i < bytes.length; i++) {
-                            assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
-                        }
+                    Buffer buf = msg.content();
+                    assertEquals(bytes.length, buf.readableBytes());
+                    for (int i = 0; i < bytes.length; i++) {
+                        assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
+                    }
 
-                        InetSocketAddress localAddress = (InetSocketAddress) ctx.channel().localAddress();
-                        if (localAddress.getAddress().isAnyLocalAddress()) {
-                            assertEquals(localAddress.getPort(), packet.recipient().getPort());
-                        } else {
-                            // Test that the channel's localAddress is equal to the message's recipient
-                            assertEquals(localAddress, packet.recipient());
-                        }
+                    InetSocketAddress localAddress = (InetSocketAddress) ctx.channel().localAddress();
+                    if (localAddress.getAddress().isAnyLocalAddress()) {
+                        assertEquals(localAddress.getPort(), msg.recipient().getPort());
                     } else {
-                        DatagramPacket packet = (DatagramPacket) msg;
-                        ByteBuf buf = packet.content();
-                        assertEquals(bytes.length, buf.readableBytes());
-                        for (int i = 0; i < bytes.length; i++) {
-                            assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                        }
-
-                        InetSocketAddress localAddress = (InetSocketAddress) ctx.channel().localAddress();
-                        if (localAddress.getAddress().isAnyLocalAddress()) {
-                            assertEquals(localAddress.getPort(), packet.recipient().getPort());
-                        } else {
-                            // Test that the channel's localAddress is equal to the message's recipient
-                            assertEquals(localAddress, packet.recipient());
-                        }
+                        // Test that the channel's localAddress is equal to the message's recipient
+                        assertEquals(localAddress, msg.recipient());
                     }
                 } finally {
                     latch.countDown();
@@ -120,61 +100,33 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
 
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
 
                     @Override
-                    public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
                         try {
-                            if (msg instanceof BufferDatagramPacket) {
-                                BufferDatagramPacket packet = (BufferDatagramPacket) msg;
-                                if (sender == null) {
-                                    assertNotNull(packet.sender());
-                                } else {
-                                    InetSocketAddress senderAddress = (InetSocketAddress) sender;
-                                    if (senderAddress.getAddress().isAnyLocalAddress()) {
-                                        assertEquals(senderAddress.getPort(), packet.sender().getPort());
-                                    } else {
-                                        assertEquals(sender, packet.sender());
-                                    }
-                                }
-
-                                Buffer buf = packet.content();
-                                assertEquals(bytes.length, buf.readableBytes());
-                                for (int i = 0; i < bytes.length; i++) {
-                                    assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
-                                }
-
-                                // Test that the channel's localAddress is equal to the message's recipient
-                                assertEquals(ctx.channel().localAddress(), packet.recipient());
-
-                                if (echo) {
-                                    ctx.writeAndFlush(new BufferDatagramPacket(buf.split(), packet.sender()));
-                                }
+                            if (sender == null) {
+                                assertNotNull(msg.sender());
                             } else {
-                                DatagramPacket packet = (DatagramPacket) msg;
-                                if (sender == null) {
-                                    assertNotNull(packet.sender());
+                                InetSocketAddress senderAddress = (InetSocketAddress) sender;
+                                if (senderAddress.getAddress().isAnyLocalAddress()) {
+                                    assertEquals(senderAddress.getPort(), msg.sender().getPort());
                                 } else {
-                                    InetSocketAddress senderAddress = (InetSocketAddress) sender;
-                                    if (senderAddress.getAddress().isAnyLocalAddress()) {
-                                        assertEquals(senderAddress.getPort(), packet.sender().getPort());
-                                    } else {
-                                        assertEquals(sender, packet.sender());
-                                    }
+                                    assertEquals(sender, msg.sender());
                                 }
+                            }
 
-                                ByteBuf buf = packet.content();
-                                assertEquals(bytes.length, buf.readableBytes());
-                                for (int i = 0; i < bytes.length; i++) {
-                                    assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
-                                }
+                            Buffer buf = msg.content();
+                            assertEquals(bytes.length, buf.readableBytes());
+                            for (int i = 0; i < bytes.length; i++) {
+                                assertEquals(bytes[i], buf.getByte(buf.readerOffset() + i));
+                            }
 
-                                // Test that the channel's localAddress is equal to the message's recipient
-                                assertEquals(ctx.channel().localAddress(), packet.recipient());
+                            // Test that the channel's localAddress is equal to the message's recipient
+                            assertEquals(ctx.channel().localAddress(), msg.recipient());
 
-                                if (echo) {
-                                    ctx.writeAndFlush(new DatagramPacket(buf.retainedDuplicate(), packet.sender()));
-                                }
+                            if (echo) {
+                                ctx.writeAndFlush(new DatagramPacket(buf.split(), msg.sender()));
                             }
                         } finally {
                             latch.countDown();
@@ -197,23 +149,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
     }
 
     @Override
-    protected Future<Void> write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
-        switch (wrapType) {
-            case DUP:
-                return cc.write(new DatagramPacket(buf.retainedDuplicate(), (InetSocketAddress) remote));
-            case SLICE:
-                return cc.write(new DatagramPacket(buf.retainedSlice(), (InetSocketAddress) remote));
-            case READ_ONLY:
-                return cc.write(new DatagramPacket(buf.retain().asReadOnly(), (InetSocketAddress) remote));
-            case NONE:
-                return cc.write(new DatagramPacket(buf.retain(), (InetSocketAddress) remote));
-            default:
-                throw new Error("unknown wrap type: " + wrapType);
-        }
-    }
-
-    @Override
     protected Future<Void> write(Channel cc, Buffer buf, SocketAddress remote) {
-        return cc.write(new BufferDatagramPacket(buf, (InetSocketAddress) remote));
+        return cc.write(new DatagramPacket(buf, (InetSocketAddress) remote));
     }
 }

@@ -26,7 +26,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
@@ -183,7 +183,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder() {
         @Override
-        protected DnsResponse decodeResponse(ChannelHandlerContext ctx, BufferDatagramPacket packet) throws Exception {
+        protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
             DnsResponse response = super.decodeResponse(ctx, packet);
             if (packet.content().readableBytes() > 0) {
                 // If there is still something to read we did stop parsing because of a truncated message.

@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.handler.codec.base64.Base64;
@@ -58,7 +57,7 @@ final class PemReader {
                     "-+END\\s+.*PRIVATE\\s+KEY[^-]*-+",            // Footer
             Pattern.CASE_INSENSITIVE);
 
-    static ByteBuf[] readCertificates(File file) throws CertificateException {
+    static Buffer[] readCertificates(File file) throws CertificateException {
         try {
             InputStream in = new FileInputStream(file);
 
@@ -72,7 +71,7 @@ final class PemReader {
         }
     }
 
-    static ByteBuf[] readCertificates(InputStream in) throws CertificateException {
+    static Buffer[] readCertificates(InputStream in) throws CertificateException {
         String content;
         try {
             content = readContent(in);
@@ -80,12 +79,12 @@ final class PemReader {
             throw new CertificateException("failed to read certificate input stream", e);
         }
 
-        List<ByteBuf> certs = new ArrayList<>();
+        List<Buffer> certs = new ArrayList<>();
         Matcher m = CERT_PATTERN.matcher(content);
         int start = 0;
         while (m.find(start)) {
             try (Buffer base64 = onHeapAllocator().copyOf(m.group(1).getBytes(CharsetUtil.US_ASCII))) {
-                ByteBuf der = ByteBufAdaptor.intoByteBuf(Base64.decode(base64));
+                Buffer der = Base64.decode(base64);
                 certs.add(der);
             }
             start = m.end();
@@ -95,10 +94,10 @@ final class PemReader {
             throw new CertificateException("found no certificates in input stream");
         }
 
-        return certs.toArray(ByteBuf[]::new);
+        return certs.toArray(Buffer[]::new);
     }
 
-    static ByteBuf readPrivateKey(File file) throws KeyException {
+    static Buffer readPrivateKey(File file) throws KeyException {
         try {
             InputStream in = new FileInputStream(file);
 
@@ -112,7 +111,7 @@ final class PemReader {
         }
     }
 
-    static ByteBuf readPrivateKey(InputStream in) throws KeyException {
+    static Buffer readPrivateKey(InputStream in) throws KeyException {
         String content;
         try {
             content = readContent(in);
@@ -127,7 +126,7 @@ final class PemReader {
         }
 
         try (Buffer base64 = onHeapAllocator().copyOf(m.group(1).getBytes(CharsetUtil.US_ASCII))) {
-            return ByteBufAdaptor.intoByteBuf(Base64.decode(base64));
+            return Base64.decode(base64);
         }
     }
 

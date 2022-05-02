@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelHandlerContext;
@@ -63,7 +63,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                             if (len == SslUtils.NOT_ENCRYPTED) {
                                 handshakeFailed = true;
                                 NotSslRecordException e = new NotSslRecordException(
-                                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                                        "not an SSL/TLS record: " + BufferUtil.hexDump(in));
                                 in.skipReadable(in.readableBytes());
                                 ctx.fireUserEventTriggered(new SniCompletionEvent(e));
                                 ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
@@ -166,7 +166,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
             } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Unexpected client hello packet: " + ByteBufUtil.hexDump(in), e);
+                    logger.debug("Unexpected client hello packet: " + BufferUtil.hexDump(in), e);
                 }
                 select(ctx, null);
             }

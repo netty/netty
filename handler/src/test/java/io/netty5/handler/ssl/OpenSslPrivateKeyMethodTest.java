@@ -22,7 +22,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -390,7 +389,6 @@ public class OpenSslPrivateKeyMethodTest {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(GROUP)
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(handler);
 
         return bootstrap.bind(address).get();
@@ -402,7 +400,6 @@ public class OpenSslPrivateKeyMethodTest {
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(GROUP)
-                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(handler);
 
         return bootstrap.connect(remoteAddress).get();

@@ -15,11 +15,6 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
@@ -28,7 +23,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty5.channel.unix.UnixChannelUtil.isBufferCopyNeededForWrite;
@@ -39,16 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class UnixChannelUtilTest {
 
     private static final int IOV_MAX = 1024;
-
-    @Test
-    public void testPooledByteBufAllocatorIsBufferCopyNeededForWrite() {
-        testIsBufferCopyNeededForWrite(PooledByteBufAllocator.DEFAULT);
-    }
-
-    @Test
-    public void testUnPooledByteBufAllocatorIsBufferCopyNeededForWrite() {
-        testIsBufferCopyNeededForWrite(UnpooledByteBufAllocator.DEFAULT);
-    }
 
     @Test
     public void testPooledBufferAllocatorIsBufferCopyNeededForWrite() {
@@ -66,46 +50,6 @@ public class UnixChannelUtilTest {
         }
     }
 
-    private static void testIsBufferCopyNeededForWrite(ByteBufAllocator alloc) {
-        ByteBuf byteBuf = alloc.directBuffer();
-        assertFalse(isBufferCopyNeededForWrite(byteBuf, IOV_MAX));
-        assertFalse(isBufferCopyNeededForWrite(byteBuf.asReadOnly(), IOV_MAX));
-        assertTrue(byteBuf.release());
-
-        byteBuf = alloc.heapBuffer();
-        assertTrue(isBufferCopyNeededForWrite(byteBuf, IOV_MAX));
-        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly(), IOV_MAX));
-        assertTrue(byteBuf.release());
-
-        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 2, 0, false);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, IOV_MAX + 1, 0, true);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 0, 2, true);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 1, 1, true);
-    }
-
-    private static void assertCompositeByteBufIsBufferCopyNeededForWrite(ByteBufAllocator alloc, int numDirect,
-                                                                         int numHeap, boolean expected) {
-        CompositeByteBuf comp = alloc.compositeBuffer(numDirect + numHeap);
-        List<ByteBuf> byteBufs = new LinkedList<>();
-
-        while (numDirect > 0) {
-            byteBufs.add(alloc.directBuffer(1));
-            numDirect--;
-        }
-        while (numHeap > 0) {
-            byteBufs.add(alloc.heapBuffer(1));
-            numHeap--;
-        }
-
-        Collections.shuffle(byteBufs);
-        for (ByteBuf byteBuf : byteBufs) {
-            comp.addComponent(byteBuf);
-        }
-
-        assertEquals(expected, isBufferCopyNeededForWrite(comp, IOV_MAX), byteBufs.toString());
-        assertTrue(comp.release());
-    }
-
     private static void testIsBufferCopyNeededForWrite(BufferAllocator onHeap, BufferAllocator offHeap) {
         try (Buffer buf = offHeap.allocate(256)) {
             assertFalse(isBufferCopyNeededForWrite(buf, IOV_MAX));
@@ -117,14 +61,14 @@ public class UnixChannelUtilTest {
             assertTrue(isBufferCopyNeededForWrite(buf.makeReadOnly(), IOV_MAX));
         }
 
-        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 2, onHeap, 0, false);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, IOV_MAX + 1, onHeap, 0, true);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 0, onHeap, 2, true);
-        assertCompositeByteBufIsBufferCopyNeededForWrite(offHeap, 1, onHeap, 1, true);
+        assertCompositeBufferIsBufferCopyNeededForWrite(offHeap, 2, onHeap, 0, false);
+        assertCompositeBufferIsBufferCopyNeededForWrite(offHeap, IOV_MAX + 1, onHeap, 0, true);
+        assertCompositeBufferIsBufferCopyNeededForWrite(offHeap, 0, onHeap, 2, true);
+        assertCompositeBufferIsBufferCopyNeededForWrite(offHeap, 1, onHeap, 1, true);
     }
 
     @SuppressWarnings("unchecked")
-    private static void assertCompositeByteBufIsBufferCopyNeededForWrite(
+    private static void assertCompositeBufferIsBufferCopyNeededForWrite(
             BufferAllocator offHeap, int numDirect, BufferAllocator onHeap, int numHeap, boolean expected) {
         List<Send<Buffer>> buffers = new ArrayList<>(numHeap + numDirect);
 

@@ -44,7 +44,7 @@ public final class Buffer {
     /**
      * Returns the memory address of the given direct {@link ByteBuffer}.
      */
-    public static long memoryAddress(ByteBuffer buffer) {
+    public static long nativeAddressOf(ByteBuffer buffer) {
         assert buffer.isDirect();
         if (PlatformDependent.hasUnsafe()) {
             return PlatformDependent.directBufferAddress(buffer);

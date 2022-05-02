@@ -15,7 +15,7 @@
  */
 package io.netty5.example.qotm;
 
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
@@ -47,8 +47,8 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<D
     public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         System.err.println(packet);
         if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
-            ctx.write(new DatagramPacket(
-                    Unpooled.copiedBuffer("QOTM: " + nextQuote(), CharsetUtil.UTF_8), packet.sender()));
+            Buffer message = ctx.bufferAllocator().copyOf(("QOTM: " + nextQuote()).getBytes(CharsetUtil.UTF_8));
+            ctx.write(new DatagramPacket(message, packet.sender()));
         }
     }
 

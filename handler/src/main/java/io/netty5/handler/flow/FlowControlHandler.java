@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.flow;
 
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -102,7 +103,11 @@ public class FlowControlHandler implements ChannelHandler {
                 if (releaseMessages) {
                     Object msg;
                     while ((msg = queue.poll()) != null) {
-                        ReferenceCountUtil.safeRelease(msg);
+                        try {
+                            Resource.dispose(msg);
+                        } catch (Exception e) {
+                            logger.trace("Exception while disposing of message in flow control", e);
+                        }
                     }
                 }
             }

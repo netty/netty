@@ -15,19 +15,14 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty5.channel.RecvBufferAllocator.Handle;
-import io.netty5.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
 
 class EpollRecvBufferAllocatorHandle extends DelegatingHandle {
-    private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
-            new PreferredDirectByteBufAllocator();
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean receivedRdHup;
 
@@ -57,15 +52,8 @@ class EpollRecvBufferAllocatorHandle extends DelegatingHandle {
     }
 
     @Override
-    public final ByteBuf allocate(ByteBufAllocator alloc) {
-        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
-        preferredDirectByteBufAllocator.updateAllocator(alloc);
-        return delegate().allocate(preferredDirectByteBufAllocator);
-    }
-
-    @Override
     public Buffer allocate(BufferAllocator alloc) {
-        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
+        // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
         if (!alloc.getAllocationType().isDirect()) {
             return super.allocate(DefaultBufferAllocators.offHeapAllocator());
         }

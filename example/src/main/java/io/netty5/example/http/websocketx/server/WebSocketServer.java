@@ -17,7 +17,6 @@ package io.netty5.example.http.websocketx.server;
 
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -68,7 +67,6 @@ public final class WebSocketServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new WebSocketServerInitializer(sslCtx));
 

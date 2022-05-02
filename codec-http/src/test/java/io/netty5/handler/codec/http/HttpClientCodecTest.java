@@ -136,7 +136,6 @@ public class HttpClientCodecTest {
         try {
             sb.group(new MultithreadEventLoopGroup(2, NioHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
-            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
@@ -177,7 +176,6 @@ public class HttpClientCodecTest {
             cb.group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()));
             cb.channel(NioSocketChannel.class);
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
-            cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {

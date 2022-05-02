@@ -344,7 +344,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         Long start = TrafficCounter.milliSecondFromNano();
         int nb = multipleMessage[0];
         for (int i = 0; i < nb; i++) {
-            cc.write(cc.alloc().buffer().writeBytes(data));
+            cc.write(cc.bufferAllocator().copyOf(data));
         }
         cc.flush();
 
@@ -444,7 +444,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             if (multipleMessage.length > step) {
                 int nb = multipleMessage[step];
                 for (int i = 0; i < nb; i++) {
-                    channel.write(channel.alloc().buffer().writeBytes(data));
+                    channel.write(channel.bufferAllocator().copyOf(data));
                 }
                 channel.flush();
             } else {
@@ -512,7 +512,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             Thread.sleep(10);
             loggerServer.debug("Step: " + step + " Write: " + nb);
             for (int i = 0; i < nb; i++) {
-                channel.write(Unpooled.copyLong(timestamp));
+                channel.write(ctx.bufferAllocator().allocate(8).writeLong(timestamp));
             }
             channel.flush();
             if (laststep != step) {

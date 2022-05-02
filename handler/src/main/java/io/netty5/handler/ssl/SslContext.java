@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
@@ -1133,12 +1133,12 @@ public abstract class SslContext {
         return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyInputStream), keyPassword);
     }
 
-    private static PrivateKey getPrivateKeyFromByteBuffer(ByteBuf encodedKeyBuf, String keyPassword)
+    private static PrivateKey getPrivateKeyFromByteBuffer(Buffer encodedKeyBuf, String keyPassword)
             throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
             InvalidAlgorithmParameterException, KeyException, IOException {
 
         byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
-        encodedKeyBuf.readBytes(encodedKey).release();
+        encodedKeyBuf.readBytes(encodedKey, 0, encodedKey.length).close();
 
         PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(
                 keyPassword == null ? null : keyPassword.toCharArray(), encodedKey);
@@ -1199,22 +1199,16 @@ public abstract class SslContext {
         return getCertificatesFromBuffers(PemReader.readCertificates(in));
     }
 
-    private static X509Certificate[] getCertificatesFromBuffers(ByteBuf[] certs) throws CertificateException {
+    private static X509Certificate[] getCertificatesFromBuffers(Buffer[] certs) throws CertificateException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         X509Certificate[] x509Certs = new X509Certificate[certs.length];
 
-        try {
-            for (int i = 0; i < certs.length; i++) {
-                try (InputStream is = new ByteBufInputStream(certs[i], false)) {
-                    x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
-                } catch (IOException e) {
-                    // This is thrown from is.close(). It's not expected to happen, but re-throw in case it does.
-                    throw new UncheckedIOException(e);
-                }
-            }
-        } finally {
-            for (ByteBuf buf: certs) {
-                buf.release();
+        for (int i = 0; i < certs.length; i++) {
+            try (InputStream is = new BufferInputStream(certs[i].send())) {
+                x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
+            } catch (IOException e) {
+                // This is thrown from is.close(). It's not expected to happen, but re-throw in case it does.
+                throw new UncheckedIOException(e);
             }
         }
         return x509Certs;

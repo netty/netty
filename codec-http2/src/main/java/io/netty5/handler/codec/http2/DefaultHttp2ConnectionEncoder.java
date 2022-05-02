@@ -15,6 +15,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.CoalescingBufferQueue;
@@ -441,7 +443,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                            Promise<Void> promise, Channel channel) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue(channel);
-            queue.add(buf, promise);
+            queue.add(ByteBufBuffer.wrap(buf), promise);
             dataSize = queue.readableBytes();
         }
 
@@ -494,7 +496,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             int writableData = min(queuedData, allowedBytes);
             Promise<Void> writePromise = ctx.newPromise();
             writePromise.asFuture().addListener(this);
-            ByteBuf toWrite = queue.remove(writableData, writePromise);
+            ByteBuf toWrite = ByteBufAdaptor.intoByteBuf(queue.remove(writableData, writePromise));
             dataSize = queue.readableBytes();
 
             // Determine how much padding to write.

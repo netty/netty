@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -25,12 +23,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import org.junit.jupiter.api.Test;
@@ -75,52 +71,10 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
 
     @Test
     @Timeout(30)
-    public void readMustBePendingUntilChannelIsActiveByteBuf(TestInfo info) throws Throwable {
-        run(info, new Runner<Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap) throws Throwable {
-                SingleThreadEventLoop group = new SingleThreadEventLoop(
-                        new DefaultThreadFactory(getClass()), NioHandler.newFactory().newHandler());
-                ServerBootstrap sb = new ServerBootstrap().group(group);
-                Channel serverChannel = sb.childHandler(new ChannelHandlerAdapter() {
-                    @Override
-                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                        ctx.writeAndFlush(Unpooled.copyInt(42));
-                    }
-                }).channel(NioServerSocketChannel.class).bind(0).get();
-
-                final CountDownLatch readLatch = new CountDownLatch(1);
-                bootstrap.handler(new ByteToMessageDecoder() {
-                    @Override
-                    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
-                        assertFalse(ctx.channel().isActive());
-                        ctx.read();
-                    }
-
-                    @Override
-                    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                        assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
-                        if (in.readableBytes() == Integer.BYTES) {
-                            assertThat(in.readInt()).isEqualTo(42);
-                            readLatch.countDown();
-                        }
-                    }
-                });
-                bootstrap.connect(serverChannel.localAddress()).sync();
-
-                readLatch.await();
-                group.shutdownGracefully().await();
-            }
-        });
-    }
-
-    @Test
-    @Timeout(30)
     public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
         run(info, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                bootstrap.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
                 SingleThreadEventLoop group = new SingleThreadEventLoop(
                         new DefaultThreadFactory(getClass()), NioHandler.newFactory().newHandler());
                 ServerBootstrap sb = new ServerBootstrap().group(group);

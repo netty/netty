@@ -24,9 +24,9 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.channel.unix.BufferSegmentedDatagramPacket;
+import io.netty5.channel.unix.SegmentedDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.DatagramUnicastInetTest;
 import org.junit.jupiter.api.Test;
@@ -128,8 +128,8 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
             sc = sb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
                 public void messageReceived(ChannelHandlerContext ctx, Object msg) {
-                    if (msg instanceof BufferDatagramPacket) {
-                        BufferDatagramPacket packet = (BufferDatagramPacket) msg;
+                    if (msg instanceof DatagramPacket) {
+                        DatagramPacket packet = (DatagramPacket) msg;
                         int packetSize = packet.content().readableBytes();
                         assertEquals(segmentSize, packetSize, "Unexpected datagram packet size");
                         latch.countDown();
@@ -175,7 +175,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 buffer.fill((byte) 0);
                 buffer.skipWritable(bufferCapacity);
             }
-            cc.writeAndFlush(new BufferSegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
+            cc.writeAndFlush(new SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();

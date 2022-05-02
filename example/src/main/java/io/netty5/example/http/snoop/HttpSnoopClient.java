@@ -17,7 +17,6 @@ package io.netty5.example.http.snoop;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -78,7 +77,6 @@ public final class HttpSnoopClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
              .handler(new HttpSnoopClientInitializer(sslCtx));
 
             // Make the connection attempt.

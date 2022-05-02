@@ -66,11 +66,6 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 private int numMessagesRead;
 
                 @Override
-                public ByteBuf allocate(ByteBufAllocator alloc) {
-                    return alloc.ioBuffer(guess(), guess());
-                }
-
-                @Override
                 public Buffer allocate(BufferAllocator alloc) {
                     return alloc.allocate(guess());
                 }

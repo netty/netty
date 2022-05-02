@@ -38,8 +38,6 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
-
 public class SocketStringEchoTest extends AbstractSocketTest {
 
     static final Random random = new Random();
@@ -90,7 +88,6 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast(bufferToByteBuf());
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", sh);
@@ -101,7 +98,6 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast(bufferToByteBuf());
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", ch);

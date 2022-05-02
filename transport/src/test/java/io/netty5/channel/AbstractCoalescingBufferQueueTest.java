@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2021 The Netty Project
 
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,9 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
@@ -53,19 +52,19 @@ public class AbstractCoalescingBufferQueueTest {
         }, new ChannelHandlerAdapter() { });
         final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
             @Override
-            protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
+            protected Buffer compose(BufferAllocator alloc, Buffer cumulation, Buffer next) {
                 return composeIntoComposite(alloc, cumulation, next);
             }
 
             @Override
-            protected ByteBuf removeEmptyValue() {
-                return Unpooled.EMPTY_BUFFER;
+            protected Buffer removeEmptyValue() {
+                return BufferAllocator.offHeapUnpooled().allocate(0);
             }
         };
 
         final byte[] bytes = new byte[128];
-        queue.add(Unpooled.wrappedBuffer(bytes), future -> {
-            queue.add(Unpooled.wrappedBuffer(bytes));
+        queue.add(BufferAllocator.offHeapUnpooled().copyOf(bytes), future -> {
+            queue.add(BufferAllocator.offHeapUnpooled().copyOf(bytes));
             assertEquals(bytes.length, queue.readableBytes());
         });
 
@@ -77,9 +76,9 @@ public class AbstractCoalescingBufferQueueTest {
         } else {
             queue.releaseAndFailAll(ctx, new ClosedChannelException());
         }
-        ByteBuf buffer = queue.remove(channel.alloc(), 128, channel.newPromise());
-        assertFalse(buffer.isReadable());
-        buffer.release();
+        Buffer buffer = queue.remove(channel.bufferAllocator(), 128, channel.newPromise());
+        assertFalse(buffer.readableBytes() > 0);
+        buffer.close();
 
         assertTrue(queue.isEmpty());
         assertEquals(0, queue.readableBytes());

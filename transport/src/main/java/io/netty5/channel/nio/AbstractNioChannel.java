@@ -15,10 +15,6 @@
  */
 package io.netty5.channel.nio;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
@@ -28,8 +24,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoop;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -375,75 +369,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Finish the connect
      */
     protected abstract void doFinishConnect() throws Exception;
-
-    /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
-     * Note that this method does not create an off-heap copy if the allocation / deallocation cost is too high,
-     * but just returns the original {@link ByteBuf}..
-     */
-    protected final ByteBuf newDirectBuffer(ByteBuf buf) {
-        final int readableBytes = buf.readableBytes();
-        if (readableBytes == 0) {
-            ReferenceCountUtil.safeRelease(buf);
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        final ByteBufAllocator alloc = alloc();
-        if (alloc.isDirectBufferPooled()) {
-            ByteBuf directBuf = alloc.directBuffer(readableBytes);
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-            ReferenceCountUtil.safeRelease(buf);
-            return directBuf;
-        }
-
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf != null) {
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-            ReferenceCountUtil.safeRelease(buf);
-            return directBuf;
-        }
-
-        // Allocating and deallocating an unpooled direct buffer is very expensive; give up.
-        return buf;
-    }
-
-    /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the specified holder.
-     * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
-     * this method.  Note that this method does not create an off-heap copy if the allocation / deallocation cost is
-     * too high, but just returns the original {@link ByteBuf}..
-     */
-    protected final ByteBuf newDirectBuffer(ReferenceCounted holder, ByteBuf buf) {
-        final int readableBytes = buf.readableBytes();
-        if (readableBytes == 0) {
-            ReferenceCountUtil.safeRelease(holder);
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        final ByteBufAllocator alloc = alloc();
-        if (alloc.isDirectBufferPooled()) {
-            ByteBuf directBuf = alloc.directBuffer(readableBytes);
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-            ReferenceCountUtil.safeRelease(holder);
-            return directBuf;
-        }
-
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf != null) {
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-            ReferenceCountUtil.safeRelease(holder);
-            return directBuf;
-        }
-
-        // Allocating and deallocating an unpooled direct buffer is very expensive; give up.
-        if (holder != buf) {
-            // Ensure to call holder.release() to give the holder a chance to release other resources than its content.
-            buf.retain();
-            ReferenceCountUtil.safeRelease(holder);
-        }
-
-        return buf;
-    }
 
     /**
      * Allocates a new off-heap copy of the given buffer, unless the cost of doing so is too high.

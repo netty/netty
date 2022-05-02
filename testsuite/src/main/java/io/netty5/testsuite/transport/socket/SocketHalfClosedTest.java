@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -36,7 +34,6 @@ import io.netty5.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty5.channel.socket.ChannelOutputShutdownEvent;
 import io.netty5.channel.socket.DuplexChannel;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
@@ -54,25 +51,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
-
-    @Test
-    @Timeout(value = 5000, unit = MILLISECONDS)
-    public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSetByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(sb, cb, false));
-    }
-
     @Test
     @Timeout(value = 5000, unit = MILLISECONDS)
     public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(sb, cb, true));
+        run(testInfo, (sb, cb) -> testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(sb, cb));
     }
 
     private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(
-            ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
+            ServerBootstrap sb, Bootstrap cb)
             throws Throwable {
-        if (!newBufferAPI) {
-            disableNewBufferAPI(sb, cb);
-        }
         Channel serverChannel = null;
         Channel clientChannel = null;
 
@@ -93,11 +80,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                if (msg instanceof Resource<?>) {
-                                    ((Resource<?>) msg).close();
-                                } else {
-                                    ReferenceCountUtil.release(msg);
-                                }
+                                Resource.dispose(msg);
                                 waitHalfClosureDone.countDown();
                             }
                         });
@@ -113,9 +96,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush(newBufferAPI ?
-                                                              ctx.bufferAllocator().copyOf(new byte[16]) :
-                                                              ctx.alloc().buffer().writeZero(16));
+                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[16]));
                                 }
 
                                 if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
@@ -207,28 +188,17 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAllDataReadAfterHalfClosureByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testAllDataReadAfterHalfClosureByteBuf);
-    }
-
-    public void testAllDataReadAfterHalfClosureByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAllDataReadAfterHalfClosure(true, sb, cb, false);
-        testAllDataReadAfterHalfClosure(false, sb, cb, false);
-    }
-
-    @Test
     public void testAllDataReadAfterHalfClosure(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testAllDataReadAfterHalfClosure);
     }
 
     public void testAllDataReadAfterHalfClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAllDataReadAfterHalfClosure(true, sb, cb, true);
-        testAllDataReadAfterHalfClosure(false, sb, cb, true);
+        testAllDataReadAfterHalfClosure(true, sb, cb);
+        testAllDataReadAfterHalfClosure(false, sb, cb);
     }
 
     private static void testAllDataReadAfterHalfClosure(final boolean autoRead,
-                                                        ServerBootstrap sb, Bootstrap cb,
-                                                        boolean newBufferAPI) throws Throwable {
+                                                        ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);
@@ -248,17 +218,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                            final Object msg;
-                            if (newBufferAPI) {
-                                Buffer buf = ctx.bufferAllocator().allocate(totalServerBytesWritten);
-                                buf.writerOffset(buf.capacity());
-                                msg = buf;
-                            } else {
-                                ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
-                                buf.writerIndex(buf.capacity());
-                                msg = buf;
-                            }
-                            ctx.writeAndFlush(msg).addListener((DuplexChannel) ctx.channel(), (c, f) ->
+                            final Buffer buf = ctx.bufferAllocator().allocate(totalServerBytesWritten);
+                            buf.writerOffset(buf.capacity());
+                            ctx.writeAndFlush(buf).addListener((DuplexChannel) ctx.channel(), (c, f) ->
                                     c.shutdownOutput());
                             serverInitializedLatch.countDown();
                         }
@@ -279,14 +241,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            if (msg instanceof Buffer) {
-                                try (Buffer buf = (Buffer) msg) {
-                                    bytesRead += buf.readableBytes();
-                                }
-                            } else {
-                                ByteBuf buf = (ByteBuf) msg;
+                            try (Buffer buf = (Buffer) msg) {
                                 bytesRead += buf.readableBytes();
-                                buf.release();
                             }
                         }
 
@@ -338,20 +294,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAutoCloseFalseDoesShutdownOutputByteBuf(TestInfo testInfo) throws Throwable {
-        // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
-        assumeFalse(PlatformDependent.isWindows());
-        run(testInfo, this::testAutoCloseFalseDoesShutdownOutputByteBuf);
-    }
-
-    public void testAutoCloseFalseDoesShutdownOutputByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAutoCloseFalseDoesShutdownOutput(false, false, sb, cb, false);
-        testAutoCloseFalseDoesShutdownOutput(false, true, sb, cb, false);
-        testAutoCloseFalseDoesShutdownOutput(true, false, sb, cb, false);
-        testAutoCloseFalseDoesShutdownOutput(true, true, sb, cb, false);
-    }
-
-    @Test
     public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
         // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
         assumeFalse(PlatformDependent.isWindows());
@@ -359,17 +301,16 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     public void testAutoCloseFalseDoesShutdownOutput(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAutoCloseFalseDoesShutdownOutput(false, false, sb, cb, true);
-        testAutoCloseFalseDoesShutdownOutput(false, true, sb, cb, true);
-        testAutoCloseFalseDoesShutdownOutput(true, false, sb, cb, true);
-        testAutoCloseFalseDoesShutdownOutput(true, true, sb, cb, true);
+        testAutoCloseFalseDoesShutdownOutput(false, false, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(false, true, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(true, false, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(true, true, sb, cb);
     }
 
     private static void testAutoCloseFalseDoesShutdownOutput(boolean allowHalfClosed,
                                                              final boolean clientIsLeader,
                                                              ServerBootstrap sb,
-                                                             Bootstrap cb,
-                                                             boolean newBufferAPI) throws Exception {
+                                                             Bootstrap cb) throws Exception {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(1);
@@ -385,7 +326,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     .childOption(ChannelOption.SO_LINGER, 0);
 
             final SimpleChannelInboundHandler<?> leaderHandler = new AutoCloseFalseLeader(
-                    expectedBytes, serverReadExpectedLatch, doneLatch, causeRef, newBufferAPI);
+                    expectedBytes, serverReadExpectedLatch, doneLatch, causeRef);
             final SimpleChannelInboundHandler<?> followerHandler = new AutoCloseFalseFollower(expectedBytes,
                     serverReadExpectedLatch, doneLatch, causeRef);
             sb.childHandler(new ChannelInitializer<Channel>() {
@@ -445,38 +386,20 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof Buffer) {
-                bytesRead += ((Buffer) msg).readableBytes();
-                if (bytesRead >= expectedBytes) {
-                    // We write a reply and immediately close our end of the socket.
-                    Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
-                    buf.skipWritable(expectedBytes);
-                    ctx.writeAndFlush(buf).addListener(ctx.channel(), (c, f) ->
-                            c.close().addListener(c, (channel, future) -> {
-                                // This is a bit racy but there is no better way how to handle this in Java11.
-                                // The problem is that on close() the underlying FD will not actually be closed directly
-                                // but the close will be done after the Selector did process all events. Because of
-                                // this we will need to give it a bit time to ensure the FD is actual closed before we
-                                // count down the latch and try to write.
-                                channel.executor().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
-                            }));
-                }
-            } else {
-                bytesRead += ((ByteBuf) msg).readableBytes();
-                if (bytesRead >= expectedBytes) {
-                    // We write a reply and immediately close our end of the socket.
-                    ByteBuf buf = ctx.alloc().buffer(expectedBytes);
-                    buf.writerIndex(buf.writerIndex() + expectedBytes);
-                    ctx.writeAndFlush(buf).addListener(ctx.channel(), (c, f) ->
-                            c.close().addListener(c, (channel, future) -> {
-                                // This is a bit racy but there is no better way how to handle this in Java11.
-                                // The problem is that on close() the underlying FD will not actually be closed directly
-                                // but the close will be done after the Selector did process all events. Because of
-                                // this we will need to give it a bit time to ensure the FD is actual closed before we
-                                // count down the latch and try to write.
-                                channel.executor().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
-                            }));
-                }
+            bytesRead += ((Buffer) msg).readableBytes();
+            if (bytesRead >= expectedBytes) {
+                // We write a reply and immediately close our end of the socket.
+                Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
+                buf.skipWritable(expectedBytes);
+                ctx.writeAndFlush(buf).addListener(ctx.channel(), (c, f) ->
+                        c.close().addListener(c, (channel, future) -> {
+                            // This is a bit racy but there is no better way how to handle this in Java11.
+                            // The problem is that on close() the underlying FD will not actually be closed directly
+                            // but the close will be done after the Selector did process all events. Because of
+                            // this we will need to give it a bit time to ensure the FD is actual closed before we
+                            // count down the latch and try to write.
+                            channel.executor().schedule(followerCloseLatch::countDown, 200, MILLISECONDS);
+                        }));
             }
         }
 
@@ -493,33 +416,23 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         private final CountDownLatch followerCloseLatch;
         private final CountDownLatch doneLatch;
         private final AtomicReference<Throwable> causeRef;
-        private final boolean newBufferAPI;
         private int bytesRead;
         private boolean seenOutputShutdown;
 
         AutoCloseFalseLeader(int expectedBytes, CountDownLatch followerCloseLatch, CountDownLatch doneLatch,
-                             AtomicReference<Throwable> causeRef, boolean newBufferAPI) {
+                             AtomicReference<Throwable> causeRef) {
             this.expectedBytes = expectedBytes;
             this.followerCloseLatch = followerCloseLatch;
             this.doneLatch = doneLatch;
             this.causeRef = causeRef;
-            this.newBufferAPI = newBufferAPI;
         }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            final Object msg;
-            if (newBufferAPI) {
-                Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
-                buf.skipWritable(expectedBytes);
-                msg = buf.copy();
-                ctx.writeAndFlush(buf);
-            } else {
-                ByteBuf buf = ctx.alloc().buffer(expectedBytes);
-                buf.writerIndex(buf.writerIndex() + expectedBytes);
-                ctx.writeAndFlush(buf.retainedDuplicate());
-                msg = buf;
-            }
+            Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
+            buf.skipWritable(expectedBytes);
+            Buffer msg = buf.copy();
+            ctx.writeAndFlush(buf);
 
             // We wait here to ensure that we write before we have a chance to process the outbound
             // shutdown event.
@@ -536,11 +449,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof Buffer) {
-                bytesRead += ((Buffer) msg).readableBytes();
-            } else {
-                bytesRead += ((ByteBuf) msg).readableBytes();
-            }
+            bytesRead += ((Buffer) msg).readableBytes();
             if (bytesRead >= expectedBytes) {
                 if (!seenOutputShutdown) {
                     causeRef.set(new IllegalStateException(
@@ -577,31 +486,19 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testAllDataReadClosureByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testAllDataReadClosureByteBuf);
-    }
-
-    public void testAllDataReadClosureByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAllDataReadClosure(true, false, sb, cb, false);
-        testAllDataReadClosure(true, true, sb, cb, false);
-        testAllDataReadClosure(false, false, sb, cb, false);
-        testAllDataReadClosure(false, true, sb, cb, false);
-    }
-
-    @Test
     public void testAllDataReadClosure(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testAllDataReadClosure);
     }
 
     public void testAllDataReadClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAllDataReadClosure(true, false, sb, cb, true);
-        testAllDataReadClosure(true, true, sb, cb, true);
-        testAllDataReadClosure(false, false, sb, cb, true);
-        testAllDataReadClosure(false, true, sb, cb, true);
+        testAllDataReadClosure(true, false, sb, cb);
+        testAllDataReadClosure(true, true, sb, cb);
+        testAllDataReadClosure(false, false, sb, cb);
+        testAllDataReadClosure(false, true, sb, cb);
     }
 
     private static void testAllDataReadClosure(final boolean autoRead, final boolean allowHalfClosed,
-                                               ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI)
+                                               ServerBootstrap sb, Bootstrap cb)
             throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
@@ -622,15 +519,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                            if (newBufferAPI) {
-                                Buffer buf = ctx.bufferAllocator().allocate(totalServerBytesWritten);
-                                buf.writerOffset(buf.capacity());
-                                ctx.writeAndFlush(buf).addListener(ctx, ChannelFutureListeners.CLOSE);
-                            } else {
-                                ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
-                                buf.writerIndex(buf.capacity());
-                                ctx.writeAndFlush(buf).addListener(ctx, ChannelFutureListeners.CLOSE);
-                            }
+                            Buffer buf = ctx.bufferAllocator().allocate(totalServerBytesWritten);
+                            buf.writerOffset(buf.capacity());
+                            ctx.writeAndFlush(buf).addListener(ctx, ChannelFutureListeners.CLOSE);
                             serverInitializedLatch.countDown();
                         }
 
@@ -650,14 +541,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            if (msg instanceof Buffer) {
-                                try (Buffer buf = (Buffer) msg) {
-                                    bytesRead += buf.readableBytes();
-                                }
-                            } else {
-                                ByteBuf buf = (ByteBuf) msg;
+                            try (Buffer buf = (Buffer) msg) {
                                 bytesRead += buf.readableBytes();
-                                buf.release();
                             }
                         }
 
@@ -730,11 +615,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 private int attemptedBytesRead;
                 private int lastBytesRead;
                 private int numMessagesRead;
-
-                @Override
-                public ByteBuf allocate(ByteBufAllocator alloc) {
-                    return alloc.ioBuffer(guess(), guess());
-                }
 
                 @Override
                 public Buffer allocate(BufferAllocator alloc) {
