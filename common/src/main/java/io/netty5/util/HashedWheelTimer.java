@@ -299,7 +299,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         if (duration < MILLISECOND_NANOS) {
-            logger.warn("Configured tickDuration {} smaller then {}, using 1ms.",
+            logger.warn("Configured tickDuration {} smaller than {}, using 1ms.",
                         tickDuration, MILLISECOND_NANOS);
             this.tickDuration = MILLISECOND_NANOS;
         } else {
