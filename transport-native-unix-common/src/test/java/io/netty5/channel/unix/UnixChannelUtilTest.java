@@ -138,7 +138,7 @@ public class UnixChannelUtilTest {
         }
 
         Collections.shuffle(buffers);
-        try (CompositeBuffer comp = CompositeBuffer.compose(offHeap, buffers.toArray(Send[]::new))) {
+        try (CompositeBuffer comp = offHeap.compose(buffers)) {
             assertEquals(expected, isBufferCopyNeededForWrite(comp, IOV_MAX), buffers.toString());
         }
     }

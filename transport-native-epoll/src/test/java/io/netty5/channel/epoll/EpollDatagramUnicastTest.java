@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static java.util.Arrays.stream;
@@ -169,8 +170,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                     components[i].fill((byte) 0);
                     components[i].skipWritable(segmentSize);
                 }
-                buffer = CompositeBuffer.compose(
-                        offHeapAllocator(), stream(components).map(Buffer::send).toArray(Send[]::new));
+                buffer = offHeapAllocator().compose(stream(components).map(Buffer::send).collect(Collectors.toList()));
             } else {
                 buffer = offHeapAllocator().allocate(bufferCapacity);
                 buffer.fill((byte) 0);

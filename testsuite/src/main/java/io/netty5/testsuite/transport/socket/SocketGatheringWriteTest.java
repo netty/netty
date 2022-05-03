@@ -47,7 +47,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketGatheringWriteTest extends AbstractSocketTest {
@@ -197,10 +199,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
                     int length = Math.min(random.nextInt(1024 * 8), data.length - i);
                     if (composite && i % 2 == 0) {
                         int firstBufLength = length / 2;
-                        CompositeBuffer comp = CompositeBuffer.compose(
-                                alloc,
+                        CompositeBuffer comp = alloc.compose(asList(
                                 src.readSplit(firstBufLength).send(),
-                                src.readSplit(length - firstBufLength).send());
+                                src.readSplit(length - firstBufLength).send()));
                         cc.write(comp);
                     } else {
                         cc.write(src.readSplit(length));

@@ -21,7 +21,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
@@ -42,6 +41,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
+import static java.util.Arrays.asList;
 import static java.util.Arrays.copyOfRange;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,9 +59,9 @@ class BufferConversionHandlerTest {
                                                   Unpooled.wrappedBuffer(copyOfRange(DATA, mid, len)));
         Buffer c = DefaultBufferAllocators.onHeapAllocator().copyOf(DATA);
         Buffer tmp = c.copy();
-        Buffer d = CompositeBuffer.compose(DefaultBufferAllocators.onHeapAllocator(),
+        Buffer d = DefaultBufferAllocators.onHeapAllocator().compose(asList(
                                            tmp.readSplit(mid).send(),
-                                           tmp.send());
+                                           tmp.send()));
         for (ByteBuf byteBuf : List.of(a, b)) {
             for (Buffer buffer : List.of(c, d)) {
                 builder.add(new TestData(byteBuf.copy(), buffer.copy()));

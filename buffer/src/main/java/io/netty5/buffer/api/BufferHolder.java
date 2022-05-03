@@ -30,7 +30,7 @@ import static java.lang.invoke.MethodHandles.lookup;
  * The {@link BufferHolder} can only hold on to a single buffer, so objects and classes that need to hold on to multiple
  * buffers will have to do their implementation from scratch, though they can use the code of the {@link BufferHolder}
  * as inspiration. Alternatively, multiple buffers can be
- * {@linkplain CompositeBuffer#compose(BufferAllocator, Send[]) composed} into a single buffer, which can then be put
+ * {@linkplain BufferAllocator#compose(Iterable) composed} into a single buffer, which can then be put
  * in a buffer holder.
  * <p>
  * If you just want an object that is a reference to a buffer, then the {@link BufferRef} can be used for that purpose.

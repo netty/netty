@@ -28,6 +28,7 @@ import java.util.ArrayDeque;
 
 import static io.netty5.util.ReferenceCountUtil.safeRelease;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("unchecked")
@@ -289,7 +290,7 @@ public abstract class AbstractCoalescingBufferQueueForBuffer {
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
         try (next) {
-            return CompositeBuffer.compose(alloc, cumulation.send(), next.send());
+            return alloc.compose(asList(cumulation.send(), next.send()));
         }
     }
 

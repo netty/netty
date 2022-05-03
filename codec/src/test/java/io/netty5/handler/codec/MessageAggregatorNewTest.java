@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.api.CompositeBuffer.compose;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -105,7 +105,7 @@ public class MessageAggregatorNewTest {
 
         @Override
         protected CompositeBuffer beginAggregation(BufferAllocator allocator, Buffer start) {
-            return compose(allocator, start.copy().send());
+            return allocator.compose(start.copy().send());
         }
 
         @Override
@@ -137,8 +137,8 @@ public class MessageAggregatorNewTest {
             assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
             // 1 read issued from EmbeddedChannel constructor
 
-            try (CompositeBuffer all = compose(allocator, first.copy().send(), chunk.copy().send(),
-                    last.copy().send());
+            try (CompositeBuffer all = allocator.compose(asList(first.copy().send(), chunk.copy().send(),
+                    last.copy().send()));
                  CompositeBuffer out = embedded.readInbound()) {
                 assertEquals(all, out);
                 assertTrue(all.isAccessible());

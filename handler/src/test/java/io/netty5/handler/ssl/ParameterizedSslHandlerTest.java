@@ -177,15 +177,13 @@ public class ParameterizedSslHandlerTest {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
-                                            @SuppressWarnings("unchecked")
-                                            Send<Buffer>[] components = new Send[numComponents];
+                                            List<Send<Buffer>> components = new ArrayList<>(numComponents);
                                             for (int i = 0; i < numComponents; ++i) {
                                                 Buffer buf = ctx.bufferAllocator().allocate(singleComponentSize);
                                                 buf.skipWritable(singleComponentSize);
-                                                components[i] = buf.send();
+                                                components.add(buf.send());
                                             }
-                                            CompositeBuffer content = CompositeBuffer.compose(
-                                                    ctx.bufferAllocator(), components);
+                                            CompositeBuffer content = ctx.bufferAllocator().compose(components);
                                             ctx.writeAndFlush(content).addListener(future -> {
                                                 writeCause = future.cause();
                                                 if (writeCause == null) {

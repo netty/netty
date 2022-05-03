@@ -209,7 +209,7 @@ public abstract class WebSocketClientHandshakerTest {
 
         byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\n\r\n".getBytes(CharsetUtil.US_ASCII);
 
-        CompositeBuffer compositeBuffer = CompositeBuffer.compose(websocketChannel.bufferAllocator());
+        CompositeBuffer compositeBuffer = websocketChannel.bufferAllocator().compose();
         compositeBuffer.extendWith(websocketChannel.bufferAllocator().allocate(bytes.length).writeBytes(bytes).send());
         for (;;) {
             final Buffer buffer = websocketChannel.readOutbound();

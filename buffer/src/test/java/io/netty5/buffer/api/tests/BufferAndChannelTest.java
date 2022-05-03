@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
-import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +41,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -482,10 +482,9 @@ public class BufferAndChannelTest extends BufferTestSupport {
         BufferAllocator allocator = DefaultBufferAllocators.onHeapAllocator();
         Path path = parentDir.resolve("transferTo");
         try (FileChannel channel = FileChannel.open(path, READ, WRITE, CREATE);
-             Buffer buf = CompositeBuffer.compose(
-                allocator,
-                allocator.allocate(4).writeInt(0x01020304).send(),
-                allocator.allocate(4).writeInt(0x05060708).send())) {
+             Buffer buf = allocator.compose(asList(
+                        allocator.allocate(4).writeInt(0x01020304).send(),
+                        allocator.allocate(4).writeInt(0x05060708).send()))) {
             WritableByteChannel channelWrapper = new WritableByteChannel() {
                 private boolean pastFirstCall;
 
@@ -526,10 +525,9 @@ public class BufferAndChannelTest extends BufferTestSupport {
         BufferAllocator allocator = DefaultBufferAllocators.onHeapAllocator();
         Path path = parentDir.resolve("transferFrom");
         try (FileChannel channel = FileChannel.open(path, READ, WRITE, CREATE);
-             Buffer buf = CompositeBuffer.compose(
-                allocator,
+             Buffer buf = allocator.compose(asList(
                 allocator.allocate(4).send(),
-                allocator.allocate(4).send())) {
+                allocator.allocate(4).send()))) {
             ByteBuffer byteBuffer = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             assertThat(channel.write(byteBuffer)).isEqualTo(8);
             channel.position(0);

@@ -41,7 +41,6 @@ import static io.netty5.buffer.api.BufferAllocator.offHeapPooled;
 import static io.netty5.buffer.api.BufferAllocator.offHeapUnpooled;
 import static io.netty5.buffer.api.BufferAllocator.onHeapPooled;
 import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
-import static io.netty5.buffer.api.CompositeBuffer.compose;
 import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.COMPOSITE_CUMULATOR;
 import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -461,7 +460,7 @@ public class ByteToMessageDecoderForBufferTest {
     public void releaseWhenCompositeCumulateThrows(BufferAllocator allocator) {
         this.allocator = allocator;
         Buffer buffer = newBufferWithRandomBytes(allocator);
-        try (CompositeBuffer cumulation = compose(allocator, buffer.send())) {
+        try (CompositeBuffer cumulation = allocator.compose(buffer.send())) {
             Buffer in = allocator.allocate(0);
             in.close(); // Cause the cumulator to throw.
 

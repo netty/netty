@@ -27,9 +27,12 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -108,29 +111,33 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     private int implicitCapacityLimit;
 
     /**
-     * @see CompositeBuffer#compose(BufferAllocator, Send[])
+     * @see BufferAllocator#compose(Iterable)
      */
-    @SafeVarargs
-    public static CompositeBuffer compose(BufferAllocator allocator, Send<Buffer>... sends) {
-        Buffer[] bufs = new Buffer[sends.length];
+    public static CompositeBuffer compose(BufferAllocator allocator, Iterable<Send<Buffer>> sends) {
+        final List<Buffer> bufs;
+        if (sends instanceof Collection) {
+            bufs = new ArrayList<>(((Collection<?>) sends).size());
+        } else {
+            bufs = new ArrayList<>(4);
+        }
         RuntimeException ise = null;
-        for (int i = 0; i < sends.length; i++) {
+        for (Send<Buffer> buf: sends) {
             if (ise != null) {
                 try {
-                    sends[i].close();
+                    buf.close();
                 } catch (Exception closeExc) {
                     ise.addSuppressed(closeExc);
                 }
             } else {
                 try {
-                    bufs[i] = sends[i].receive();
+                    bufs.add(buf.receive());
                 } catch (RuntimeException e) {
                     // We catch RuntimeException instead of IllegalStateException to ensure cleanup always happens
                     // regardless of the exception thrown.
                     ise = e;
-                    for (int j = 0; j < i; j++) {
+                    for (Buffer b: bufs) {
                         try {
-                            bufs[j].close();
+                            b.close();
                         } catch (Exception closeExc) {
                             ise.addSuppressed(closeExc);
                         }
@@ -141,7 +148,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         if (ise != null) {
             throw ise;
         }
-        return new DefaultCompositeBuffer(allocator, filterExternalBufs(Arrays.stream(bufs)), COMPOSITE_DROP);
+        return new DefaultCompositeBuffer(allocator, filterExternalBufs(bufs.stream()), COMPOSITE_DROP);
     }
 
     /**

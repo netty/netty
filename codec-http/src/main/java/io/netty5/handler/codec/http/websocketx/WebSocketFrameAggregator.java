@@ -101,12 +101,12 @@ public class WebSocketFrameAggregator
     @Override
     protected WebSocketFrame beginAggregation(BufferAllocator allocator, WebSocketFrame start) {
         if (start instanceof TextWebSocketFrame) {
-            final CompositeBuffer content = CompositeBuffer.compose(allocator, start.binaryData().send());
+            final CompositeBuffer content = allocator.compose(start.binaryData().send());
             return new TextWebSocketFrame(true, start.rsv(), content);
         }
 
         if (start instanceof BinaryWebSocketFrame) {
-            final CompositeBuffer content = CompositeBuffer.compose(allocator, start.binaryData().send());
+            final CompositeBuffer content = allocator.compose(start.binaryData().send());
             return new BinaryWebSocketFrame(true, start.rsv(), content);
         }
 

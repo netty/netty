@@ -638,7 +638,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 if (CompositeBuffer.isComposite(cumulation)) {
                     composite = (CompositeBuffer) cumulation;
                 } else {
-                    composite = CompositeBuffer.compose(alloc, cumulation.send());
+                    composite = alloc.compose(cumulation.send());
                 }
                 if (in.readOnly()) {
                     composite.extendWith(in.copy().send());

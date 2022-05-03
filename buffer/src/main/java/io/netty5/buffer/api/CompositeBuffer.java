@@ -26,12 +26,12 @@ import java.nio.charset.Charset;
  * A composite buffer is constructed using one of the {@code compose} methods:
  * <ul>
  *     <li>
- *         {@link #compose(BufferAllocator, Send[])} creates a composite buffer from the buffers that are sent to it via
+ *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are sent to it via
  *         the passed in send objects. Since {@link Send#receive()} transfers ownership, the resulting composite buffer
  *         will have ownership, because it is guaranteed that there are no other references to its constituent buffers.
  *     </li>
  *     <li>
- *         {@link #compose(BufferAllocator)} creates an empty, zero capacity, composite buffer. Such empty buffers may
+ *         {@link BufferAllocator#compose()} creates an empty, zero capacity, composite buffer. Such empty buffers may
  *         change their {@linkplain #readOnly() read-only} states when they gain their first component.
  *     </li>
  * </ul>
@@ -73,26 +73,6 @@ import java.nio.charset.Charset;
 public interface CompositeBuffer extends Buffer {
 
     /**
-     * Compose the given sequence of sends of buffers and present them as a single buffer.
-     * <p>
-     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
-     * <p>
-     * See the class documentation for more information on what is required of the given buffers for composition to be
-     * allowed.
-     *
-     * @param allocator The allocator for the composite buffer. This allocator will be used e.g. to service
-     * {@link #ensureWritable(int)} calls.
-     * @param sends The sent buffers to compose into a single buffer view.
-     * @return A buffer composed of, and backed by, the given buffers.
-     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
-     * will be closed and discarded, respectively.
-     */
-    @SafeVarargs
-    static CompositeBuffer compose(BufferAllocator allocator, Send<Buffer>... sends) {
-        return DefaultCompositeBuffer.compose(allocator, sends);
-    }
-
-    /**
      * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
      * {@link #ensureWritable(int)} or {@link #extendWith(Send)}.
      *
@@ -105,10 +85,10 @@ public interface CompositeBuffer extends Buffer {
     }
 
     /**
-     * Check if the given buffer is a {@linkplain #compose(BufferAllocator, Send...) composite} buffer or not.
+     * Check if the given buffer is a composite buffer or not.
      * @param composite The buffer to check.
-     * @return {@code true} if the given buffer was created with {@link #compose(BufferAllocator, Send...)},
-     * {@code false} otherwise.
+     * @return {@code true} if the given buffer was created with {@link BufferAllocator#compose()},
+     * {@link BufferAllocator#compose(Send)} or {@link BufferAllocator#compose(Iterable)}, {@code false} otherwise.
      */
     static boolean isComposite(Buffer composite) {
         return composite instanceof CompositeBuffer;
@@ -120,7 +100,7 @@ public interface CompositeBuffer extends Buffer {
      * the composite buffer was created.
      * The extension buffer is added to the end of this composite buffer, which is modified in-place.
      *
-     * @see #compose(BufferAllocator, Send...)
+     * @see BufferAllocator#compose(Send)
      * @param extension The buffer to extend the composite buffer with.
      * @return This composite buffer instance.
      */
