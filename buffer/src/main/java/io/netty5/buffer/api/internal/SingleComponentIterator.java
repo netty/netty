@@ -21,13 +21,16 @@ import io.netty5.buffer.api.Resource;
 
 import java.lang.ref.Reference;
 
+import static java.util.Objects.requireNonNull;
+
 public final class SingleComponentIterator<T extends Next> implements ComponentIterator<T> {
     private final Resource<?> lifecycle;
     private final T singleComponent;
 
     @SuppressWarnings("unchecked")
     public SingleComponentIterator(Resource<?> lifecycle, Object singleComponent) {
-        this.lifecycle = lifecycle;
+        this.lifecycle = requireNonNull(lifecycle, "lifecycle");
+        // The singleComponent may be null if there is nothing to iterate.
         this.singleComponent = (T) singleComponent;
     }
 
