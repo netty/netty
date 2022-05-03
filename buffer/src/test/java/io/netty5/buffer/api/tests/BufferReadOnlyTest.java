@@ -155,6 +155,32 @@ public class BufferReadOnlyTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8).makeReadOnly()) {
             assertThrows(BufferReadOnlyException.class, () -> buf.writerOffset(0));
             assertThrows(BufferReadOnlyException.class, () -> buf.writerOffset(4));
+
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeByte((byte) 0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeShort((short) 0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeChar((char) 0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeMedium(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeInt(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeFloat(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeLong(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeDouble(0));
+            assertEquals(0, buf.writerOffset());
+
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeUnsignedByte(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeUnsignedShort(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeUnsignedMedium(0));
+            assertEquals(0, buf.writerOffset());
+            assertThrows(BufferReadOnlyException.class, () -> buf.writeUnsignedInt(0));
+            assertEquals(0, buf.writerOffset());
         }
     }
 
