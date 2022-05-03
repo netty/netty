@@ -142,6 +142,7 @@
 
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+        <javaModuleNameClassifier>${os.detected.name}.aarch_64</javaModuleNameClassifier>
         <skipTests>true</skipTests>
       </properties>
       <build>
@@ -244,7 +245,8 @@
   </profiles>
 
   <properties>
-    <javaModuleName>io.netty.resolver.dns.macos</javaModuleName>
+    <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
+    <javaModuleName>io.netty.resolver.dns.macos.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
