@@ -17,17 +17,25 @@ package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.MemoryManager;
 
+import java.util.List;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class MemoryManagerLoader {
     /**
-     * Cache the service loader to reduce cost of repeated calls.
+     * Cache the service loader result to reduce cost of repeated calls.
      * However, also place the cached loader field in a dedicated class, so the service loading is performed lazily,
      * on class initialisation, when (and if) needed.
+     * {@link ServiceLoader} objects are not actually thread-safe, so instead of caching the loader itself, we
+     * cache its result.
+     * This becomes a bit more complicated by the fact that the service-loader stream is lazy.
      */
-    private static final ServiceLoader<MemoryManager> LOADER = ServiceLoader.load(MemoryManager.class);
+    private static final AtomicReference<List<Provider<MemoryManager>>> CACHE = new AtomicReference<>();
+    private static final ReentrantLock CACHE_POP_LOCK = new ReentrantLock();
 
     private MemoryManagerLoader() {
     }
@@ -36,6 +44,22 @@ public final class MemoryManagerLoader {
      * @see MemoryManager#availableManagers()
      */
     public static Stream<Provider<MemoryManager>> stream() {
-        return LOADER.stream();
+        var cachedList = CACHE.get();
+        if (cachedList != null) {
+            return cachedList.stream();
+        }
+        CACHE_POP_LOCK.lock();
+        try {
+            cachedList = CACHE.get();
+            if (cachedList != null) {
+                return cachedList.stream();
+            }
+            var loader = ServiceLoader.load(MemoryManager.class);
+            cachedList = List.copyOf(loader.stream().collect(Collectors.toList()));
+            CACHE.set(cachedList);
+            return cachedList.stream();
+        } finally {
+            CACHE_POP_LOCK.unlock();
+        }
     }
 }
