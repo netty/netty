@@ -1429,7 +1429,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private void checkWriteBounds(int index, int size) {
-        if (index < 0 || capacity < index + size) {
+        if (index < 0 || capacity < index + size || readOnly) {
             throw indexOutOfBounds(index, true);
         }
     }

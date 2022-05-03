@@ -613,6 +613,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeByte(byte value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Byte.BYTES);
             delegate.writeByte(value);
@@ -634,6 +637,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeUnsignedByte(int value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Byte.BYTES);
             delegate.writeByte((byte) (value & 0xFF));
@@ -673,6 +679,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeChar(char value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Character.BYTES);
             delegate.writeChar(value);
@@ -731,6 +740,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeShort(short value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Short.BYTES);
             delegate.writeShort(value);
@@ -753,6 +765,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeUnsignedShort(int value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Short.BYTES);
             delegate.writeShort((short) (value & 0xFFFF));
@@ -811,6 +826,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeMedium(int value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(3);
             delegate.writeMedium(value);
@@ -833,6 +851,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeUnsignedMedium(int value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(3);
             delegate.writeMedium(value);
@@ -891,6 +912,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeInt(int value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Integer.BYTES);
             delegate.writeInt(value);
@@ -913,6 +937,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeUnsignedInt(long value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Integer.BYTES);
             delegate.writeInt((int) (value & 0xFFFFFFFFL));
@@ -953,6 +980,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeFloat(float value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Float.BYTES);
             delegate.writeFloat(value);
@@ -993,6 +1023,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeLong(long value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             checkWrite(Long.BYTES);
             delegate.writeLong(value);
@@ -1033,6 +1066,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer writeDouble(double value) {
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
         try {
             int size = Double.BYTES;
             checkWrite(size);
