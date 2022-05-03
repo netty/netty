@@ -2010,9 +2010,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             this.compositeBuffer = compositeBuffer;
             this.intoIterator = intoIterator;
             bufs = compositeBuffer.bufs;
-            nextIndex = 1;
-            currentItr = intoIterator.apply(bufs[0]);
-            currentComponent = currentItr.first();
+            nextComponent();
         }
 
         @SuppressWarnings("unchecked")
@@ -2021,23 +2019,26 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             if (currentComponent == null) {
                 return null; // Already at the end of the iteration.
             }
-            currentComponent = currentComponent.next();
-            if (currentComponent == null) {
-                currentItr.close();
-                if (nextIndex < bufs.length) {
-                    pastOffset += bufs[nextIndex - 1].capacity();
-                    currentReadSkip = 0;
-                    currentWriteSkip = 0;
-                    currentItr = intoIterator.apply(bufs[nextIndex]);
-                    currentComponent = currentItr.first();
-                    if (currentComponent != null) {
-                        nextIndex++;
-                        return (N) this;
-                    }
-                }
-                currentItr = null;
+            nextComponent();
+            return currentComponent != null? (N) this : null;
+        }
+
+        private void nextComponent() {
+            if (currentComponent != null) {
+                currentComponent = currentComponent.next();
             }
-            return null;
+            while (currentComponent == null) {
+                if (currentItr != null) {
+                    currentItr.close();
+                    currentItr = null;
+                }
+                if (nextIndex >= bufs.length) {
+                    return;
+                }
+                currentItr = intoIterator.apply(bufs[nextIndex]);
+                nextIndex++;
+                currentComponent = currentItr.first();
+            }
         }
 
         @Override
@@ -2082,9 +2083,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
         @Override
         public void skipReadable(int byteCount) {
-            if (byteCount < 0) {
-                throw new IllegalArgumentException("Byte count cannot be negative: " + byteCount);
-            }
             ((ReadableComponent) currentComponent).skipReadable(byteCount);
             compositeBuffer.readerOffset(pastOffset + currentReadSkip + byteCount);
             currentReadSkip += byteCount; // This needs to be after the bounds-checks.
@@ -2127,9 +2125,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
         @Override
         public void skipWritable(int byteCount) {
-            if (byteCount < 0) {
-                throw new IllegalArgumentException("Byte count cannot be negative: " + byteCount);
-            }
             ((WritableComponent) currentComponent).skipWritable(byteCount);
             compositeBuffer.writerOffset(pastOffset + currentWriteSkip + byteCount);
             currentWriteSkip += byteCount; // This needs to be after the bounds-checks.
