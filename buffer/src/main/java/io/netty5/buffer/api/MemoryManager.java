@@ -88,7 +88,7 @@ public interface MemoryManager {
     }
 
     /**
-     * Get a lazy-loading stream of all available memory managers.
+     * Get a stream of all available memory managers.
      *
      * @return A stream of providers of memory managers instances.
      */
