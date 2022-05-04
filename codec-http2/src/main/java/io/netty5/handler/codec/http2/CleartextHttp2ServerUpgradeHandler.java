@@ -27,8 +27,6 @@ import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
-import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static java.util.Objects.requireNonNull;
 
@@ -68,7 +66,8 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
         ctx.pipeline()
                 .addAfter(ctx.name(), null, httpServerUpgradeHandler)
                 .addAfter(ctx.name(), null, httpServerCodec)
-                .addAfter(ctx.name(), null, new BufferConversionHandler(Conversion.BYTEBUF_TO_BUFFER));
+                .addAfter(ctx.name(), null, new BufferConversionHandler(
+                        Conversion.BYTEBUF_TO_BUFFER, Conversion.BYTEBUF_TO_BUFFER));
     }
 
     /**

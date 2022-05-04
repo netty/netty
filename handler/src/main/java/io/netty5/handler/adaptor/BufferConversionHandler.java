@@ -49,13 +49,14 @@ public final class BufferConversionHandler implements ChannelHandler {
     private final Conversion onUserEvent;
 
     /**
-     * Create a conversion handler where incoming reads, and outgoing writes, are passed through the given conversion.
+     * Create a conversion handler where incoming reads are passed through the given conversion,
+     * and outgoing writes are passed through its {@linkplain Conversion#invert() inverse}.
      *
      * @param conversion The conversion to apply to all {@linkplain #channelRead(ChannelHandlerContext, Object) read}
      *                  and {@linkplain #write(ChannelHandlerContext, Object) write} messages.
      */
     public BufferConversionHandler(Conversion conversion) {
-        this(conversion, conversion, Conversion.NONE);
+        this(conversion, conversion.invert(), Conversion.NONE);
     }
 
     /**
@@ -145,6 +146,11 @@ public final class BufferConversionHandler implements ChannelHandler {
                 }
                 return msg;
             }
+
+            @Override
+            public Conversion invert() {
+                return BUFFER_TO_BYTEBUF;
+            }
         },
         /**
          * Convert {@link Buffer} instances to {@link ByteBuf} instances.
@@ -160,6 +166,11 @@ public final class BufferConversionHandler implements ChannelHandler {
                     return ByteBufAdaptor.intoByteBuf(buf);
                 }
                 return msg;
+            }
+
+            @Override
+            public Conversion invert() {
+                return BYTEBUF_TO_BUFFER;
             }
         },
         /**
@@ -180,6 +191,11 @@ public final class BufferConversionHandler implements ChannelHandler {
                 }
                 return msg;
             }
+
+            @Override
+            public Conversion invert() {
+                return this;
+            }
         },
         /**
          * Do not convert anything, but let the messages pass through unchanged.
@@ -188,6 +204,11 @@ public final class BufferConversionHandler implements ChannelHandler {
             @Override
             public Object convert(Object msg) {
                 return msg;
+            }
+
+            @Override
+            public Conversion invert() {
+                return this;
             }
         };
 
@@ -198,11 +219,18 @@ public final class BufferConversionHandler implements ChannelHandler {
          * @return The result of the conversion.
          */
         public abstract Object convert(Object msg);
+
+        /**
+         * Return a {@link Conversion} that is the inverse of this one.
+         *
+         * @return A conversion that converts buffers in the opposite direction.
+         */
+        public abstract Conversion invert();
     }
 
     static final class LazyBufferToByteBuf {
         static final BufferConversionHandler HANDLER =
-                new BufferConversionHandler(Conversion.BUFFER_TO_BYTEBUF, Conversion.BYTEBUF_TO_BUFFER);
+                new BufferConversionHandler(Conversion.BUFFER_TO_BYTEBUF);
 
         private LazyBufferToByteBuf() {
         }
@@ -210,7 +238,7 @@ public final class BufferConversionHandler implements ChannelHandler {
 
     static final class LazyByteBufToBuffer {
         static final BufferConversionHandler HANDLER =
-                new BufferConversionHandler(Conversion.BYTEBUF_TO_BUFFER, Conversion.BUFFER_TO_BYTEBUF);
+                new BufferConversionHandler(Conversion.BYTEBUF_TO_BUFFER);
 
         private LazyByteBufToBuffer() {
         }
