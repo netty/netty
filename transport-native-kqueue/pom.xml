@@ -142,6 +142,7 @@
       <properties>
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+        <javaModuleNameClassifier>${os.detected.name}.aarch_64</javaModuleNameClassifier>
         <jni.compiler.args.cflags>CFLAGS=-target arm64-apple-macos11 -O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
         <jni.compiler.args.ldflags>LDFLAGS=-arch arm64 -Wl,-weak_library,${unix.common.lib.unpacked.dir}/lib${unix.common.lib.name}.a -Wl,-platform_version,macos,11.0,11.0</jni.compiler.args.ldflags>
         <skipTests>true</skipTests>
@@ -477,7 +478,8 @@
   </profiles>
 
   <properties>
-    <javaModuleName>io.netty5.transport.kqueue</javaModuleName>
+    <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
+    <javaModuleName>io.nett5.transport.kqueue.${javaModuleNameClassifier}</javaModuleName>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
