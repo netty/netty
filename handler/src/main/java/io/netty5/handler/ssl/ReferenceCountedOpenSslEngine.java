@@ -17,6 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.ComponentIterator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.ReadableComponent;
 import io.netty5.buffer.api.ReadableComponentProcessor;
@@ -102,7 +103,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         implements ReferenceCounted, ApplicationProtocolAccessor, VectoredUnwrap {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
-
+    private static final ByteBuffer EMPTY = ByteBuffer.allocateDirect(0);
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2 = 0;
@@ -174,11 +175,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     private volatile boolean needTask;
     private String[] explicitlyEnabledProtocols;
     private boolean sessionSet;
-
-    // Buffer IO helpers
-    private SslWrite write;
-    private SslRead read;
-    private final SslBioSetByteBuffer setBioByteBuffer = new SslBioSetByteBuffer();
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
@@ -351,9 +347,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
-
-        write = new SslWrite(ssl);
-        read = new SslRead(ssl);
     }
 
     final synchronized String[] authMethods() {
@@ -509,8 +502,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         if (!destroyed) {
             destroyed = true;
             engineMap.remove(ssl);
-            read = null;
-            write = null;
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
 
@@ -540,33 +531,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         } else {
             try (Buffer buf = alloc.allocate(len)) {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                write.len = len;
-                buf.forEachReadable(0, write);
-                sslWrote = write.sslWrote;
-                if (sslWrote > 0) {
-                    src.position(pos + sslWrote);
-                } else {
-                    src.position(pos);
+                try (var iterator = buf.forEachReadable()) {
+                    var c = iterator.first();
+                    sslWrote = SSL.writeToSSL(ssl, c.readableNativeAddress(), len);
+                    if (sslWrote > 0) {
+                        src.position(pos + sslWrote);
+                    }
+                    assert c.next() == null : "Unexpected composite buffer";
                 }
             }
         }
         return sslWrote;
-    }
-
-    static final class SslWrite implements ReadableComponentProcessor<RuntimeException> {
-        private final long ssl;
-        int len;
-        int sslWrote;
-
-        SslWrite(long ssl) {
-            this.ssl = ssl;
-        }
-
-        @Override
-        public boolean process(int index, ReadableComponent component) {
-            sslWrote = SSL.writeToSSL(ssl, component.readableNativeAddress(), len);
-            return false;
-        }
     }
 
     /**
@@ -581,9 +556,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             Buffer buf = alloc.allocate(len);
             try {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                setBioByteBuffer.networkBIO = networkBIO;
-                setBioByteBuffer.len = len;
-                buf.forEachReadable(0, setBioByteBuffer);
+                try (var iterator = buf.forEachReadable()) {
+                    var component = iterator.first();
+                    SSL.bioSetByteBuffer(networkBIO, component.readableNativeAddress(), len, false);
+                    assert component.next() == null;
+                }
                 return buf;
             } catch (Throwable cause) {
                 buf.close();
@@ -591,24 +568,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             }
         }
         return null;
-    }
-
-    static final class SslBioSetByteBuffer implements ReadableComponentProcessor<RuntimeException>,
-                                                      WritableComponentProcessor<RuntimeException> {
-        long networkBIO;
-        int len;
-
-        @Override
-        public boolean process(int index, ReadableComponent component) {
-            SSL.bioSetByteBuffer(networkBIO, component.readableNativeAddress(), len, false);
-            return false;
-        }
-
-        @Override
-        public boolean process(int index, WritableComponent component) {
-            SSL.bioSetByteBuffer(networkBIO, component.writableNativeAddress(), len, true);
-            return false;
-        }
     }
 
     /**
@@ -627,9 +586,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             final int limit = dst.limit();
             final int len = min(maxEncryptedPacketLength0(), limit - pos);
             try (Buffer buf = alloc.allocate(len)) {
-                read.len = len;
-                buf.forEachWritable(0, read);
-                sslRead = read.sslRead;
+                try (var iterator = buf.forEachWritable()) {
+                    var component = iterator.first();
+                    sslRead = SSL.readFromSSL(ssl, component.writableNativeAddress(), len);
+                    assert component.next() == null;
+                }
                 if (sslRead > 0) {
                     buf.copyInto(0, dst, dst.position(), sslRead);
                     dst.position(dst.position() + sslRead);
@@ -638,22 +599,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         }
 
         return sslRead;
-    }
-
-    static final class SslRead implements WritableComponentProcessor<RuntimeException> {
-        private final long ssl;
-        int len;
-        int sslRead;
-
-        SslRead(long ssl) {
-            this.ssl = ssl;
-        }
-
-        @Override
-        public boolean process(int index, WritableComponent component) {
-            sslRead = SSL.readFromSSL(ssl, component.writableNativeAddress(), len);
-            return false;
-        }
     }
 
     /**
@@ -741,15 +686,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             int bytesProduced = 0;
             final Buffer bioReadCopyBuf;
             // Setup the BIO buffer so that we directly write the encryption results into dst.
-            if (dst.isDirect()) {
-                SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), dst.remaining(), true);
+            int len = dst.remaining();
+            if (len == 0) {
+                SSL.bioSetByteBuffer(networkBIO, bufferAddress(EMPTY), 0, true);
+                bioReadCopyBuf = null;
+            } else if (dst.isDirect()) {
+                SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), len, true);
                 bioReadCopyBuf = null;
             } else {
-                int len = dst.remaining();
                 bioReadCopyBuf = alloc.allocate(len);
-                setBioByteBuffer.networkBIO = networkBIO;
-                setBioByteBuffer.len = len;
-                bioReadCopyBuf.forEachWritable(0, setBioByteBuffer);
+                try (var iterator = bioReadCopyBuf.forEachWritable()) {
+                    var component = iterator.first();
+                    SSL.bioSetByteBuffer(networkBIO, component.writableNativeAddress(), len, true);
+                    assert component.next() == null;
+                }
             }
 
             try {

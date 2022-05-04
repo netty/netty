@@ -25,6 +25,8 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
+import io.netty5.buffer.api.ComponentIterator;
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.ReadableComponent;
@@ -528,7 +530,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         if (delegate.nioBufferCount() == 1) {
             ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes);
-            if (processor.process(initialIndex, new ReadableBufferComponent(byteBuffer, this))) {
+            if (processor.process(initialIndex, new ReadableBufferComponent(byteBuffer, this, null))) {
                 return 1;
             } else {
                 return -1;
@@ -536,12 +538,57 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         ByteBuffer[] byteBuffers = delegate.nioBuffers(readerOffset(), readableBytes);
         for (int i = 0; i < byteBuffers.length; i++) {
-            ReadableBufferComponent component = new ReadableBufferComponent(byteBuffers[i], this);
+            ReadableBufferComponent component = new ReadableBufferComponent(byteBuffers[i], this, null);
             if (!processor.process(initialIndex + i, component)) {
                 return -(i + 1);
             }
         }
         return byteBuffers.length;
+    }
+
+    @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        acquire();
+        return new ComponentIterator<T>() {
+            ByteBuffer[] byteBuffers;
+            int index;
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public T first() {
+                int readableBytes = readableBytes();
+                if (readableBytes == 0) {
+                    return null;
+                }
+                if (delegate.nioBufferCount() == 1) {
+                    ByteBuffer byteBuffer = delegate.nioBuffer(readerOffset(), readableBytes);
+                    return (T) new ReadableBufferComponent(byteBuffer, ByteBufBuffer.this, this::noNext);
+                }
+                byteBuffers = delegate.nioBuffers(readerOffset(), readableBytes);
+                return getNext();
+            }
+
+            private <N extends Next> N noNext() {
+                return null;
+            }
+
+            @SuppressWarnings("unchecked")
+            private <N extends Next> N getNext() {
+                if (index >= byteBuffers.length) {
+                    return null;
+                }
+                ByteBuffer byteBuffer = byteBuffers[index];
+                index++;
+                return (N) new ReadableBufferComponent(byteBuffer, ByteBufBuffer.this, this::getNext);
+            }
+
+            @Override
+            public void close() {
+                byteBuffers = null;
+                index = 0;
+                ByteBufBuffer.this.close();
+            }
+        };
     }
 
     @Override
@@ -559,7 +606,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         if (delegate.nioBufferCount() == 1) {
             ByteBuffer byteBuffer = delegate.nioBuffer(writerOffset(), writableBytes);
-            if (processor.process(initialIndex, new WritableBufferComponent(byteBuffer, this))) {
+            if (processor.process(initialIndex, new WritableBufferComponent(byteBuffer, this, null))) {
                 return 1;
             } else {
                 return -1;
@@ -567,12 +614,61 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         ByteBuffer[] byteBuffers = delegate.nioBuffers(writerOffset(), writableBytes);
         for (int i = 0; i < byteBuffers.length; i++) {
-            WritableBufferComponent component = new WritableBufferComponent(byteBuffers[i], this);
+            WritableBufferComponent component = new WritableBufferComponent(byteBuffers[i], this, null);
             if (!processor.process(initialIndex + i, component)) {
                 return -(i + 1);
             }
         }
         return byteBuffers.length;
+    }
+
+    @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        acquire();
+        if (readOnly()) {
+            close();
+            throw bufferIsReadOnly(this);
+        }
+        return new ComponentIterator<T>() {
+            ByteBuffer[] byteBuffers;
+            int index;
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public T first() {
+                int writableBytes = writableBytes();
+                if (writableBytes == 0) {
+                    return null;
+                }
+                if (delegate.nioBufferCount() == 1) {
+                    ByteBuffer byteBuffer = delegate.nioBuffer(writerOffset(), writableBytes);
+                    return (T) new WritableBufferComponent(byteBuffer, ByteBufBuffer.this, this::noNext);
+                }
+                byteBuffers = delegate.nioBuffers(readerOffset(), writableBytes);
+                return getNext();
+            }
+
+            private <N extends Next> N noNext() {
+                return null;
+            }
+
+            @SuppressWarnings("unchecked")
+            private <N extends Next> N getNext() {
+                if (index >= byteBuffers.length) {
+                    return null;
+                }
+                ByteBuffer byteBuffer = byteBuffers[index];
+                index++;
+                return (N) new WritableBufferComponent(byteBuffer, ByteBufBuffer.this, this::getNext);
+            }
+
+            @Override
+            public void close() {
+                byteBuffers = null;
+                index = 0;
+                ByteBufBuffer.this.close();
+            }
+        };
     }
 
     @Override
@@ -1156,15 +1252,18 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
     }
 
-    private static final class ReadableBufferComponent implements ReadableComponent, NotReadOnlyReadableComponent {
+    private static final class ReadableBufferComponent
+            implements ReadableComponent, NotReadOnlyReadableComponent, Next {
         private final ByteBuffer byteBuffer;
         private final Buffer buffer;
         private final int startByteBufferPosition;
         private final int startBufferReaderOffset;
+        private final Next next;
 
-        ReadableBufferComponent(ByteBuffer byteBuffer, Buffer buffer) {
+        ReadableBufferComponent(ByteBuffer byteBuffer, Buffer buffer, Next next) {
             this.byteBuffer = byteBuffer;
             this.buffer = buffer;
+            this.next = next;
             startByteBufferPosition = byteBuffer.position();
             startBufferReaderOffset = buffer.readerOffset();
         }
@@ -1220,17 +1319,24 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         public ByteBuffer mutableReadableBuffer() {
             return byteBuffer;
         }
+
+        @Override
+        public <N extends Next> N next() {
+            return next.next();
+        }
     }
 
-    private static final class WritableBufferComponent implements WritableComponent {
+    private static final class WritableBufferComponent implements WritableComponent, Next {
         private final ByteBuffer byteBuffer;
         private final Buffer buffer;
+        private final Next next;
         private final int startByteBufferPosition;
         private final int startBufferWriterOffset;
 
-        WritableBufferComponent(ByteBuffer byteBuffer, Buffer buffer) {
+        WritableBufferComponent(ByteBuffer byteBuffer, Buffer buffer, Next next) {
             this.byteBuffer = byteBuffer;
             this.buffer = buffer;
+            this.next = next;
             startByteBufferPosition = byteBuffer.position();
             startBufferWriterOffset = buffer.writerOffset();
         }
@@ -1275,6 +1381,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             buffer.skipWritable(byteCount);
             int delta = buffer.writerOffset() - startBufferWriterOffset;
             byteBuffer.position(startByteBufferPosition + delta);
+        }
+
+        @Override
+        public <N extends Next> N next() {
+            return next.next();
         }
     }
 

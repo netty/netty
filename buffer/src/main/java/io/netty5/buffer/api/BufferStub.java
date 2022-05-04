@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.buffer.api.ComponentIterator.Next;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -243,9 +245,19 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        return delegate.forEachReadable();
+    }
+
+    @Override
     public <E extends Exception> int forEachWritable(int initialIndex,
                                                      WritableComponentProcessor<E> processor) throws E {
         return delegate.forEachWritable(initialIndex, processor);
+    }
+
+    @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        return delegate.forEachWritable();
     }
 
     @Override

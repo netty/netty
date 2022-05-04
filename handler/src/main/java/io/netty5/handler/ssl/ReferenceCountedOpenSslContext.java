@@ -941,14 +941,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     private static long newBIO(Buffer buffer) throws Exception {
         long bio = SSL.newMemBIO();
-        buffer.forEachReadable(0, (index, component) -> {
-            int readable = component.readableBytes();
-            if (SSL.bioWrite(bio, component.readableNativeAddress(), readable) != readable) {
-                SSL.freeBIO(bio);
-                throw new IllegalStateException("Could not write data to memory BIO");
+        try (var iterator = buffer.forEachReadable()) {
+            for (var component = iterator.first(); component != null; component = component.next()) {
+                int readable = component.readableBytes();
+                if (SSL.bioWrite(bio, component.readableNativeAddress(), readable) != readable) {
+                    SSL.freeBIO(bio);
+                    throw new IllegalStateException("Could not write data to memory BIO");
+                }
             }
-            return true;
-        });
+        }
         return bio;
     }
 

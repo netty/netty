@@ -20,6 +20,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
+import io.netty5.buffer.api.ComponentIterator;
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.ReadableComponent;
@@ -28,6 +30,7 @@ import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
+import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -52,7 +55,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 final class NioBuffer extends AdaptableBuffer<NioBuffer>
-        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent {
+        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
     private ByteBuffer base;
@@ -590,6 +593,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     public ByteBuffer writableBuffer() {
         return bbslice(wmem, writerOffset(), writableBytes());
     }
+
+    @Override
+    public <N extends Next> N next() {
+        return null; // There is no "next" component in our external-iteration of components.
+    }
     // </editor-fold>
 
     @Override
@@ -611,6 +619,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        return new SingleComponentIterator<T>(acquire(), readableBytes() > 0? this : null);
+    }
+
+    @Override
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
@@ -626,6 +639,12 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         } finally {
             Reference.reachabilityFence(this);
         }
+    }
+
+    @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        checkWrite(writerOffset(), writableBytes(), false);
+        return new SingleComponentIterator<T>(acquire(), writableBytes() > 0? this : null);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">

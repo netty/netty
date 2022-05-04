@@ -15,8 +15,10 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.util.SafeCloseable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,6 +32,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
@@ -990,6 +993,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
+        return new CompositeComponentIterator<T>((DefaultCompositeBuffer) acquire(), Buffer::forEachReadable);
+    }
+
+    @Override
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
@@ -1019,6 +1027,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
         }
         return visited;
+    }
+
+    @Override
+    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
+        checkWriteBounds(writerOffset(), writableBytes());
+        return new CompositeComponentIterator<T>((DefaultCompositeBuffer) acquire(), Buffer::forEachWritable);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors.">
@@ -1949,6 +1963,180 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         public boolean process(int index, WritableComponent component) {
             buffers[index] = component.writableBuffer();
             return true;
+        }
+    }
+
+    private static final class CompositeComponentIterator<T extends Next> implements ComponentIterator<T> {
+        private final DefaultCompositeBuffer compositeBuffer;
+        private final Function<Buffer, ComponentIterator<T>> intoIterator;
+        NextComponent<T> readableNext;
+
+        private CompositeComponentIterator(DefaultCompositeBuffer compositeBuffer,
+                                           Function<Buffer, ComponentIterator<T>> intoIterator) {
+            this.compositeBuffer = compositeBuffer;
+            this.intoIterator = intoIterator;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public T first() {
+            return compositeBuffer.bufs.length > 0 ?
+                    (T) (readableNext = new NextComponent<>(compositeBuffer, intoIterator)) : null;
+        }
+
+        @Override
+        public void close() {
+            if (readableNext != null) {
+                readableNext.close();
+            }
+            compositeBuffer.close();
+        }
+    }
+
+    private static final class NextComponent<T extends Next>
+            implements ReadableComponent, WritableComponent, Next, SafeCloseable {
+        private final DefaultCompositeBuffer compositeBuffer;
+        private final Function<Buffer, ComponentIterator<T>> intoIterator;
+        private final Buffer[] bufs;
+        int nextIndex;
+        ComponentIterator<T> currentItr;
+        T currentComponent;
+        int pastOffset;
+        int currentReadSkip;
+        int currentWriteSkip;
+
+        private NextComponent(DefaultCompositeBuffer compositeBuffer,
+                              Function<Buffer, ComponentIterator<T>> intoIterator) {
+            this.compositeBuffer = compositeBuffer;
+            this.intoIterator = intoIterator;
+            bufs = compositeBuffer.bufs;
+            nextComponent();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <N extends Next> N next() {
+            if (currentComponent == null) {
+                return null; // Already at the end of the iteration.
+            }
+            nextComponent();
+            return currentComponent != null? (N) this : null;
+        }
+
+        private void nextComponent() {
+            if (currentComponent != null) {
+                currentComponent = currentComponent.next();
+            }
+            while (currentComponent == null) {
+                if (currentItr != null) {
+                    currentItr.close();
+                    currentItr = null;
+                }
+                if (nextIndex >= bufs.length) {
+                    return;
+                }
+                currentItr = intoIterator.apply(bufs[nextIndex]);
+                nextIndex++;
+                currentComponent = currentItr.first();
+            }
+        }
+
+        @Override
+        public boolean hasReadableArray() {
+            return ((ReadableComponent) currentComponent).hasReadableArray();
+        }
+
+        @Override
+        public byte[] readableArray() {
+            return ((ReadableComponent) currentComponent).readableArray();
+        }
+
+        @Override
+        public int readableArrayOffset() {
+            return ((ReadableComponent) currentComponent).readableArrayOffset();
+        }
+
+        @Override
+        public int readableArrayLength() {
+            return ((ReadableComponent) currentComponent).readableArrayLength();
+        }
+
+        @Override
+        public long readableNativeAddress() {
+            return ((ReadableComponent) currentComponent).readableNativeAddress();
+        }
+
+        @Override
+        public ByteBuffer readableBuffer() {
+            return ((ReadableComponent) currentComponent).readableBuffer();
+        }
+
+        @Override
+        public int readableBytes() {
+            return ((ReadableComponent) currentComponent).readableBytes();
+        }
+
+        @Override
+        public ByteCursor openCursor() {
+            return ((ReadableComponent) currentComponent).openCursor();
+        }
+
+        @Override
+        public void skipReadable(int byteCount) {
+            ((ReadableComponent) currentComponent).skipReadable(byteCount);
+            compositeBuffer.readerOffset(pastOffset + currentReadSkip + byteCount);
+            currentReadSkip += byteCount; // This needs to be after the bounds-checks.
+        }
+
+        @Override
+        public boolean hasWritableArray() {
+            return ((WritableComponent) currentComponent).hasWritableArray();
+        }
+
+        @Override
+        public byte[] writableArray() {
+            return ((WritableComponent) currentComponent).writableArray();
+        }
+
+        @Override
+        public int writableArrayOffset() {
+            return ((WritableComponent) currentComponent).writableArrayOffset();
+        }
+
+        @Override
+        public int writableArrayLength() {
+            return ((WritableComponent) currentComponent).writableArrayLength();
+        }
+
+        @Override
+        public long writableNativeAddress() {
+            return ((WritableComponent) currentComponent).writableNativeAddress();
+        }
+
+        @Override
+        public int writableBytes() {
+            return ((WritableComponent) currentComponent).writableBytes();
+        }
+
+        @Override
+        public ByteBuffer writableBuffer() {
+            return ((WritableComponent) currentComponent).writableBuffer();
+        }
+
+        @Override
+        public void skipWritable(int byteCount) {
+            ((WritableComponent) currentComponent).skipWritable(byteCount);
+            compositeBuffer.writerOffset(pastOffset + currentWriteSkip + byteCount);
+            currentWriteSkip += byteCount; // This needs to be after the bounds-checks.
+        }
+
+        @Override
+        public void close() {
+            currentComponent = null;
+            if (currentItr != null) {
+                currentItr.close();
+                currentItr = null;
+            }
         }
     }
 }
