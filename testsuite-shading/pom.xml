@@ -34,7 +34,9 @@
     <classesShadedDir>${project.build.directory}/classes-shaded</classesShadedDir>
     <classesShadedNativeDir>${classesShadedDir}/META-INF/native</classesShadedNativeDir>
     <shadingPrefix>shaded</shadingPrefix>
-    <shadingPrefix2>shaded2</shadingPrefix2>
+    <shadingPrefix2>shaded_2</shadingPrefix2>
+    <mangledShadingPrefix>shaded</mangledShadingPrefix>
+    <mangledShadingPrefix2>shaded_12</mangledShadingPrefix2>
     <skipShadingTestsuite>true</skipShadingTestsuite>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
     <japicmp.skip>true</japicmp.skip>
@@ -126,12 +128,12 @@
                     <include name="shaded2.jar" />
                   </fileset>
                 </unzip>
-                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${mangledShadingPrefix}_${nativeTransportLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${mangledShadingPrefix2}_${nativeTransportLib}" />
                 <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
 
-                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
-                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${mangledShadingPrefix}_${nativeTcnativeLib}" />
+                <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${mangledShadingPrefix2}_${nativeTcnativeLib}" />
                 <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
 
                 <delete file="${project.build.directory}/shaded1.jar" />

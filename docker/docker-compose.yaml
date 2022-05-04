@@ -29,7 +29,11 @@ services:
 
   build:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
+    command: /bin/bash -cl "
+      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora && 
+      cd testsuite-shading &&
+      ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora
+    "
 
   deploy:
     <<: *common
