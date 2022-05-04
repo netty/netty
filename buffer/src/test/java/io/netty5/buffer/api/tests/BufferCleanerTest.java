@@ -17,6 +17,7 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.internal.Statics;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -30,6 +31,7 @@ import static io.netty5.buffer.api.MemoryManager.using;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@Isolated // Cannot run in parallel with any other tests because we access Statics.MEM_USAGE_NATIVE.
 public class BufferCleanerTest extends BufferTestSupport {
     @SuppressWarnings("unused")
     private static volatile int sink;
