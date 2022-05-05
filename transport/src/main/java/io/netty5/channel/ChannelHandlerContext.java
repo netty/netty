@@ -187,7 +187,7 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     ByteBufAllocator alloc();
 
     /**
