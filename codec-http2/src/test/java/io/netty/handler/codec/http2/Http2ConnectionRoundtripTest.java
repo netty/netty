@@ -272,7 +272,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(headers),
                 anyInt(), anyShort(), anyBoolean(), eq(0), eq(true));
 
-        bootstrapEnv(1, 2, 1, 0, 0);
+        bootstrapEnv(1, 2, 2, 0, 0);
 
         // Set the maxHeaderListSize to 100 so we may be able to write some headers, but not all. We want to verify
         // that we don't corrupt state if some can be written but not all.
@@ -394,7 +394,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), anyBoolean());
 
-        bootstrapEnv(1, 1, 1, 1);
+        bootstrapEnv(1, 1, 2, 1);
 
         final Http2Headers headers = dummyHeaders();
 
@@ -738,7 +738,7 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void writeFailureFlowControllerRemoveFrame()
             throws Exception {
-        bootstrapEnv(1, 1, 2, 1);
+        bootstrapEnv(1, 1, 3, 1);
 
         final ChannelPromise dataPromise = newPromise();
         final ChannelPromise assertPromise = newPromise();
@@ -834,7 +834,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
-        bootstrapEnv(1, 1, 3, 1, 1);
+        bootstrapEnv(1, 1, 4, 1, 1);
 
         // Don't wait for the server to close streams
         setClientGracefulShutdownTime(0);
@@ -962,7 +962,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 2, 1, 1);
+        bootstrapEnv(1, 1, 3, 1, 1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
@@ -1051,7 +1051,7 @@ public class Http2ConnectionRoundtripTest {
                 any(ByteBuf.class), eq(0), anyBoolean());
         try {
             // Initialize the data latch based on the number of bytes expected.
-            bootstrapEnv(length, 1, 2, 1);
+            bootstrapEnv(length, 1, 3, 1);
 
             // Create the stream and send all of the data at once.
             runInChannel(clientChannel, new Http2Runnable() {
@@ -1134,7 +1134,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
         try {
-            bootstrapEnv(numStreams * length, 1, numStreams * 4, numStreams);
+            bootstrapEnv(numStreams * length, 1, numStreams * 4 + 1 , numStreams);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() throws Http2Exception {
