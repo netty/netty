@@ -114,12 +114,14 @@ public class Http2MultiplexTransportTest {
         eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
     }
 
+    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexCodec() throws Exception {
         asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, DISCARD_HANDLER).build(), null);
     }
 
+    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexHandler() throws Exception {
@@ -204,6 +206,7 @@ public class Http2MultiplexTransportTest {
         serverAckAllLatch.await();
     }
 
+    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFlushNotDiscarded() throws Exception {

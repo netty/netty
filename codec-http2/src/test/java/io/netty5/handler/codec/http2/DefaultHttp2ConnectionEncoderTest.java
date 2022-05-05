@@ -76,7 +76,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link DefaultHttp2ConnectionEncoder}
  */
-@SuppressWarnings("unchecked")
 public class DefaultHttp2ConnectionEncoderTest {
     private static final int STREAM_ID = 2;
     private static final int PUSH_STREAM_ID = 4;
