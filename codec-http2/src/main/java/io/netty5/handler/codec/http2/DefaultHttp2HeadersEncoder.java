@@ -17,6 +17,9 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -72,6 +75,24 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
             }
 
             hpackEncoder.encodeHeaders(streamId, buffer, headers, sensitivityDetector);
+        } catch (Http2Exception e) {
+            throw e;
+        } catch (Throwable t) {
+            throw connectionError(COMPRESSION_ERROR, t, "Failed encoding headers block: %s", t.getMessage());
+        }
+    }
+
+    @Override
+    public void encodeHeaders(int streamId, Http2Headers headers, Buffer buffer) throws Http2Exception {
+        try {
+            // If there was a change in the table size, serialize the output from the hpackEncoder
+            // resulting from that change.
+            if (tableSizeChangeOutput.isReadable()) {
+                buffer.writeBytes(ByteBufBuffer.wrap(tableSizeChangeOutput));
+                tableSizeChangeOutput.clear();
+            }
+
+            hpackEncoder.encodeHeaders(streamId, ByteBufAdaptor.intoByteBuf(buffer), headers, sensitivityDetector);
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable t) {
