@@ -163,7 +163,6 @@ public final class Http2ServerCodecBuilder {
                                 (DefaultChannelFlowControlledBytesDistributor) distributor) :
                         new Http2ServerStreamMuxer(h2channel, headerSensitivityDetector);
                 // Muxer creates child streams which will write Buffer instances to the parent channel
-                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 h2channel.pipeline().addLast(muxer);
 
                 initializer.initialize(h2channel);

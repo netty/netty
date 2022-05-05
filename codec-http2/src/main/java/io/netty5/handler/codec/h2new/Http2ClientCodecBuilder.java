@@ -100,7 +100,6 @@ public final class Http2ClientCodecBuilder {
         return build0(sslContext, new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 if (headerSensitivityDetector != null) {
                     ch.pipeline().addLast(new Http2FrameEncoder(headerSensitivityDetector));
                 } else {
@@ -131,7 +130,6 @@ public final class Http2ClientCodecBuilder {
         return build0(sslContext, new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 ch.pipeline().addLast(new Http2FrameDecoder(validateHeaders));
                 final ChannelFlowControlledBytesDistributor distributor;
                 if (distributorFactory == null) {
@@ -147,7 +145,6 @@ public final class Http2ClientCodecBuilder {
                                 (DefaultChannelFlowControlledBytesDistributor) distributor) :
                         new Http2ClientStreamMuxer(h2channel, headerSensitivityDetector);
                 // Muxer creates child streams which will write Buffer instances to the parent channel
-                ch.pipeline().addLast(EnsureByteBufOutbound.ADAPTOR);
                 h2channel.pipeline().addLast(muxer);
 
                 initializer.initialize(ch, h2channel);
