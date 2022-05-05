@@ -258,14 +258,14 @@ public final class Http2CodecUtil {
      * Provides the ability to associate the outcome of multiple {@link Promise}
      * objects into a single {@link Promise} object.
      */
-    static final class SimpleChannelPromiseAggregator extends DefaultPromise<Void> {
+    public static final class SimpleChannelPromiseAggregator extends DefaultPromise<Void> {
         private final Promise<Void> promise;
         private int expectedCount;
         private int doneCount;
         private Throwable aggregateFailure;
         private boolean doneAllocating;
 
-        SimpleChannelPromiseAggregator(Promise<Void> promise, EventExecutor e) {
+        public SimpleChannelPromiseAggregator(Promise<Void> promise, EventExecutor e) {
             super(e);
             assert promise != null && !promise.isDone();
             this.promise = promise;
