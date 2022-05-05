@@ -572,7 +572,7 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.5.Final</version>
+        <version>0.0.6.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
