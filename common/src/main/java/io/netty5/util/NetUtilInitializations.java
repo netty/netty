@@ -71,13 +71,11 @@ final class NetUtilInitializations {
         List<NetworkInterface> ifaces = new ArrayList<>();
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            if (interfaces != null) {
-                while (interfaces.hasMoreElements()) {
-                    NetworkInterface iface = interfaces.nextElement();
-                    // Use the interface with proper INET addresses only.
-                    if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
-                        ifaces.add(iface);
-                    }
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                // Use the interface with proper INET addresses only.
+                if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
+                    ifaces.add(iface);
                 }
             }
         } catch (SocketException e) {
