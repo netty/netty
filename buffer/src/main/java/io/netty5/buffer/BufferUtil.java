@@ -18,6 +18,7 @@ package io.netty5.buffer;
 import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
@@ -399,11 +400,14 @@ public final class BufferUtil {
         static final FastThreadLocal<Buffer> BUFFER = new FastThreadLocal<Buffer>() {
             @Override
             protected Buffer initialValue() throws Exception {
-                return super.initialValue();
+                return DefaultBufferAllocators.offHeapAllocator().allocate(1024);
             }
 
             @Override
             protected void onRemoval(Buffer value) throws Exception {
+                if (value.isAccessible()) {
+                    value.close();
+                }
                 super.onRemoval(value);
             }
         };
