@@ -236,9 +236,10 @@ public final class NetUtil {
                 br.close();
             }
         } finally {
-            if (process != null) {
-                process.destroy();
-            }
+            // No need of 'null' check because we're initializing
+            // the Process instance in first line. Any exception
+            // raised will directly lead to throwable.
+            process.destroy();
         }
     }
 
