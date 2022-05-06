@@ -23,6 +23,7 @@ import io.netty5.buffer.api.Send;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -47,6 +48,7 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SuppressWarnings("StringOperationCanBeSimplified")
+@Isolated
 public class BufferLeakDetectionTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
