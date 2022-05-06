@@ -1447,13 +1447,20 @@ public final class PlatformDependent {
             }
             return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
         }
+        final File file;
         if (directory == null) {
-            return File.createTempFile(prefix, suffix);
+            file = File.createTempFile(prefix, suffix);
+        } else {
+            file = File.createTempFile(prefix, suffix, directory);
         }
-        File file = File.createTempFile(prefix, suffix, directory);
+
         // Try to adjust the perms, if this fails there is not much else we can do...
-        file.setReadable(false, false);
-        file.setReadable(true, true);
+        if (!file.setReadable(false, false)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
+        if (!file.setReadable(true, true)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
         return file;
     }
 
