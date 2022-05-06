@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.codec.dns;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrRecord {

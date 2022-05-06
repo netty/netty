@@ -36,7 +36,6 @@ import java.util.regex.Pattern;
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty5.util.internal.StringUtil.indexOfNonWhiteSpace;
 import static io.netty5.util.internal.StringUtil.indexOfWhiteSpace;
-
 import static java.util.Objects.requireNonNull;
 
 /**

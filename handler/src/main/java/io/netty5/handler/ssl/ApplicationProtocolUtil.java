@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.ssl;
 
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * Utility class for application protocol common operations.

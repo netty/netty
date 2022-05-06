@@ -17,7 +17,11 @@ package io.netty5.util.internal.logging;
 
 import org.slf4j.spi.LocationAwareLogger;
 
-import static org.slf4j.spi.LocationAwareLogger.*;
+import static org.slf4j.spi.LocationAwareLogger.DEBUG_INT;
+import static org.slf4j.spi.LocationAwareLogger.ERROR_INT;
+import static org.slf4j.spi.LocationAwareLogger.INFO_INT;
+import static org.slf4j.spi.LocationAwareLogger.TRACE_INT;
+import static org.slf4j.spi.LocationAwareLogger.WARN_INT;
 
 /**
  * <a href="https://www.slf4j.org/">SLF4J</a> logger which is location aware and so will log the correct origin of the

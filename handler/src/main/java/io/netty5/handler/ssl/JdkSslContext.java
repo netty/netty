@@ -21,6 +21,11 @@ import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import javax.crypto.NoSuchPaddingException;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -40,12 +45,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
-import javax.crypto.NoSuchPaddingException;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSessionContext;
 
 import static io.netty5.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
 import static io.netty5.handler.ssl.SslUtils.addIfSupported;

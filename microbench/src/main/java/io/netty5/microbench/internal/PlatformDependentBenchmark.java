@@ -17,10 +17,6 @@ package io.netty5.microbench.internal;
 
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.internal.PlatformDependent;
-
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -31,6 +27,9 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
+
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 @Threads(1)
 @State(Scope.Benchmark)

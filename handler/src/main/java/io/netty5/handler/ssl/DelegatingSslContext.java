@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.buffer.api.BufferAllocator;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
 import java.util.List;
 import java.util.concurrent.Executor;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Adapter class which allows to wrap another {@link SslContext} and init {@link SSLEngine} instances.

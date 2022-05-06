@@ -15,10 +15,9 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-
+import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.util.NetUtil;
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

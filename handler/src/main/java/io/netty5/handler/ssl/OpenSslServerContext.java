@@ -17,13 +17,12 @@ package io.netty5.handler.ssl;
 
 import io.netty.internal.tcnative.SSL;
 
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
-import java.util.Map;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.util.Map;
 
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext.newSessionContext;
 

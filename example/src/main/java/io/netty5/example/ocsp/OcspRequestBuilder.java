@@ -16,14 +16,6 @@
 
 package io.netty5.example.ocsp;
 
-import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.X509Certificate;
-
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.x509.Extension;
@@ -34,6 +26,14 @@ import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.OCSPReq;
 import org.bouncycastle.cert.ocsp.OCSPReqBuilder;
 import org.bouncycastle.operator.DigestCalculator;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This is a simplified version of BC's own {@link OCSPReqBuilder}.

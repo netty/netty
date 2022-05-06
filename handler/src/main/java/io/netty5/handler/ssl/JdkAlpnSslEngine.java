@@ -20,16 +20,15 @@ import io.netty5.util.internal.StringUtil;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
-
 import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import static io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
+import static io.netty5.handler.ssl.SslUtils.toSSLHandshakeException;
 
 class JdkAlpnSslEngine extends JdkSslEngine {
     private final ProtocolSelectionListener selectionListener;

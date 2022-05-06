@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.ssl.util;
 
-import java.security.KeyStore;
-import java.util.Objects;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
+import java.security.KeyStore;
+import java.util.Objects;
 
 public final class TrustManagerFactoryWrapper extends SimpleTrustManagerFactory {
     private final TrustManager tm;

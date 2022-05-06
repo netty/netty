@@ -15,10 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import static java.util.Objects.requireNonNull;
-import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -26,6 +22,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
+import static java.util.Objects.requireNonNull;
 
 final class TcpMd5Util {
 

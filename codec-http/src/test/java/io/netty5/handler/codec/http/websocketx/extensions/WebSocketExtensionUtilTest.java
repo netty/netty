@@ -23,7 +23,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.*;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.computeMergeExtensionsHeaderValue;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.extractExtensions;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil.isWebsocketUpgrade;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

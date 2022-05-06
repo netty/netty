@@ -17,9 +17,9 @@ package io.netty5.channel;
 
 import io.netty5.util.concurrent.Promise;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.SocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side

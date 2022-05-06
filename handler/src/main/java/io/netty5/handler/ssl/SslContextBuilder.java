@@ -38,8 +38,8 @@ import java.util.Map;
 
 import static io.netty5.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty5.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
-import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.util.Objects.requireNonNull;
 
 /**

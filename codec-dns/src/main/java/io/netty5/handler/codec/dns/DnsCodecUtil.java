@@ -19,12 +19,9 @@ package io.netty5.handler.codec.dns;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.CorruptedFrameException;
-import io.netty5.util.CharsetUtil;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
 final class DnsCodecUtil {

@@ -15,10 +15,6 @@
  */
 package io.netty5.handler.codec.base64;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -27,6 +23,10 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.Delimiters;
 import io.netty5.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Encodes a {@link ByteBuf} into a Base64-encoded {@link ByteBuf}.

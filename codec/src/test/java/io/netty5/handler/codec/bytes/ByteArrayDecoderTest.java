@@ -22,9 +22,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 public class ByteArrayDecoderTest {
 

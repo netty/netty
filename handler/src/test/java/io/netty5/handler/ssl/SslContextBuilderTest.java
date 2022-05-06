@@ -17,7 +17,6 @@ package io.netty5.handler.ssl;
 
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.CharsetUtil;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 

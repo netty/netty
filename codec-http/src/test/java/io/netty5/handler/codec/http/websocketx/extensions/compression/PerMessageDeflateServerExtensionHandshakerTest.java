@@ -15,21 +15,23 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import static io.netty5.handler.codec.http.websocketx.extensions.compression.
-        PerMessageDeflateServerExtensionHandshaker.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import io.netty5.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
+import io.netty5.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.CLIENT_MAX_WINDOW;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.CLIENT_NO_CONTEXT;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.PERMESSAGE_DEFLATE_EXTENSION;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.SERVER_MAX_WINDOW;
+import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.SERVER_NO_CONTEXT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PerMessageDeflateServerExtensionHandshakerTest {
 

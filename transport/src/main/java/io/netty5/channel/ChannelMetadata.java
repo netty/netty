@@ -15,9 +15,9 @@
  */
 package io.netty5.channel;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
-
 import java.net.SocketAddress;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Represents the properties of a {@link Channel} implementation.

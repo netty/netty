@@ -23,7 +23,9 @@ import java.util.function.Supplier;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import static io.netty5.handler.codec.compression.FastLz.*;
+import static io.netty5.handler.codec.compression.FastLz.BLOCK_TYPE_COMPRESSED;
+import static io.netty5.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
+import static io.netty5.handler.codec.compression.FastLz.MAGIC_NUMBER;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded by {@link FastLzCompressor} using the FastLZ algorithm.

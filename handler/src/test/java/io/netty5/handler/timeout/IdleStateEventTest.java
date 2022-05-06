@@ -18,7 +18,12 @@ package io.netty5.handler.timeout;
 
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.handler.timeout.IdleStateEvent.*;
+import static io.netty5.handler.timeout.IdleStateEvent.ALL_IDLE_STATE_EVENT;
+import static io.netty5.handler.timeout.IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
+import static io.netty5.handler.timeout.IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT;
+import static io.netty5.handler.timeout.IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
+import static io.netty5.handler.timeout.IdleStateEvent.READER_IDLE_STATE_EVENT;
+import static io.netty5.handler.timeout.IdleStateEvent.WRITER_IDLE_STATE_EVENT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 

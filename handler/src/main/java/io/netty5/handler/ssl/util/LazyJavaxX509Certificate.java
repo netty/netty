@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl.util;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.security.cert.CertificateException;
 import javax.security.cert.CertificateExpiredException;
 import javax.security.cert.CertificateNotYetValidException;
@@ -29,6 +27,8 @@ import java.security.Principal;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.util.Date;
+
+import static java.util.Objects.requireNonNull;
 
 public final class LazyJavaxX509Certificate extends X509Certificate {
     private final byte[] bytes;

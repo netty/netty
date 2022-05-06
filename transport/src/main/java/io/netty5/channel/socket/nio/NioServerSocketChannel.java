@@ -15,19 +15,17 @@
  */
 package io.netty5.channel.socket.nio;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DefaultServerSocketChannelConfig;
+import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannelConfig;
+import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -42,6 +40,8 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses

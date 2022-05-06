@@ -17,11 +17,10 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.BufferAllocator;
 
-import java.security.cert.Certificate;
-import java.util.Map;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import java.security.cert.Certificate;
+import java.util.Map;
 
 /**
  * This class will use a finalizer to ensure native resources are automatically cleaned up. To avoid finalizers

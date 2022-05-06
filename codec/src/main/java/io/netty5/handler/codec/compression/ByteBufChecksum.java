@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.codec.compression;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 
 import java.nio.ByteBuffer;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link Checksum} implementation which can directly act on a {@link ByteBuf}.

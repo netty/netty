@@ -20,8 +20,8 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DefaultDnsOptEcsRecord;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 

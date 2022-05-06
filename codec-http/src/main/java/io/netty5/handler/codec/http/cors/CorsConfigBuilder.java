@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.http.cors;
 
-import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
-
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 
@@ -29,6 +27,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
  * Builder used to configure and build a {@link CorsConfig} instance.

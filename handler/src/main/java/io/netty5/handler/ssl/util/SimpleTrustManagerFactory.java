@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.concurrent.FastThreadLocal;
 
 import javax.net.ssl.ManagerFactoryParameters;
@@ -29,6 +27,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Provider;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helps to implement a custom {@link TrustManagerFactory}.

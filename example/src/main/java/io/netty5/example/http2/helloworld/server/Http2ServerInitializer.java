@@ -16,8 +16,6 @@
 
 package io.netty5.example.http2.helloworld.server;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -35,6 +33,8 @@ import io.netty5.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ReferenceCountUtil;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Sets up the Netty pipeline for the example server. Depending on the endpoint config, sets up the

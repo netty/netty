@@ -15,14 +15,9 @@
  */
 package io.netty5.handler.codec.http.cookie;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import io.netty5.handler.codec.DateFormatter;
+import io.netty5.handler.codec.http.cookie.CookieHeaderNames.SameSite;
+import org.junit.jupiter.api.Test;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -33,8 +28,12 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.netty5.handler.codec.http.cookie.CookieHeaderNames.SameSite;
-import org.junit.jupiter.api.Test;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ServerCookieEncoderTest {
 

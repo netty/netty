@@ -24,7 +24,10 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-import static io.netty5.handler.codec.compression.Bzip2Constants.*;
+import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
+import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
+import static io.netty5.handler.codec.compression.Bzip2Constants.MAGIC_NUMBER;
+import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Bzip2DecoderTest extends AbstractDecoderTest {

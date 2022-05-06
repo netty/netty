@@ -26,13 +26,13 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import static io.netty5.buffer.ByteBufUtil.writeAscii;
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;

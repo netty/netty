@@ -15,11 +15,11 @@
  */
 package io.netty5.resolver.dns;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.handler.codec.dns.DnsQuestion;
 
 import java.net.InetSocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link RuntimeException} raised when {@link DnsNameResolver} failed to perform a successful query.

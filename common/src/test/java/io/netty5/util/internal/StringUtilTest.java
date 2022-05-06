@@ -22,8 +22,8 @@ import java.util.Collections;
 
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static io.netty5.util.internal.StringUtil.commonSuffixOfLength;
-import static io.netty5.util.internal.StringUtil.indexOfWhiteSpace;
 import static io.netty5.util.internal.StringUtil.indexOfNonWhiteSpace;
+import static io.netty5.util.internal.StringUtil.indexOfWhiteSpace;
 import static io.netty5.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty5.util.internal.StringUtil.simpleClassName;
 import static io.netty5.util.internal.StringUtil.substringAfter;

@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Resource;
@@ -27,15 +25,34 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
-import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
-import static io.netty5.channel.ChannelHandlerMask.*;
+import static io.netty5.channel.ChannelHandlerMask.MASK_BIND;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ_COMPLETE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_REGISTERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_UNREGISTERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_WRITABILITY_CHANGED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CLOSE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CONNECT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_DEREGISTER;
+import static io.netty5.channel.ChannelHandlerMask.MASK_DISCONNECT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_FLUSH;
+import static io.netty5.channel.ChannelHandlerMask.MASK_READ;
+import static io.netty5.channel.ChannelHandlerMask.MASK_REGISTER;
+import static io.netty5.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
+import static io.netty5.channel.ChannelHandlerMask.mask;
+import static java.util.Objects.requireNonNull;
 
 final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 

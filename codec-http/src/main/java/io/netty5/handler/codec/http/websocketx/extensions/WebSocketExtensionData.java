@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Collections;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A WebSocket Extension data from the <tt>Sec-WebSocket-Extensions</tt> header.

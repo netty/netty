@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.AbstractConstant;
@@ -24,6 +22,8 @@ import io.netty5.util.ConstantPool;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe

@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Supplier;
 
-import static lzma.sdk.lzma.Encoder.*;
+import static lzma.sdk.lzma.Encoder.EMatchFinderTypeBT4;
 
 /**
  * Compresses a {@link ByteBuf} using the LZMA algorithm.

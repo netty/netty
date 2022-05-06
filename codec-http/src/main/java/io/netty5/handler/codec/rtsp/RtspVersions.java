@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.rtsp;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.handler.codec.http.HttpVersion;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The version of RTSP.

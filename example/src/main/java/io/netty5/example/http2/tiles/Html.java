@@ -16,9 +16,9 @@
 
 package io.netty5.example.http2.tiles;
 
-import static io.netty5.util.CharsetUtil.UTF_8;
-
 import java.util.Random;
+
+import static io.netty5.util.CharsetUtil.UTF_8;
 
 /**
  * Static and dynamically generated HTML for the example.

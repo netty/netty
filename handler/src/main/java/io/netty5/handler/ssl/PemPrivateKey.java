@@ -15,17 +15,16 @@
  */
 package io.netty5.handler.ssl;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-
-import java.security.PrivateKey;
-
-import javax.security.auth.Destroyable;
-
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferHolder;
 import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.util.CharsetUtil;
+
+import javax.security.auth.Destroyable;
+import java.security.PrivateKey;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 
 /**
  * This is a special purpose implementation of a {@link PrivateKey} which allows the

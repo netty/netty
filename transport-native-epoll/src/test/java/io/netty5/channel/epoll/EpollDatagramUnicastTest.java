@@ -25,7 +25,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.BufferDatagramPacket;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.BufferSegmentedDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;

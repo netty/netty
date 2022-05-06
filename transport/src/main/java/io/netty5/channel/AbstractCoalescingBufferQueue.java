@@ -14,9 +14,9 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;

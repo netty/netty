@@ -20,11 +20,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Supplier;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Compress a {@link ByteBuf} with the brotli format.

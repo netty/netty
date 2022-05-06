@@ -15,8 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
@@ -32,6 +30,7 @@ import java.util.Map;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
+import static java.util.Objects.requireNonNull;
 
 public final class EpollDomainSocketChannelConfig extends EpollDuplexChannelConfig
         implements DomainSocketChannelConfig {

@@ -15,11 +15,11 @@
  */
 package io.netty5.channel.local;
 
-import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
-
 import io.netty5.channel.Channel;
 
 import java.net.SocketAddress;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * An endpoint in the local transport.  Each endpoint is identified by a unique

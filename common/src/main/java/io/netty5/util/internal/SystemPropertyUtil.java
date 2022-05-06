@@ -15,13 +15,13 @@
  */
 package io.netty5.util.internal;
 
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * A collection of utility methods to retrieve and parse the values of the Java system properties.

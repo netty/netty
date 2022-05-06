@@ -16,12 +16,12 @@
 
 package io.netty5.util;
 
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A pool of {@link Constant}s.

@@ -19,13 +19,12 @@ import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 /**
  * Default implementation of the JMH microbenchmark adapter.  There may be context switches introduced by this harness.

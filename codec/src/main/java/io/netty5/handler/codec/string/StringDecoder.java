@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.string;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -27,6 +25,8 @@ import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 
 import java.nio.charset.Charset;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decodes a received {@link ByteBuf} into a {@link String}.  Please

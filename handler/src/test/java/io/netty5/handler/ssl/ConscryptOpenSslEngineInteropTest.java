@@ -23,7 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
-
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.List;

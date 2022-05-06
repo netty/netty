@@ -26,7 +26,14 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.util.internal.StringUtil.*;
+import static io.netty5.util.internal.StringUtil.CARRIAGE_RETURN;
+import static io.netty5.util.internal.StringUtil.COMMA;
+import static io.netty5.util.internal.StringUtil.DOUBLE_QUOTE;
+import static io.netty5.util.internal.StringUtil.EMPTY_STRING;
+import static io.netty5.util.internal.StringUtil.LINE_FEED;
+import static io.netty5.util.internal.StringUtil.SPACE;
+import static io.netty5.util.internal.StringUtil.TAB;
+import static io.netty5.util.internal.StringUtil.escapeCsv;
 import static java.util.Objects.requireNonNull;
 
 @Threads(1)

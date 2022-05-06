@@ -15,9 +15,9 @@
  */
 package io.netty5.util;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import io.netty5.util.internal.ReferenceCountUpdater;
+
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.

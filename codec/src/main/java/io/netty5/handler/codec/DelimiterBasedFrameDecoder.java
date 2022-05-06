@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.codec;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A decoder that splits the received {@link Buffer}s by one or more

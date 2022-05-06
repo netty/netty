@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
-
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;

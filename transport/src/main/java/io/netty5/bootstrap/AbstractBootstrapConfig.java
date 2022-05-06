@@ -15,8 +15,6 @@
  */
 package io.netty5.bootstrap;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelHandler;
@@ -28,6 +26,8 @@ import io.netty5.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Exposes the configuration of an {@link AbstractBootstrap}.

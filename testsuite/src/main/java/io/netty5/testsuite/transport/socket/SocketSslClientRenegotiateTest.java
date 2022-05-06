@@ -15,9 +15,9 @@
  */
 package io.netty5.testsuite.transport.socket;
 
+import io.netty.buffer.ByteBuf;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -41,6 +41,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
 import java.security.cert.CertificateException;
@@ -53,13 +54,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLHandshakeException;
-
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(

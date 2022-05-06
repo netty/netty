@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.ByteBufUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
@@ -24,7 +23,6 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.Resource;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.AbstractCoalescingBufferQueueForBuffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;

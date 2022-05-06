@@ -15,8 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
@@ -29,6 +27,8 @@ import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+
+import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);

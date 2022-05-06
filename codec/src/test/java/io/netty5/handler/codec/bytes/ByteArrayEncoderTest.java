@@ -24,8 +24,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.CoreMatchers.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ByteArrayEncoderTest {

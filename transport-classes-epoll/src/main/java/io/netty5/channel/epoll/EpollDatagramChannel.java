@@ -37,7 +37,6 @@ import io.netty5.channel.unix.BufferSegmentedDatagramPacket;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.SegmentedDatagramPacket;
-import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.UncheckedBooleanSupplier;

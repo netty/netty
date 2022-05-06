@@ -20,7 +20,8 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.security.cert.CertificateException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class SelfSignedCertificateTest {
 

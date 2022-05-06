@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
+import io.netty.internal.tcnative.AsyncTask;
+import io.netty.internal.tcnative.SSL;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.ComponentIterator;
@@ -26,8 +28,6 @@ import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
-import io.netty.internal.tcnative.AsyncTask;
-import io.netty.internal.tcnative.SSL;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.ResourceLeakDetector;

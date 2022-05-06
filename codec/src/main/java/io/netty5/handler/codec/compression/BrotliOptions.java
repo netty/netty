@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
+
 import static java.util.Objects.requireNonNull;
 
 /**

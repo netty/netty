@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.unix.tests;
 
-import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.Buffer;
+import io.netty5.channel.unix.Socket;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

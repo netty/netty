@@ -27,7 +27,8 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.handler.codec.http.HttpConstants.*;
+import static io.netty5.handler.codec.http.HttpConstants.CR;
+import static io.netty5.handler.codec.http.HttpConstants.LF;
 
 @Threads(1)
 @Warmup(iterations = 3)

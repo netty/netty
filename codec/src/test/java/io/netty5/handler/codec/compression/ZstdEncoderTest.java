@@ -30,10 +30,9 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.InputStream;
 
-
-import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 public class ZstdEncoderTest extends AbstractEncoderTest {
 

@@ -16,13 +16,13 @@
 
 package io.netty5.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ThreadFactory} implementation with a simple naming rule.

@@ -14,13 +14,13 @@
  */
 package io.netty5.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.util.concurrent.Promise;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link ByteBuf} and consumers take bytes in

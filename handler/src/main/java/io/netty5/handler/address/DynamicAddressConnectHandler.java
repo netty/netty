@@ -18,6 +18,7 @@ package io.netty5.handler.address;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
+
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 

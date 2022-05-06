@@ -15,12 +15,6 @@
  */
 package io.netty5.handler.codec.http.cookie;
 
-import static io.netty5.handler.codec.http.cookie.CookieUtil.add;
-import static io.netty5.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty5.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty5.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.util.internal.StringUtil;
 
@@ -30,6 +24,12 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+
+import static io.netty5.handler.codec.http.cookie.CookieUtil.add;
+import static io.netty5.handler.codec.http.cookie.CookieUtil.addQuoted;
+import static io.netty5.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
+import static io.netty5.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A <a href="https://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so

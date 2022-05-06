@@ -18,14 +18,14 @@ package io.netty5.channel.epoll;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.Socket;
-import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import org.junit.jupiter.api.Test;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

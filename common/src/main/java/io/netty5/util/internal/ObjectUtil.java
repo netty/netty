@@ -14,10 +14,10 @@
  */
 package io.netty5.util.internal;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Collection;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A grab-bag of useful utility methods.

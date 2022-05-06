@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SessionTicketKey;
@@ -28,6 +26,8 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.concurrent.locks.Lock;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * OpenSSL specific {@link SSLSessionContext} implementation.

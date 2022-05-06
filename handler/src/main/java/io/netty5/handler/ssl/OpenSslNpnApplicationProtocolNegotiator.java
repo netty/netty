@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.ssl;
 
+import java.util.List;
+
 import static io.netty5.handler.ssl.ApplicationProtocolUtil.toList;
 import static java.util.Objects.requireNonNull;
-
-import java.util.List;
 
 /**
  * OpenSSL {@link ApplicationProtocolNegotiator} for NPN.

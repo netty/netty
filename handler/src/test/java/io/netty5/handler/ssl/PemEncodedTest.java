@@ -16,16 +16,16 @@
 
 package io.netty5.handler.ssl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.security.PrivateKey;
-
 import io.netty5.buffer.api.Resource;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.security.PrivateKey;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

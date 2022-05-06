@@ -15,8 +15,6 @@
  */
 package io.netty5.channel.embedded;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.concurrent.AbstractScheduledEventExecutor;
@@ -26,6 +24,8 @@ import io.netty5.util.internal.StringUtil;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 

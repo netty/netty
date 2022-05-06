@@ -24,8 +24,8 @@ import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
+import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {

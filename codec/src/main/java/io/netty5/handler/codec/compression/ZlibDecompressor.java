@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.compression;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -27,6 +25,8 @@ import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.

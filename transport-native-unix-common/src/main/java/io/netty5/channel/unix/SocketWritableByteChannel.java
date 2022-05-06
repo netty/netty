@@ -15,10 +15,11 @@
  */
 package io.netty5.channel.unix;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
+
 import java.nio.channels.WritableByteChannel;
+
+import static java.util.Objects.requireNonNull;
 
 public abstract class SocketWritableByteChannel implements WritableByteChannel {
     private final FileDescriptor fd;

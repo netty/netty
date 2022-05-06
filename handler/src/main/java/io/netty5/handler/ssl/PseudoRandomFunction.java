@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.ssl;
 
-import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty5.util.internal.EmptyArrays;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * This pseudorandom function (PRF) takes as input a secret, a seed, and

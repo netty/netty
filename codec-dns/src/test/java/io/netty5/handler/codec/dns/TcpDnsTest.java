@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;

@@ -16,8 +16,6 @@
 
 package io.netty5.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -25,6 +23,8 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Constructor;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This static factory should be used to load {@link ResourceLeakDetector}s as needed

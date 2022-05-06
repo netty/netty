@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.Signal;
+
+import static java.util.Objects.requireNonNull;
 
 public class DecoderResult {
 

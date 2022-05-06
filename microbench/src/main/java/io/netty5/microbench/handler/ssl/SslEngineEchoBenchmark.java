@@ -21,9 +21,9 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
-import java.nio.ByteBuffer;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import java.nio.ByteBuffer;
 
 @State(Scope.Benchmark)
 @Threads(1)

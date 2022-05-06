@@ -15,9 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
-
 import io.netty.internal.tcnative.SSL;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
@@ -49,6 +46,9 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Special {@link KeyManagerFactory} that pre-compute the keymaterial used when {@link SslProvider#OPENSSL} or

@@ -16,11 +16,11 @@
 
 package io.netty5.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty5.util.internal.StringUtil;
 
 import java.lang.reflect.Constructor;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChannelFactory} that instantiates a new {@link ServerChannel} by invoking its default constructor

@@ -15,9 +15,13 @@
  */
 package io.netty5.handler.ssl;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static java.util.Objects.requireNonNull;
-import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
+import io.netty5.buffer.api.Send;
+import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.api.internal.Statics;
+import io.netty5.util.CharsetUtil;
 
 import java.math.BigInteger;
 import java.security.Principal;
@@ -28,13 +32,9 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
-import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
-import io.netty5.util.CharsetUtil;
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This is a special purpose implementation of a {@link X509Certificate} which allows

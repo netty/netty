@@ -15,10 +15,10 @@
  */
 package io.netty5.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+
+import static java.util.Objects.requireNonNull;
 
 public final class ThreadPerTaskExecutor implements Executor {
     private final ThreadFactory threadFactory;

@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.ssl.util;
 
-import java.security.KeyStore;
-import java.util.Objects;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.ManagerFactoryParameters;
+import java.security.KeyStore;
+import java.util.Objects;
 
 public final class KeyManagerFactoryWrapper extends SimpleKeyManagerFactory {
     private final KeyManager km;

@@ -25,8 +25,8 @@ import io.netty5.util.internal.ObjectUtil;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
-import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
+import static io.netty5.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
 import static io.netty5.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 

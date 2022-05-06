@@ -20,13 +20,18 @@ import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.Dummy2Decoder;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.Dummy2Encoder;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.DummyDecoder;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.DummyEncoder;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeRequest;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeResponse;
+import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.webSocketExtensionDataMatcher;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
