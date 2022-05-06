@@ -24,7 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.api.CompositeBuffer.compose;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -93,7 +93,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send());
+                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
                 }
             });
         }
@@ -109,7 +109,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send());
+                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
                 }
             });
         }
@@ -125,7 +125,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send());
+                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
                 }
             });
         }
@@ -141,7 +141,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send());
+                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
                 }
             });
         }
@@ -157,7 +157,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
                 }
             });
         }
@@ -173,7 +173,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
                 }
             });
         }
@@ -189,7 +189,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
                 }
             });
         }
@@ -205,7 +205,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return compose(a, bufFirst.send(), bufSecond.send()).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
                 }
             });
         }

@@ -20,7 +20,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
@@ -31,6 +30,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.buffer;
@@ -218,9 +218,9 @@ public class ChannelOutboundBufferTest {
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
 
         Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
-        var sends = Stream.generate(() -> buf.copy().send()).limit(65).toArray(Send[]::new);
         @SuppressWarnings("unchecked")
-        CompositeBuffer comp = CompositeBuffer.compose(BufferAllocator.offHeapUnpooled(), sends);
+        var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
+        CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
 
         buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());
 
@@ -279,9 +279,9 @@ public class ChannelOutboundBufferTest {
 
         Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
         assertEquals(4, buf.readableBytes());
-        var sends = Stream.generate(() -> buf.copy().send()).limit(65).toArray(Send[]::new);
         @SuppressWarnings("unchecked")
-        CompositeBuffer comp = CompositeBuffer.compose(BufferAllocator.offHeapUnpooled(), sends);
+        var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
+        CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
 
         assertEquals(65, comp.countComponents());
         buffer.addMessage(comp, comp.readableBytes(), channel.newPromise());

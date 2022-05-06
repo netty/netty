@@ -20,6 +20,7 @@ import io.netty5.buffer.api.pool.PooledBufferAllocator;
 import io.netty5.util.SafeCloseable;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -124,6 +125,49 @@ public interface BufferAllocator extends SafeCloseable {
      * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
      */
     Buffer allocate(int size);
+
+    /**
+     * Compose the send of a buffer and present them as a single buffer.
+     * <p>
+     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
+     * <p>
+     * See the class documentation for more information on what is required of the given buffers for composition to be
+     * allowed.
+     *
+     * @param send The sent buffer to compose into a single buffer view.
+     * @return A buffer composed of, and backed by, the given buffers.
+     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
+     * will be closed and discarded, respectively.
+     */
+    default CompositeBuffer compose(Send<Buffer> send) {
+        return DefaultCompositeBuffer.compose(this, Collections.singleton(send));
+    }
+
+    /**
+     * Compose the given sequence of sends of buffers and present them as a single buffer.
+     * <p>
+     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
+     * <p>
+     * See the class documentation for more information on what is required of the given buffers for composition to be
+     * allowed.
+     *
+     * @param sends The sent buffers to compose into a single buffer view.
+     * @return A buffer composed of, and backed by, the given buffers.
+     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
+     * will be closed and discarded, respectively.
+     */
+    default CompositeBuffer compose(Iterable<Send<Buffer>> sends) {
+        return DefaultCompositeBuffer.compose(this, sends);
+    }
+
+    /**
+     * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
+     * {@link CompositeBuffer#ensureWritable(int)} or {@link CompositeBuffer#extendWith(Send)}.
+     * @return A composite buffer that has no components, and has a capacity of zero.
+     */
+    default CompositeBuffer compose() {
+        return DefaultCompositeBuffer.compose(this);
+    }
 
     /**
      * Create a supplier of "constant" {@linkplain Buffer Buffers} from this allocator, that all have the given

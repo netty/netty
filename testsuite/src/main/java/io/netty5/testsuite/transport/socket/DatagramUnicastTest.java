@@ -43,6 +43,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -122,11 +123,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendCompositeDirectBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
         BufferAllocator alloc = DefaultBufferAllocators.offHeapAllocator();
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = CompositeBuffer.compose(alloc, data.readSplit(2).send(), data.readSplit(2).send());
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
             testSimpleSend(sb, cb, buf, true, BYTES, 1);
         }
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = CompositeBuffer.compose(alloc, data.readSplit(2).send(), data.readSplit(2).send());
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
             testSimpleSend(sb, cb, buf, true, BYTES, 4);
         }
     }
@@ -156,11 +157,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendCompositeHeapBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
         BufferAllocator alloc = DefaultBufferAllocators.onHeapAllocator();
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = CompositeBuffer.compose(alloc, data.readSplit(2).send(), data.readSplit(2).send());
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
             testSimpleSend(sb, cb, buf, true, BYTES, 1);
         }
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = CompositeBuffer.compose(alloc, data.readSplit(2).send(), data.readSplit(2).send());
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
             testSimpleSend(sb, cb, buf, true, BYTES, 4);
         }
     }
@@ -190,16 +191,14 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendCompositeMixedBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
         BufferAllocator offHeap = DefaultBufferAllocators.offHeapAllocator();
         BufferAllocator onHeap = DefaultBufferAllocators.onHeapAllocator();
-        CompositeBuffer buf = CompositeBuffer.compose(
-                offHeap,
+        CompositeBuffer buf = offHeap.compose(asList(
                 offHeap.allocate(2).writeBytes(BYTES, 0, 2).send(),
-                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send());
+                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send()));
         testSimpleSend(sb, cb, buf, true, BYTES, 1);
 
-        CompositeBuffer buf2 = CompositeBuffer.compose(
-                offHeap,
+        CompositeBuffer buf2 = offHeap.compose(asList(
                 offHeap.allocate(2).writeBytes(BYTES, 0, 2).send(),
-                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send());
+                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send()));
         testSimpleSend(sb, cb, buf2, true, BYTES, 4);
     }
 

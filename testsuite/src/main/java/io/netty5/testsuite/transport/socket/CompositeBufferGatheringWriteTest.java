@@ -42,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
@@ -420,10 +421,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             ctx.write(contents.readSplit(soSndBuf - 100));
 
                             // Build and write CompositeByteBuf
-                            CompositeBuffer compositeBuffer = CompositeBuffer.compose(
-                                    ctx.bufferAllocator(),
+                            CompositeBuffer compositeBuffer = ctx.bufferAllocator().compose(asList(
                                     contents.readSplit(50).send(),
-                                    contents.readSplit(200).send());
+                                    contents.readSplit(200).send()));
                             ctx.write(compositeBuffer);
 
                             // Write a single buffer that is smaller than the second component of the
@@ -535,11 +535,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
     }
 
     private static Buffer newCompositeBuffer(BufferAllocator alloc) {
-        CompositeBuffer compositeBuffer = CompositeBuffer.compose(
-                alloc,
+        CompositeBuffer compositeBuffer = alloc.compose(asList(
                 alloc.allocate(4).writeInt(100).send(),
                 alloc.allocate(8).writeLong(123).send(),
-                alloc.allocate(8).writeLong(456).send());
+                alloc.allocate(8).writeLong(456).send()));
         assertEquals(EXPECTED_BYTES, compositeBuffer.readableBytes());
         return compositeBuffer;
     }

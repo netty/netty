@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.netty5.buffer.api.internal.Statics.acquire;
 import static io.netty5.buffer.api.internal.Statics.isOwned;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,11 +41,11 @@ public class BufferCompositionTest extends BufferTestSupport {
     public void compositeBuffersCannotHaveDuplicateComponents() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Send<Buffer> a = allocator.allocate(4).send();
-            var e = assertThrows(IllegalStateException.class, () -> CompositeBuffer.compose(allocator, a, a));
+            var e = assertThrows(IllegalStateException.class, () -> allocator.compose(asList(a, a)));
             assertThat(e).hasMessageContaining("already been received");
 
             Send<Buffer> b = allocator.allocate(4).send();
-            try (CompositeBuffer composite = CompositeBuffer.compose(allocator, b)) {
+            try (CompositeBuffer composite = allocator.compose(b)) {
                 e = assertThrows(IllegalStateException.class, () -> composite.extendWith(b));
                 assertThat(e).hasMessageContaining("already been received");
             }
@@ -54,10 +55,10 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void compositeBufferFromSends() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             Buffer composite = CompositeBuffer.compose(allocator,
+             Buffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             assertEquals(24, composite.capacity());
             assertTrue(isOwned((ResourceSupport<?, ?>) composite));
         }
@@ -66,7 +67,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void compositeBufferMustNotBeAllowedToContainThemselves() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            CompositeBuffer bufA = CompositeBuffer.compose(allocator, allocator.allocate(4).send());
+            CompositeBuffer bufA = allocator.compose(allocator.allocate(4).send());
             Send<Buffer> sendA = bufA.send();
             try {
                 assertThrows(BufferClosedException.class, () -> bufA.extendWith(sendA));
@@ -74,9 +75,9 @@ public class BufferCompositionTest extends BufferTestSupport {
                 sendA.close();
             }
 
-            CompositeBuffer bufB = CompositeBuffer.compose(allocator, allocator.allocate(4).send());
+            CompositeBuffer bufB = allocator.compose(allocator.allocate(4).send());
             Send<Buffer> sendB = bufB.send();
-            try (CompositeBuffer compositeBuffer = CompositeBuffer.compose(allocator, sendB)) {
+            try (CompositeBuffer compositeBuffer = allocator.compose(sendB)) {
                 assertThrows(IllegalStateException.class, () -> compositeBuffer.extendWith(sendB));
             } finally {
                 sendB.close();
@@ -90,7 +91,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer composite;
             try (Buffer a = allocator.allocate(4)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite) {
                 composite.writeInt(0x01020304);
@@ -115,7 +116,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer a = allocator.allocate(8);
              Buffer b = allocator.allocate(8);
-             CompositeBuffer composed = CompositeBuffer.compose(allocator, a.send())) {
+             CompositeBuffer composed = allocator.compose(a.send())) {
             try (Buffer ignore = acquire((ResourceSupport<?, ?>) composed)) {
                 var exc = assertThrows(IllegalStateException.class, () -> composed.extendWith(b.send()));
                 assertThat(exc).hasMessageContaining("owned");
@@ -128,7 +129,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite) {
                 assertThrows(BufferClosedException.class, () -> composite.extendWith(composite.send()));
@@ -139,18 +140,18 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void extendingWithZeroCapacityBufferHasNoEffect() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
-            composite.extendWith(CompositeBuffer.compose(allocator).send());
+             CompositeBuffer composite = allocator.compose()) {
+            composite.extendWith(allocator.compose().send());
             assertThat(composite.capacity()).isZero();
             assertThat(composite.countComponents()).isZero();
         }
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer a = allocator.allocate(1);
-            CompositeBuffer composite = CompositeBuffer.compose(allocator, a.send());
+            CompositeBuffer composite = allocator.compose(a.send());
             assertTrue(isOwned((ResourceSupport<?, ?>) composite));
             assertThat(composite.capacity()).isOne();
             assertThat(composite.countComponents()).isOne();
-            try (Buffer b = CompositeBuffer.compose(allocator)) {
+            try (Buffer b = allocator.compose()) {
                 composite.extendWith(b.send());
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) composite));
@@ -162,7 +163,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void extendingCompositeBufferWithNullMustThrow() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+             CompositeBuffer composite = allocator.compose()) {
             assertThrows(NullPointerException.class, () -> composite.extendWith(null));
         }
     }
@@ -170,7 +171,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void extendingCompositeBufferMustIncreaseCapacityByGivenBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+             CompositeBuffer composite = allocator.compose()) {
             assertThat(composite.capacity()).isZero();
             try (Buffer buf = allocator.allocate(8)) {
                 composite.extendWith(buf.send());
@@ -184,7 +185,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void emptyCompositeBufferMustAllowSettingOffsetsToZero() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+            try (CompositeBuffer composite = allocator.compose()) {
                 composite.readerOffset(0);
                 composite.writerOffset(0);
                 composite.resetOffsets();
@@ -195,7 +196,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void emptyCompositeBufferMustAllowExtendingWithBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+            try (CompositeBuffer composite = allocator.compose()) {
                 try (Buffer b = allocator.allocate(8)) {
                     composite.extendWith(b.send());
                     assertThat(composite.capacity()).isEqualTo(8);
@@ -207,7 +208,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void emptyCompositeBufferMustAllowExtendingWithReadOnlyBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            try (CompositeBuffer composite = CompositeBuffer.compose(allocator)) {
+            try (CompositeBuffer composite = allocator.compose()) {
                 try (Buffer b = allocator.allocate(8).makeReadOnly()) {
                     composite.extendWith(b.send());
                     assertTrue(composite.readOnly());
@@ -221,7 +222,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite) {
                 composite.writeLong(0);
@@ -240,7 +241,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite) {
                 composite.writeInt(0);
@@ -271,7 +272,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite) {
                 composite.writeLong(0);
@@ -290,7 +291,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void whenExtendingCompositeBufferWithReadOffsetLessThanCapacityExtensionReadOffsetMustZero() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator, allocator.allocate(8).send())) {
+             CompositeBuffer composite = allocator.compose(allocator.allocate(8).send())) {
             composite.writeLong(0);
             composite.readInt();
 
@@ -326,7 +327,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer a = allocator.allocate(4).makeReadOnly();
              Buffer b = allocator.allocate(4).makeReadOnly();
-             Buffer composite = CompositeBuffer.compose(allocator, a.send(), b.send())) {
+             Buffer composite = allocator.compose(asList(a.send(), b.send()))) {
             assertTrue(composite.readOnly());
             verifyWriteInaccessible(composite, BufferReadOnlyException.class);
         }
@@ -338,24 +339,24 @@ public class BufferCompositionTest extends BufferTestSupport {
             try (Buffer a = allocator.allocate(8).makeReadOnly();
                  Buffer b = allocator.allocate(8)) {
                 assertThrows(IllegalArgumentException.class,
-                             () -> CompositeBuffer.compose(allocator, a.send(), b.send()));
+                             () -> allocator.compose(asList(a.send(), b.send())));
             }
             try (Buffer a = allocator.allocate(8).makeReadOnly();
                  Buffer b = allocator.allocate(8)) {
                 assertThrows(IllegalArgumentException.class,
-                             () -> CompositeBuffer.compose(allocator, b.send(), a.send()));
+                             () -> allocator.compose(asList(b.send(), a.send())));
             }
             try (Buffer a = allocator.allocate(8).makeReadOnly();
                  Buffer b = allocator.allocate(8);
                  Buffer c = allocator.allocate(8).makeReadOnly()) {
                 assertThrows(IllegalArgumentException.class,
-                        () -> CompositeBuffer.compose(allocator, a.send(), b.send(), c.send()));
+                        () -> allocator.compose(asList(a.send(), b.send(), c.send())));
             }
             try (Buffer a = allocator.allocate(8).makeReadOnly();
                  Buffer b = allocator.allocate(8);
                  Buffer c = allocator.allocate(8)) {
                 assertThrows(IllegalArgumentException.class,
-                        () -> CompositeBuffer.compose(allocator, b.send(), a.send(), c.send()));
+                        () -> allocator.compose(asList(b.send(), a.send(), c.send())));
             }
         }
     }
@@ -365,7 +366,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8)) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite; Buffer b = allocator.allocate(8).makeReadOnly()) {
                 assertThrows(IllegalArgumentException.class, () -> composite.extendWith(b.send()));
@@ -378,7 +379,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite;
             try (Buffer a = allocator.allocate(8).makeReadOnly()) {
-                composite = CompositeBuffer.compose(allocator, a.send());
+                composite = allocator.compose(a.send());
             }
             try (composite; Buffer b = allocator.allocate(8)) {
                 assertThrows(IllegalArgumentException.class, () -> composite.extendWith(b.send()));
@@ -389,9 +390,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsFloorMustThrowOnOutOfBounds() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             assertThrows(IllegalArgumentException.class, () -> composite.splitComponentsFloor(-1));
             assertThrows(IllegalArgumentException.class, () -> composite.splitComponentsFloor(17));
             try (CompositeBuffer split = composite.splitComponentsFloor(16)) {
@@ -404,9 +405,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustThrowOnOutOfBounds() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             assertThrows(IllegalArgumentException.class, () -> composite.splitComponentsCeil(-1));
             assertThrows(IllegalArgumentException.class, () -> composite.splitComponentsCeil(17));
             try (CompositeBuffer split = composite.splitComponentsCeil(16)) {
@@ -419,9 +420,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsFloorMustGiveEmptyBufferForOffsetInFirstComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsFloor(4)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -437,9 +438,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsFloorMustGiveEmptyBufferForOffsetLastByteInFirstComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsFloor(7)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -455,9 +456,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsFloorMustGiveBufferWithFirstComponentForOffsetInSecondComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsFloor(12)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -473,9 +474,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsFloorMustGiveBufferWithFirstComponentForOffsetOnFirstByteInSecondComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsFloor(8)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -491,9 +492,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustGiveBufferWithFirstComponentForOffsetInFirstComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(4)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -509,9 +510,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustGiveBufferWithFirstComponentFofOffsetOnLastByteInFirstComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(7)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -527,9 +528,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustGiveBufferWithFirstAndSecondComponentForOffsetInSecondComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(12)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -542,10 +543,10 @@ public class BufferCompositionTest extends BufferTestSupport {
         }
 
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(12)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -561,9 +562,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustGiveBufferWithFirstComponentForOffsetOnFirstByteInSecondComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(7)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -579,9 +580,9 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void splitComponentsCeilMustGiveEmptyBufferForOffsetOnFirstByteInFirstComponent() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = CompositeBuffer.compose(allocator,
+             CompositeBuffer composite = allocator.compose(asList(
                      allocator.allocate(8).send(),
-                     allocator.allocate(8).send())) {
+                     allocator.allocate(8).send()))) {
             try (CompositeBuffer split = composite.splitComponentsCeil(0)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) split));
                 assertTrue(split.isAccessible());
@@ -596,21 +597,22 @@ public class BufferCompositionTest extends BufferTestSupport {
 
     @Test
     public void decomposeOfEmptyBufferMustGiveEmptyArray() {
-        CompositeBuffer composite = CompositeBuffer.compose(BufferAllocator.onHeapUnpooled());
-        Buffer[] components = composite.decomposeBuffer();
-        assertThat(components.length).isZero();
-        verifyInaccessible(composite);
-        assertThrows(IllegalStateException.class, () -> composite.close());
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            CompositeBuffer composite = allocator.compose();
+            Buffer[] components = composite.decomposeBuffer();
+            assertThat(components.length).isZero();
+            verifyInaccessible(composite);
+            assertThrows(IllegalStateException.class, composite::close);
+        }
     }
 
     @Test
     public void decomposeOfCompositeBufferMustGiveComponentArray() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            CompositeBuffer composite = CompositeBuffer.compose(
-                    allocator,
+            CompositeBuffer composite = allocator.compose(asList(
                     allocator.allocate(3).send(),
                     allocator.allocate(3).send(),
-                    allocator.allocate(2).send());
+                    allocator.allocate(2).send()));
             composite.writeLong(0x0102030405060708L);
             assertThat(composite.readInt()).isEqualTo(0x01020304);
             Buffer[] components = composite.decomposeBuffer();
@@ -630,11 +632,10 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void failureInDecomposeMustCloseConstituentBuffers() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            CompositeBuffer composite = CompositeBuffer.compose(
-                    allocator,
+            CompositeBuffer composite = allocator.compose(asList(
                     allocator.allocate(3).send(),
                     allocator.allocate(3).send(),
-                    allocator.allocate(2).send());
+                    allocator.allocate(2).send()));
             Drop<Object> throwingDrop = new Drop<>() {
                 @Override
                 public void drop(Object obj) {

@@ -210,7 +210,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
 
         HttpUtil.setTransferEncodingChunked(start, false);
 
-        final CompositeBuffer content = CompositeBuffer.compose(allocator);
+        final CompositeBuffer content = allocator.compose();
         FullHttpMessage<?> ret;
         if (start instanceof HttpRequest) {
             ret = new AggregatedFullHttpRequest((HttpRequest) start, content, null);

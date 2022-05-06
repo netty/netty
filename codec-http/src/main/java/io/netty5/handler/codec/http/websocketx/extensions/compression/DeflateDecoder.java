@@ -124,7 +124,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             decoder.writeInbound(intoByteBuf(FRAME_TAIL.get()));
         }
 
-        CompositeBuffer compositeDecompressedContent = CompositeBuffer.compose(ctx.bufferAllocator());
+        CompositeBuffer compositeDecompressedContent = ctx.bufferAllocator().compose();
         for (;;) {
             ByteBuf partUncompressedContent = decoder.readInbound();
             if (partUncompressedContent == null) {
