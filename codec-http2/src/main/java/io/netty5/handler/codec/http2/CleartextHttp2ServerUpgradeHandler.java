@@ -15,19 +15,17 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.adaptor.BufferConversionHandler;
-import io.netty5.handler.adaptor.BufferConversionHandler.Conversion;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.CONNECTION_PREFACE_BUFFER;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -37,9 +35,7 @@ import static java.util.Objects.requireNonNull;
  * prior knowledge or not.
  */
 @UnstableApi
-public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoder {
-    private static final ByteBuf CONNECTION_PREFACE = unreleasableBuffer(connectionPrefaceBuf()).asReadOnly();
-
+public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoderForBuffer {
     private final HttpServerCodec httpServerCodec;
     private final HttpServerUpgradeHandler<?> httpServerUpgradeHandler;
     private final ChannelHandler http2ServerHandler;
@@ -65,9 +61,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
     public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
         ctx.pipeline()
                 .addAfter(ctx.name(), null, httpServerUpgradeHandler)
-                .addAfter(ctx.name(), null, httpServerCodec)
-                .addAfter(ctx.name(), null, new BufferConversionHandler(
-                        Conversion.BYTEBUF_TO_BUFFER, Conversion.BYTEBUF_TO_BUFFER));
+                .addAfter(ctx.name(), null, httpServerCodec);
     }
 
     /**
@@ -75,24 +69,28 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
      * by HTTP upgrade or prior knowledge
      */
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        int prefaceLength = CONNECTION_PREFACE.readableBytes();
-        int bytesRead = Math.min(in.readableBytes(), prefaceLength);
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
+        try (Buffer connectionPreface = CONNECTION_PREFACE_BUFFER.get()) {
+            int prefaceLength = connectionPreface.readableBytes();
+            int bytesRead = Math.min(in.readableBytes(), prefaceLength);
 
-        if (!ByteBufUtil.equals(CONNECTION_PREFACE, CONNECTION_PREFACE.readerIndex(),
-                in, in.readerIndex(), bytesRead)) {
-            ctx.pipeline().remove(this);
-        } else if (bytesRead == prefaceLength) {
-            // Full h2 preface match, removed source codec, using http2 codec to handle
-            // following network traffic
-            ctx.pipeline()
-                    .remove(httpServerCodec)
-                    .remove(httpServerUpgradeHandler);
+            if (!BufferUtil.equals(connectionPreface, connectionPreface.readerOffset(),
+                                   in, in.readerOffset(), bytesRead)) {
+                ctx.pipeline().addBefore(ctx.name(), null, bufferToByteBuf());
+                ctx.pipeline().remove(this);
+            } else if (bytesRead == prefaceLength) {
+                // Full h2 preface match, removed source codec, using http2 codec to handle
+                // following network traffic
+                ctx.pipeline()
+                   .remove(httpServerCodec)
+                   .remove(httpServerUpgradeHandler);
 
-            ctx.pipeline().addAfter(ctx.name(), null, http2ServerHandler);
-            ctx.fireUserEventTriggered(PriorKnowledgeUpgradeEvent.INSTANCE);
-
-            ctx.pipeline().remove(this);
+                String bufferToByteBufName = ctx.name() + "-bufferToByteBuf";
+                ctx.pipeline().addAfter(ctx.name(), bufferToByteBufName, bufferToByteBuf());
+                ctx.pipeline().addAfter(bufferToByteBufName, null, http2ServerHandler);
+                ctx.fireUserEventTriggered(PriorKnowledgeUpgradeEvent.INSTANCE);
+                ctx.pipeline().remove(this);
+            }
         }
     }
 

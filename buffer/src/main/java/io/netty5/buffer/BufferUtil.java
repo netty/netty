@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
@@ -192,6 +193,19 @@ public final class BufferUtil {
         }
 
         requireNonNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
+    }
+
+    /**
+     * Returns {@code true} if and only if the two specified buffers are
+     * identical to each other for {@code length} bytes starting at {@code firstReaderOffset}
+     * index for the {@code first} buffer and {@code secondReaderOffset} index for the {@code second} buffer.
+     * A more compact way to express this is:
+     * <p>
+     * {@code first[firstRoff : firstRoff + length] == second[secondRoff : secondRoff + length]}
+     */
+    public static boolean equals(Buffer first, int firstReaderOffset, Buffer second, int secondReaderOffset,
+                                 int length) {
+        return Statics.equals(first, firstReaderOffset, second, secondReaderOffset, length);
     }
 
     /**

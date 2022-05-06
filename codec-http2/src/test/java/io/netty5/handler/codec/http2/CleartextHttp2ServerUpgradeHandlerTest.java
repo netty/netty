@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -43,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,9 +97,9 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     public void priorKnowledge() throws Exception {
         setUpServerChannel();
 
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer());
 
-        ByteBuf settingsFrame = settingsFrameBuf();
+        Buffer settingsFrame = settingsFrameBuf();
 
         assertFalse(channel.writeInbound(settingsFrame));
 
@@ -151,10 +150,10 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     public void priorKnowledgeInFragments() throws Exception {
         setUpServerChannel();
 
-        ByteBuf connectionPreface = Http2CodecUtil.connectionPrefaceBuf();
-        assertFalse(channel.writeInbound(connectionPreface.readBytes(5), connectionPreface));
+        Buffer connectionPreface = Http2CodecUtil.connectionPrefaceBuffer();
+        assertFalse(channel.writeInbound(connectionPreface.readSplit(5), connectionPreface));
 
-        ByteBuf settingsFrame = settingsFrameBuf();
+        Buffer settingsFrame = settingsFrameBuf();
         assertFalse(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
@@ -173,7 +172,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         String requestString = "GET / HTTP/1.1\r\n" +
                          "Host: example.com\r\n\r\n";
-        ByteBuf inbound = Unpooled.buffer().writeBytes(requestString.getBytes(CharsetUtil.US_ASCII));
+        Buffer inbound = onHeapAllocator().copyOf(requestString.getBytes(CharsetUtil.US_ASCII));
 
         assertTrue(channel.writeInbound(inbound));
 
@@ -215,9 +214,9 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
             }
         });
 
-        assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+        assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer()));
 
-        ByteBuf settingsFrame = settingsFrameBuf();
+        Buffer settingsFrame = settingsFrameBuf();
 
         assertTrue(channel.writeInbound(settingsFrame));
 
@@ -225,15 +224,15 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
     }
 
-    private static ByteBuf settingsFrameBuf() {
-        ByteBuf settingsFrame = Unpooled.buffer();
+    private static Buffer settingsFrameBuf() {
+        Buffer settingsFrame = onHeapAllocator().allocate(64);
         settingsFrame.writeMedium(12); // Payload length
-        settingsFrame.writeByte(0x4); // Frame type
-        settingsFrame.writeByte(0x0); // Flags
+        settingsFrame.writeByte((byte) 0x4); // Frame type
+        settingsFrame.writeByte((byte) 0x0); // Flags
         settingsFrame.writeInt(0x0); // StreamId
-        settingsFrame.writeShort(0x3);
+        settingsFrame.writeShort((short) 0x3);
         settingsFrame.writeInt(100);
-        settingsFrame.writeShort(0x4);
+        settingsFrame.writeShort((short) 0x4);
         settingsFrame.writeInt(65535);
 
         return settingsFrame;
@@ -246,7 +245,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     private void validateClearTextUpgrade(String upgradeString) {
         setUpServerChannel();
 
-        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+        Buffer upgrade = onHeapAllocator().copyOf(upgradeString.getBytes(CharsetUtil.US_ASCII));
 
         assertFalse(channel.writeInbound(upgrade));
 
