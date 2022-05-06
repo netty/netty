@@ -193,8 +193,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -218,8 +216,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -243,8 +239,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -267,8 +261,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -291,8 +283,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -316,8 +306,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- This is the minimum supported by Java12+ -->
@@ -341,8 +329,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java11 build -->
@@ -552,7 +538,7 @@
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
-    <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
+    <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.7.0</junit.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
