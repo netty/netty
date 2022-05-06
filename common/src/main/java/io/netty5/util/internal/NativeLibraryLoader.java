@@ -118,11 +118,25 @@ public final class NativeLibraryLoader {
     }
 
     /**
-     * The shading prefix added to this class's full name.
+     * Calculates the mangled shading prefix added to this class's full name.
+     *
+     * <p>This method mangles the package name as follows, so we can unmangle it back later:
+     * <ul>
+     *   <li>{@code _} to {@code _1}</li>
+     *   <li>{@code .} to {@code _}</li>
+     * </ul>
+     *
+     * <p>Note that we don't mangle non-ASCII characters here because it's extremely unlikely to have
+     * a non-ASCII character in a package name. For more information, see:
+     * <ul>
+     *   <li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html">JNI
+     *       specification</a></li>
+     *   <li>{@code parsePackagePrefix()} in {@code netty_jni_util.c}.</li>
+     * </ul>
      *
      * @throws UnsatisfiedLinkError if the shader used something other than a prefix
      */
-    private static String calculatePackagePrefix() {
+    private static String calculateMangledPackagePrefix() {
         String maybeShaded = NativeLibraryLoader.class.getName();
         // Use ! instead of . to avoid shading utilities from modifying the string
         String expected = "io!netty5!util!internal!NativeLibraryLoader".replace('!', '.');
@@ -131,16 +145,17 @@ public final class NativeLibraryLoader {
                     "Could not find prefix added to %s to get %s. When shading, only adding a "
                     + "package prefix is supported", expected, maybeShaded));
         }
-        return maybeShaded.substring(0, maybeShaded.length() - expected.length());
+        return maybeShaded.substring(0, maybeShaded.length() - expected.length())
+                          .replace("_", "_1")
+                          .replace('.', '_');
     }
 
     /**
      * Load the given library with the specified {@link ClassLoader}
      */
     public static void load(String originalName, ClassLoader loader) {
-        // Adjust expected name to support shading of native libraries.
-        String packagePrefix = calculatePackagePrefix().replace('.', '_');
-        String name = packagePrefix + originalName;
+        String mangledPackagePrefix = calculateMangledPackagePrefix();
+        String name = mangledPackagePrefix + originalName;
         List<Throwable> suppressed = new ArrayList<>();
         try {
             // first try to load from java.library.path
@@ -190,7 +205,7 @@ public final class NativeLibraryLoader {
             }
             out.flush();
 
-            if (shouldShadedLibraryIdBePatched(packagePrefix)) {
+            if (shouldShadedLibraryIdBePatched(mangledPackagePrefix)) {
                 // Let's try to patch the id and re-sign it. This is a best-effort and might fail if a
                 // SecurityManager is setup or the right executables are not installed :/
                 tryPatchShadedLibraryIdAndSign(tmpFile, originalName);
