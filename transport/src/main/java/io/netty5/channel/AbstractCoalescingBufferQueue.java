@@ -26,6 +26,7 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
+import java.util.List;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
@@ -289,7 +290,7 @@ public abstract class AbstractCoalescingBufferQueue {
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
         try (next) {
-            return CompositeBuffer.compose(alloc, cumulation.send(), next.send());
+            return alloc.compose(List.of(cumulation.send(), next.send()));
         }
     }
 
