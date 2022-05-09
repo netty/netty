@@ -293,9 +293,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                     buffers[index] = component.readableBuffer();
                     index++;
                 }
-                System.out.println("buffers[2].get(0) = " + buffers[2].get(0));
             }
-            System.out.println("buffers[2].get(0) = " + buffers[2].get(0));
             i = 1;
             assertThat(buffers.length).isGreaterThanOrEqualTo(1);
             for (ByteBuffer buffer : buffers) {
