@@ -67,13 +67,28 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         // Ensure we remove the id from the QueryContextManager once the query completes.
         promise.asFuture().addListener(this);
 
-        if (parent.isOptResourceEnabled()) {
+        if (parent.isOptResourceEnabled() &&
+                // Only add the extra OPT record if there is not already one. This is required as only one is allowed
+                // as per RFC:
+                //  - https://datatracker.ietf.org/doc/html/rfc6891#section-6.1.1
+                !hasOptRecord(additionals)) {
             optResource = new AbstractDnsOptPseudoRrRecord(parent.maxPayloadSize(), 0, 0) {
                 // We may want to remove this in the future and let the user just specify the opt record in the query.
             };
         } else {
             optResource = null;
         }
+    }
+
+    private static boolean hasOptRecord(DnsRecord[] additionals) {
+        if (additionals != null && additionals.length > 0) {
+            for (DnsRecord additional: additionals) {
+                if (additional.type() == DnsRecordType.OPT) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     InetSocketAddress nameServerAddr() {
