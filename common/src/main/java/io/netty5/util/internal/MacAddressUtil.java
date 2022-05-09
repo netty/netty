@@ -115,7 +115,6 @@ public final class MacAddressUtil {
             return null;
         }
 
-        // Unknown
         if (bestMacAddr.length == EUI48_MAC_ADDRESS_LENGTH) { // EUI-48 - convert to EUI-64
             byte[] newAddr = new byte[EUI64_MAC_ADDRESS_LENGTH];
             System.arraycopy(bestMacAddr, 0, newAddr, 0, 3);
@@ -124,6 +123,7 @@ public final class MacAddressUtil {
             System.arraycopy(bestMacAddr, 3, newAddr, 5, 3);
             bestMacAddr = newAddr;
         } else {
+            // Unknown
             bestMacAddr = Arrays.copyOf(bestMacAddr, EUI64_MAC_ADDRESS_LENGTH);
         }
 
