@@ -203,7 +203,9 @@ public class DatagramDnsResponse extends DefaultDnsResponse
 
         if (recipient() == null) {
             return that.recipient() == null;
-        } else return recipient().equals(that.recipient());
+        } else {
+            return recipient().equals(that.recipient());
+        }
     }
 
     @Override

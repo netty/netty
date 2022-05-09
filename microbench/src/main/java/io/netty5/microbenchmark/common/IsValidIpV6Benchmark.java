@@ -199,7 +199,9 @@ public class IsValidIpV6Benchmark extends AbstractMicrobenchmark {
                 // If we did not end in :: then this is invalid
                 return ipAddress.charAt(endOffset - 1) != ':' ||
                         ipAddress.charAt(endOffset - 2) == ':';
-            } else return numberOfColons != 8 || ipAddress.charAt(startOffset) == ':';
+            } else {
+                return numberOfColons != 8 || ipAddress.charAt(startOffset) == ':';
+            }
         }
     }
 
