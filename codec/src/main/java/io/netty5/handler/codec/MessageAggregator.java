@@ -105,7 +105,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         if (isStartMessage(in)) {
             aggregating = true;
             return true;
-        } else return aggregating && isContentMessage(in);
+        } else {
+            return aggregating && isContentMessage(in);
+        }
     }
 
     /**
