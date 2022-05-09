@@ -21,6 +21,7 @@ import io.netty5.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty5.handler.codec.dns.DnsQuery;
 import io.netty5.handler.codec.dns.DnsQuestion;
 import io.netty5.handler.codec.dns.DnsRecord;
+import io.netty5.handler.codec.dns.DnsRecordType;
 import io.netty5.handler.codec.dns.DnsResponse;
 import io.netty5.handler.codec.dns.DnsSection;
 import io.netty5.util.ReferenceCountUtil;
