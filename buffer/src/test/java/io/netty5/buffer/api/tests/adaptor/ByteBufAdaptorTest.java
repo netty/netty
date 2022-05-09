@@ -31,36 +31,29 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class ByteBufAdaptorTest extends AbstractByteBufTest {
-    static ByteBufAllocatorAdaptor alloc;
-
-    static void setUpAllocator(String name) {
+    static ByteBufAllocatorAdaptor setUpAllocator(String name) {
         Optional<MemoryManager> managers = MemoryManager.lookupImplementation(name);
         assumeTrue(managers.isPresent(), () -> "Memory implementation '" + name + "' not found.");
         BufferAllocator onheap = MemoryManager.using(managers.get(), BufferAllocator::onHeapPooled);
         BufferAllocator offheap = MemoryManager.using(managers.get(), BufferAllocator::onHeapPooled);
-        alloc = new ByteBufAllocatorAdaptor(onheap, offheap);
+        return new ByteBufAllocatorAdaptor(onheap, offheap);
     }
 
-    @AfterAll
-    public static void tearDownAllocator() throws Exception {
-        if (alloc != null) {
-            alloc.close();
-        }
-    }
+    protected abstract ByteBufAllocatorAdaptor alloc();
 
     @Override
     protected ByteBuf newBuffer(int capacity, int maxCapacity) {
-        return alloc.buffer(capacity, maxCapacity);
+        return alloc().buffer(capacity, maxCapacity);
     }
 
     @Test
     public void byteBufOfFromOnHeapBufferMustMirrorContentsOfBuffer() {
-        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc.getOnHeap());
+        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc().getOnHeap());
     }
 
     @Test
     public void byteBufOfFromOffHeapBufferMustMirrorContentsOfBuffer() {
-        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc.getOffHeap());
+        byteBufOfFromBufferMustMirrorContentsOfBuffer(alloc().getOffHeap());
     }
 
     private static void byteBufOfFromBufferMustMirrorContentsOfBuffer(BufferAllocator allocator) {
