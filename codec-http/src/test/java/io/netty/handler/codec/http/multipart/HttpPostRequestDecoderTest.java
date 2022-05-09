@@ -1024,7 +1024,10 @@ public class HttpPostRequestDecoderTest {
                 "/",
                 content);
         try {
-            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(new DefaultHttpDataFactory(true), req);
+            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(
+                    new DefaultHttpDataFactory(true),
+                    req
+            );
             decoder.offer(req);
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             fail("Was not expecting an exception");
