@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -267,7 +268,7 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
         int countBytes = 0;
         for (String string : strings) {
             buffer.writerIndex(0);
-            final byte[] bytes = string.getBytes("UTF-8");
+            final byte[] bytes = string.getBytes(StandardCharsets.UTF_8);
             buffer.writeBytes(bytes);
             countBytes += buffer.writerIndex();
         }

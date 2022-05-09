@@ -17,6 +17,7 @@ package io.netty5.util.internal;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A utility class that provides various common operations and constants
@@ -32,11 +33,7 @@ public final class ResourcesUtil {
      * @return The file named {@code fileName} associated with {@link Class} {@code resourceClass} .
      */
     public static File getFile(Class resourceClass, String fileName) {
-        try {
-            return new File(URLDecoder.decode(resourceClass.getResource(fileName).getFile(), "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            return new File(resourceClass.getResource(fileName).getFile());
-        }
+        return new File(URLDecoder.decode(resourceClass.getResource(fileName).getFile(), StandardCharsets.UTF_8));
     }
 
     private ResourcesUtil() { }
