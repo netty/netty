@@ -77,12 +77,12 @@ jobs:
           name:  maven-repository
           path: /home/runner/jars
 
-      - uses: uraimo/run-on-arch-action@v2.0.9
+      - uses: uraimo/run-on-arch-action@v2.2.0
         name: Check native loading
         id: runcmd
         with:
           arch: aarch64
-          distro: ubuntu18.04
+          distro: ubuntu20.04
 
           # Not required, but speeds up builds by storing container images in
           # a GitHub package registry.
