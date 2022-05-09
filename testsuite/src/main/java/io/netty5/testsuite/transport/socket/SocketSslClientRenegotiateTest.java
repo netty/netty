@@ -15,9 +15,9 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -221,7 +221,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     }
 
     @Sharable
-    private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
+    private static final class TestHandler extends SimpleChannelInboundHandler<Buffer> {
 
         private final AtomicReference<Throwable> exception;
         private int handshakeCounter;
@@ -260,6 +260,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception { }
     }
 }

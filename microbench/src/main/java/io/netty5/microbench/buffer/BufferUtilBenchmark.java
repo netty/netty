@@ -34,7 +34,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 public class
-    ByteBufUtilBenchmark extends AbstractMicrobenchmark {
+BufferUtilBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "true", "false" })
     private boolean direct;

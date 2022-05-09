@@ -15,10 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
@@ -36,7 +32,6 @@ import io.netty5.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
@@ -45,7 +40,6 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
@@ -211,47 +205,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     public abstract KQueueChannelConfig config();
 
     /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
-     */
-    protected final ByteBuf newDirectBuffer(ByteBuf buf) {
-        return newDirectBuffer(buf, buf);
-    }
-
-    /**
-     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the specified holder.
-     * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
-     * this method.
-     */
-    protected final ByteBuf newDirectBuffer(Object holder, ByteBuf buf) {
-        final int readableBytes = buf.readableBytes();
-        if (readableBytes == 0) {
-            ReferenceCountUtil.release(holder);
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        final ByteBufAllocator alloc = alloc();
-        if (alloc.isDirectBufferPooled()) {
-            return newDirectBuffer0(holder, buf, alloc, readableBytes);
-        }
-
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf == null) {
-            return newDirectBuffer0(holder, buf, alloc, readableBytes);
-        }
-
-        directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-        ReferenceCountUtil.safeRelease(holder);
-        return directBuf;
-    }
-
-    private static ByteBuf newDirectBuffer0(Object holder, ByteBuf buf, ByteBufAllocator alloc, int capacity) {
-        final ByteBuf directBuf = alloc.directBuffer(capacity);
-        directBuf.writeBytes(buf, buf.readerIndex(), capacity);
-        ReferenceCountUtil.safeRelease(holder);
-        return directBuf;
-    }
-
-    /**
      * Returns an off-heap copy of, and then closes, the given {@link Buffer}.
      */
     protected final Buffer newDirectBuffer(Buffer buf) {
@@ -284,30 +237,16 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     /**
-     * Read bytes into the given {@link ByteBuf} and return the amount.
-     */
-    protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
-        int writerIndex = byteBuf.writerIndex();
-        int localReadAmount;
-        unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
-        if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
-        } else {
-            ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = socket.read(buf, buf.position(), buf.limit());
-        }
-        if (localReadAmount > 0) {
-            byteBuf.writerIndex(writerIndex + localReadAmount);
-        }
-        return localReadAmount;
-    }
-
-    /**
      * Read bytes into the given {@link Buffer} and return the amount.
      */
-    protected final void doReadBytes(Buffer buffer) throws Exception {
+    protected final int doReadBytes(Buffer buffer) throws Exception {
         unsafe().recvBufAllocHandle().attemptedBytesRead(buffer.writableBytes());
-        buffer.forEachWritable(0, (index, component) -> {
+        try (var iterator = buffer.forEachWritable()) {
+            var component = iterator.first();
+            if (component == null) {
+                unsafe().recvBufAllocHandle().lastBytesRead(0);
+                return 0;
+            }
             long address = component.writableNativeAddress();
             assert address != 0;
             int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
@@ -315,28 +254,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             if (localReadAmount > 0) {
                 component.skipWritable(localReadAmount);
             }
-            return false;
-        });
-    }
-
-    protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
-        if (buf.hasMemoryAddress()) {
-            int localFlushedAmount = socket.writeAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
-            if (localFlushedAmount > 0) {
-                in.removeBytes(localFlushedAmount);
-                return 1;
-            }
-        } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
-                    buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
-            int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
-            if (localFlushedAmount > 0) {
-                nioBuf.position(nioBuf.position() + localFlushedAmount);
-                in.removeBytes(localFlushedAmount);
-                return 1;
-            }
+            return localReadAmount;
         }
-        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {

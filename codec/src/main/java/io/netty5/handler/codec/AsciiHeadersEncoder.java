@@ -17,7 +17,7 @@
 package io.netty5.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
 
@@ -117,7 +117,7 @@ public final class AsciiHeadersEncoder {
 
     private static void writeAscii(ByteBuf buf, int offset, CharSequence value) {
         if (value instanceof AsciiString) {
-            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, value.length());
+            BufferUtil.copy((AsciiString) value, 0, buf, offset, value.length());
         } else {
             buf.setCharSequence(offset, value, CharsetUtil.US_ASCII);
         }

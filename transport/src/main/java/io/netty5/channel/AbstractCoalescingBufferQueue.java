@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -14,10 +14,10 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufConvertible;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -26,15 +26,16 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
+import java.util.List;
 
-import static io.netty5.util.ReferenceCountUtil.safeRelease;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("unchecked")
 @UnstableApi
 public abstract class AbstractCoalescingBufferQueue {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractCoalescingBufferQueue.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
+            AbstractCoalescingBufferQueue.class);
     private final ArrayDeque<Object> bufAndListenerPairs;
     private final PendingBytesTracker tracker;
     private int readableBytes;
@@ -57,11 +58,11 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the head of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void addFirst(ByteBuf buf, Promise<Void> promise) {
+    public final void addFirst(Buffer buf, Promise<Void> promise) {
         addFirst(buf, f -> f.cascadeTo(promise));
     }
 
-    private void addFirst(ByteBuf buf, FutureListener<Void> listener) {
+    private void addFirst(Buffer buf, FutureListener<Void> listener) {
         if (listener != null) {
             bufAndListenerPairs.addFirst(listener);
         }
@@ -72,7 +73,7 @@ public abstract class AbstractCoalescingBufferQueue {
     /**
      * Add a buffer to the end of the queue.
      */
-    public final void add(ByteBuf buf) {
+    public final void add(Buffer buf) {
         add(buf, (FutureListener<Void>) null);
     }
 
@@ -82,7 +83,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void add(ByteBuf buf, Promise<Void> promise) {
+    public final void add(Buffer buf, Promise<Void> promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         add(buf, f -> f.cascadeTo(promise));
@@ -94,7 +95,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
-    public final void add(ByteBuf buf, FutureListener<Void> listener) {
+    public final void add(Buffer buf, FutureListener<Void> listener) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         bufAndListenerPairs.add(buf);
@@ -105,17 +106,17 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * Remove the first {@link ByteBuf} from the queue.
+     * Remove the first {@link Buffer} from the queue.
      * @param aggregatePromise used to aggregate the promises and listeners for the returned buffer.
-     * @return the first {@link ByteBuf} from the queue.
+     * @return the first {@link Buffer} from the queue.
      */
-    public final ByteBuf removeFirst(Promise<Void> aggregatePromise) {
+    public final Buffer removeFirst(Promise<Void> aggregatePromise) {
         Object entry = bufAndListenerPairs.poll();
         if (entry == null) {
             return null;
         }
-        assert entry instanceof ByteBufConvertible;
-        ByteBuf result = ((ByteBufConvertible) entry).asByteBuf();
+        assert entry instanceof Buffer;
+        Buffer result = (Buffer) entry;
 
         decrementReadableBytes(result.readableBytes());
 
@@ -128,17 +129,17 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * Remove a {@link ByteBuf} from the queue with the specified number of bytes. Any added buffer who's bytes are
-     * fully consumed during removal will have it's promise completed when the passed aggregate {@link Promise}
+     * Remove a {@link Buffer} from the queue with the specified number of bytes. Any added buffer whose bytes are
+     * fully consumed during removal will have their promise completed when the passed aggregate {@link Promise}
      * completes.
      *
-     * @param alloc The allocator used if a new {@link ByteBuf} is generated during the aggregation process.
-     * @param bytes the maximum number of readable bytes in the returned {@link ByteBuf}, if {@code bytes} is greater
+     * @param alloc The allocator used if a new {@link Buffer} is generated during the aggregation process.
+     * @param bytes the maximum number of readable bytes in the returned {@link Buffer}, if {@code bytes} is greater
      *              than {@link #readableBytes} then a buffer of length {@link #readableBytes} is returned.
      * @param aggregatePromise used to aggregate the promises and listeners for the constituent buffers.
-     * @return a {@link ByteBuf} composed of the enqueued buffers.
+     * @return a {@link Buffer} composed of the enqueued buffers.
      */
-    public final ByteBuf remove(ByteBufAllocator alloc, int bytes, Promise<Void> aggregatePromise) {
+    public final Buffer remove(BufferAllocator alloc, int bytes, Promise<Void> aggregatePromise) {
         checkPositiveOrZero(bytes, "bytes");
         requireNonNull(aggregatePromise, "aggregatePromise");
 
@@ -149,8 +150,8 @@ public abstract class AbstractCoalescingBufferQueue {
         }
         bytes = Math.min(bytes, readableBytes);
 
-        ByteBuf toReturn = null;
-        ByteBuf entryBuffer = null;
+        Buffer toReturn = null;
+        Buffer entryBuffer = null;
         int originalBytes = bytes;
         try {
             for (;;) {
@@ -162,28 +163,27 @@ public abstract class AbstractCoalescingBufferQueue {
                     aggregatePromise.asFuture().addListener((FutureListener<Void>) entry);
                     continue;
                 }
-                entryBuffer = (ByteBuf) entry;
+                entryBuffer = (Buffer) entry;
                 if (entryBuffer.readableBytes() > bytes) {
                     // Add the buffer back to the queue as we can't consume all of it.
                     bufAndListenerPairs.addFirst(entryBuffer);
                     if (bytes > 0) {
                         // Take a slice of what we can consume and retain it.
-                        entryBuffer = entryBuffer.readRetainedSlice(bytes);
+                        entryBuffer = entryBuffer.readSplit(bytes);
                         toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
                                                     : compose(alloc, toReturn, entryBuffer);
                         bytes = 0;
                     }
                     break;
-                } else {
-                    bytes -= entryBuffer.readableBytes();
-                    toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
-                                                : compose(alloc, toReturn, entryBuffer);
                 }
+                bytes -= entryBuffer.readableBytes();
+                toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
+                                            : compose(alloc, toReturn, entryBuffer);
                 entryBuffer = null;
             }
         } catch (Throwable cause) {
-            safeRelease(entryBuffer);
-            safeRelease(toReturn);
+            safeDispose(entryBuffer);
+            safeDispose(toReturn);
             aggregatePromise.setFailure(cause);
             throw cause;
         }
@@ -227,7 +227,7 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
         Throwable pending = null;
-        ByteBuf previousBuf = null;
+        Buffer previousBuf = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
             try {
@@ -242,7 +242,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     break;
                 }
 
-                if (entry instanceof ByteBufConvertible) {
+                if (entry instanceof Buffer) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
                         // If the write fails we want to at least propagate the exception through the ChannelPipeline
@@ -250,7 +250,7 @@ public abstract class AbstractCoalescingBufferQueue {
                         ctx.write(previousBuf)
                            .addListener(ctx.channel(), ChannelFutureListeners.FIRE_EXCEPTION_ON_FAILURE);
                     }
-                    previousBuf = ((ByteBufConvertible) entry).asByteBuf();
+                    previousBuf = (Buffer) entry;
                 } else if (entry instanceof Promise) {
                     decrementReadableBytes(previousBuf.readableBytes());
                     ctx.write(previousBuf).cascadeTo((Promise<? super Void>) entry);
@@ -281,63 +281,50 @@ public abstract class AbstractCoalescingBufferQueue {
     /**
      * Calculate the result of {@code current + next}.
      */
-    protected abstract ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next);
+    protected abstract Buffer compose(BufferAllocator alloc, Buffer cumulation, Buffer next);
 
     /**
-     * Compose {@code cumulation} and {@code next} into a new {@link CompositeByteBuf}.
+     * Compose {@code cumulation} and {@code next} into a new {@link CompositeBuffer}.
      */
-    protected final ByteBuf composeIntoComposite(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
+    protected final Buffer composeIntoComposite(BufferAllocator alloc, Buffer cumulation, Buffer next) {
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
-        CompositeByteBuf composite = alloc.compositeBuffer(size() + 2);
-        try {
-            composite.addComponent(true, cumulation);
-            composite.addComponent(true, next);
-        } catch (Throwable cause) {
-            composite.release();
-            safeRelease(next);
-            throw cause;
+        try (next) {
+            return alloc.compose(List.of(cumulation.send(), next.send()));
         }
-        return composite;
     }
 
     /**
-     * Compose {@code cumulation} and {@code next} into a new {@link ByteBufAllocator#ioBuffer()}.
+     * Compose {@code cumulation} and {@code next} into a new {@link Buffer} suitable for IO.
      * @param alloc The allocator to use to allocate the new buffer.
      * @param cumulation The current cumulation.
      * @param next The next buffer.
+     * @param minIncrement The minimum buffer size - the resulting buffer will grow by at least this much.
      * @return The result of {@code cumulation + next}.
      */
-    protected final ByteBuf copyAndCompose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
-        ByteBuf newCumulation = alloc.ioBuffer(cumulation.readableBytes() + next.readableBytes());
-        try {
-            newCumulation.writeBytes(cumulation).writeBytes(next);
-        } catch (Throwable cause) {
-            newCumulation.release();
-            safeRelease(next);
-            throw cause;
+    protected final Buffer copyAndCompose(BufferAllocator alloc, Buffer cumulation, Buffer next, int minIncrement) {
+        try (cumulation; next) {
+            int sum = cumulation.readableBytes() + Math.max(minIncrement, next.readableBytes());
+            return alloc.allocate(sum).writeBytes(cumulation).writeBytes(next);
         }
-        cumulation.release();
-        next.release();
-        return newCumulation;
     }
 
     /**
-     * Calculate the first {@link ByteBuf} which will be used in subsequent calls to
-     * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
+     * Calculate the first {@link Buffer} which will be used in subsequent calls to
+     * {@link #compose(BufferAllocator, Buffer, Buffer)}.
      */
-    protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
+    protected Buffer composeFirst(BufferAllocator allocator, Buffer first) {
         return first;
     }
 
     /**
-     * The value to return when {@link #remove(ByteBufAllocator, int, Promise)} is called but the queue is empty.
-     * @return the {@link ByteBuf} which represents an empty queue.
+     * The value to return when {@link #remove(BufferAllocator, int, Promise)} is called but the queue is empty.
+     * @return the {@link Buffer} which represents an empty queue.
      */
-    protected abstract ByteBuf removeEmptyValue();
+    protected abstract Buffer removeEmptyValue();
 
     /**
-     * Get the number of elements in this queue added via one of the {@link #add(ByteBuf)} methods.
+     * Get the number of elements in this queue added via one of the {@link #add(Buffer)} methods.
      * @return the number of elements in this queue.
      */
     protected final int size() {
@@ -352,10 +339,10 @@ public abstract class AbstractCoalescingBufferQueue {
                 break;
             }
             try {
-                if (entry instanceof ByteBufConvertible) {
-                    ByteBuf buffer = ((ByteBufConvertible) entry).asByteBuf();
+                if (entry instanceof Buffer) {
+                    Buffer buffer = (Buffer) entry;
                     decrementReadableBytes(buffer.readableBytes());
-                    safeRelease(buffer);
+                    safeDispose(buffer);
                 } else {
                     ((FutureListener<Void>) entry).operationComplete(future);
                 }
@@ -388,6 +375,14 @@ public abstract class AbstractCoalescingBufferQueue {
         assert readableBytes >= 0;
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
+        }
+    }
+
+    private void safeDispose(Object object) {
+        try {
+            Resource.dispose(object);
+        } catch (Throwable t) {
+            logger.warn("Failed to release a message: {}", object, t);
         }
     }
 }

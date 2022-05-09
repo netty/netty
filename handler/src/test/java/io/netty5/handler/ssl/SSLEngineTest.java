@@ -24,7 +24,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -713,7 +712,6 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -759,7 +757,6 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -885,7 +882,6 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -929,7 +925,6 @@ public abstract class SSLEngineTest {
         final Promise<Void> clientWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -1074,7 +1069,6 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
@@ -1117,7 +1111,6 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -1362,7 +1355,6 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap()
                 .group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()))
                 .channel(NioServerSocketChannel.class)
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
@@ -1421,7 +1413,6 @@ public abstract class SSLEngineTest {
         cb = new Bootstrap();
         cb.group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()))
                 .channel(NioSocketChannel.class)
-                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
@@ -1724,7 +1715,6 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -1755,7 +1745,6 @@ public abstract class SSLEngineTest {
 
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -1813,7 +1802,6 @@ public abstract class SSLEngineTest {
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                 new MultithreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         final Promise<String> promise = sb.config().group().next().newPromise();
         serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1895,7 +1883,6 @@ public abstract class SSLEngineTest {
         cb = new Bootstrap();
         cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         clientChannel = cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -3922,7 +3909,6 @@ public abstract class SSLEngineTest {
             sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
                     new MultithreadEventLoopGroup(NioHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
-            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
             final Promise<SecretKey> promise = sb.config().group().next().newPromise();
             serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override

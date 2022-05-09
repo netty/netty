@@ -284,7 +284,7 @@ public interface Statics {
             destination.writeBytes(asciiString.array(), asciiString.arrayOffset(), source.length());
             return;
         }
-        // TODO: Copy optimized writes from ByteBufUtil
+        // TODO: Copy optimized writes from BufferUtil
         byte[] bytes = source.toString().getBytes(charset);
         destination.writeBytes(bytes);
     }

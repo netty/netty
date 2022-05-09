@@ -21,7 +21,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -440,14 +439,12 @@ public class NettyBlockHoundIntegrationTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(serverSslHandler)
                     .bind(new InetSocketAddress(0)).get();
 
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {

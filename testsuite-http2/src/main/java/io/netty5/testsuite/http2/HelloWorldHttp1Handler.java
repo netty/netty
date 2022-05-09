@@ -51,10 +51,13 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         }
         boolean keepAlive = HttpUtil.isKeepAlive(req);
 
-        final Buffer content = HelloWorldHttp2Handler.RESPONSE_BYTES_SUPPLIER.get()
-                .writeCharSequence(" - via " + req.protocolVersion() + " (" + establishApproach + ')', US_ASCII);
+        FullHttpResponse response;
+        try (Buffer responseBytes = HelloWorldHttp2Handler.RESPONSE_BYTES_SUPPLIER.get()) {
+            final Buffer content = responseBytes.copy()
+                    .writeCharSequence(" - via " + req.protocolVersion() + " (" + establishApproach + ')', US_ASCII);
 
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+            response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+        }
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
 

@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.util.AsciiString;
@@ -27,8 +28,11 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 
+import java.util.function.Supplier;
+
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.handler.codec.http2.Http2Exception.headerListSizeError;
@@ -67,6 +71,9 @@ public final class Http2CodecUtil {
     private static final ByteBuf CONNECTION_PREFACE =
             unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8)))
                     .asReadOnly();
+
+    public static final Supplier<Buffer> CONNECTION_PREFACE_BUFFER =
+            offHeapAllocator().constBufferSupplier("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8));
 
     private static final int MAX_PADDING_LENGTH_LENGTH = 1;
     public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
@@ -169,6 +176,14 @@ public final class Http2CodecUtil {
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
         return CONNECTION_PREFACE.retainedDuplicate();
+    }
+
+    /**
+     * Returns a buffer containing the {@link #CONNECTION_PREFACE}.
+     */
+    public static Buffer connectionPrefaceBuffer() {
+        // Return a duplicate so that modifications to the reader index will not affect the original buffer.
+        return CONNECTION_PREFACE_BUFFER.get();
     }
 
     /**

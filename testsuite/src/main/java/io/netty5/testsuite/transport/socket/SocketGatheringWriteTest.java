@@ -15,21 +15,18 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.testsuite.util.TestUtils;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -44,8 +41,6 @@ import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.compositeBuffer;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,65 +64,12 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-    public void testGatheringWriteByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testGatheringWriteByteBuf);
-    }
-
-    public void testGatheringWriteByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, false, true, false);
-    }
-
-    @Test
-    @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-    public void testGatheringWriteNotAutoReadByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testGatheringWriteNotAutoReadByteBuf);
-    }
-
-    public void testGatheringWriteNotAutoReadByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, false, false, false);
-    }
-
-    @Test
-    @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-    public void testGatheringWriteWithCompositeByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testGatheringWriteWithCompositeByteBuf);
-    }
-
-    public void testGatheringWriteWithCompositeByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, true, true, false);
-    }
-
-    @Test
-    @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-    public void testGatheringWriteWithCompositeNotAutoReadByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testGatheringWriteWithCompositeNotAutoReadByteBuf);
-    }
-
-    public void testGatheringWriteWithCompositeNotAutoReadByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, true, false, false);
-    }
-
-    // Test for https://github.com/netty/netty/issues/2647
-    @Test
-    @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-    public void testGatheringWriteBigByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testGatheringWriteBigByteBuf);
-    }
-
-    public void testGatheringWriteBigByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        byte[] bigData = new byte[1024 * 1024 * 50];
-        random.nextBytes(bigData);
-        testGatheringWrite0(sb, cb, bigData, false, true, false);
-    }
-
-    @Test
-    @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
     public void testGatheringWrite(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testGatheringWrite);
     }
 
     public void testGatheringWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, false, true, true);
+        testGatheringWrite0(sb, cb, data, false, true);
     }
 
     @Test
@@ -137,7 +79,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, false, false, true);
+        testGatheringWrite0(sb, cb, data, false, false);
     }
 
     @Test
@@ -147,7 +89,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteWithComposite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, true, true, true);
+        testGatheringWrite0(sb, cb, data, true, true);
     }
 
     @Test
@@ -157,7 +99,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteWithCompositeNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testGatheringWrite0(sb, cb, data, true, false, true);
+        testGatheringWrite0(sb, cb, data, true, false);
     }
 
     // Test for https://github.com/netty/netty/issues/2647
@@ -170,15 +112,12 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     public void testGatheringWriteBig(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         byte[] bigData = new byte[1024 * 1024 * 50];
         random.nextBytes(bigData);
-        testGatheringWrite0(sb, cb, bigData, false, true, true);
+        testGatheringWrite0(sb, cb, bigData, false, true);
     }
 
     private void testGatheringWrite0(
-            ServerBootstrap sb, Bootstrap cb, byte[] data, boolean composite, boolean autoRead, boolean newBufferAPI)
+            ServerBootstrap sb, Bootstrap cb, byte[] data, boolean composite, boolean autoRead)
             throws Throwable {
-        if (!newBufferAPI) {
-            disableNewBufferAPI(sb, cb);
-        }
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
@@ -192,40 +131,25 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         Channel sc = sb.bind().get();
         Channel cc = cb.connect(sc.localAddress()).get();
 
-        if (newBufferAPI) {
-            BufferAllocator alloc = preferredAllocator();
-            try (Buffer src = MemoryManager.unsafeWrap(data)) {
-                for (int i = 0; i < data.length;) {
-                    int length = Math.min(random.nextInt(1024 * 8), data.length - i);
-                    if (composite && i % 2 == 0) {
-                        int firstBufLength = length / 2;
-                        CompositeBuffer comp = alloc.compose(asList(
-                                src.readSplit(firstBufLength).send(),
-                                src.readSplit(length - firstBufLength).send()));
-                        cc.write(comp);
-                    } else {
-                        cc.write(src.readSplit(length));
-                    }
-                    i += length;
-                }
-            }
-        } else {
+        BufferAllocator alloc = preferredAllocator();
+        try (Buffer src = MemoryManager.unsafeWrap(data)) {
             for (int i = 0; i < data.length;) {
                 int length = Math.min(random.nextInt(1024 * 8), data.length - i);
                 if (composite && i % 2 == 0) {
                     int firstBufLength = length / 2;
-                    CompositeByteBuf comp = compositeBuffer();
-                    comp.addComponent(true, wrappedBuffer(data, i, firstBufLength))
-                        .addComponent(true, wrappedBuffer(data, i + firstBufLength, length - firstBufLength));
+                    CompositeBuffer comp =
+                            alloc.compose(asList(
+                            src.readSplit(firstBufLength).send(),
+                            src.readSplit(length - firstBufLength).send()));
                     cc.write(comp);
                 } else {
-                    cc.write(wrappedBuffer(data, i, length));
+                    cc.write(src.readSplit(length));
                 }
                 i += length;
             }
         }
 
-        Future<Void> cf = cc.writeAndFlush(newBufferAPI ? preferredAllocator().allocate(0) : Unpooled.EMPTY_BUFFER);
+        Future<Void> cf = cc.writeAndFlush(preferredAllocator().allocate(0));
         try {
             assertTrue(cf.await(60000));
             cf.sync();
@@ -252,15 +176,10 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         if (ch.exception.get() != null) {
             throw ch.exception.get();
         }
-        Object expected = newBufferAPI ? MemoryManager.unsafeWrap(data) : wrappedBuffer(data);
+        Object expected = MemoryManager.unsafeWrap(data);
         assertEquals(expected, sh.received);
-        if (sh.received instanceof Buffer) {
-            ((Buffer) sh.received).close();
-            ((Buffer) expected).close();
-        } else {
-            ReferenceCountUtil.release(sh.received);
-            ReferenceCountUtil.release(expected);
-        }
+        Resource.dispose(sh.received);
+        Resource.dispose(expected);
     }
 
     private static final class TestServerHandler extends TestHandler {
@@ -275,28 +194,15 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object in) throws Exception {
-            if (in instanceof Buffer) {
-                Buffer buf = (Buffer) in;
-                Buffer recv = (Buffer) received;
-                if (recv == null) {
-                    received = recv = ctx.bufferAllocator().allocate(256);
-                }
-                recv.ensureWritable(buf.readableBytes(), recv.capacity(), true);
-                recv.writeBytes(buf);
-                if (recv.readableBytes() >= expectedBytes) {
-                    doneReadingPromise.setSuccess(null);
-                }
-            } else {
-                ByteBuf buf = (ByteBuf) in;
-                ByteBuf recv = (ByteBuf) received;
-                if (recv == null) {
-                    received = recv = Unpooled.buffer();
-                }
-                recv.writeBytes(buf);
-                if (recv.readableBytes() >= expectedBytes) {
-                    doneReadingPromise.setSuccess(null);
-                }
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
+            Buffer recv = (Buffer) received;
+            if (recv == null) {
+                received = recv = ctx.bufferAllocator().allocate(256);
+            }
+            recv.ensureWritable(in.readableBytes(), recv.capacity(), true);
+            recv.writeBytes(in);
+            if (recv.readableBytes() >= expectedBytes) {
+                doneReadingPromise.setSuccess(null);
             }
         }
 
@@ -313,7 +219,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends SimpleChannelInboundHandler<Object> {
+    private static class TestHandler extends SimpleChannelInboundHandler<Buffer> {
         private final boolean autoRead;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<>();
@@ -332,7 +238,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Buffer in) throws Exception {
         }
 
         @Override

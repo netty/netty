@@ -53,7 +53,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -145,7 +144,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), bufferToByteBuf());
+                p.addLast(new LineBasedFrameDecoder(64));
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(sh);
             }
@@ -156,7 +155,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), bufferToByteBuf());
+                p.addLast(new LineBasedFrameDecoder(64));
                 p.addLast(new StringDecoder(), new StringEncoder());
                 p.addLast(ch);
             }

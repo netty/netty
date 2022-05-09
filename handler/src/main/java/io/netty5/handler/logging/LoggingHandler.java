@@ -18,7 +18,7 @@ package io.netty5.handler.logging;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -48,7 +48,7 @@ public class LoggingHandler implements ChannelHandler {
     protected final InternalLogLevel internalLevel;
 
     private final LogLevel level;
-    private final ByteBufFormat byteBufFormat;
+    private final BufferFormat bufferFormat;
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
@@ -63,7 +63,7 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param format Format of ByteBuf dumping
      */
-    public LoggingHandler(ByteBufFormat format) {
+    public LoggingHandler(BufferFormat format) {
         this(DEFAULT_LEVEL, format);
     }
 
@@ -74,7 +74,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        this(level, ByteBufFormat.HEX_DUMP);
+        this(level, BufferFormat.HEX_DUMP);
     }
 
     /**
@@ -82,11 +82,11 @@ public class LoggingHandler implements ChannelHandler {
      * name of the instance.
      *
      * @param level the log level
-     * @param byteBufFormat the ByteBuf format
+     * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(LogLevel level, ByteBufFormat byteBufFormat) {
+    public LoggingHandler(LogLevel level, BufferFormat bufferFormat) {
         this.level = requireNonNull(level, "level");
-        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
+        this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = InternalLoggerFactory.getInstance(getClass());
         internalLevel = level.toInternalLevel();
     }
@@ -108,7 +108,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        this(clazz, level, ByteBufFormat.HEX_DUMP);
+        this(clazz, level, BufferFormat.HEX_DUMP);
     }
 
     /**
@@ -116,12 +116,12 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param clazz the class type to generate the logger for
      * @param level the log level
-     * @param byteBufFormat the ByteBuf format
+     * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(Class<?> clazz, LogLevel level, ByteBufFormat byteBufFormat) {
+    public LoggingHandler(Class<?> clazz, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(clazz, "clazz");
         this.level = requireNonNull(level, "level");
-        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
+        this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = InternalLoggerFactory.getInstance(clazz);
         internalLevel = level.toInternalLevel();
     }
@@ -142,7 +142,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        this(name, level, ByteBufFormat.HEX_DUMP);
+        this(name, level, BufferFormat.HEX_DUMP);
     }
 
     /**
@@ -150,13 +150,13 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param name the name of the class to use for the logger
      * @param level the log level
-     * @param byteBufFormat the ByteBuf format
+     * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(String name, LogLevel level, ByteBufFormat byteBufFormat) {
+    public LoggingHandler(String name, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(name, "name");
 
         this.level = requireNonNull(level, "level");
-        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
+        this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = InternalLoggerFactory.getInstance(name);
         internalLevel = level.toInternalLevel();
     }
@@ -169,10 +169,10 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     /**
-     * Returns the {@link ByteBufFormat} that this handler uses to log
+     * Returns the {@link BufferFormat} that this handler uses to log
      */
-    public ByteBufFormat byteBufFormat() {
-        return byteBufFormat;
+    public BufferFormat bufferFormat() {
+        return bufferFormat;
     }
 
     @Override
@@ -371,14 +371,14 @@ public class LoggingHandler implements ChannelHandler {
             return buf.toString();
         } else {
             int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
                 int hexDumpLength = 2 + rows * 80;
                 outputLength += hexDumpLength;
             }
             StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B');
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 buf.append(NEWLINE);
                 appendPrettyHexDump(buf, msg);
             }
@@ -399,16 +399,16 @@ public class LoggingHandler implements ChannelHandler {
             return buf.toString();
         } else {
             int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
                 int hexDumpLength = 2 + rows * 80;
                 outputLength += hexDumpLength;
             }
             StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B');
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 buf.append(NEWLINE);
-                ByteBufUtil.appendPrettyHexDump(buf, msg);
+                BufferUtil.appendPrettyHexDump(buf, msg);
             }
 
             return buf.toString();
@@ -429,7 +429,7 @@ public class LoggingHandler implements ChannelHandler {
             return buf.toString();
         } else {
             int outputLength = chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1;
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
                 int hexDumpLength = 2 + rows * 80;
                 outputLength += hexDumpLength;
@@ -437,7 +437,7 @@ public class LoggingHandler implements ChannelHandler {
             StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ")
                .append(msgStr).append(", ").append(length).append('B');
-            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+            if (bufferFormat == BufferFormat.HEX_DUMP) {
                 buf.append(NEWLINE);
                 appendPrettyHexDump(buf, content);
             }

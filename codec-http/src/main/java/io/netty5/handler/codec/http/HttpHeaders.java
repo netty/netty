@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.handler.codec.DateFormatter;
 import io.netty5.handler.codec.Headers;
 import io.netty5.handler.codec.HeadersUtils;
@@ -694,7 +694,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof AsciiString) {
-            ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());
+            BufferUtil.copy((AsciiString) seq, 0, buf, seq.length());
         } else {
             buf.writeCharSequence(seq, CharsetUtil.US_ASCII);
         }

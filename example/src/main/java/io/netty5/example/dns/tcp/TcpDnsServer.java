@@ -17,7 +17,7 @@ package io.netty5.example.dns.tcp;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -164,7 +164,7 @@ public final class TcpDnsServer {
             if (record.type() == DnsRecordType.A) {
                 //just print the IP after query
                 DnsRawRecord raw = (DnsRawRecord) record;
-                System.out.println(NetUtil.bytesToIpAddress(ByteBufUtil.getBytes(raw.content())));
+                System.out.println(NetUtil.bytesToIpAddress(BufferUtil.getBytes(raw.content())));
             }
         }
     }

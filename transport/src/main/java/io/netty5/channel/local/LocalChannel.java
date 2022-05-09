@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.local;
 
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -23,7 +24,6 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.PreferHeapByteBufAllocator;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -76,12 +76,12 @@ public class LocalChannel extends AbstractChannel {
 
     public LocalChannel(EventLoop eventLoop) {
         super(null, eventLoop);
-        config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
+        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
     }
 
     protected LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
         super(parent, eventLoop);
-        config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
+        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();
@@ -139,9 +139,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        this.localAddress =
-                LocalChannelRegistry.register(this, this.localAddress,
-                        localAddress);
+        this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
         state = State.BOUND;
     }
 

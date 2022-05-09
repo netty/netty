@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.DatagramPacket;
@@ -25,7 +25,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * A decoder that decodes the content of the received {@link DatagramPacket} using
- * the specified {@link ByteBuf} decoder. E.g.,
+ * the specified {@link Buffer} decoder. E.g.,
  *
  * <pre><code>
  * {@link ChannelPipeline} pipeline = ...;
@@ -34,14 +34,14 @@ import static java.util.Objects.requireNonNull;
  */
 public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
-    private final MessageToMessageDecoder<ByteBuf> decoder;
+    private final MessageToMessageDecoder<Buffer> decoder;
 
     /**
-     * Create a {@link DatagramPacket} decoder using the specified {@link ByteBuf} decoder.
+     * Create a {@link DatagramPacket} decoder using the specified {@link Buffer} decoder.
      *
-     * @param decoder the specified {@link ByteBuf} decoder
+     * @param decoder the specified {@link Buffer} decoder
      */
-    public DatagramPacketDecoder(MessageToMessageDecoder<ByteBuf> decoder) {
+    public DatagramPacketDecoder(MessageToMessageDecoder<Buffer> decoder) {
         this.decoder = requireNonNull(decoder, "decoder");
     }
 

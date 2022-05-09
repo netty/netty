@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,66 +15,33 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty5.channel.DefaultByteBufAddressedEnvelope;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.BufferAddressedEnvelope;
 
 import java.net.InetSocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public class DatagramPacket extends DefaultByteBufAddressedEnvelope<InetSocketAddress> {
-    /**
-     * Create a new instance with the specified packet {@code data} and {@code recipient} address.
-     */
-    public DatagramPacket(ByteBuf data, InetSocketAddress recipient) {
-        super(data, recipient);
-    }
-
+public class DatagramPacket extends BufferAddressedEnvelope<InetSocketAddress, DatagramPacket> {
     /**
      * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
      * address.
      */
-    public DatagramPacket(ByteBuf data, InetSocketAddress recipient, InetSocketAddress sender) {
-        super(data, recipient, sender);
+    public DatagramPacket(Buffer message, InetSocketAddress recipient, InetSocketAddress sender) {
+        super(message, recipient, sender);
+    }
+
+    /**
+     * Create a new instance with the specified packet {@code data} and {@code recipient} address.
+     */
+    public DatagramPacket(Buffer message, InetSocketAddress recipient) {
+        super(message, recipient);
     }
 
     @Override
-    public DatagramPacket copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public DatagramPacket duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public DatagramPacket retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public DatagramPacket replace(ByteBuf content) {
+    public DatagramPacket replace(Buffer content) {
         return new DatagramPacket(content, recipient(), sender());
-    }
-
-    @Override
-    public DatagramPacket retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public DatagramPacket retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public DatagramPacket touch() {
-        super.touch();
-        return this;
     }
 
     @Override

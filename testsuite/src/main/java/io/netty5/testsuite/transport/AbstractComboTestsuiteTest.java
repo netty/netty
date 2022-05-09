@@ -15,12 +15,8 @@
  */
 package io.netty5.testsuite.transport;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.bootstrap.AbstractBootstrap;
-import io.netty5.bootstrap.Bootstrap;
-import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelOption;
 import io.netty5.testsuite.transport.TestsuitePermutation.AllocatorConfig;
 import io.netty5.testsuite.util.TestUtils;
 import io.netty5.util.internal.StringUtil;
@@ -50,25 +46,17 @@ public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?,
             for (TestsuitePermutation.BootstrapComboFactory<SB, CB> e : combos) {
                 sb = e.newServerInstance();
                 cb = e.newClientInstance();
-                configure(sb, cb, config.byteBufAllocator, config.bufferAllocator);
+                configure(sb, cb, config.bufferAllocator);
                 logger.info(String.format(
                         "Running: %s %d of %d (%s + %s) with %s",
                         methodName, ++i, combos.size(), sb, cb,
-                        StringUtil.simpleClassName(config.byteBufAllocator)));
+                        StringUtil.simpleClassName(config.bufferAllocator)));
                 runner.run(sb, cb);
             }
         }
     }
 
-    protected abstract void configure(SB sb, CB cb, ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator);
-
-    public void disableNewBufferAPI(AbstractBootstrap<?, ?, ?> sb, Bootstrap cb) {
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
-        if (sb instanceof ServerBootstrap) {
-            ((ServerBootstrap) sb).childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
-        }
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, false);
-    }
+    protected abstract void configure(SB sb, CB cb, BufferAllocator bufferAllocator);
 
     public interface Runner<SB extends AbstractBootstrap<?, ?, ?>, CB extends AbstractBootstrap<?, ?, ?>> {
         void run(SB sb, CB cb) throws Throwable;

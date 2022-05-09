@@ -15,13 +15,13 @@
  */
 package io.netty5.channel.local;
 
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AbstractServerChannel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.PreferHeapByteBufAllocator;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelRecvBufferAllocator;
@@ -45,7 +45,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         super(eventLoop, childEventLoopGroup);
-        config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
+        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
     }
 
     @Override

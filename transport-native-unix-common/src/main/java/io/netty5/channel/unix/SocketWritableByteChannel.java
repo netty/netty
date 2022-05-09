@@ -15,8 +15,14 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.Resource;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 import static java.util.Objects.requireNonNull;
@@ -29,7 +35,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
     }
 
     @Override
-    public final int write(java.nio.ByteBuffer src) throws java.io.IOException {
+    public final int write(ByteBuffer src) throws IOException {
         final int written;
         int position = src.position();
         int limit = src.limit();
@@ -37,28 +43,26 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
             written = fd.write(src, position, src.limit());
         } else {
             final int readableBytes = limit - position;
-            io.netty.buffer.ByteBuf buffer = null;
+            final BufferAllocator alloc = alloc();
+            Buffer buffer = null;
             try {
-                if (readableBytes == 0) {
-                    buffer = io.netty.buffer.Unpooled.EMPTY_BUFFER;
+                if (alloc.isPooling() && alloc.getAllocationType().isDirect()) {
+                    buffer = alloc.allocate(readableBytes);
                 } else {
-                    final ByteBufAllocator alloc = alloc();
-                    if (alloc.isDirectBufferPooled()) {
-                        buffer = alloc.directBuffer(readableBytes);
-                    } else {
-                        buffer = io.netty.buffer.ByteBufUtil.threadLocalDirectBuffer();
-                        if (buffer == null) {
-                            buffer = io.netty.buffer.Unpooled.directBuffer(readableBytes);
-                        }
+                    buffer = BufferUtil.threadLocalDirectBuffer();
+                    if (buffer == null) {
+                        buffer = DefaultBufferAllocators.offHeapAllocator().allocate(readableBytes);
                     }
                 }
                 buffer.writeBytes(src.duplicate());
-                java.nio.ByteBuffer nioBuffer = buffer.internalNioBuffer(buffer.readerIndex(), readableBytes);
-                written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
-            } finally {
-                if (buffer != null) {
-                    buffer.release();
+                try (var iterator = buffer.forEachReadable()) {
+                    var component = iterator.first();
+                    ByteBuffer nioBuffer = component.readableBuffer();
+                    written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
+                    assert component.next() == null;
                 }
+            } finally {
+                Resource.dispose(buffer);
             }
         }
         if (written > 0) {
@@ -73,9 +77,9 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
     }
 
     @Override
-    public final void close() throws java.io.IOException {
+    public final void close() throws IOException {
         fd.close();
     }
 
-    protected abstract ByteBufAllocator alloc();
+    protected abstract BufferAllocator alloc();
 }

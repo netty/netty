@@ -18,7 +18,6 @@ package io.netty5.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.internal.ObjectUtil;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -35,7 +34,6 @@ import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR;
-import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
@@ -63,7 +61,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile RecvBufferAllocator rcvBufAllocator;
-    private volatile boolean rcvBufAllocatorUseBuffer = true;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
@@ -90,7 +87,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, RCVBUF_ALLOCATOR_USE_BUFFER,
+                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR,
                 WRITE_BUFFER_HIGH_WATER_MARK, WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK,
                 MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
     }
@@ -142,10 +139,7 @@ public class DefaultChannelConfig implements ChannelConfig {
             return (T) getBufferAllocator();
         }
         if (option == RCVBUF_ALLOCATOR) {
-            return (T) getRecvBufferAllocator();
-        }
-        if (option == RCVBUF_ALLOCATOR_USE_BUFFER) {
-            return (T) Boolean.valueOf(getRecvBufferAllocatorUseBuffer());
+            return getRecvBufferAllocator();
         }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
@@ -188,8 +182,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
             setRecvBufferAllocator((RecvBufferAllocator) value);
-        } else if (option == RCVBUF_ALLOCATOR_USE_BUFFER) {
-            setRecvBufferAllocatorUseBuffer((Boolean) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
@@ -278,7 +270,7 @@ public class DefaultChannelConfig implements ChannelConfig {
      * reached we will continue to process other events before trying to write the remaining messages.
      */
     public ChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        this.maxMessagesPerWrite = ObjectUtil.checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
+        this.maxMessagesPerWrite = checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
         return this;
     }
 
@@ -334,17 +326,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     public ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
         rcvBufAllocator = requireNonNull(allocator, "allocator");
-        return this;
-    }
-
-    @Override
-    public boolean getRecvBufferAllocatorUseBuffer() {
-        return rcvBufAllocatorUseBuffer;
-    }
-
-    @Override
-    public ChannelConfig setRecvBufferAllocatorUseBuffer(boolean useBufferApi) {
-        rcvBufAllocatorUseBuffer = useBufferApi;
         return this;
     }
 

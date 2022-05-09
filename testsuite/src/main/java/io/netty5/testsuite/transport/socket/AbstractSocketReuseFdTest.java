@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -52,17 +50,11 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
-    public void testReuseFdByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReuseFd(sb, cb, false));
-    }
-
-    @Test
-    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testReuseFd(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReuseFd(sb, cb, true));
+        run(testInfo, (sb, cb) -> testReuseFd(sb, cb));
     }
 
-    public void testReuseFd(ServerBootstrap sb, Bootstrap cb, boolean newBufferAPI) throws Throwable {
+    public void testReuseFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);
 
@@ -82,8 +74,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                     false,
                     globalException,
                     serverRemaining,
-                    serverDonePromise,
-                    newBufferAPI);
+                    serverDonePromise);
                 sch.pipeline().addLast("handler", sh);
             }
         });
@@ -95,8 +86,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                         true,
                         globalException,
                         clientRemaining,
-                        clientDonePromise,
-                        newBufferAPI);
+                        clientDonePromise);
                 sch.pipeline().addLast("handler", ch);
             }
         });
@@ -125,7 +115,6 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         private static final String EXPECTED_PAYLOAD = "payload";
 
         private final Promise<Void> donePromise;
-        private final boolean newBufferAPI;
         private final AtomicInteger remaining;
         private final boolean client;
         volatile Channel channel;
@@ -137,52 +126,32 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                 boolean client,
                 AtomicReference<Throwable> globalException,
                 AtomicInteger remaining,
-                Promise<Void> donePromise,
-                boolean newBufferAPI) {
+                Promise<Void> donePromise) {
             this.client = client;
             this.globalException = globalException;
             this.remaining = remaining;
             this.donePromise = donePromise;
-            this.newBufferAPI = newBufferAPI;
         }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (client) {
-                if (newBufferAPI) {
-                    ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
-                } else {
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, US_ASCII));
-                }
+                ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
             }
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            if (msg instanceof Buffer) {
-                Buffer buf = (Buffer) msg;
-                received.append(buf.toString(US_ASCII));
-                buf.close();
+            Buffer buf = (Buffer) msg;
+            received.append(buf.toString(US_ASCII));
+            buf.close();
 
-                if (received.toString().equals(EXPECTED_PAYLOAD)) {
-                    if (client) {
-                        ctx.close();
-                    } else {
-                        ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
-                    }
-                }
-            } else if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                received.append(buf.toString(US_ASCII));
-                buf.release();
-
-                if (received.toString().equals(EXPECTED_PAYLOAD)) {
-                    if (client) {
-                        ctx.close();
-                    } else {
-                        ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, US_ASCII));
-                    }
+            if (received.toString().equals(EXPECTED_PAYLOAD)) {
+                if (client) {
+                    ctx.close();
+                } else {
+                    ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
                 }
             }
         }

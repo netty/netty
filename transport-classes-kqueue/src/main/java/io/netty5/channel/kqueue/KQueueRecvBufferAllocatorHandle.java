@@ -15,24 +15,18 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty5.channel.RecvBufferAllocator.Handle;
-import io.netty5.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
-    private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
-            new PreferredDirectByteBufAllocator();
-
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean overrideGuess;
     private boolean readEOF;
@@ -54,16 +48,8 @@ final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     }
 
     @Override
-    public ByteBuf allocate(ByteBufAllocator alloc) {
-        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
-        preferredDirectByteBufAllocator.updateAllocator(alloc);
-        return overrideGuess ? preferredDirectByteBufAllocator.ioBuffer(guess0()) :
-                delegate().allocate(preferredDirectByteBufAllocator);
-    }
-
-    @Override
     public Buffer allocate(BufferAllocator alloc) {
-        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
+        // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
         if (!alloc.getAllocationType().isDirect()) {
             alloc = DefaultBufferAllocators.offHeapAllocator();
         }

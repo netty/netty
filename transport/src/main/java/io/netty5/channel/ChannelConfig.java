@@ -53,7 +53,7 @@ import java.util.Map;
  * </tr><tr>
  * <td>{@link ChannelOption#WRITE_BUFFER_WATER_MARK}</td><td>{@link #setWriteBufferWaterMark(WriteBufferWaterMark)}</td>
  * </tr><tr>
- * <td>{@link ChannelOption#ALLOCATOR}</td><td>{@link #setAllocator(ByteBufAllocator)}</td>
+ * <td>{@link ChannelOption#BUFFER_ALLOCATOR}</td><td>{@link #setBufferAllocator(BufferAllocator)}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
  * </tr>
@@ -168,7 +168,7 @@ public interface ChannelConfig {
      * to allocate buffers.
      * @deprecated use {@link #getBufferAllocator()}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     ByteBufAllocator getAllocator();
 
     /**
@@ -176,7 +176,7 @@ public interface ChannelConfig {
      * to allocate buffers.
      * @deprecated use {@link #setBufferAllocator(BufferAllocator)}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     ChannelConfig setAllocator(ByteBufAllocator allocator);
 
     /**
@@ -200,21 +200,6 @@ public interface ChannelConfig {
      * Set the {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
      */
     ChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);
-
-    /**
-     * Returns whether the {@link RecvBufferAllocator} should be used to allocate {@link io.netty5.buffer.api.Buffer}
-     * instances.
-     * The default is {@code false}, which means {@link io.netty5.buffer.ByteBuf} instances will be allocated instead.
-     *
-     * @return {@code true} if the {@link RecvBufferAllocator} should use the new buffer API.
-     */
-    boolean getRecvBufferAllocatorUseBuffer();
-
-    /**
-     * Set whether the {@link RecvBufferAllocator} should be used to allocate {@link io.netty5.buffer.api.Buffer}
-     * instances (when set to {@code true}), or {@link io.netty5.buffer.ByteBuf} instances (when {@code false}).
-     */
-    ChannelConfig setRecvBufferAllocatorUseBuffer(boolean useBufferApi);
 
     /**
      * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that

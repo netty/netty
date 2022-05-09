@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBufConvertible;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -81,9 +81,9 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
                     StringUtil.simpleClassName(encoder) + " must produce only one message.");
         }
         Object content = out.get(0);
-        if (content instanceof ByteBufConvertible) {
-            // Replace the ByteBuf with a DatagramPacket.
-            out.set(0, new DatagramPacket(((ByteBufConvertible) content).asByteBuf(), msg.recipient(), msg.sender()));
+        if (content instanceof Buffer) {
+            // Replace the Buffer with a DatagramPacket.
+            out.set(0, new DatagramPacket((Buffer) content, msg.recipient(), msg.sender()));
         } else {
             throw new EncoderException(
                     StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");

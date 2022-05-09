@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
@@ -41,16 +39,10 @@ public interface RecvBufferAllocator {
          * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
          * enough not to waste its space.
          */
-        ByteBuf allocate(ByteBufAllocator alloc);
-
-        /**
-         * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
-         * enough not to waste its space.
-         */
         Buffer allocate(BufferAllocator alloc);
 
         /**
-         * Similar to {@link #allocate(ByteBufAllocator)} except that it does not allocate anything but just tells the
+         * Similar to {@link #allocate(BufferAllocator)} except that it does not allocate anything but just tells the
          * capacity.
          */
         int guess();
@@ -134,11 +126,6 @@ public interface RecvBufferAllocator {
          */
         protected final Handle delegate() {
             return delegate;
-        }
-
-        @Override
-        public ByteBuf allocate(ByteBufAllocator alloc) {
-            return delegate.allocate(alloc);
         }
 
         @Override

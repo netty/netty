@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * Different modes of reading from a {@link DomainSocketChannel}.
@@ -23,7 +23,7 @@ import io.netty.buffer.ByteBuf;
 public enum DomainSocketReadMode {
 
     /**
-     * Read {@link ByteBuf}s from the {@link DomainSocketChannel}.
+     * Read {@link Buffer}s from the {@link DomainSocketChannel}.
      */
     BYTES,
 

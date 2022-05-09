@@ -20,30 +20,30 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ByteBufUtilTest {
+public class BufferUtilTest {
 
     @Test
     void testReverseUnsignedShort() {
-        assertEquals(0x00FF00, ByteBufUtil.reverseUnsignedShort(0x0000FF));
-        assertEquals(0x0000FF, ByteBufUtil.reverseUnsignedShort(0x00FF00));
+        assertEquals(0x00FF00, BufferUtil.reverseUnsignedShort(0x0000FF));
+        assertEquals(0x0000FF, BufferUtil.reverseUnsignedShort(0x00FF00));
     }
 
     @Test
     void testReverseMedium() {
-        assertEquals(0xFFFF0000, ByteBufUtil.reverseMedium(0x000000FF));
-        assertEquals(0x000000FF, ByteBufUtil.reverseMedium(0xFFFF0000));
+        assertEquals(0xFFFF0000, BufferUtil.reverseMedium(0x000000FF));
+        assertEquals(0x000000FF, BufferUtil.reverseMedium(0xFFFF0000));
     }
 
     @Test
     void testReverseUnsignedMedium() {
-        assertEquals(0xFF0000, ByteBufUtil.reverseUnsignedMedium(0x0000FF));
-        assertEquals(0x0000FF, ByteBufUtil.reverseUnsignedMedium(0xFF0000));
+        assertEquals(0xFF0000, BufferUtil.reverseUnsignedMedium(0x0000FF));
+        assertEquals(0x0000FF, BufferUtil.reverseUnsignedMedium(0xFF0000));
     }
 
     @Test
     void testReverseUnsignedInt() {
-        assertEquals(0xFF000000L, ByteBufUtil.reverseUnsignedInt(0x000000FFL));
-        assertEquals(0x000000FFL, ByteBufUtil.reverseUnsignedInt(0xFF000000L));
+        assertEquals(0xFF000000L, BufferUtil.reverseUnsignedInt(0x000000FFL));
+        assertEquals(0x000000FFL, BufferUtil.reverseUnsignedInt(0xFF000000L));
     }
 
 }

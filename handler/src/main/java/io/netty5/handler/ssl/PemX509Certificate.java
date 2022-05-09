@@ -92,7 +92,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
             success = true;
             return value;
         } finally {
-            // Make sure we never leak the PEM's ByteBuf in the event of an Exception
+            // Make sure we never leak the PEM's Buffer in the event of an Exception
             if (!success && pem != null) {
                 pem.close();
             }
@@ -158,7 +158,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     /**
-     * Creates a {@link PemX509Certificate} from raw {@code ByteBuf}.
+     * Creates a {@link PemX509Certificate} from raw {@code Buffer}.
      *
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.

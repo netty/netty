@@ -34,7 +34,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.ByteBufUtil.writeAscii;
+import static io.netty5.buffer.BufferUtil.writeAscii;
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -173,7 +173,6 @@ public class CloseNotifyTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.config().setRecvBufferAllocatorUseBuffer(true);
         // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
         // non-JDK compatible OpenSSL engine that can process partial packets:
         channel.pipeline().addLast(sslContext.newHandler(ALLOC));

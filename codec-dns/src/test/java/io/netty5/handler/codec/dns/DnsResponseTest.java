@@ -20,7 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.BufferDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;
 
@@ -79,7 +79,7 @@ public class DnsResponseTest {
         for (byte[] p: packets) {
             BufferAllocator allocator = embedder.bufferAllocator();
             Buffer packet = allocator.copyOf(p);
-            embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0)));
+            embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = embedder.readInbound();
             assertThat(envelope, is(instanceOf(DatagramDnsResponse.class)));
             DnsResponse response = envelope.content();
@@ -104,7 +104,7 @@ public class DnsResponseTest {
         Buffer packet = embedder.bufferAllocator().allocate(512).writeBytes(malformedLoopPacket);
         try {
             assertThrows(CorruptedFrameException.class,
-                () -> embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0))));
+                () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }
@@ -116,7 +116,7 @@ public class DnsResponseTest {
         Buffer packet = embedder.bufferAllocator().allocate(512);
         try {
             assertThrows(CorruptedFrameException.class,
-                () -> embedder.writeInbound(new BufferDatagramPacket(packet, null, new InetSocketAddress(0))));
+                () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }

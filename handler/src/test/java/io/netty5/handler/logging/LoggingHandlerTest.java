@@ -243,7 +243,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogByteBufDataReadWithSimpleFormat() throws Exception {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, ByteBufFormat.SIMPLE));
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
 

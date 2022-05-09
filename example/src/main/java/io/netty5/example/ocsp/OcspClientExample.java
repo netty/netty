@@ -94,7 +94,6 @@ public class OcspClientExample {
                         .channel(NioSocketChannel.class)
                         .group(group)
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000)
-                        .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                         .handler(newClientHandler(context, host, promise));
 
                 Channel channel = bootstrap.connect(host, 443).get();

@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
@@ -138,8 +138,8 @@ public class Base64Test {
              Buffer decoded = Base64.decode(encoded);
              Buffer expectedBuf = onHeapAllocator().copyOf(bytes)) {
             assertEquals(expectedBuf, decoded,
-                         StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
-                         StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
+                         StringUtil.NEWLINE + "expected: " + BufferUtil.hexDump(expectedBuf) +
+                         StringUtil.NEWLINE + "actual--: " + BufferUtil.hexDump(decoded));
         }
     }
 

@@ -50,7 +50,7 @@ final class KQueueEventArray {
             throw new IllegalArgumentException("capacity must be >= 1 but was " + capacity);
         }
         memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(capacity));
-        memoryAddress = Buffer.memoryAddress(memory);
+        memoryAddress = Buffer.nativeAddressOf(memory);
         this.capacity = capacity;
     }
 
@@ -105,7 +105,7 @@ final class KQueueEventArray {
 
             Buffer.free(memory);
             memory = buffer;
-            memoryAddress = Buffer.memoryAddress(buffer);
+            memoryAddress = Buffer.nativeAddressOf(buffer);
         } catch (OutOfMemoryError e) {
             if (throwIfFail) {
                 OutOfMemoryError error = new OutOfMemoryError(

@@ -28,16 +28,13 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
-import io.netty5.channel.DefaultByteBufAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
-import io.netty5.channel.socket.BufferDatagramPacket;
-import io.netty5.channel.socket.DatagramChannelConfig;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.DatagramChannelConfig;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -78,9 +75,9 @@ public final class NioDatagramChannel
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
-            StringUtil.simpleClassName(ByteBuf.class) + ')';
+            StringUtil.simpleClassName(Buffer.class) + ')';
 
     private final DatagramChannelConfig config;
 
@@ -241,10 +238,7 @@ public final class NioDatagramChannel
         DatagramChannelConfig config = config();
         RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
-        if (config.getRecvBufferAllocatorUseBuffer()) {
-            return doReadBufferMessages(allocHandle, buf);
-        }
-        return doReadByteBufMessages(allocHandle, buf);
+        return doReadBufferMessages(allocHandle, buf);
     }
 
     private int doReadBufferMessages(Handle allocHandle, List<Object> buf) throws IOException {
@@ -262,36 +256,12 @@ public final class NioDatagramChannel
 
             allocHandle.lastBytesRead(receiveDatagram.bytesReceived);
             data.skipWritable(allocHandle.lastBytesRead());
-            buf.add(new BufferDatagramPacket(data, localAddress(), remoteAddress));
+            buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;
         } finally {
             if (free) {
                 data.close();
-            }
-        }
-    }
-
-    private int doReadByteBufMessages(Handle allocHandle, List<Object> buf) throws IOException {
-        ByteBuf data = allocHandle.allocate(config.getAllocator());
-        allocHandle.attemptedBytesRead(data.writableBytes());
-        boolean free = true;
-        try {
-            ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
-            int pos = nioData.position();
-            InetSocketAddress remoteAddress = (InetSocketAddress) javaChannel().receive(nioData);
-            if (remoteAddress == null) {
-                return 0;
-            }
-
-            allocHandle.lastBytesRead(nioData.position() - pos);
-            buf.add(new DatagramPacket(data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead()),
-                                       localAddress(), remoteAddress));
-            free = false;
-            return 1;
-        } finally {
-            if (free) {
-                data.release();
             }
         }
     }
@@ -352,30 +322,15 @@ public final class NioDatagramChannel
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket p = (DatagramPacket) msg;
-            ByteBuf content = p.content();
+            Buffer content = p.content();
             if (isSingleDirectBuffer(content)) {
                 return p;
             }
             return new DatagramPacket(newDirectBuffer(p, content), p.recipient());
         }
-        if (msg instanceof BufferDatagramPacket) {
-            BufferDatagramPacket p = (BufferDatagramPacket) msg;
-            Buffer content = p.content();
-            if (isSingleDirectBuffer(content)) {
-                return p;
-            }
-            return new BufferDatagramPacket(newDirectBuffer(p, content), p.recipient());
-        }
 
         if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
-            if (isSingleDirectBuffer(buf)) {
-                return buf;
-            }
-            return newDirectBuffer(buf);
-        }
-        if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             if (isSingleDirectBuffer(buf)) {
                 return buf;
             }
@@ -393,25 +348,10 @@ public final class NioDatagramChannel
                 }
                 return new DefaultBufferAddressedEnvelope<>(newDirectBuffer((Resource<?>) e, buf), e.recipient());
             }
-            if (content instanceof ByteBufConvertible) {
-                ByteBuf buf = ((ByteBufConvertible) content).asByteBuf();
-                if (isSingleDirectBuffer(buf)) {
-                    return e;
-                }
-                return new DefaultByteBufAddressedEnvelope<>(newDirectBuffer((ReferenceCounted) e, buf), e.recipient());
-            }
         }
 
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
-    }
-
-    /**
-     * Checks if the specified buffer is a direct buffer and is composed of a single NIO buffer.
-     * (We check this because otherwise we need to make it a non-composite buffer.)
-     */
-    private static boolean isSingleDirectBuffer(ByteBuf buf) {
-        return buf.isDirect() && buf.nioBufferCount() == 1;
     }
 
     /**

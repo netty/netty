@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.socket.nio;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
@@ -317,23 +316,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doReadBytes(ByteBuf byteBuf) throws Exception {
-        final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-        return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
-    }
-
-    @Override
     protected int doReadBytes(Buffer buffer) throws Exception {
         final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         allocHandle.attemptedBytesRead(buffer.writableBytes());
         return buffer.transferFrom(javaChannel(), allocHandle.attemptedBytesRead());
-    }
-
-    @Override
-    protected int doWriteBytes(ByteBuf buf) throws Exception {
-        final int expectedWrittenBytes = buf.readableBytes();
-        return buf.readBytes(javaChannel(), expectedWrittenBytes);
     }
 
     @Override

@@ -13,15 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.channel.epoll;
+package io.netty5.handler.logging;
 
-import io.netty5.channel.unix.tests.IovArrayTest;
-import org.junit.jupiter.api.BeforeAll;
-
-public class EpollKQueueIovArrayTest extends IovArrayTest {
-
-    @BeforeAll
-    public static void loadNative() {
-        Epoll.ensureAvailability();
-    }
+/**
+ * Used to control the format and verbosity of logging for buffers and buffer-like objects.
+ *
+ * @see LoggingHandler
+ */
+public enum BufferFormat {
+    /**
+     * Buffers will be logged in a simple format, with no hex dump included.
+     */
+    SIMPLE,
+    /**
+     * Buffers will be logged as hex-dumps.
+     */
+    HEX_DUMP
 }

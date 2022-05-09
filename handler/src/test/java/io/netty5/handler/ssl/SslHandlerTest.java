@@ -24,7 +24,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelId;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -608,7 +607,6 @@ public class SslHandlerTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group)
               .channel(LocalServerChannel.class)
-              .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
               .childHandler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) {
@@ -644,7 +642,6 @@ public class SslHandlerTest {
             Bootstrap cb = new Bootstrap();
             cb.group(group)
               .channel(LocalChannel.class)
-              .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) {
@@ -721,7 +718,6 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -742,7 +738,6 @@ public class SslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -1135,7 +1130,6 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1153,7 +1147,6 @@ public class SslHandlerTest {
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1230,14 +1223,12 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(serverSslHandler)
                     .bind(new InetSocketAddress(0)).get();
 
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1329,7 +1320,6 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1394,7 +1384,6 @@ public class SslHandlerTest {
             Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1509,7 +1498,6 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1531,7 +1519,6 @@ public class SslHandlerTest {
             Channel channel = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1638,7 +1625,6 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -1651,7 +1637,6 @@ public class SslHandlerTest {
             cc = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -1730,7 +1715,6 @@ public class SslHandlerTest {
             Channel sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
@@ -1743,7 +1727,6 @@ public class SslHandlerTest {
             Bootstrap bs = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {

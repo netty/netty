@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.transport;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.bootstrap.AbstractBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.testsuite.transport.TestsuitePermutation.AllocatorConfig;
@@ -44,16 +43,16 @@ public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?, ?>
             int i = 0;
             for (TestsuitePermutation.BootstrapFactory<T> e: combos) {
                 cb = e.newInstance();
-                configure(cb, config.byteBufAllocator, config.bufferAllocator);
+                configure(cb, config.bufferAllocator);
                 logger.info(String.format(
                         "Running: %s %d of %d with %s",
-                        methodName, ++ i, combos.size(), StringUtil.simpleClassName(config.byteBufAllocator)));
+                        methodName, ++ i, combos.size(), StringUtil.simpleClassName(config.bufferAllocator)));
                 runner.run(cb);
             }
         }
     }
 
-    protected abstract void configure(T bootstrap, ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator);
+    protected abstract void configure(T bootstrap, BufferAllocator bufferAllocator);
 
     public interface Runner<CB extends AbstractBootstrap<?, ?, ?>> {
         void run(CB cb) throws Throwable;

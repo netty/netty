@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
@@ -47,6 +49,7 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,30 +59,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class FlowControlHandlerTest {
-    private static EventLoopGroup GROUP;
+    private static EventLoopGroup eventLoopGroup;
 
     @BeforeAll
     public static void init() {
-        GROUP = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        eventLoopGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @AfterAll
     public static void destroy() {
-        GROUP.shutdownGracefully();
+        eventLoopGroup.shutdownGracefully();
     }
 
     /**
      * The {@link OneByteToThreeStringsDecoder} decodes this {@code byte[]} into three messages.
      */
-    private static ByteBuf newOneMessage() {
-        return Unpooled.wrappedBuffer(new byte[]{ 1 });
+    private static Buffer newOneMessage() {
+        return preferredAllocator().allocate(1).writeByte((byte) 1);
     }
 
     private static Channel newServer(final boolean autoRead, final ChannelHandler... handlers) throws Exception {
         assertTrue(handlers.length >= 1);
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
-        serverBootstrap.group(GROUP)
+        serverBootstrap.group(eventLoopGroup)
             .channel(NioServerSocketChannel.class)
             .childOption(ChannelOption.AUTO_READ, autoRead)
             .childHandler(new ChannelInitializer<Channel>() {
@@ -97,7 +100,7 @@ public class FlowControlHandlerTest {
     private static Channel newClient(SocketAddress server) throws Exception {
         Bootstrap bootstrap = new Bootstrap();
 
-        bootstrap.group(GROUP)
+        bootstrap.group(eventLoopGroup)
             .channel(NioSocketChannel.class)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
             .handler(new ChannelHandler() {
@@ -174,7 +177,7 @@ public class FlowControlHandlerTest {
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 latch.countDown();
             }
         };

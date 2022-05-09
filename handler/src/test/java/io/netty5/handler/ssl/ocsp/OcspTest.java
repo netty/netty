@@ -22,7 +22,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -404,7 +403,6 @@ public class OcspTest {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(group)
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .childHandler(newServerHandler(context, response, handler));
 
         return bootstrap.bind(address).get();
@@ -416,7 +414,6 @@ public class OcspTest {
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
-                .option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true)
                 .handler(newClientHandler(context, callback, handler));
 
         return bootstrap.connect(address).get();

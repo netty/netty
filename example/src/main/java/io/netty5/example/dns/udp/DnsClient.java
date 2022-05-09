@@ -16,7 +16,7 @@
 package io.netty5.example.dns.udp;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -61,7 +61,7 @@ public final class DnsClient {
             if (record.type() == DnsRecordType.A) {
                 // Just print the IP after query
                 DnsRawRecord raw = (DnsRawRecord) record;
-                System.out.println(NetUtil.bytesToIpAddress(ByteBufUtil.getBytes(raw.content())));
+                System.out.println(NetUtil.bytesToIpAddress(BufferUtil.getBytes(raw.content())));
             }
         }
     }

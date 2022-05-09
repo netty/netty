@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.internal.ObjectUtil;
 
@@ -30,27 +30,30 @@ public class SegmentedDatagramPacket extends DatagramPacket {
     private final int segmentSize;
 
     /**
-     * Create a new instance.
+     * Create a new segmented datagram packet.
+     * The attached message may be sent in multiple segment-sized network packets.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
-     * @param segmentSize   the segment size.
-     * @param recipient     the recipient.
+     * @param message The data to send.
+     * @param segmentSize The (positive) segment size.
+     * @param recipient The recipient address.
+     * @param sender The sender address.
      */
-    public SegmentedDatagramPacket(ByteBuf data, int segmentSize, InetSocketAddress recipient) {
-        super(data, recipient);
+    public SegmentedDatagramPacket(Buffer message, int segmentSize, InetSocketAddress recipient,
+                                   InetSocketAddress sender) {
+        super(message, recipient, sender);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
 
     /**
-     * Create a new instance.
+     * Create a new segmented datagram packet.
+     * The attached message may be sent in multiple segment-sized network packets.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
-     * @param segmentSize   the segment size.
-     * @param recipient     the recipient.
+     * @param message The data to send.
+     * @param segmentSize The (positive) segment size.
+     * @param recipient The recipient address.
      */
-    public SegmentedDatagramPacket(ByteBuf data, int segmentSize,
-                                   InetSocketAddress recipient, InetSocketAddress sender) {
-        super(data, recipient, sender);
+    public SegmentedDatagramPacket(Buffer message, int segmentSize, InetSocketAddress recipient) {
+        super(message, recipient);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
 
@@ -64,41 +67,8 @@ public class SegmentedDatagramPacket extends DatagramPacket {
     }
 
     @Override
-    public SegmentedDatagramPacket copy() {
-        return new SegmentedDatagramPacket(content().copy(), segmentSize, recipient(), sender());
-    }
-
-    @Override
-    public SegmentedDatagramPacket duplicate() {
-        return new SegmentedDatagramPacket(content().duplicate(), segmentSize, recipient(), sender());
-    }
-
-    @Override
-    public SegmentedDatagramPacket retainedDuplicate() {
-        return new SegmentedDatagramPacket(content().retainedDuplicate(), segmentSize, recipient(), sender());
-    }
-
-    @Override
-    public SegmentedDatagramPacket replace(ByteBuf content) {
+    public SegmentedDatagramPacket replace(Buffer content) {
         return new SegmentedDatagramPacket(content, segmentSize, recipient(), sender());
-    }
-
-    @Override
-    public SegmentedDatagramPacket retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public SegmentedDatagramPacket retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public SegmentedDatagramPacket touch() {
-        super.touch();
-        return this;
     }
 
     @Override

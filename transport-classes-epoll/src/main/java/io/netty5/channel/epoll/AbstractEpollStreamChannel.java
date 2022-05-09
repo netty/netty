@@ -15,9 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Resource;
@@ -54,7 +51,7 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
-            " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEpollStreamChannel.class);
     private final Runnable flushTask = () -> {
@@ -106,36 +103,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    /**
-     * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
-     * @param in the collection which contains objects to write.
-     * @param buf the {@link ByteBuf} from which the bytes should be written
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
-     */
-    private int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
-        int readableBytes = buf.readableBytes();
-        if (readableBytes == 0) {
-            in.remove();
-            return 0;
-        }
-
-        if (buf.hasMemoryAddress() || buf.nioBufferCount() == 1) {
-            return doWriteBytes(in, buf);
-        } else {
-            ByteBuffer[] nioBuffers = buf.nioBuffers();
-            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                    config().getMaxBytesPerGatheringWrite());
-        }
     }
 
     /**
@@ -193,7 +160,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -226,7 +193,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -258,7 +225,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -294,7 +261,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -326,8 +293,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
-            // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && (in.current() instanceof ByteBufConvertible || in.current() instanceof Buffer)) {
+            // Do gathering write if the outbound buffer entries start with more than one Buffer.
+            if (msgCount > 1 && in.current() instanceof Buffer) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
@@ -365,7 +332,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -378,8 +345,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         Object msg = in.current();
         if (msg instanceof Buffer) {
             return writeBytes(in, (Buffer) msg);
-        } else if (msg instanceof ByteBufConvertible) {
-            return writeBytes(in, ((ByteBufConvertible) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
@@ -391,12 +356,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     /**
-     * Attempt to write multiple {@link ByteBuf} objects.
+     * Attempt to write multiple {@link Buffer} objects.
      * @param in the collection which contains objects to write.
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
@@ -422,11 +387,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
@@ -557,24 +517,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return super.prepareToClose();
         }
 
-        private void handleReadException(ChannelPipeline pipeline, Object bufferish, Throwable cause, boolean close,
+        private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
                 EpollRecvBufferAllocatorHandle allocHandle) {
-            if (bufferish instanceof ByteBuf) {
-                ByteBuf byteBuf = (ByteBuf) bufferish;
-                if (byteBuf.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                } else {
-                    byteBuf.release();
-                }
-            } else if (bufferish instanceof Buffer) {
-                Buffer buffer = (Buffer) bufferish;
-                if (buffer.readableBytes() > 0) {
-                    readPending = false;
-                    pipeline.fireChannelRead(buffer);
-                } else {
-                    buffer.close();
-                }
+            if (buffer.readableBytes() > 0) {
+                readPending = false;
+                pipeline.fireChannelRead(buffer);
+            } else {
+                buffer.close();
             }
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -604,25 +553,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
 
             final ChannelPipeline pipeline = pipeline();
-            final boolean useBufferApi = config.getRecvBufferAllocatorUseBuffer();
             final BufferAllocator bufferAllocator = config.getBufferAllocator();
-            final ByteBufAllocator byteBufAllocator = config.getAllocator();
             recvAlloc.reset(config);
             epollInBefore();
 
-            Object buffer = null;
+            Buffer buffer = null;
             boolean close = false;
             try {
                 do {
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
-                    if (useBufferApi) {
-                        buffer = recvAlloc.allocate(bufferAllocator);
-                        doReadBytes((Buffer) buffer);
-                    } else {
-                        buffer = recvAlloc.allocate(byteBufAllocator);
-                        recvAlloc.lastBytesRead(doReadBytes((ByteBuf) buffer));
-                    }
+                    buffer = recvAlloc.allocate(bufferAllocator);
+                    doReadBytes(buffer);
                     if (recvAlloc.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
                         Resource.dispose(buffer);
@@ -677,8 +619,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        protected ByteBufAllocator alloc() {
-            return AbstractEpollStreamChannel.this.alloc();
+        protected BufferAllocator alloc() {
+            return bufferAllocator();
         }
     }
 }

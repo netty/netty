@@ -15,9 +15,6 @@
  */
 package io.netty5.testsuite.transport;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.bootstrap.AbstractBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 
@@ -25,8 +22,8 @@ import java.util.List;
 
 public final class TestsuitePermutation {
     private static final List<AllocatorConfig> ALLOCATOR_CONFIGS = List.of(
-            new AllocatorConfig(UnpooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapUnpooled()),
-            new AllocatorConfig(PooledByteBufAllocator.DEFAULT, BufferAllocator.offHeapPooled()));
+            new AllocatorConfig(BufferAllocator.offHeapUnpooled()),
+            new AllocatorConfig(BufferAllocator.offHeapPooled()));
 
     public static List<AllocatorConfig> allocator() {
         return ALLOCATOR_CONFIGS;
@@ -45,11 +42,9 @@ public final class TestsuitePermutation {
     }
 
     public static final class AllocatorConfig {
-        public final ByteBufAllocator byteBufAllocator;
         public final BufferAllocator bufferAllocator;
 
-        public AllocatorConfig(ByteBufAllocator byteBufAllocator, BufferAllocator bufferAllocator) {
-            this.byteBufAllocator = byteBufAllocator;
+        public AllocatorConfig(BufferAllocator bufferAllocator) {
             this.bufferAllocator = bufferAllocator;
         }
     }

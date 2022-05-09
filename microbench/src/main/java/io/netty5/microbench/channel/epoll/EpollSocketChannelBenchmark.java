@@ -15,9 +15,9 @@
  */
 package io.netty5.microbench.channel.epoll;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -43,7 +43,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     private EventLoopGroup group;
     private Channel serverChan;
     private Channel chan;
-    private ByteBuf abyte;
+    private Buffer abyte;
     private Future<?> future;
 
     @Setup
@@ -63,7 +63,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            if (msg instanceof ByteBuf) {
+                            if (msg instanceof Buffer) {
                                 ctx.writeAndFlush(msg);
                             } else {
                                 throw new AssertionError();
@@ -85,18 +85,14 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof ByteBuf) {
-
-                            ByteBuf buf = (ByteBuf) msg;
-                            try {
+                        if (msg instanceof Buffer) {
+                            try (Buffer buf = (Buffer) msg) {
                                 if (buf.readableBytes() == 1) {
                                     lastWritePromise.trySuccess(null);
                                     lastWritePromise = null;
                                 } else {
                                     throw new AssertionError();
                                 }
-                            } finally {
-                                buf.release();
                             }
                         } else {
                             throw new AssertionError();
@@ -118,8 +114,8 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         .connect(serverChan.localAddress())
         .get();
 
-        abyte = chan.alloc().directBuffer(1);
-        abyte.writeByte('a');
+        abyte = chan.bufferAllocator().allocate(1);
+        abyte.writeByte((byte) 'a').makeReadOnly();
     }
 
     @TearDown
@@ -128,12 +124,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         serverChan.close().sync();
         future.cancel();
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
-        abyte.release();
+        abyte.close();
     }
 
     @Benchmark
     public Object pingPong() throws Exception {
-        return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
+        return chan.pipeline().writeAndFlush(abyte.copy(0, 1, true)).sync();
     }
 
     @Benchmark

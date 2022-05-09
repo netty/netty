@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -43,7 +41,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
 import static io.netty5.util.CharsetUtil.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -133,29 +130,6 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testWriteWithFastOpenBeforeConnectByteBuf(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testWriteWithFastOpenBeforeConnectByteBuf);
-    }
-
-    public void testWriteWithFastOpenBeforeConnectByteBuf(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        enableTcpFastOpen(sb, cb);
-        sb.childOption(ChannelOption.AUTO_READ, true);
-        cb.option(ChannelOption.AUTO_READ, true);
-
-        sb.childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(new EchoServerHandler());
-            }
-        });
-
-        Channel sc = sb.bind().get();
-        connectAndVerifyDataTransfer(cb, sc);
-        connectAndVerifyDataTransfer(cb, sc);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testWriteWithFastOpenBeforeConnect(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testWriteWithFastOpenBeforeConnect);
     }
@@ -196,10 +170,7 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     private static Object writeAsciiBuffer(Channel sc, String seq) {
-        if (sc.config().getRecvBufferAllocatorUseBuffer()) {
-            return DefaultBufferAllocators.preferredAllocator().copyOf(seq.getBytes(US_ASCII));
-        }
-        return ByteBufUtil.writeAscii(DEFAULT, seq);
+        return DefaultBufferAllocators.preferredAllocator().copyOf(seq.getBytes(US_ASCII));
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {
@@ -227,12 +198,6 @@ public class SocketConnectTest extends AbstractSocketTest {
                     streamBuffer.write(array);
                     semaphore.release(readableBytes);
                 }
-            } else if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                int readableBytes = buf.readableBytes();
-                buf.readBytes(streamBuffer, readableBytes);
-                semaphore.release(readableBytes);
-                buf.release();
             } else {
                 throw new IllegalArgumentException("Unexpected message type: " + msg);
             }
@@ -255,12 +220,6 @@ public class SocketConnectTest extends AbstractSocketTest {
                     buffer.writeBytes(buf);
                     ctx.channel().writeAndFlush(buffer);
                 }
-            } else if (msg instanceof ByteBuf) {
-                ByteBuf buffer = ctx.alloc().buffer();
-                ByteBuf buf = (ByteBuf) msg;
-                buffer.writeBytes(buf);
-                buf.release();
-                ctx.channel().writeAndFlush(buffer);
             } else {
                 throw new IllegalArgumentException("Unexpected message type: " + msg);
             }

@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
@@ -35,11 +34,9 @@ public abstract class AbstractServerSocketTest extends AbstractTestsuiteTest<Ser
     }
 
     @Override
-    protected void configure(ServerBootstrap bootstrap, ByteBufAllocator byteBufAllocator,
+    protected void configure(ServerBootstrap bootstrap,
                              BufferAllocator bufferAllocator) {
         bootstrap.localAddress(newSocketAddress());
-        bootstrap.option(ChannelOption.ALLOCATOR, byteBufAllocator);
-        bootstrap.childOption(ChannelOption.ALLOCATOR, byteBufAllocator);
         bootstrap.option(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
         bootstrap.childOption(ChannelOption.BUFFER_ALLOCATOR, bufferAllocator);
     }

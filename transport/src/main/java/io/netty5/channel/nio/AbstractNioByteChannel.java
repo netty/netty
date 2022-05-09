@@ -15,9 +15,6 @@
  */
 package io.netty5.channel.nio;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Resource;
@@ -48,7 +45,7 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
-            " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
     private final Runnable flushTask = () -> {
@@ -113,24 +110,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, Object bufferish, Throwable cause, boolean close,
+        private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
                 RecvBufferAllocator.Handle allocHandle) {
-            if (bufferish instanceof ByteBuf) {
-                ByteBuf buffer = (ByteBuf) bufferish;
-                if (buffer.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(buffer);
-                } else {
-                    buffer.release();
-                }
-            } else if (bufferish instanceof Buffer) {
-                Buffer buffer = (Buffer) bufferish;
-                if (buffer.readableBytes() > 0) {
-                    readPending = false;
-                    pipeline.fireChannelRead(buffer);
-                } else {
-                    buffer.close();
-                }
+            if (buffer.readableBytes() > 0) {
+                readPending = false;
+                pipeline.fireChannelRead(buffer);
+            } else {
+                buffer.close();
             }
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -153,23 +139,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
-            final boolean useBufferApi = config.getRecvBufferAllocatorUseBuffer();
             final BufferAllocator bufferAllocator = config.getBufferAllocator();
-            final ByteBufAllocator byteBufAllocator = config.getAllocator();
             final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
-            Object buffer = null;
+            Buffer buffer = null;
             boolean close = false;
             try {
                 do {
-                    if (useBufferApi) {
-                        buffer = allocHandle.allocate(bufferAllocator);
-                        allocHandle.lastBytesRead(doReadBytes((Buffer) buffer));
-                    } else {
-                        buffer = allocHandle.allocate(byteBufAllocator);
-                        allocHandle.lastBytesRead(doReadBytes((ByteBuf) buffer));
-                    }
+                    buffer = allocHandle.allocate(bufferAllocator);
+                    allocHandle.lastBytesRead(doReadBytes(buffer));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
                         Resource.dispose(buffer);
@@ -218,7 +197,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @return The value that should be decremented from the write quantum which starts at
      * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
      *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but no
@@ -247,21 +226,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (localFlushAmount > 0) {
                 in.progress(localFlushAmount);
                 if (buf.readableBytes() == 0) {
-                    in.remove();
-                }
-                return 1;
-            }
-        } else if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-            if (!buf.isReadable()) {
-                in.remove();
-                return 0;
-            }
-
-            final int localFlushedAmount = doWriteBytes(buf);
-            if (localFlushedAmount > 0) {
-                in.progress(localFlushedAmount);
-                if (!buf.isReadable()) {
                     in.remove();
                 }
                 return 1;
@@ -316,15 +280,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             return newDirectBuffer(buf);
         }
 
-        if (msg instanceof ByteBufConvertible) {
-            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
-            if (buf.isDirect()) {
-                return msg;
-            }
-
-            return newDirectBuffer(buf);
-        }
-
         if (msg instanceof FileRegion) {
             return msg;
         }
@@ -358,21 +313,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract long doWriteFileRegion(FileRegion region) throws Exception;
 
     /**
-     * Read bytes into the given {@link ByteBuf} and return the amount.
-     */
-    protected abstract int doReadBytes(ByteBuf buf) throws Exception;
-
-    /**
      * Read bytes into the given {@link Buffer} and return the amount.
      */
     protected abstract int doReadBytes(Buffer buf) throws Exception;
-
-    /**
-     * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
-     * @param buf           the {@link ByteBuf} from which the bytes should be written
-     * @return amount       the amount of written bytes
-     */
-    protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
     /**
      * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.

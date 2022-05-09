@@ -67,13 +67,10 @@ public class DatagramPacketEncoderTest {
         InetSocketAddress sender = senderIsNull ? null : SocketUtils.socketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
                 new DefaultAddressedEnvelope<>("netty", recipient, sender)));
-        DatagramPacket packet = channel.readOutbound();
-        try {
+        try (DatagramPacket packet = channel.readOutbound()) {
             assertEquals("netty", packet.content().toString(CharsetUtil.UTF_8));
             assertEquals(recipient, packet.recipient());
             assertEquals(sender, packet.sender());
-        } finally {
-            packet.release();
         }
     }
 

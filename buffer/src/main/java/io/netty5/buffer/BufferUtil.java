@@ -18,7 +18,10 @@ package io.netty5.buffer;
 import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.AsciiString;
+import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -36,9 +39,9 @@ import static java.util.Objects.requireNonNull;
  * A collection of utility methods that is related with handling {@code ByteBuf},
  * such as the generation of hex dump and swapping an integer's byte order.
  */
-public final class ByteBufUtil {
+public final class BufferUtil {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferUtil.class);
 
     private static final int MAX_CHAR_BUFFER_SIZE;
     private static final int THREAD_LOCAL_BUFFER_SIZE;
@@ -157,7 +160,7 @@ public final class ByteBufUtil {
 
     /**
      * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#setBytes(int, byte[], int, int)}.
-     * Unlike the {@link #copy(AsciiString, ByteBuf)} and {@link #copy(AsciiString, int, ByteBuf, int)} methods,
+     * Unlike the {@link #copy(AsciiString, int, ByteBuf, int)} method,
      * this method do not increase a {@code writerIndex} of {@code dst} buffer.
      *
      * @param src the source string to copy
@@ -193,6 +196,19 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Returns {@code true} if and only if the two specified buffers are
+     * identical to each other for {@code length} bytes starting at {@code firstReaderOffset}
+     * index for the {@code first} buffer and {@code secondReaderOffset} index for the {@code second} buffer.
+     * A more compact way to express this is:
+     * <p>
+     * {@code first[firstRoff : firstRoff + length] == second[secondRoff : secondRoff + length]}
+     */
+    public static boolean equals(Buffer first, int firstReaderOffset, Buffer second, int secondReaderOffset,
+                                 int length) {
+        return Statics.equals(first, firstReaderOffset, second, secondReaderOffset, length);
+    }
+
+    /**
      * Appends the prettified multi-line hexadecimal dump of the specified {@link Buffer} to the specified
      * {@link StringBuilder} that is easy to read by humans.
      */
@@ -207,6 +223,19 @@ public final class ByteBufUtil {
      */
     public static void appendPrettyHexDump(StringBuilder dump, Buffer buf, int offset, int length) {
         HexUtil.appendPrettyHexDump(dump, buf, offset, length);
+    }
+
+    /**
+     * Returns a cached thread-local direct buffer, if available.
+     *
+     * @return a cached thread-local direct buffer, if available.  {@code null} otherwise.
+     */
+    public static Buffer threadLocalDirectBuffer() {
+        if (THREAD_LOCAL_BUFFER_SIZE <= 0) {
+            return null;
+        }
+
+        return ThreadLocalDirectBufferHolder.BUFFER.get();
     }
 
     /* Separate class so that the expensive static initialization is only done when needed */
@@ -380,5 +409,23 @@ public final class ByteBufUtil {
         }
     }
 
-    private ByteBufUtil() { }
+    /* Separate class so that the expensive static initialisation is only done when needed */
+    private static final class ThreadLocalDirectBufferHolder {
+        static final FastThreadLocal<Buffer> BUFFER = new FastThreadLocal<Buffer>() {
+            @Override
+            protected Buffer initialValue() throws Exception {
+                return DefaultBufferAllocators.offHeapAllocator().allocate(1024);
+            }
+
+            @Override
+            protected void onRemoval(Buffer value) throws Exception {
+                if (value.isAccessible()) {
+                    value.close();
+                }
+                super.onRemoval(value);
+            }
+        };
+    }
+
+    private BufferUtil() { }
 }

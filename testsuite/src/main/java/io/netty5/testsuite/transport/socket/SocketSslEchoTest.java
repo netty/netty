@@ -221,7 +221,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     private boolean clientUsesDelegatedTaskExecutor;
     private boolean autoRead;
     private boolean useChunkedWriteHandler;
-    private boolean useCompositeByteBuf;
+    private boolean useCompositeBuffer;
 
     @AfterAll
     public static void compressHeapDumps() throws Exception {
@@ -231,13 +231,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     @ParameterizedTest(name =
             "{index}: serverEngine = {0}, clientEngine = {1}, renegotiation = {2}, " +
             "serverUsesDelegatedTaskExecutor = {3}, clientUsesDelegatedTaskExecutor = {4}, " +
-            "autoRead = {5}, useChunkedWriteHandler = {6}, useCompositeByteBuf = {7}")
+            "autoRead = {5}, useChunkedWriteHandler = {6}, useCompositeBuffer = {7}")
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSslEcho(
             SslContext serverCtx, SslContext clientCtx, Renegotiation renegotiation,
             boolean serverUsesDelegatedTaskExecutor, boolean clientUsesDelegatedTaskExecutor,
-            boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeByteBuf,
+            boolean autoRead, boolean useChunkedWriteHandler, boolean useCompositeBuffer,
             TestInfo testInfo) throws Throwable {
         this.serverCtx = serverCtx;
         this.clientCtx = clientCtx;
@@ -246,7 +246,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         this.renegotiation = renegotiation;
         this.autoRead = autoRead;
         this.useChunkedWriteHandler = useChunkedWriteHandler;
-        this.useCompositeByteBuf = useCompositeByteBuf;
+        this.useCompositeBuffer = useCompositeBuffer;
         run(testInfo, this::testSslEcho);
     }
 
@@ -254,8 +254,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         final ExecutorService delegatedTaskExecutor = Executors.newCachedThreadPool();
         reset();
 
-        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
-        cb.option(ChannelOption.RCVBUF_ALLOCATOR_USE_BUFFER, true);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
@@ -330,7 +328,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             int clientSendCounterVal = clientSendCounter.get();
             int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
             Buffer buf = dataBuffer.readSplit(length);
-            if (useCompositeByteBuf) {
+            if (useCompositeBuffer) {
                 buf = bufferAllocator.compose(buf.send());
             }
 
@@ -571,7 +569,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             Buffer buf = bufferAllocator.copyOf(actual);
-            if (useCompositeByteBuf) {
+            if (useCompositeBuffer) {
                 buf = bufferAllocator.compose(buf.send());
             }
             ctx.writeAndFlush(buf);
