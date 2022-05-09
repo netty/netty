@@ -1019,7 +1019,7 @@ public class HttpPostRequestDecoderTest {
             HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(new DefaultHttpDataFactory(true), req);
             decoder.offer(req);
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertEquals("java.lang.IllegalArgumentException: Invalid prefix or suffix", e.getMessage());
+            fail("Was not expecting an exception");
         } finally {
             assertTrue(req.release());
         }
