@@ -49,7 +49,9 @@ public final class EchoServer {
         }
 
         // Configure the server.
+        // 创建 boss 线程组 用于服务端接受客户端的连接
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        // 创建 worker 线程组 用于进行 SocketChannel 的数据读写
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
@@ -57,10 +59,11 @@ public final class EchoServer {
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(LogLevel.INFO)) // 设置 NioServerSocketChannel 的处理器
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
+                     // 设置连入服务端的 Client 的 SocketChannel 的处理器
                      ChannelPipeline p = ch.pipeline();
                      if (sslCtx != null) {
                          p.addLast(sslCtx.newHandler(ch.alloc()));
