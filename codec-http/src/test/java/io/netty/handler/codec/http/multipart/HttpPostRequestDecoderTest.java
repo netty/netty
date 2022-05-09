@@ -1010,11 +1010,19 @@ public class HttpPostRequestDecoderTest {
     @Test
     void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar() throws UnsupportedEncodingException {
         StringBuffer sb = new StringBuffer();
-        byte[] bodyBytes ="aaaa/bbbb=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
+        byte[] bodyBytes = ("aaaa/bbbb=aaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaa").getBytes();
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        FullHttpRequest req =
+                new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1,
+                HttpMethod.POST,
+                "/",
+                content);
         try {
             HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(new DefaultHttpDataFactory(true), req);
             decoder.offer(req);
