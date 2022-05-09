@@ -45,7 +45,7 @@ public final class BrotliDecompressor implements Decompressor {
         PROCESSING,
         FINISHED,
         CLOSED
-    };
+    }
 
     private State state = State.PROCESSING;
 
