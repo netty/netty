@@ -403,12 +403,10 @@ public final class DateFormatter {
 
         if (year >= 70 && year <= 99) {
             year += 1900;
-        } else if (year >= 0 && year < 70) {
+        } else // invalid value
+            if (year >= 0 && year < 70) {
             year += 2000;
-        } else if (year < 1601) {
-            // invalid value
-            return false;
-        }
+        } else return year >= 1601;
         return true;
     }
 

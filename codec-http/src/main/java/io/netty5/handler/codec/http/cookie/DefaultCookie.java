@@ -171,14 +171,10 @@ public class DefaultCookie implements Cookie {
         }
 
         if (domain() == null) {
-            if (that.domain() != null) {
-                return false;
-            }
+            return that.domain() == null;
         } else {
             return domain().equalsIgnoreCase(that.domain());
         }
-
-        return true;
     }
 
     @Override
