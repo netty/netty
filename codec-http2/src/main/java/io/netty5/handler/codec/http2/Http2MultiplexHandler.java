@@ -274,14 +274,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             return;
         }
         if (cause.getCause() instanceof SSLException) {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                            ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireExceptionCaught(cause);
-                    return true;
-                }
+            forEachActiveStream(stream -> {
+                AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
+                childChannel.pipeline().fireExceptionCaught(cause);
+                return true;
             });
         }
         ctx.fireExceptionCaught(cause);

@@ -281,9 +281,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             if (future.isSuccess()) {
                 // TODO eventually I think we'd like to be able to either pass the generic promise down,
                 //  or return the future from register().
-                channel.register().addListener(f -> {
-                    promise.setSuccess(channel);
-                });
+                channel.register().addListener(f -> promise.setSuccess(channel));
             } else {
                 channel.unsafe().closeForcibly();
                 promise.setFailure(future.cause());

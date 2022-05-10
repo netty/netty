@@ -1259,18 +1259,15 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         AllocatorControl control = this.control;
         long baseOffset = this.baseOffset;
         int rsize = this.rsize;
-        return new Owned<UnsafeBuffer>() {
-            @Override
-            public UnsafeBuffer transferOwnership(Drop<UnsafeBuffer> drop) {
-                UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
-                copy.roff = roff;
-                copy.woff = woff;
-                copy.implicitCapacityLimit = implicitCapacityLimit;
-                if (readOnly) {
-                    copy.makeReadOnly();
-                }
-                return copy;
+        return drop -> {
+            UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
+            copy.roff = roff;
+            copy.woff = woff;
+            copy.implicitCapacityLimit = implicitCapacityLimit;
+            if (readOnly) {
+                copy.makeReadOnly();
             }
+            return copy;
         };
     }
 

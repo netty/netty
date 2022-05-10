@@ -76,12 +76,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         static final FlowControlledFrameSizeEstimator INSTANCE = new FlowControlledFrameSizeEstimator();
 
-    private static final Handle HANDLE_INSTANCE = msg -> {
-        return msg instanceof Http2DataFrame ?
-                // Guard against overflow.
-                (int) min(Integer.MAX_VALUE, ((Http2DataFrame) msg).initialFlowControlledBytes() +
-                        (long) MIN_HTTP2_FRAME_SIZE) : MIN_HTTP2_FRAME_SIZE;
-        };
+    private static final Handle HANDLE_INSTANCE = msg -> msg instanceof Http2DataFrame ?
+            // Guard against overflow.
+            (int) min(Integer.MAX_VALUE, ((Http2DataFrame) msg).initialFlowControlledBytes() +
+                    (long) MIN_HTTP2_FRAME_SIZE) : MIN_HTTP2_FRAME_SIZE;
 
         @Override
         public Handle newHandle() {

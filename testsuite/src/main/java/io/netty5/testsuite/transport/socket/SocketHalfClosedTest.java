@@ -54,7 +54,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 5000, unit = MILLISECONDS)
     public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(sb, cb));
+        run(testInfo, this::testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet);
     }
 
     private void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(

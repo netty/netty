@@ -406,6 +406,6 @@ final class PoolThreadCache {
             return entry;
         }
 
-        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(handle -> new Entry(handle));
+        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(Entry::new);
     }
 }

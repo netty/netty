@@ -208,12 +208,9 @@ public abstract class LifecycleTracer {
             Trace sendTrace = new Trace(TraceType.SEND);
             sendTrace.attachmentType = AttachmentType.RECEIVED_AT;
             addTrace(walk(sendTrace));
-            return new Owned<T>() {
-                @Override
-                public T transferOwnership(Drop<T> drop) {
-                    sendTrace.attachment = walk(new Trace(TraceType.RECEIVE));
-                    return instance.transferOwnership(drop);
-                }
+            return drop -> {
+                sendTrace.attachment = walk(new Trace(TraceType.RECEIVE));
+                return instance.transferOwnership(drop);
             };
         }
 

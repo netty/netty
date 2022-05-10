@@ -51,7 +51,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testReuseFd(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReuseFd(sb, cb));
+        run(testInfo, this::testReuseFd);
     }
 
     public void testReuseFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {

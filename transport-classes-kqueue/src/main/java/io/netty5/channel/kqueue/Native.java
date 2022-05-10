@@ -75,12 +75,7 @@ final class Native {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
         }
-        Unix.registerInternal(new Runnable() {
-            @Override
-            public void run() {
-                registerUnix();
-            }
-        });
+        Unix.registerInternal(Native::registerUnix);
     }
 
     private static native int registerUnix();

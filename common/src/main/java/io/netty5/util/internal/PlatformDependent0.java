@@ -408,14 +408,11 @@ final class PlatformDependent0 {
         }
 
         if (javaVersion() > 9) {
-            ALIGN_SLICE = (Method) AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
-                    } catch (Exception e) {
-                        return null;
-                    }
+            ALIGN_SLICE = (Method) AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                try {
+                    return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
+                } catch (Exception e) {
+                    return null;
                 }
             });
         } else {

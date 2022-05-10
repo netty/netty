@@ -1411,16 +1411,13 @@ public final class ByteBufAdaptor extends ByteBuf {
     }
 
     private static ByteProcessor wrap(io.netty.util.ByteProcessor byteProcessor) {
-        return new ByteProcessor() {
-            @Override
-            public boolean process(byte value) {
-                try {
-                    return byteProcessor.process(value);
-                } catch (RuntimeException | Error re) {
-                    throw re;
-                } catch (Exception e) {
-                    throw new ByteProcessingException(e);
-                }
+        return value -> {
+            try {
+                return byteProcessor.process(value);
+            } catch (RuntimeException | Error re) {
+                throw re;
+            } catch (Exception e) {
+                throw new ByteProcessingException(e);
             }
         };
     }
