@@ -61,7 +61,7 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
     @Override
     public Iterator<SelectionKey> iterator() {
-        return new Iterator<SelectionKey>() {
+        return new Iterator<>() {
             private int idx;
 
             @Override

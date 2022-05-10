@@ -101,8 +101,9 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
 
     @Override
     public Enumeration<byte[]> getIds() {
-        return new Enumeration<byte[]>() {
+        return new Enumeration<>() {
             private final Iterator<OpenSslSessionId> ids = sessionCache.getIds().iterator();
+
             @Override
             public boolean hasMoreElements() {
                 return ids.hasNext();

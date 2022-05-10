@@ -411,7 +411,7 @@ public final class BufferUtil {
 
     /* Separate class so that the expensive static initialisation is only done when needed */
     private static final class ThreadLocalDirectBufferHolder {
-        static final FastThreadLocal<Buffer> BUFFER = new FastThreadLocal<Buffer>() {
+        static final FastThreadLocal<Buffer> BUFFER = new FastThreadLocal<>() {
             @Override
             protected Buffer initialValue() throws Exception {
                 return DefaultBufferAllocators.offHeapAllocator().allocate(1024);

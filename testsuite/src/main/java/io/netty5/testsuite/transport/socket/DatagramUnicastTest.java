@@ -158,7 +158,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         Channel cc = null;
 
         try (buf) {
-            cb.handler(new SimpleChannelInboundHandler<Object>() {
+            cb.handler(new SimpleChannelInboundHandler<>() {
                 @Override
                 public void messageReceived(ChannelHandlerContext ctx, Object msgs) {
                     // Nothing will be sent.

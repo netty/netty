@@ -48,7 +48,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
             final int maxWriteChunkSize = 16 * 1024;
             final CountDownLatch latch = new CountDownLatch(1);
             sb.childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(8 * 1024, 16 * 1024));
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -93,11 +93,12 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().get();
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
                         private int totalRead;
+
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             ctx.writeAndFlush(ctx.bufferAllocator().allocate(1).writeByte((byte) 0));

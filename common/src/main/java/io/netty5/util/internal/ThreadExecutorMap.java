@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public final class ThreadExecutorMap {
 
-    private static final FastThreadLocal<EventExecutor> mappings = new FastThreadLocal<EventExecutor>();
+    private static final FastThreadLocal<EventExecutor> mappings = new FastThreadLocal<>();
 
     private ThreadExecutorMap() { }
 

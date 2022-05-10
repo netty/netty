@@ -203,8 +203,9 @@ abstract class DnsResolveContext<T> {
             final int initialSearchDomainIdx = startWithoutSearchDomain ? 0 : 1;
 
             final Promise<List<T>> searchDomainPromise = parent.executor().newPromise();
-            searchDomainPromise.asFuture().addListener(new FutureListener<List<T>>() {
+            searchDomainPromise.asFuture().addListener(new FutureListener<>() {
                 private int searchDomainIdx = initialSearchDomainIdx;
+
                 @Override
                 public void operationComplete(Future<? extends List<T>> future) {
                     Throwable cause = future.cause();
@@ -688,7 +689,7 @@ abstract class DnsResolveContext<T> {
 
         @Override
         public Iterator<InetSocketAddress> iterator() {
-            return new Iterator<InetSocketAddress>() {
+            return new Iterator<>() {
                 private final DnsServerAddressStream stream = duplicate.duplicate();
                 private int i;
 

@@ -54,7 +54,7 @@ import java.util.List;
  */
 public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelHandlerAdapter {
 
-    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>() {
+    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<>() {
 
         @Override
         public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -68,7 +68,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         }
     };
 
-    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>() {
+    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<>() {
 
         @Override
         public boolean acceptInboundMessage(Object msg) throws Exception {

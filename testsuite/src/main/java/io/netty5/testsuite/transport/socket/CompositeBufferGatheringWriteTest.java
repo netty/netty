@@ -56,7 +56,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Object> clientReceived = new AtomicReference<>();
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -68,11 +68,12 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                     });
                 }
             });
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
                         private Buffer aggregator;
+
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
                             aggregator = ctx.bufferAllocator().allocate(EXPECTED_BYTES);
@@ -166,49 +167,50 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childOption(ChannelOption.SO_SNDBUF, soSndBuf)
-              .childHandler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelHandler() {
-                        @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                            compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(
-                                    ctx.channel().config(), soSndBuf);
-                            Buffer contents = expectedContent.copy();
-                            // First single write
-                            ctx.write(contents.readSplit(soSndBuf - 100));
+              .childHandler(new ChannelInitializer<>() {
+                  @Override
+                  protected void initChannel(Channel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelHandler() {
+                          @Override
+                          public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                              compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(
+                                      ctx.channel().config(), soSndBuf);
+                              Buffer contents = expectedContent.copy();
+                              // First single write
+                              ctx.write(contents.readSplit(soSndBuf - 100));
 
-                            // Build and write CompositeBuffer
-                            CompositeBuffer compositeBuffer = ctx.bufferAllocator().compose(asList(
-                                    contents.readSplit(50).send(),
-                                    contents.readSplit(200).send()));
-                            ctx.write(compositeBuffer);
+                              // Build and write CompositeBuffer
+                              CompositeBuffer compositeBuffer = ctx.bufferAllocator().compose(asList(
+                                      contents.readSplit(50).send(),
+                                      contents.readSplit(200).send()));
+                              ctx.write(compositeBuffer);
 
-                            // Write a single buffer that is smaller than the second component of the
-                            // CompositeBuffer above but small enough to fit in the remaining space allowed by the
-                            // soSndBuf amount.
-                            ctx.write(contents.readSplit(50));
+                              // Write a single buffer that is smaller than the second component of the
+                              // CompositeBuffer above but small enough to fit in the remaining space allowed by the
+                              // soSndBuf amount.
+                              ctx.write(contents.readSplit(50));
 
-                            // Write the remainder of the content
-                            ctx.writeAndFlush(contents).addListener(ctx, ChannelFutureListeners.CLOSE);
-                        }
+                              // Write the remainder of the content
+                              ctx.writeAndFlush(contents).addListener(ctx, ChannelFutureListeners.CLOSE);
+                          }
 
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                            // IOException is fine as it will also close the channel and may just be a connection reset.
-                            if (!(cause instanceof IOException)) {
-                                clientReceived.set(cause);
-                                latch.countDown();
-                            }
-                        }
-                    });
-                }
-            });
-            cb.handler(new ChannelInitializer<Channel>() {
+                          @Override
+                          public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                              // IOException is fine as it will also close the channel and may just be a connection reset.
+                              if (!(cause instanceof IOException)) {
+                                  clientReceived.set(cause);
+                                  latch.countDown();
+                              }
+                          }
+                      });
+                  }
+              });
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
                         private Buffer aggregator;
+
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
                             aggregator = ctx.bufferAllocator().allocate(expectedContent.readableBytes());

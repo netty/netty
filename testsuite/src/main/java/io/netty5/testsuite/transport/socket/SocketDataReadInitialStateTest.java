@@ -57,7 +57,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             final CountDownLatch clientReadLatch = new CountDownLatch(1);
             final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<>();
 
-            sb.handler(new ChannelInitializer<Channel>() {
+            sb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -70,7 +70,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     serverConnectedChannelRef.set(ch);
@@ -85,10 +85,10 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
+                    ch.pipeline().addLast(new SimpleChannelInboundHandler<>() {
                         @Override
                         protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();
@@ -148,7 +148,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             final CountDownLatch serverReadLatch = new CountDownLatch(1);
             final CountDownLatch clientReadLatch = new CountDownLatch(1);
 
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<Buffer>() {
@@ -161,10 +161,10 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
+                    ch.pipeline().addLast(new SimpleChannelInboundHandler<>() {
                         @Override
                         protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();

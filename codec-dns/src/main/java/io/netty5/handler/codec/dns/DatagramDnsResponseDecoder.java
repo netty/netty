@@ -44,7 +44,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsResponseDecoder(DnsRecordDecoder recordDecoder) {
-        responseDecoder = new DnsResponseDecoder<InetSocketAddress>(recordDecoder) {
+        responseDecoder = new DnsResponseDecoder<>(recordDecoder) {
             @Override
             protected DnsResponse newResponse(InetSocketAddress sender, InetSocketAddress recipient,
                                               int id, DnsOpCode opCode, DnsResponseCode responseCode) {

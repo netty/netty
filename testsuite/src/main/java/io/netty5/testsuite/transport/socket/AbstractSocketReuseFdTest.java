@@ -61,25 +61,25 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         // Use a number which will typically not exceed /proc/sys/net/core/somaxconn (which is 128 on linux by default
         // often).
         int numChannels = 100;
-        final AtomicReference<Throwable> globalException = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> globalException = new AtomicReference<>();
         final AtomicInteger serverRemaining = new AtomicInteger(numChannels);
         final AtomicInteger clientRemaining = new AtomicInteger(numChannels);
         final Promise<Void> serverDonePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final Promise<Void> clientDonePromise = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) {
                 ReuseFdHandler sh = new ReuseFdHandler(
-                    false,
-                    globalException,
-                    serverRemaining,
-                    serverDonePromise);
+                        false,
+                        globalException,
+                        serverRemaining,
+                        serverDonePromise);
                 sch.pipeline().addLast("handler", sh);
             }
         });
 
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) {
                 ReuseFdHandler ch = new ReuseFdHandler(
@@ -119,7 +119,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         private final boolean client;
         volatile Channel channel;
         final AtomicReference<Throwable> globalException;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         final StringBuilder received = new StringBuilder();
 
         ReuseFdHandler(

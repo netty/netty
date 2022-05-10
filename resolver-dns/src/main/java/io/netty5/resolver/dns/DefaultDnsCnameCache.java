@@ -31,7 +31,7 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
     private final int minTtl;
     private final int maxTtl;
 
-    private final Cache<String> cache = new Cache<String>() {
+    private final Cache<String> cache = new Cache<>() {
         @Override
         protected boolean shouldReplaceAll(String entry) {
             // Only one 1:1 mapping is supported as specified in the RFC.

@@ -132,8 +132,8 @@ public final class HostsFileEntriesProvider {
     private final Map<String, List<InetAddress>> ipv6Entries;
 
     HostsFileEntriesProvider(Map<String, List<InetAddress>> ipv4Entries, Map<String, List<InetAddress>> ipv6Entries) {
-        this.ipv4Entries = Collections.unmodifiableMap(new HashMap<String, List<InetAddress>>(ipv4Entries));
-        this.ipv6Entries = Collections.unmodifiableMap(new HashMap<String, List<InetAddress>>(ipv6Entries));
+        this.ipv4Entries = Collections.unmodifiableMap(new HashMap<>(ipv4Entries));
+        this.ipv6Entries = Collections.unmodifiableMap(new HashMap<>(ipv6Entries));
     }
 
     /**
@@ -209,8 +209,8 @@ public final class HostsFileEntriesProvider {
             requireNonNull(reader, "reader");
             BufferedReader buff = new BufferedReader(reader);
             try {
-                Map<String, List<InetAddress>> ipv4Entries = new HashMap<String, List<InetAddress>>();
-                Map<String, List<InetAddress>> ipv6Entries = new HashMap<String, List<InetAddress>>();
+                Map<String, List<InetAddress>> ipv4Entries = new HashMap<>();
+                Map<String, List<InetAddress>> ipv6Entries = new HashMap<>();
                 String line;
                 while ((line = buff.readLine()) != null) {
                     // remove comment
@@ -225,7 +225,7 @@ public final class HostsFileEntriesProvider {
                     }
 
                     // split
-                    List<String> lineParts = new ArrayList<String>();
+                    List<String> lineParts = new ArrayList<>();
                     for (String s : WHITESPACES.split(line)) {
                         if (!s.isEmpty()) {
                             lineParts.add(s);
@@ -254,13 +254,13 @@ public final class HostsFileEntriesProvider {
                         if (address instanceof Inet4Address) {
                             addresses = ipv4Entries.get(hostnameLower);
                             if (addresses == null) {
-                                addresses = new ArrayList<InetAddress>();
+                                addresses = new ArrayList<>();
                                 ipv4Entries.put(hostnameLower, addresses);
                             }
                         } else {
                             addresses = ipv6Entries.get(hostnameLower);
                             if (addresses == null) {
-                                addresses = new ArrayList<InetAddress>();
+                                addresses = new ArrayList<>();
                                 ipv6Entries.put(hostnameLower, addresses);
                             }
                         }

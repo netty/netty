@@ -57,7 +57,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         serverChan = new ServerBootstrap()
             .channel(EpollServerSocketChannel.class)
             .group(group)
-            .childHandler(new ChannelInitializer<Channel>() {
+            .childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -76,12 +76,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             .get();
     chan = new Bootstrap()
         .channel(EpollSocketChannel.class)
-        .handler(new ChannelInitializer<Channel>() {
+        .handler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new ChannelHandler() {
 
-                private Promise<Void> lastWritePromise;
+                    private Promise<Void> lastWritePromise;
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {

@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
 
     private static final Comparator<DnsResolver> RESOLVER_COMPARATOR =
-            new Comparator<DnsResolver>() {
+            new Comparator<>() {
                 @Override
                 public int compare(DnsResolver r1, DnsResolver r2) {
                     // Note: order is descending (from higher to lower) so entries with lower search order override

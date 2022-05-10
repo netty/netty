@@ -34,7 +34,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
     private final int minTtl;
     private final int maxTtl;
     private final Comparator<InetSocketAddress> comparator;
-    private final Cache<InetSocketAddress> resolveCache = new Cache<InetSocketAddress>() {
+    private final Cache<InetSocketAddress> resolveCache = new Cache<>() {
         @Override
         protected boolean shouldReplaceAll(InetSocketAddress entry) {
             return false;

@@ -100,14 +100,14 @@ public class DefaultAttributeMap implements AttributeMap {
                 }
                 // let's try replace the removed attribute with a new one
                 if (newAttribute == null) {
-                    newAttribute = new DefaultAttribute<T>(this, key);
+                    newAttribute = new DefaultAttribute<>(this, key);
                 }
                 final int count = attributes.length;
                 newAttributes = Arrays.copyOf(attributes, count);
                 newAttributes[index] = newAttribute;
             } else {
                 if (newAttribute == null) {
-                    newAttribute = new DefaultAttribute<T>(this, key);
+                    newAttribute = new DefaultAttribute<>(this, key);
                 }
                 final int count = attributes.length;
                 newAttributes = new DefaultAttribute[count + 1];

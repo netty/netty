@@ -42,7 +42,7 @@ public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoderFor
         // See https://tools.ietf.org/html/rfc7766#section-8
         super(maxFrameLength, 0, 2, 0, 2);
 
-        this.responseDecoder = new DnsResponseDecoder<SocketAddress>(recordDecoder) {
+        this.responseDecoder = new DnsResponseDecoder<>(recordDecoder) {
             @Override
             protected DnsResponse newResponse(SocketAddress sender, SocketAddress recipient,
                                               int id, DnsOpCode opCode, DnsResponseCode responseCode) {

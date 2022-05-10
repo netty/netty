@@ -24,7 +24,7 @@ package io.netty5.util;
 @SuppressWarnings("UnusedDeclaration") // 'T' is used only at compile time
 public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
 
-    private static final ConstantPool<AttributeKey<Object>> pool = new ConstantPool<AttributeKey<Object>>() {
+    private static final ConstantPool<AttributeKey<Object>> pool = new ConstantPool<>() {
         @Override
         protected AttributeKey<Object> newConstant(int id, String name) {
             return new AttributeKey<>(id, name);

@@ -56,12 +56,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static final ChannelHandler TAIL_HANDLER = new TailHandler();
 
     private static final FastThreadLocal<Map<Class<?>, String>> nameCaches =
-            new FastThreadLocal<Map<Class<?>, String>>() {
-        @Override
-        protected Map<Class<?>, String> initialValue() {
-            return new WeakHashMap<>();
-        }
-    };
+            new FastThreadLocal<>() {
+                @Override
+                protected Map<Class<?>, String> initialValue() {
+                    return new WeakHashMap<>();
+                }
+            };
 
     private static final AtomicReferenceFieldUpdater<DefaultChannelPipeline, MessageSizeEstimator.Handle> ESTIMATOR =
             AtomicReferenceFieldUpdater.newUpdater(

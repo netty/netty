@@ -50,7 +50,7 @@ abstract class Cache<E> {
     private static final AtomicReferenceFieldUpdater<Cache.Entries, FutureAndDelay> FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(Cache.Entries.class, FutureAndDelay.class, "expirationFuture");
 
-    private static final Future<?> CANCELLED_FUTURE = new Future<Object>() {
+    private static final Future<?> CANCELLED_FUTURE = new Future<>() {
         @Override
         public boolean cancel() {
             return false;
