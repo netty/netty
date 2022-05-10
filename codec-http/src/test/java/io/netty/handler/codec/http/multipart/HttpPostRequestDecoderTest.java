@@ -1031,7 +1031,7 @@ public class HttpPostRequestDecoderTest {
             );
             decoder.destroy();
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            if(null != decoder){
+            if (null != decoder) {
                 decoder.destroy();
             }
             fail("Was not expecting an exception");
