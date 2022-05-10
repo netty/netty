@@ -516,7 +516,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 char id = (char) payload.readUnsignedShort();
                 long value = payload.readUnsignedInt();
                 try {
-                    settings.put(id, Long.valueOf(value));
+                    settings.put(id, value);
                 } catch (IllegalArgumentException e) {
                     if (id == SETTINGS_INITIAL_WINDOW_SIZE) {
                         throw connectionError(FLOW_CONTROL_ERROR, e,
