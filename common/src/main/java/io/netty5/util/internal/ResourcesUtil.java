@@ -15,7 +15,6 @@
 package io.netty5.util.internal;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 

@@ -32,7 +32,6 @@ import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
-import io.netty5.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
