@@ -150,9 +150,9 @@ public final class OcspUtils {
                     }
 
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try {
+                    try (baos) {
                         byte[] buffer = new byte[8192];
-                        int length = -1;
+                        int length;
 
                         while ((length = in.read(buffer)) != -1) {
                             baos.write(buffer, 0, length);
@@ -161,8 +161,6 @@ public final class OcspUtils {
                                 break;
                             }
                         }
-                    } finally {
-                        baos.close();
                     }
                     return new OCSPResp(baos.toByteArray());
                 }

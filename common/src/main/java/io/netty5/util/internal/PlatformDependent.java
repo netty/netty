@@ -194,11 +194,9 @@ public final class PlatformDependent {
             boolean found = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 try {
                     if (file.exists()) {
-                        BufferedReader reader = null;
-                        try {
-                            reader = new BufferedReader(
-                                    new InputStreamReader(
-                                            new FileInputStream(file), CharsetUtil.UTF_8));
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(
+                                        new FileInputStream(file), CharsetUtil.UTF_8))) {
 
                             String line;
                             while ((line = reader.readLine()) != null) {
@@ -216,14 +214,6 @@ public final class PlatformDependent {
                             logger.debug("Unable to read {}", osReleaseFileName, e);
                         } catch (IOException e) {
                             logger.debug("Error while reading content of {}", osReleaseFileName, e);
-                        } finally {
-                            if (reader != null) {
-                                try {
-                                    reader.close();
-                                } catch (IOException ignored) {
-                                    // Ignore
-                                }
-                            }
                         }
                         // specification states we should only fall back if /etc/os-release does not exist
                         return true;

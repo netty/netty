@@ -164,16 +164,14 @@ public class OcspServerExample {
 
     private static X509Certificate[] parseCertificates(Class<?> clazz, String name) throws Exception {
         InputStream in = clazz.getResourceAsStream(name);
-        if (in == null) {
-            throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
-        }
 
-        try {
+        try (in) {
+            if (in == null) {
+                throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
+            }
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
                 return parseCertificates(reader);
             }
-        } finally {
-            in.close();
         }
     }
 
@@ -184,20 +182,17 @@ public class OcspServerExample {
 
         List<X509Certificate> dst = new ArrayList<>();
 
-        PEMParser parser = new PEMParser(reader);
-        try {
-          X509CertificateHolder holder = null;
+        try (PEMParser parser = new PEMParser(reader)) {
+            X509CertificateHolder holder;
 
-          while ((holder = (X509CertificateHolder) parser.readObject()) != null) {
-            X509Certificate certificate = converter.getCertificate(holder);
-            if (certificate == null) {
-              continue;
+            while ((holder = (X509CertificateHolder) parser.readObject()) != null) {
+                X509Certificate certificate = converter.getCertificate(holder);
+                if (certificate == null) {
+                    continue;
+                }
+
+                dst.add(certificate);
             }
-
-            dst.add(certificate);
-          }
-        } finally {
-            parser.close();
         }
 
         return dst.toArray(new X509Certificate[0]);

@@ -204,16 +204,14 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                     InetAddress address = addresses.nextElement();
                     if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
                         MulticastSocket socket = new MulticastSocket(newAnySocketAddress());
-                        socket.setReuseAddress(true);
-                        socket.setNetworkInterface(iface);
-                        try {
-                            socket.send(new java.net.DatagramPacket(new byte[] { 1, 2, 3, 4 }, 4,
-                                                                    new InetSocketAddress(groupAddress(), 12345)));
+                        try (socket) {
+                            socket.setReuseAddress(true);
+                            socket.setNetworkInterface(iface);
+                            socket.send(new java.net.DatagramPacket(new byte[]{1, 2, 3, 4}, 4,
+                                    new InetSocketAddress(groupAddress(), 12345)));
                             return iface;
                         } catch (IOException ignore) {
                             // Try the next interface
-                        } finally {
-                            socket.close();
                         }
                     }
                 }

@@ -105,21 +105,15 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         // Check if the test can be executed or should be skipped because of no network/internet connection
         // See https://github.com/netty/netty/issues/1474
         boolean badHostTimedOut = true;
-        Socket socket = new Socket();
-        try {
+        try (Socket socket = new Socket()) {
             SocketUtils.connect(socket, SocketUtils.socketAddress(BAD_HOST, BAD_PORT), 10);
         } catch (ConnectException e) {
             badHostTimedOut = false;
             // is thrown for no route to host when using Socket connect
         } catch (Exception e) {
             // ignore
-        } finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                // ignore
-            }
         }
+        // ignore
 
         assumeTrue(badHostTimedOut, "The connection attempt to " + BAD_HOST + " does not time out.");
 
