@@ -1029,7 +1029,6 @@ public class HttpPostRequestDecoderTest {
                     new DefaultHttpDataFactory(true),
                     req
             );
-            decoder.offer(req);
             decoder.destroy();
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
             if(null != decoder){
