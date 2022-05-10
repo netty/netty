@@ -73,7 +73,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             sb.childOption(ChannelOption.AUTO_READ, false);
             sb.childOption(ChannelOption.MAX_MESSAGES_PER_READ, 1);
             sb.childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(expectedBytes / 10));
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
@@ -132,7 +132,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(serverGroup);
             sb.channel(serverChannel());
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -157,7 +157,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             cb.option(ChannelOption.AUTO_READ, false);
             cb.option(ChannelOption.MAX_MESSAGES_PER_READ, 1);
             cb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(expectedBytes / 10));
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));

@@ -65,7 +65,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         final EchoHandler ch = new EchoHandler(autoRead);
 
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
@@ -74,7 +74,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         });
 
         cb.option(ChannelOption.AUTO_READ, autoRead);
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));

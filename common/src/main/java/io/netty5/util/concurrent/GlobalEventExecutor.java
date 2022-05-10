@@ -58,7 +58,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         INSTANCE.scheduledTaskQueue().add(QUIET_PERIOD_TASK);
     }
 
-    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
+    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
 
     // because the GlobalEventExecutor is a singleton, tasks submitted to it can come from arbitrary threads and this
     // can trigger the creation of a thread from arbitrary thread groups; for this reason, the thread factory must not

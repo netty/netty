@@ -43,7 +43,7 @@ abstract class ByteBufChecksum implements Checksum {
             return (ByteBufChecksum) checksum;
         }
         if (checksum instanceof Adler32) {
-            return new OptimizedByteBufChecksum<Adler32>((Adler32) checksum) {
+            return new OptimizedByteBufChecksum<>((Adler32) checksum) {
                 @Override
                 public void update(ByteBuffer b) {
                     checksum.update(b);
@@ -51,7 +51,7 @@ abstract class ByteBufChecksum implements Checksum {
             };
         }
         if (checksum instanceof CRC32) {
-            return new OptimizedByteBufChecksum<CRC32>((CRC32) checksum) {
+            return new OptimizedByteBufChecksum<>((CRC32) checksum) {
                 @Override
                 public void update(ByteBuffer b) {
                     checksum.update(b);

@@ -360,7 +360,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V>,
         requireNonNull(fn, "fn");
 
         Promise<U> promise = executor().newPromise();
-        BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<V, U>(promise) {
+        BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<>(promise) {
             private static final long serialVersionUID = -8454630185124276599L;
 
             @Override
@@ -380,7 +380,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V>,
         requireNonNull(action, "action");
 
         Promise<Void> promise = executor().newPromise();
-        BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<V, Void>(promise) {
+        BiConsumer<V, Throwable> consumer = new AtomicBiConsumer<>(promise) {
             private static final long serialVersionUID = -8429618092318150682L;
 
             @Override
@@ -401,7 +401,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V>,
         requireNonNull(action, "action");
 
         Promise<Void> promise = executor().newPromise();
-        BiConsumer<Object, Throwable> consumer = new AtomicBiConsumer<Object, Void>(promise) {
+        BiConsumer<Object, Throwable> consumer = new AtomicBiConsumer<>(promise) {
             private static final long serialVersionUID = 5994110691767731494L;
 
             @Override

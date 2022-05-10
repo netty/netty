@@ -71,7 +71,7 @@ public final class DateFormatter {
             new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
     private static final FastThreadLocal<DateFormatter> INSTANCES =
-            new FastThreadLocal<DateFormatter>() {
+            new FastThreadLocal<>() {
                 @Override
                 protected DateFormatter initialValue() {
                     return new DateFormatter();

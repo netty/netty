@@ -41,13 +41,13 @@ public class FastThreadLocalSlowPathBenchmark extends AbstractMicrobenchmark {
     static {
         for (int i = 0; i < jdkThreadLocals.length; i ++) {
             final int num = rand.nextInt();
-            jdkThreadLocals[i] = new ThreadLocal<Integer>() {
+            jdkThreadLocals[i] = new ThreadLocal<>() {
                 @Override
                 protected Integer initialValue() {
                     return num;
                 }
             };
-            fastThreadLocals[i] = new FastThreadLocal<Integer>() {
+            fastThreadLocals[i] = new FastThreadLocal<>() {
                 @Override
                 protected Integer initialValue() {
                     return num;

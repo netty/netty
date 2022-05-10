@@ -115,7 +115,7 @@ public class OcspClientExample {
     private static ChannelInitializer<Channel> newClientHandler(final ReferenceCountedOpenSslContext context,
             final String host, final Promise<FullHttpResponse> promise) {
 
-        return new ChannelInitializer<Channel>() {
+        return new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 SslHandler sslHandler = context.newHandler(ch.bufferAllocator());

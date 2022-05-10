@@ -72,7 +72,7 @@ public class SocketTestPermutation {
             for (BootstrapFactory<B> cbf: cbfs) {
                 final BootstrapFactory<A> sbf0 = sbf;
                 final BootstrapFactory<B> cbf0 = cbf;
-                list.add(new BootstrapComboFactory<A, B>() {
+                list.add(new BootstrapComboFactory<>() {
                     @Override
                     public A newServerInstance() {
                         return sbf0.newInstance();
@@ -119,7 +119,7 @@ public class SocketTestPermutation {
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Collections.singletonList(
-                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
+                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<>() {
                     @Override
                     public Channel newChannel(EventLoop eventLoop) {
                         return new NioDatagramChannel(eventLoop, family);

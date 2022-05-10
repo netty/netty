@@ -38,7 +38,7 @@ import static java.lang.Math.min;
  */
 public abstract class Recycler<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
-    private static final Handle<?> NOOP_HANDLE = new Handle<Object>() {
+    private static final Handle<?> NOOP_HANDLE = new Handle<>() {
         @Override
         public void recycle(Object object) {
             // NOOP
@@ -263,7 +263,7 @@ public abstract class Recycler<T> {
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
             if (BLOCKING_POOL) {
-                pooledHandles = new BlockingMessageQueue<DefaultHandle<T>>(maxCapacity);
+                pooledHandles = new BlockingMessageQueue<>(maxCapacity);
             } else {
                 pooledHandles = (MessagePassingQueue<DefaultHandle<T>>) newMpscQueue(chunkSize, maxCapacity);
             }
@@ -320,7 +320,7 @@ public abstract class Recycler<T> {
             // We use ArrayDeque instead of ArrayBlockingQueue because ABQ allocates its max capacity up-front,
             // and these queues will usually have large capacities, in potentially great numbers (one per thread),
             // but often only have comparatively few items in them.
-            deque = new ArrayDeque<T>();
+            deque = new ArrayDeque<>();
         }
 
         @Override

@@ -206,11 +206,11 @@ public class EmbeddedChannel extends AbstractChannel {
     private void setup(boolean register, final ChannelHandler... handlers) {
         requireNonNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
-        p.addLast(new ChannelInitializer<Channel>() {
+        p.addLast(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                for (ChannelHandler h: handlers) {
+                for (ChannelHandler h : handlers) {
                     if (h == null) {
                         break;
                     }

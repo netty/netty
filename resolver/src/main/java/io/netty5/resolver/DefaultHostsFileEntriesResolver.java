@@ -124,7 +124,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     }
 
     private static List<InetAddress> allAddresses(List<InetAddress> a, List<InetAddress> b) {
-        List<InetAddress> result = new ArrayList<InetAddress>(a.size() + (b == null ? 0 : b.size()));
+        List<InetAddress> result = new ArrayList<>(a.size() + (b == null ? 0 : b.size()));
         result.addAll(a);
         if (b != null) {
             result.addAll(b);

@@ -305,10 +305,10 @@ public final class OpenSsl {
                     String groups = SystemPropertyUtil.get("jdk.tls.namedGroups", null);
                     if (groups != null) {
                         String[] nGroups = groups.split(",");
-                        Set<String> supportedNamedGroups = new LinkedHashSet<String>(nGroups.length);
-                        Set<String> supportedConvertedNamedGroups = new LinkedHashSet<String>(nGroups.length);
+                        Set<String> supportedNamedGroups = new LinkedHashSet<>(nGroups.length);
+                        Set<String> supportedConvertedNamedGroups = new LinkedHashSet<>(nGroups.length);
 
-                        Set<String> unsupportedNamedGroups = new LinkedHashSet<String>();
+                        Set<String> unsupportedNamedGroups = new LinkedHashSet<>();
                         for (String namedGroup : nGroups) {
                             String converted = GroupsConverter.toOpenSsl(namedGroup);
                             if (SSLContext.setCurvesList(sslCtx, converted)) {
@@ -431,7 +431,7 @@ public final class OpenSsl {
     static String checkTls13Ciphers(InternalLogger logger, String ciphers) {
         if (IS_BORINGSSL && !ciphers.isEmpty()) {
             assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
-            Set<String> boringsslTlsv13Ciphers = new HashSet<String>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);
+            Set<String> boringsslTlsv13Ciphers = new HashSet<>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);
             Collections.addAll(boringsslTlsv13Ciphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
             boolean ciphersNotMatch = false;
             for (String cipher: ciphers.split(":")) {

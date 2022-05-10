@@ -71,16 +71,16 @@ final class BouncyCastleAlpnSslUtils {
             final Class<?> testBCApplicationProtocolSelector = bcApplicationProtocolSelector;
 
             bcApplicationProtocolSelectorSelect = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
-                }
-            });
+                    new PrivilegedExceptionAction<>() {
+                        @Override
+                        public Method run() throws Exception {
+                            return testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
+                        }
+                    });
 
             SSLContext context = getSSLContext("BCJSSE");
             SSLEngine engine = context.createSSLEngine();
-            setParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+            setParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                 @Override
                 public Method run() throws Exception {
                     return testBCSslEngine.getMethod("setParameters", testBCSslParameters);
@@ -88,7 +88,7 @@ final class BouncyCastleAlpnSslUtils {
             });
             setParameters.invoke(engine, bcSslParametersInstance);
 
-            setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+            setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                 @Override
                 public Method run() throws Exception {
                     return testBCSslParameters.getMethod("setApplicationProtocols", String[].class);
@@ -96,7 +96,7 @@ final class BouncyCastleAlpnSslUtils {
             });
             setApplicationProtocols.invoke(bcSslParametersInstance, new Object[]{EmptyArrays.EMPTY_STRINGS});
 
-            getApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+            getApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                 @Override
                 public Method run() throws Exception {
                     return testBCSslEngine.getMethod("getApplicationProtocol");
@@ -104,7 +104,7 @@ final class BouncyCastleAlpnSslUtils {
             });
             getApplicationProtocol.invoke(engine);
 
-            getHandshakeApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+            getHandshakeApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                 @Override
                 public Method run() throws Exception {
                     return testBCSslEngine.getMethod("getHandshakeApplicationProtocol");
@@ -113,7 +113,7 @@ final class BouncyCastleAlpnSslUtils {
             getHandshakeApplicationProtocol.invoke(engine);
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                    AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                         @Override
                         public Method run() throws Exception {
                             return testBCSslEngine.getMethod("setBCHandshakeApplicationProtocolSelector",
@@ -122,7 +122,7 @@ final class BouncyCastleAlpnSslUtils {
                     });
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                    AccessController.doPrivileged(new PrivilegedExceptionAction<>() {
                         @Override
                         public Method run() throws Exception {
                             return testBCSslEngine.getMethod("getBCHandshakeApplicationProtocolSelector");
@@ -226,7 +226,7 @@ final class BouncyCastleAlpnSslUtils {
     static BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector(SSLEngine engine) {
         try {
             final Object selector = GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invoke(engine);
-            return new BiFunction<SSLEngine, List<String>, String>() {
+            return new BiFunction<>() {
 
                 @Override
                 public String apply(SSLEngine sslEngine, List<String> strings) {

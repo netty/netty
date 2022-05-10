@@ -40,7 +40,7 @@ public final class HeadersUtils {
      */
     public static <K, V> List<String> getAllAsString(Headers<K, V, ?> headers, K name) {
         final List<V> allNames = headers.getAll(name);
-        return new AbstractList<String>() {
+        return new AbstractList<>() {
             @Override
             public String get(int index) {
                 V value = allNames.get(index);

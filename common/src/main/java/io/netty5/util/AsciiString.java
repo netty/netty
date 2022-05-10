@@ -1368,30 +1368,30 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     public static final HashingStrategy<CharSequence> CASE_INSENSITIVE_HASHER =
-            new HashingStrategy<CharSequence>() {
-        @Override
-        public int hashCode(CharSequence o) {
-            return AsciiString.hashCode(o);
-        }
+            new HashingStrategy<>() {
+                @Override
+                public int hashCode(CharSequence o) {
+                    return AsciiString.hashCode(o);
+                }
 
-        @Override
-        public boolean equals(CharSequence a, CharSequence b) {
-            return AsciiString.contentEqualsIgnoreCase(a, b);
-        }
-    };
+                @Override
+                public boolean equals(CharSequence a, CharSequence b) {
+                    return AsciiString.contentEqualsIgnoreCase(a, b);
+                }
+            };
 
     public static final HashingStrategy<CharSequence> CASE_SENSITIVE_HASHER =
-            new HashingStrategy<CharSequence>() {
-        @Override
-        public int hashCode(CharSequence o) {
-            return AsciiString.hashCode(o);
-        }
+            new HashingStrategy<>() {
+                @Override
+                public int hashCode(CharSequence o) {
+                    return AsciiString.hashCode(o);
+                }
 
-        @Override
-        public boolean equals(CharSequence a, CharSequence b) {
-            return AsciiString.contentEquals(a, b);
-        }
-    };
+                @Override
+                public boolean equals(CharSequence a, CharSequence b) {
+                    return AsciiString.contentEquals(a, b);
+                }
+            };
 
     /**
      * Returns an {@link AsciiString} containing the given character sequence. If the given string is already a

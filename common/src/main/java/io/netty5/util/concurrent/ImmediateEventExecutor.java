@@ -38,7 +38,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     /**
      * A Runnable will be queued if we are executing a Runnable. This is to prevent a {@link StackOverflowError}.
      */
-    private static final FastThreadLocal<Queue<Runnable>> DELAYED_RUNNABLES = new FastThreadLocal<Queue<Runnable>>() {
+    private static final FastThreadLocal<Queue<Runnable>> DELAYED_RUNNABLES = new FastThreadLocal<>() {
         @Override
         protected Queue<Runnable> initialValue() throws Exception {
             return new ArrayDeque<>();
@@ -47,7 +47,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     /**
      * Set to {@code true} if we are executing a runnable.
      */
-    private static final FastThreadLocal<Boolean> RUNNING = new FastThreadLocal<Boolean>() {
+    private static final FastThreadLocal<Boolean> RUNNING = new FastThreadLocal<>() {
         @Override
         protected Boolean initialValue() throws Exception {
             return false;

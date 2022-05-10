@@ -620,7 +620,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
-        return new SingleComponentIterator<T>(acquire(), readableBytes() > 0? this : null);
+        return new SingleComponentIterator<>(acquire(), readableBytes() > 0 ? this : null);
     }
 
     @Override
@@ -644,7 +644,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
         checkWrite(writerOffset(), writableBytes(), false);
-        return new SingleComponentIterator<T>(acquire(), writableBytes() > 0? this : null);
+        return new SingleComponentIterator<>(acquire(), writableBytes() > 0 ? this : null);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">
@@ -1119,7 +1119,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         int implicitCapacityLimit = this.implicitCapacityLimit;
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
-        return new Owned<NioBuffer>() {
+        return new Owned<>() {
             @Override
             public NioBuffer transferOwnership(Drop<NioBuffer> drop) {
                 NioBuffer copy = new NioBuffer(base, rmem, control, drop);

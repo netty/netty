@@ -61,7 +61,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
             List<WebSocketExtensionData> extraExtensions =
-              new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
+                    new ArrayList<>(extensionHandshakers.size());
             for (WebSocketClientExtensionHandshaker extensionHandshaker : extensionHandshakers) {
                 extraExtensions.add(extensionHandshaker.newRequestData());
             }

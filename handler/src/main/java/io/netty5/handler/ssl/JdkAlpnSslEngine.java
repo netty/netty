@@ -99,13 +99,13 @@ class JdkAlpnSslEngine extends JdkSslEngine {
                      @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
                      boolean isServer) {
        this(engine, applicationNegotiator, isServer,
-               new BiConsumer<SSLEngine, AlpnSelector>() {
+               new BiConsumer<>() {
                    @Override
                    public void accept(SSLEngine e, AlpnSelector s) {
                        JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(e, s);
                    }
                },
-               new BiConsumer<SSLEngine, List<String>>() {
+               new BiConsumer<>() {
                    @Override
                    public void accept(SSLEngine e, List<String> p) {
                        JdkAlpnSslUtils.setApplicationProtocols(e, p);

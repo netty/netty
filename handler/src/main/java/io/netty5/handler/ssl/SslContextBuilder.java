@@ -206,7 +206,7 @@ public final class SslContextBuilder {
     private boolean startTls;
     private boolean enableOcsp;
     private String keyStoreType = KeyStore.getDefaultType();
-    private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
+    private final Map<SslContextOption<?>, Object> options = new HashMap<>();
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;

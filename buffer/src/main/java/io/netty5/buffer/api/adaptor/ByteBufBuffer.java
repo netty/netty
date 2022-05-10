@@ -135,7 +135,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     protected Owned<ByteBufBuffer> prepareSend() {
         final ByteBuf delegate = this.delegate;
         final int implicitCapacityLimit = this.implicitCapacityLimit;
-        return new Owned<ByteBufBuffer>() {
+        return new Owned<>() {
             @Override
             public ByteBufBuffer transferOwnership(Drop<ByteBufBuffer> drop) {
                 ByteBufBuffer buffer = new ByteBufBuffer(control, delegate, drop);
@@ -549,7 +549,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
         acquire();
-        return new ComponentIterator<T>() {
+        return new ComponentIterator<>() {
             ByteBuffer[] byteBuffers;
             int index;
 
@@ -629,7 +629,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             close();
             throw bufferIsReadOnly(this);
         }
-        return new ComponentIterator<T>() {
+        return new ComponentIterator<>() {
             ByteBuffer[] byteBuffers;
             int index;
 

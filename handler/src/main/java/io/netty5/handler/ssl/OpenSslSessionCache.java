@@ -52,7 +52,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     private final OpenSslEngineMap engineMap;
 
     private final Map<OpenSslSessionId, NativeSslSession> sessions =
-            new LinkedHashMap<OpenSslSessionId, NativeSslSession>() {
+            new LinkedHashMap<>() {
 
                 private static final long serialVersionUID = -7773696788135734448L;
 
@@ -255,7 +255,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         synchronized (this) {
             sessionsArray = sessions.values().toArray(EMPTY_SESSIONS);
         }
-        List<OpenSslSessionId> ids = new ArrayList<OpenSslSessionId>(sessionsArray.length);
+        List<OpenSslSessionId> ids = new ArrayList<>(sessionsArray.length);
         for (OpenSslSession session: sessionsArray) {
             if (session.isValid()) {
                 ids.add(session.sessionId());

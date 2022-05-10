@@ -49,7 +49,7 @@ public class DomainWildcardMappingBuilder<V> {
      */
     public DomainWildcardMappingBuilder(int initialCapacity, V defaultValue) {
         this.defaultValue = requireNonNull(defaultValue, "defaultValue");
-        map = new LinkedHashMap<String, V>(initialCapacity);
+        map = new LinkedHashMap<>(initialCapacity);
     }
 
     /**
@@ -95,7 +95,7 @@ public class DomainWildcardMappingBuilder<V> {
      * @return new {@link Mapping} instance
      */
     public Mapping<String, V> build() {
-        return new ImmutableDomainWildcardMapping<V>(defaultValue, map);
+        return new ImmutableDomainWildcardMapping<>(defaultValue, map);
     }
 
     private static final class ImmutableDomainWildcardMapping<V> implements Mapping<String, V> {
@@ -108,7 +108,7 @@ public class DomainWildcardMappingBuilder<V> {
 
         ImmutableDomainWildcardMapping(V defaultValue, Map<String, V> map) {
             this.defaultValue = defaultValue;
-            this.map = new LinkedHashMap<String, V>(map);
+            this.map = new LinkedHashMap<>(map);
         }
 
         @Override

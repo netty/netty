@@ -274,7 +274,7 @@ public class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup imp
 
     private static Object[] merge(IoHandlerFactory ioHandlerFactory,
                                   int maxTasksPerRun, Object... args) {
-        List<Object> argList = new ArrayList<Object>(2 + args.length);
+        List<Object> argList = new ArrayList<>(2 + args.length);
         argList.add(ioHandlerFactory);
         argList.add(maxTasksPerRun);
         Collections.addAll(argList, args);

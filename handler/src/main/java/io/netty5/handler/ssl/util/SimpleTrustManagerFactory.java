@@ -48,7 +48,7 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
      * To work around this issue, we use an ugly hack which uses a {@link ThreadLocal}.
      */
     private static final FastThreadLocal<SimpleTrustManagerFactorySpi> CURRENT_SPI =
-            new FastThreadLocal<SimpleTrustManagerFactorySpi>() {
+            new FastThreadLocal<>() {
                 @Override
                 protected SimpleTrustManagerFactorySpi initialValue() {
                     return new SimpleTrustManagerFactorySpi();

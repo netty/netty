@@ -101,7 +101,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     @Override
     public Iterator<EventExecutor> iterator() {
         final Iterator<EventExecutor> itr = group.iterator();
-        return new Iterator<EventExecutor>() {
+        return new Iterator<>() {
             @Override
             public boolean hasNext() {
                 return itr.hasNext();

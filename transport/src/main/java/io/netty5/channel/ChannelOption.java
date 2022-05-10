@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
-    private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<ChannelOption<Object>>() {
+    private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<>() {
         @Override
         protected ChannelOption<Object> newConstant(int id, String name) {
             return new ChannelOption<>(id, name);

@@ -62,7 +62,7 @@ final class ChannelHandlerMask {
             MASK_CLOSE | MASK_REGISTER | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
-            new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
+            new FastThreadLocal<>() {
                 @Override
                 protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
                     return new WeakHashMap<>(32);

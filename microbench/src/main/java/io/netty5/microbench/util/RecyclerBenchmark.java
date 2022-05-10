@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class RecyclerBenchmark extends AbstractMicrobenchmark {
-    private Recycler<DummyObject> recycler = new Recycler<DummyObject>() {
+    private Recycler<DummyObject> recycler = new Recycler<>() {
         @Override
         protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
             return new DummyObject(handle);
@@ -67,7 +67,7 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
 
     @State(Scope.Benchmark)
     public static class ProducerConsumerState {
-        final ArrayBlockingQueue<DummyObject> queue = new ArrayBlockingQueue<DummyObject>(100);
+        final ArrayBlockingQueue<DummyObject> queue = new ArrayBlockingQueue<>(100);
     }
 
     // The allocation stats are the main thing interesting about this benchmark

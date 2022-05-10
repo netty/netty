@@ -257,7 +257,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) {
                 serverChannel = sch;
@@ -279,7 +279,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         });
 
         final CountDownLatch clientHandshakeEventLatch = new CountDownLatch(1);
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) {
                 clientChannel = sch;

@@ -139,7 +139,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         out.close();
 
-        ChannelHandler ch = new SimpleChannelInboundHandler<Object>() {
+        ChannelHandler ch = new SimpleChannelInboundHandler<>() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             }

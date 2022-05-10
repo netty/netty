@@ -26,13 +26,13 @@ final class BouncyCastleAlpnSslEngine extends JdkAlpnSslEngine {
                      @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
                      boolean isServer) {
         super(engine, applicationNegotiator, isServer,
-                new BiConsumer<SSLEngine, AlpnSelector>() {
+                new BiConsumer<>() {
                     @Override
                     public void accept(SSLEngine e, AlpnSelector s) {
                         BouncyCastleAlpnSslUtils.setHandshakeApplicationProtocolSelector(e, s);
                     }
                 },
-                new BiConsumer<SSLEngine, List<String>>() {
+                new BiConsumer<>() {
                     @Override
                     public void accept(SSLEngine e, List<String> p) {
                         BouncyCastleAlpnSslUtils.setApplicationProtocols(e, p);

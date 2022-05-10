@@ -66,44 +66,44 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         final CountDownLatch waitHalfClosureDone = new CountDownLatch(1);
         try {
             sb.childOption(ChannelOption.SO_LINGER, 1)
-              .childHandler(new ChannelInitializer<Channel>() {
+              .childHandler(new ChannelInitializer<>() {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
                       ch.pipeline().addLast(new ChannelHandler() {
 
-                            @Override
-                            public void channelActive(final ChannelHandlerContext ctx) {
-                                SocketChannel channel = (SocketChannel) ctx.channel();
-                                channel.shutdownOutput();
-                            }
+                          @Override
+                          public void channelActive(final ChannelHandlerContext ctx) {
+                              SocketChannel channel = (SocketChannel) ctx.channel();
+                              channel.shutdownOutput();
+                          }
 
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                Resource.dispose(msg);
-                                waitHalfClosureDone.countDown();
-                            }
-                        });
+                          @Override
+                          public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                              Resource.dispose(msg);
+                              waitHalfClosureDone.countDown();
+                          }
+                      });
                   }
               });
 
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
-              .handler(new ChannelInitializer<Channel>() {
+              .handler(new ChannelInitializer<>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
                       ch.pipeline().addLast(new ChannelHandler() {
 
-                            @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                                if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[16]));
-                                }
+                          @Override
+                          public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                              if (ChannelInputShutdownEvent.INSTANCE == evt) {
+                                  ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[16]));
+                              }
 
-                                if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
-                                    ctx.close();
-                                }
-                            }
-                        });
+                              if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
+                                  ctx.close();
+                              }
+                          }
+                      });
                   }
               });
 
@@ -132,7 +132,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
                     .option(ChannelOption.AUTO_READ, true);
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -152,7 +152,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             final AtomicInteger shutdownEventReceivedCounter = new AtomicInteger();
             final AtomicInteger shutdownReadCompleteEventReceivedCounter = new AtomicInteger();
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -212,7 +212,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               .option(ChannelOption.AUTO_READ, autoRead)
               .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(numReadsPerReadLoop));
 
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -233,7 +233,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -329,14 +329,14 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     expectedBytes, serverReadExpectedLatch, doneLatch, causeRef);
             final SimpleChannelInboundHandler<?> followerHandler = new AutoCloseFalseFollower(expectedBytes,
                     serverReadExpectedLatch, doneLatch, causeRef);
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(clientIsLeader ? followerHandler :leaderHandler);
+                    ch.pipeline().addLast(clientIsLeader ? followerHandler : leaderHandler);
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(clientIsLeader ? leaderHandler : followerHandler);
@@ -513,7 +513,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     .option(ChannelOption.AUTO_READ, autoRead)
                     .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(numReadsPerReadLoop));
 
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -533,7 +533,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelHandler() {

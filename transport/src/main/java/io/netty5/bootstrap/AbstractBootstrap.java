@@ -355,7 +355,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
 
     static Map.Entry<ChannelOption<?>, Object>[] newOptionsArray(Map<ChannelOption<?>, Object> options) {
         synchronized (options) {
-            return new LinkedHashMap<ChannelOption<?>, Object>(options).entrySet().toArray(EMPTY_OPTION_ARRAY);
+            return new LinkedHashMap<>(options).entrySet().toArray(EMPTY_OPTION_ARRAY);
         }
     }
 
