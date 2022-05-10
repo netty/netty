@@ -196,7 +196,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
                           @Override
                           public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                              // IOException is fine as it will also close the channel and may just be a connection reset.
+                              // IOException is fine as it will also close the channel
+                              // and may just be a connection reset.
                               if (!(cause instanceof IOException)) {
                                   clientReceived.set(cause);
                                   latch.countDown();
@@ -227,7 +228,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                            // IOException is fine as it will also close the channel and may just be a connection reset.
+                            // IOException is fine as it will also close the channel
+                            // and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
                                 closeAggregator();
                                 clientReceived.set(cause);
