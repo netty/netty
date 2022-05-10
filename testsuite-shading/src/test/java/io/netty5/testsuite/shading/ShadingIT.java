@@ -43,7 +43,7 @@ public class ShadingIT {
         // Skip on windows.
         assumeFalse(PlatformDependent.isWindows());
 
-        String className = "io.netty.handler.ssl.OpenSsl";
+        String className = "io.netty5.handler.ssl.OpenSsl";
         testShading0(SHADING_PREFIX, className);
         testShading0(SHADING_PREFIX2, className);
     }
