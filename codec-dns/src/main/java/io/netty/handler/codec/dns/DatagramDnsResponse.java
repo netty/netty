@@ -202,14 +202,10 @@ public class DatagramDnsResponse extends DefaultDnsResponse
         }
 
         if (recipient() == null) {
-            if (that.recipient() != null) {
-                return false;
-            }
-        } else if (!recipient().equals(that.recipient())) {
-            return false;
+            return that.recipient() == null;
+        } else {
+            return recipient().equals(that.recipient());
         }
-
-        return true;
     }
 
     @Override
