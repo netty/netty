@@ -33,8 +33,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
-public class
-BufferUtilBenchmark extends AbstractMicrobenchmark {
+public class BufferUtilBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "true", "false" })
     private boolean direct;
@@ -58,9 +57,7 @@ BufferUtilBenchmark extends AbstractMicrobenchmark {
         buffer = direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes);
         wrapped = Unpooled.unreleasableBuffer(direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes));
         asciiSequence = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            asciiSequence.append('a');
-        }
+        asciiSequence.append("a".repeat(Math.max(0, length)));
         ascii = asciiSequence.toString();
 
         // Generate some mixed UTF-8 String for benchmark

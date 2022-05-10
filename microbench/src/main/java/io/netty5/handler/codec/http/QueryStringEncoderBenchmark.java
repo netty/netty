@@ -86,10 +86,6 @@ public class QueryStringEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private static String repeat(String s, int num) {
-        StringBuilder sb = new StringBuilder(num * s.length());
-        for (int i = 0; i < num; i++) {
-            sb.append(s);
-        }
-        return sb.toString();
+        return s.repeat(Math.max(0, num));
     }
 }
