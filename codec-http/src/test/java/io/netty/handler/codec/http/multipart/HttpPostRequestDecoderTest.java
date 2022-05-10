@@ -1023,13 +1023,18 @@ public class HttpPostRequestDecoderTest {
                 HttpMethod.POST,
                 "/",
                 content);
+        HttpPostStandardRequestDecoder decoder = null;
         try {
-            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(
+            decoder = new HttpPostStandardRequestDecoder(
                     new DefaultHttpDataFactory(true),
                     req
             );
             decoder.offer(req);
+            decoder.destroy();
         } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            if(null != decoder){
+                decoder.destroy();
+            }
             fail("Was not expecting an exception");
         } finally {
             assertTrue(req.release());
