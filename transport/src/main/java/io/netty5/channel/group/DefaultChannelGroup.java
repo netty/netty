@@ -174,11 +174,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
         }
 
-        if (c == null) {
-            return false;
-        }
-
-        return true;
+        return c != null;
     }
 
     @Override

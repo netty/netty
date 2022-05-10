@@ -184,10 +184,8 @@ public class IsValidIpV6Benchmark extends AbstractMicrobenchmark {
         // Check if we have an IPv4 ending
         if (numberOfPeriods > 0) {
             // There is a test case with 7 colons and valid ipv4 this should resolve it
-            if (numberOfPeriods != 3 ||
-                !(isValidIp4Word(word.toString()) && (numberOfColons < 7 || doubleColon))) {
-                return false;
-            }
+            return numberOfPeriods == 3 &&
+                    (isValidIp4Word(word.toString()) && (numberOfColons < 7 || doubleColon));
         } else {
             // If we're at then end and we haven't had 7 colons then there is a
             // problem unless we encountered a doubleColon
@@ -199,16 +197,12 @@ public class IsValidIpV6Benchmark extends AbstractMicrobenchmark {
                 // If we have an empty word at the end, it means we ended in either
                 // a : or a .
                 // If we did not end in :: then this is invalid
-                if (ipAddress.charAt(endOffset - 1) == ':' &&
-                    ipAddress.charAt(endOffset - 2) != ':') {
-                    return false;
-                }
-            } else if (numberOfColons == 8 && ipAddress.charAt(startOffset) != ':') {
-                return false;
+                return ipAddress.charAt(endOffset - 1) != ':' ||
+                        ipAddress.charAt(endOffset - 2) == ':';
+            } else {
+                return numberOfColons != 8 || ipAddress.charAt(startOffset) == ':';
             }
         }
-
-        return true;
     }
 
     // Tests
