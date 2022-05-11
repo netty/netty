@@ -41,6 +41,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -143,7 +145,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        if (file.isDirectory()) {
+        BasicFileAttributes readAttributes = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
+        if (readAttributes.isDirectory()) {
             if (uri.endsWith("/")) {
                 sendListing(ctx, file, uri);
             } else {
@@ -152,7 +155,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        if (!file.isFile()) {
+        if (!readAttributes.isRegularFile()) {
             sendError(ctx, FORBIDDEN);
             return;
         }
@@ -166,7 +169,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             // Only compare up to the second because the datetime format we send to the client
             // does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
-            long fileLastModifiedSeconds = file.lastModified() / 1000;
+            long fileLastModifiedSeconds = readAttributes.lastModifiedTime().toMillis() / 1000;
             if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
                 sendNotModified(ctx);
                 return;
