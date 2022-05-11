@@ -189,15 +189,12 @@ public final class HostsFileEntriesProvider {
             }
             if (file.exists() && file.isFile()) {
                 for (Charset charset : charsets) {
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(new FileInputStream(file), charset));
-                    try {
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(new FileInputStream(file), charset))) {
                         HostsFileEntriesProvider entries = parse(reader);
                         if (entries != HostsFileEntriesProvider.EMPTY) {
                             return entries;
                         }
-                    } finally {
-                        reader.close();
                     }
                 }
             }
