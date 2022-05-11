@@ -163,9 +163,7 @@ public class OcspServerExample {
     }
 
     private static X509Certificate[] parseCertificates(Class<?> clazz, String name) throws Exception {
-        InputStream in = clazz.getResourceAsStream(name);
-
-        try (in) {
+        try (InputStream in = clazz.getResourceAsStream(name)) {
             if (in == null) {
                 throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
             }

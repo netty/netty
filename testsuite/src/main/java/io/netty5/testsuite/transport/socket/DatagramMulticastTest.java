@@ -203,8 +203,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 while (addresses.hasMoreElements()) {
                     InetAddress address = addresses.nextElement();
                     if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
-                        MulticastSocket socket = new MulticastSocket(newAnySocketAddress());
-                        try (socket) {
+                        try (MulticastSocket socket = new MulticastSocket(newAnySocketAddress())) {
                             socket.setReuseAddress(true);
                             socket.setNetworkInterface(iface);
                             socket.send(new java.net.DatagramPacket(new byte[]{1, 2, 3, 4}, 4,

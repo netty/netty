@@ -149,8 +149,7 @@ public final class OcspUtils {
                         contentLength = Integer.MAX_VALUE;
                     }
 
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try (baos) {
+                    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                         byte[] buffer = new byte[8192];
                         int length;
 
@@ -161,8 +160,8 @@ public final class OcspUtils {
                                 break;
                             }
                         }
+                        return new OCSPResp(baos.toByteArray());
                     }
-                    return new OCSPResp(baos.toByteArray());
                 }
             }
         } finally {
