@@ -28,6 +28,8 @@
   <packaging>${packaging.type}</packaging>
 
   <properties>
+    <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
+    <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <javaModuleName>io.netty.incubator.codec.quic</javaModuleName>
     <fragmentHost>io.netty.incubator.netty-incubator-codec-classes-quic</fragmentHost>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
@@ -132,6 +134,7 @@
       <properties>
         <jniLibName>netty_quiche_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
+        <javaModuleNameWithClassifier>osx.aarch_64</javaModuleNameWithClassifier>
         <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
         <extraCflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCflags>
         <extraCxxflags>-O3 -fno-omit-frame-pointer -target arm64-apple-macos11</extraCxxflags>
@@ -385,7 +388,7 @@
                     <!-- Add the ant tasks from ant-contrib -->
                     <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
 
-                    <filter token="JAVA_MODULE_NAME" value="${javaModuleName}" />
+                    <filter token="JAVA_MODULE_NAME" value="${javaModuleNameWithClassifier}" />
                     <filter token="MIN_SDK_VERSION" value="${androidMinSdkVersion}" />
 
                     <copy file="src/main/AndroidManifest.xml" todir="${project.build.directory}/android-build/" filtering="true" />
@@ -441,6 +444,7 @@
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch_64</bundleNativeCode>
         <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
+        <javaModuleNameWithClassifier>linux.aarch_64</javaModuleNameWithClassifier>
         <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
         <extraConfigureArg2>CC=aarch64-none-linux-gnu-gcc</extraConfigureArg2>
         <extraCmakeFlags>-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=aarch64-none-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-none-linux-gnu-g++</extraCmakeFlags>
@@ -981,7 +985,7 @@
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Automatic-Module-Name>${javaModuleNameWithClassifier}</Automatic-Module-Name>
                   <Fragment-Host>${fragmentHost}</Fragment-Host>
                   <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
