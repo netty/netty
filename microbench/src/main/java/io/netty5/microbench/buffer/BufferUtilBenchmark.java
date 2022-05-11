@@ -44,7 +44,6 @@ public class BufferUtilBenchmark extends AbstractMicrobenchmark {
     private ByteBuf asciiBuffer;
     private ByteBuf utf8Buffer;
 
-    private StringBuilder asciiSequence;
     private String ascii;
 
     private StringBuilder utf8Sequence;
@@ -54,11 +53,9 @@ public class BufferUtilBenchmark extends AbstractMicrobenchmark {
     public void setup() {
         // Use buffer sizes that will also allow to write UTF-8 without grow the buffer
         final int maxBytes = ByteBufUtil.utf8MaxBytes(length);
-        buffer = direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes);
+        buffer = direct ? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes);
         wrapped = Unpooled.unreleasableBuffer(direct? Unpooled.directBuffer(maxBytes) : Unpooled.buffer(maxBytes));
-        asciiSequence = new StringBuilder(length);
-        asciiSequence.append("a".repeat(Math.max(0, length)));
-        ascii = asciiSequence.toString();
+        ascii = "a".repeat(Math.max(0, length));
 
         // Generate some mixed UTF-8 String for benchmark
         utf8Sequence = new StringBuilder(length);
@@ -67,7 +64,6 @@ public class BufferUtilBenchmark extends AbstractMicrobenchmark {
             utf8Sequence.append(chars[i % chars.length]);
         }
         utf8 = utf8Sequence.toString();
-        asciiSequence = utf8Sequence;
 
         asciiBuffer = Unpooled.copiedBuffer(ascii, CharsetUtil.US_ASCII);
         utf8Buffer = Unpooled.copiedBuffer(utf8, CharsetUtil.UTF_8);
@@ -108,25 +104,25 @@ public class BufferUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public void writeAsciiViaArray() {
         buffer.writerIndex(0);
-        buffer.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
+        buffer.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAsciiViaArrayWrapped() {
         wrapped.writerIndex(0);
-        wrapped.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
+        wrapped.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAscii() {
         buffer.writerIndex(0);
-        ByteBufUtil.writeAscii(buffer, asciiSequence);
+        ByteBufUtil.writeAscii(buffer, ascii);
     }
 
     @Benchmark
     public void writeAsciiWrapped() {
         wrapped.writerIndex(0);
-        ByteBufUtil.writeAscii(wrapped, asciiSequence);
+        ByteBufUtil.writeAscii(wrapped, ascii);
     }
 
     @Benchmark

@@ -86,6 +86,6 @@ public class QueryStringEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private static String repeat(String s, int num) {
-        return s.repeat(Math.max(0, num));
+        return s.repeat(num);
     }
 }
