@@ -58,7 +58,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new SimpleChannelInboundHandler<Object>() {
+        sb.handler(new SimpleChannelInboundHandler<>() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.

@@ -96,7 +96,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
     protected Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final SocketAddress sender,
                                          final CountDownLatch latch, final AtomicReference<Throwable> errorRef,
                                          final boolean echo) throws Throwable {
-        sb.handler(new ChannelInitializer<Channel>() {
+        sb.handler(new ChannelInitializer<>() {
 
             @Override
             protected void initChannel(Channel ch) {

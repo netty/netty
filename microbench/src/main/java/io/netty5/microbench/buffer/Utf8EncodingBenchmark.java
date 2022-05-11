@@ -87,10 +87,10 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
         InputStreamReader inStreamReader = null;
         BufferedReader buffReader = null;
         int maxExpectedSize = 0;
-        List<String> strings = new ArrayList<String>();
-        List<StringBuilder> stringBuilders = new ArrayList<StringBuilder>();
-        List<AnotherCharSequence> anotherCharSequenceList = new ArrayList<AnotherCharSequence>();
-        List<AsciiString> asciiStrings = new ArrayList<AsciiString>();
+        List<String> strings = new ArrayList<>();
+        List<StringBuilder> stringBuilders = new ArrayList<>();
+        List<AnotherCharSequence> anotherCharSequenceList = new ArrayList<>();
+        List<AsciiString> asciiStrings = new ArrayList<>();
         try {
             testTextStream = getClass().getResourceAsStream("/Utf8Samples.txt");
             inStreamReader = new InputStreamReader(testTextStream, "UTF-8");

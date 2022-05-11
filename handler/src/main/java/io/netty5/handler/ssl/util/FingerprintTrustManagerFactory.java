@@ -164,7 +164,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
         }
 
         int hashLength = md.getDigestLength();
-        List<byte[]> list = new ArrayList<byte[]>(fingerprints.length);
+        List<byte[]> list = new ArrayList<>(fingerprints.length);
         for (byte[] f: fingerprints) {
             if (f == null) {
                 break;
@@ -177,7 +177,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             list.add(f.clone());
         }
 
-        this.tlmd = new FastThreadLocal<MessageDigest>() {
+        this.tlmd = new FastThreadLocal<>() {
 
             @Override
             protected MessageDigest initialValue() {

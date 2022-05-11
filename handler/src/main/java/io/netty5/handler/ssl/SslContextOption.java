@@ -30,10 +30,10 @@ import static java.util.Objects.requireNonNull;
  */
 public class SslContextOption<T> extends AbstractConstant<SslContextOption<T>> {
 
-    private static final ConstantPool<SslContextOption<Object>> pool = new ConstantPool<SslContextOption<Object>>() {
+    private static final ConstantPool<SslContextOption<Object>> pool = new ConstantPool<>() {
         @Override
         protected SslContextOption<Object> newConstant(int id, String name) {
-            return new SslContextOption<Object>(id, name);
+            return new SslContextOption<>(id, name);
         }
     };
 

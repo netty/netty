@@ -66,19 +66,19 @@ public abstract class ObjectPool<T> {
      * that should be pooled.
      */
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
-        return new RecyclerObjectPool<T>(Objects.requireNonNull(creator, "creator"));
+        return new RecyclerObjectPool<>(Objects.requireNonNull(creator, "creator"));
     }
 
     private static final class RecyclerObjectPool<T> extends ObjectPool<T> {
         private final Recycler<T> recycler;
 
         RecyclerObjectPool(final ObjectCreator<T> creator) {
-             recycler = new Recycler<T>() {
-                @Override
-                protected T newObject(Handle<T> handle) {
-                    return creator.newObject(handle);
-                }
-            };
+             recycler = new Recycler<>() {
+                 @Override
+                 protected T newObject(Handle<T> handle) {
+                     return creator.newObject(handle);
+                 }
+             };
         }
 
         @Override

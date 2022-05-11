@@ -24,7 +24,7 @@ public final class Signal extends Error implements Constant<Signal> {
 
     private static final long serialVersionUID = -221145131122459977L;
 
-    private static final ConstantPool<Signal> pool = new ConstantPool<Signal>() {
+    private static final ConstantPool<Signal> pool = new ConstantPool<>() {
         @Override
         protected Signal newConstant(int id, String name) {
             return new Signal(id, name);

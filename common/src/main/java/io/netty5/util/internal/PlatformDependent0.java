@@ -297,7 +297,7 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
-            Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<>() {
                 @Override
                 public Object run() {
                     try {
@@ -329,7 +329,7 @@ final class PlatformDependent0 {
                         }
                         return unalignedMethod.invoke(null);
                     } catch (NoSuchMethodException | SecurityException
-                            | IllegalAccessException | ClassNotFoundException | InvocationTargetException e) {
+                             | IllegalAccessException | ClassNotFoundException | InvocationTargetException e) {
                         return e;
                     }
                 }

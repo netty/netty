@@ -28,7 +28,7 @@ final class GroupsConverter {
 
     static {
         // See https://tools.ietf.org/search/rfc4492#appendix-A and https://www.java.com/en/configure_crypto.html
-        Map<String, String> map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<>();
         map.put("secp224r1", "P-224");
         map.put("prime256v1", "P-256");
         map.put("secp256r1", "P-256");

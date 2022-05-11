@@ -237,7 +237,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (task instanceof RunnableScheduledFutureNode) {
             node = (RunnableScheduledFutureNode<V>) task;
         } else {
-            node = new DefaultRunnableScheduledFutureNode<V>(task);
+            node = new DefaultRunnableScheduledFutureNode<>(task);
         }
         scheduledTaskQueue().add(node);
     }
@@ -259,7 +259,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected static <V> RunnableScheduledFuture<V> newRunnableScheduledFuture(
             AbstractScheduledEventExecutor executor, Promise<V> promise, Callable<V> task,
             long deadlineNanos, long periodNanos) {
-        return new RunnableScheduledFutureAdapter<V>(executor, promise, task, deadlineNanos, periodNanos);
+        return new RunnableScheduledFutureAdapter<>(executor, promise, task, deadlineNanos, periodNanos);
     }
 
     /**

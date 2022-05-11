@@ -187,8 +187,8 @@ public final class PlatformDependent {
         }
 
         final Set<String> allowedClassifiers = Collections.unmodifiableSet(
-                new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
-        final Set<String> availableClassifiers = new LinkedHashSet<String>();
+                new HashSet<>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
+        final Set<String> availableClassifiers = new LinkedHashSet<>();
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
             boolean found = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {

@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class DefaultDnsCache implements DnsCache {
 
-    private final Cache<DefaultDnsCacheEntry> resolveCache = new Cache<DefaultDnsCacheEntry>() {
+    private final Cache<DefaultDnsCacheEntry> resolveCache = new Cache<>() {
 
         @Override
         protected boolean shouldReplaceAll(DefaultDnsCacheEntry entry) {

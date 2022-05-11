@@ -622,25 +622,29 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * @return the list of TrafficCounters that exists at the time of the call.
      */
     public Collection<TrafficCounter> channelTrafficCounters() {
-        return new AbstractCollection<TrafficCounter>() {
+        return new AbstractCollection<>() {
             @Override
             public Iterator<TrafficCounter> iterator() {
-                return new Iterator<TrafficCounter>() {
+                return new Iterator<>() {
                     final Iterator<PerChannel> iter = channelQueues.values().iterator();
+
                     @Override
                     public boolean hasNext() {
                         return iter.hasNext();
                     }
+
                     @Override
                     public TrafficCounter next() {
                         return iter.next().channelTrafficCounter;
                     }
+
                     @Override
                     public void remove() {
                         throw new UnsupportedOperationException();
                     }
                 };
             }
+
             @Override
             public int size() {
                 return channelQueues.size();

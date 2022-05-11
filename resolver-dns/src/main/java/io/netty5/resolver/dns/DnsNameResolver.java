@@ -221,7 +221,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final DnsCnameCache cnameCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
-            new FastThreadLocal<DnsServerAddressStream>() {
+            new FastThreadLocal<>() {
                 @Override
                 protected DnsServerAddressStream initialValue() {
                     return dnsServerAddressStreamProvider.nameServerAddressStream("");
@@ -833,7 +833,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (type == DnsRecordType.A || type == DnsRecordType.AAAA) {
             final List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
             if (hostsFileEntries != null) {
-                List<DnsRecord> result = new ArrayList<DnsRecord>();
+                List<DnsRecord> result = new ArrayList<>();
                 for (InetAddress hostsFileEntry : hostsFileEntries) {
                     Buffer content = null;
                     if (hostsFileEntry instanceof Inet4Address) {

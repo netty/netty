@@ -29,7 +29,7 @@ import java.util.concurrent.locks.LockSupport;
  * {@link IoHandler} implementation for {@link LocalChannel} and {@link LocalServerChannel}.
  */
 public final class LocalHandler implements IoHandler {
-    private final Set<LocalChannelUnsafe> registeredChannels = new HashSet<LocalChannelUnsafe>(64);
+    private final Set<LocalChannelUnsafe> registeredChannels = new HashSet<>(64);
     private volatile Thread executionThread;
 
     private LocalHandler() { }

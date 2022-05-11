@@ -48,7 +48,7 @@ public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
      * To work around this issue, we use an ugly hack which uses a {@link FastThreadLocal }.
      */
     private static final FastThreadLocal<SimpleKeyManagerFactorySpi> CURRENT_SPI =
-            new FastThreadLocal<SimpleKeyManagerFactorySpi>() {
+            new FastThreadLocal<>() {
                 @Override
                 protected SimpleKeyManagerFactorySpi initialValue() {
                     return new SimpleKeyManagerFactorySpi();

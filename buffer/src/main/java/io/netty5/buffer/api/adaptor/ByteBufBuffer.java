@@ -546,7 +546,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
         acquire();
-        return new ComponentIterator<T>() {
+        return new ComponentIterator<>() {
             ByteBuffer[] byteBuffers;
             int index;
 
@@ -626,7 +626,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             close();
             throw bufferIsReadOnly(this);
         }
-        return new ComponentIterator<T>() {
+        return new ComponentIterator<>() {
             ByteBuffer[] byteBuffers;
             int index;
 

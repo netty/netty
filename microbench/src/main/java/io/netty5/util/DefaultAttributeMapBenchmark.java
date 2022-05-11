@@ -62,7 +62,7 @@ public class DefaultAttributeMapBenchmark extends AbstractMicrobenchmark {
         }
         attributes = new DefaultAttributeMap();
         keys = new AttributeKey[keyCount];
-        identityHashMap = new IdentityHashMap<AttributeKey<Integer>, Attribute<Integer>>(keyCount);
+        identityHashMap = new IdentityHashMap<>(keyCount);
         for (int i = 0; i < keyCount; i++) {
             final AttributeKey<Integer> key = AttributeKey.valueOf(Integer.toString(i));
             keys[i] = key;

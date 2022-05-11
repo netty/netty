@@ -64,14 +64,14 @@ public final class TcpDnsServer {
                        new MultithreadEventLoopGroup(ioHandlerFactory))
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
-                .childHandler(new ChannelInitializer<Channel>() {
+                .childHandler(new ChannelInitializer<>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
                                 new SimpleChannelInboundHandler<DnsQuery>() {
                                     @Override
                                     protected void messageReceived(ChannelHandlerContext ctx,
-                                                                DnsQuery msg) throws Exception {
+                                                                   DnsQuery msg) throws Exception {
                                         DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
                                         System.out.println("Query domain: " + question);
 

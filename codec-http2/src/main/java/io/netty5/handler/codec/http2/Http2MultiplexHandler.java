@@ -92,7 +92,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
-            new MaxCapacityQueue<AbstractHttp2StreamChannel>(new ArrayDeque<AbstractHttp2StreamChannel>(8),
+            new MaxCapacityQueue<>(new ArrayDeque<>(8),
                     // Choose 100 which is what is used most of the times as default.
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 

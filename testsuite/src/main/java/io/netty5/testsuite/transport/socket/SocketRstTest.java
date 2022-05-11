@@ -56,14 +56,14 @@ public class SocketRstTest extends AbstractSocketTest {
         final CountDownLatch latch2 = new CountDownLatch(1);
         // SO_LINGER=0 means that we must send ONLY a RST when closing (not a FIN + RST).
         sb.childOption(ChannelOption.SO_LINGER, 0);
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 serverChannelRef.compareAndSet(null, ch);
                 latch.countDown();
             }
         });
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new ChannelHandler() {
@@ -110,14 +110,14 @@ public class SocketRstTest extends AbstractSocketTest {
         final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
-        sb.childHandler(new ChannelInitializer<Channel>() {
+        sb.childHandler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 serverChannelRef.compareAndSet(null, ch);
                 latch.countDown();
             }
         });
-        cb.handler(new ChannelInitializer<Channel>() {
+        cb.handler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new ChannelHandler() {

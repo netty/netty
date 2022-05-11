@@ -142,14 +142,14 @@ public class OcspServerExample {
 
     private static ChannelInitializer<Channel> newServerHandler(final ReferenceCountedOpenSslContext context,
             final OCSPResp response) {
-        return new ChannelInitializer<Channel>() {
+        return new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 SslHandler sslHandler = context.newHandler(ch.bufferAllocator());
 
                 if (response != null) {
                     ReferenceCountedOpenSslEngine engine
-                        = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+                            = (ReferenceCountedOpenSslEngine) sslHandler.engine();
 
                     engine.setOcspResponse(response.getEncoded());
                 }

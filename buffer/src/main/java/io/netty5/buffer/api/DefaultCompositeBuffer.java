@@ -1001,7 +1001,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
-        return new CompositeComponentIterator<T>((DefaultCompositeBuffer) acquire(), Buffer::forEachReadable);
+        return new CompositeComponentIterator<>((DefaultCompositeBuffer) acquire(), Buffer::forEachReadable);
     }
 
     @Override
@@ -1039,7 +1039,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     @Override
     public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
         checkWriteBounds(writerOffset(), writableBytes());
-        return new CompositeComponentIterator<T>((DefaultCompositeBuffer) acquire(), Buffer::forEachWritable);
+        return new CompositeComponentIterator<>((DefaultCompositeBuffer) acquire(), Buffer::forEachWritable);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors.">

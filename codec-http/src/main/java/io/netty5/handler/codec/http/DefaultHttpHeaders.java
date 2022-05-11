@@ -280,7 +280,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public Iterator<String> valueStringIterator(CharSequence name) {
         final Iterator<CharSequence> itr = valueCharSequenceIterator(name);
-        return new Iterator<String>() {
+        return new Iterator<>() {
             @Override
             public boolean hasNext() {
                 return itr.hasNext();

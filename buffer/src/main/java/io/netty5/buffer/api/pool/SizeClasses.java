@@ -80,7 +80,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 abstract class SizeClasses implements SizeClassesMetric {
     private static final ConcurrentHashMap<SizeClassKey, SizeClassValue> CACHE =
-            new ConcurrentHashMap<SizeClassKey, SizeClassValue>();
+            new ConcurrentHashMap<>();
 
     static final int LOG2_QUANTUM = 4;
 

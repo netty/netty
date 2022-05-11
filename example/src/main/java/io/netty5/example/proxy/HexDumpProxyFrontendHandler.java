@@ -46,7 +46,7 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
         Bootstrap b = new Bootstrap();
         b.group(inboundChannel.executor())
          .channel(ctx.channel().getClass())
-         .handler(new ChannelInitializer<Channel>() {
+         .handler(new ChannelInitializer<>() {
              @Override
              protected void initChannel(Channel ch) throws Exception {
                  outboundChannel = ch;

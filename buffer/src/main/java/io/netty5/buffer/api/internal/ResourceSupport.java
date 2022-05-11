@@ -137,7 +137,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
         try {
             var owned = tracer.send(prepareSend());
-            return new SendFromOwned<I, T>(owned, drop, getClass());
+            return new SendFromOwned<>(owned, drop, getClass());
         } finally {
             acquires = -2; // Close without dropping. This also ignore future double-free attempts.
             makeInaccessible();

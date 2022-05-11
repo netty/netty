@@ -93,7 +93,7 @@ public final class WebSocketExtensionUtil {
                 extraExtensions.add(userDefined);
             } else {
                 // merge with higher precedence to user defined parameters
-                Map<String, String> mergedParameters = new HashMap<String, String>(matchingExtra.parameters());
+                Map<String, String> mergedParameters = new HashMap<>(matchingExtra.parameters());
                 mergedParameters.putAll(userDefined.parameters());
                 extraExtensions.set(i, new WebSocketExtensionData(matchingExtra.name(), mergedParameters));
             }

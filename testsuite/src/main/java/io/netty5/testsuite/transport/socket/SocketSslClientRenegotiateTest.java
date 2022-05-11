@@ -153,7 +153,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         final ExecutorService executorService = delegate ? Executors.newCachedThreadPool() : null;
 
         try {
-            sb.childHandler(new ChannelInitializer<Channel>() {
+            sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     serverChannel = sch;
@@ -165,7 +165,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 }
             });
 
-            cb.handler(new ChannelInitializer<Channel>() {
+            cb.handler(new ChannelInitializer<>() {
                 @Override
                 public void initChannel(Channel sch) throws Exception {
                     clientChannel = sch;
