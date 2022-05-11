@@ -1013,7 +1013,7 @@ public class HttpPostRequestDecoderTest {
         byte[] bodyBytes = ("aaaa/bbbb=aaaaaaaaaa" +
                 "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
                 "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
-                "aaaaaaaaaaaaaaaaaaa").getBytes();
+                "aaaaaaaaaaaaaaaaaaa").getBytes(CharsetUtil.US_ASCII);
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
