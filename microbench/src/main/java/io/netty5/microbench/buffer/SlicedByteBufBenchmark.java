@@ -48,11 +48,7 @@ public class SlicedByteBufBenchmark extends AbstractMicrobenchmark {
             throw new IllegalStateException();
         }
 
-        StringBuilder asciiSequence = new StringBuilder(128);
-        for (int i = 0; i < 128; i++) {
-            asciiSequence.append('a');
-        }
-        ascii = asciiSequence.toString();
+        ascii = "a".repeat(128);
     }
 
     @TearDown
