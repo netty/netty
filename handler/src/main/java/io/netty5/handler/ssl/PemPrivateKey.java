@@ -128,7 +128,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     @Override
     public PemPrivateKey copy() {
         Buffer buffer = getBuffer();
-        return new PemPrivateKey(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true));
+        return new PemPrivateKey(buffer.copy(true));
     }
 
     @Override

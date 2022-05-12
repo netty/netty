@@ -92,7 +92,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
         clientCtx.releaseCumulation();
 
         for (int i = 0; i < numWrites; ++i) {
-            Buffer copy = wrapSrcBuffer.copy(wrapSrcBuffer.readerOffset(), wrapSrcBuffer.readableBytes(), true);
+            Buffer copy = wrapSrcBuffer.copy(true);
             clientSslHandler.write(clientCtx, copy);
         }
         clientSslHandler.flush(clientCtx);

@@ -93,10 +93,10 @@ public class SensitiveBufferTest {
             buffer.writeLong(0x0102030405060708L).makeReadOnly();
             try (Buffer split = buffer.readSplit(4)) {
                 assertTrue(split.readOnly());
-                split.copy(0, 4, true).close();
+                split.copy(true).close();
             }
             final Send<Buffer> send;
-            try (Buffer copy = buffer.copy(0, 4, true)) {
+            try (Buffer copy = buffer.copy(true)) {
                 send = buffer.send();
                 copy.readSplit(2).close();
             }
