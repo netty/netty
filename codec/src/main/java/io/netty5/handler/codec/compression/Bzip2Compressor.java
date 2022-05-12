@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
@@ -29,7 +28,7 @@ import static io.netty5.handler.codec.compression.Bzip2Constants.MAX_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
- * Compresses a {@link ByteBuf} using the Bzip2 algorithm.
+ * Compresses a {@link Buffer} using the Bzip2 algorithm.
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
@@ -113,12 +112,12 @@ public final class Bzip2Compressor implements Compressor {
     private CompressorState compressorState = CompressorState.PROCESSING;
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (compressorState) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
                 return compressData(in, allocator);
             default:
@@ -126,14 +125,14 @@ public final class Bzip2Compressor implements Compressor {
         }
     }
 
-    private ByteBuf compressData(ByteBuf in, ByteBufAllocator allocator) {
-        ByteBuf out = allocator.buffer();
+    private Buffer compressData(Buffer in, BufferAllocator allocator) {
+        Buffer out = allocator.allocate(256);
         for (;;) {
             switch (currentState) {
                 case INIT:
                     out.ensureWritable(4);
                     out.writeMedium(MAGIC_NUMBER);
-                    out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
+                    out.writeByte((byte) ('0' + streamBlockSize / BASE_BLOCK_SIZE));
                     currentState = State.INIT_BLOCK;
                     // fall through
                 case INIT_BLOCK:
@@ -141,15 +140,15 @@ public final class Bzip2Compressor implements Compressor {
                     currentState = State.WRITE_DATA;
                     // fall through
                 case WRITE_DATA:
-                    if (!in.isReadable()) {
+                    if (in.readableBytes() == 0) {
                         return out;
                     }
                     Bzip2BlockCompressor blockCompressor = this.blockCompressor;
                     final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
-                    final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
-                    in.skipBytes(bytesWritten);
+                    final int bytesWritten = blockCompressor.write(in, in.readerOffset(), length);
+                    in.skipReadable(bytesWritten);
                     if (!blockCompressor.isFull()) {
-                        if (in.isReadable()) {
+                        if (in.readableBytes() > 0) {
                             break;
                         } else {
                             return out;
@@ -170,7 +169,7 @@ public final class Bzip2Compressor implements Compressor {
     /**
      * Close current block and update {@link #streamCRC}.
      */
-    private void closeBlock(ByteBuf out) {
+    private void closeBlock(Buffer out) {
         final Bzip2BlockCompressor blockCompressor = this.blockCompressor;
         if (!blockCompressor.isEmpty()) {
             blockCompressor.close(out);
@@ -180,15 +179,15 @@ public final class Bzip2Compressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (compressorState) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
                 compressorState = CompressorState.FINISHED;
-                final ByteBuf footer = allocator.buffer();
+                final Buffer footer = allocator.allocate(256);
                 try {
                     closeBlock(footer);
 
@@ -204,7 +203,7 @@ public final class Bzip2Compressor implements Compressor {
                     }
                     return footer;
                 } catch (Throwable cause) {
-                    footer.release();
+                    footer.close();
                     throw cause;
                 }
             default:

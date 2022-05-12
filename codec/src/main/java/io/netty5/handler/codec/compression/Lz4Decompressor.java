@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -35,7 +34,7 @@ import static io.netty5.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
+ * Uncompresses a {@link Buffer} encoded with the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
  * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
@@ -105,7 +104,8 @@ public final class Lz4Decompressor implements Decompressor {
      */
     private Lz4Decompressor(LZ4Factory factory, Checksum checksum) {
         decompressor = factory.fastDecompressor();
-        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        this.checksum = checksum == null ? null : checksum instanceof Lz4XXHash32 ? (Lz4XXHash32) checksum :
+                new ByteBufChecksum(checksum);
     }
 
     /**
@@ -167,13 +167,24 @@ public final class Lz4Decompressor implements Decompressor {
         return () -> new Lz4Decompressor(factory, checksum);
     }
 
+    private void decompress(Buffer compressed, Buffer uncompressed) {
+        assert compressed.countReadableComponents() == 1;
+        try (var writableIteration = uncompressed.forEachWritable()) {
+            var writableComponent = writableIteration.first();
+            try (var readableIteration = compressed.forEachReadable()) {
+                var readableComponent = readableIteration.first();
+                decompressor.decompress(
+                        readableComponent.readableBuffer(), writableComponent.writableBuffer());
+            }
+        }
+    }
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+    public Buffer decompress(Buffer in, BufferAllocator allocator) throws DecompressionException {
         try {
             switch (currentState) {
                 case CORRUPTED:
                 case FINISHED:
-                    return Unpooled.EMPTY_BUFFER;
+                    return allocator.allocate(0);
                 case CLOSED:
                     throw new DecompressionException("Decompressor closed");
                 case INIT_BLOCK:
@@ -240,36 +251,45 @@ public final class Lz4Decompressor implements Decompressor {
                     }
 
                     final ByteBufChecksum checksum = this.checksum;
-                    ByteBuf uncompressed = null;
+                    Buffer uncompressed = null;
 
                     try {
                         switch (blockType) {
                             case BLOCK_TYPE_NON_COMPRESSED:
-                                // Just pass through, we not update the readerIndex yet as we do this outside of the
-                                // switch statement.
-                                uncompressed = in.retainedSlice(in.readerIndex(), decompressedLength);
+                                // Just pass through.
+                                assert compressedLength == decompressedLength;
+                                uncompressed = in.readSplit(decompressedLength);
                                 break;
                             case BLOCK_TYPE_COMPRESSED:
-                                uncompressed = allocator.buffer(decompressedLength, decompressedLength);
+                                uncompressed = allocator.allocate(decompressedLength);
 
-                                decompressor.decompress(CompressionUtil.safeNioBuffer(in),
-                                        uncompressed.internalNioBuffer(
-                                                uncompressed.writerIndex(), decompressedLength));
+                                assert uncompressed.countWritableComponents() == 1;
+                                if (in.countReadableComponents() > 1) {
+                                    // Lz4 needs to get the compressed data to be feed in one buffer so we need to do
+                                    // a memory copy.
+                                    try (Buffer inBuffer = allocator.allocate(compressedLength)) {
+                                        in.copyInto(in.readerOffset(), inBuffer,
+                                                inBuffer.writerOffset(), compressedLength);
+                                        inBuffer.skipWritable(compressedLength);
+                                        decompress(inBuffer, uncompressed);
+                                    }
+                                } else {
+                                    decompress(in, uncompressed);
+                                }
+                                in.skipReadable(compressedLength);
                                 // Update the writerIndex now to reflect what we decompressed.
-                                uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
+                                uncompressed.skipWritable(decompressedLength);
                                 break;
                             default:
                                 streamCorrupted(String.format(
                                         "unexpected blockType: %d (expected: %d or %d)",
                                         blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
                         }
-                        // Skip inbound bytes after we processed them.
-                        in.skipBytes(compressedLength);
 
                         if (checksum != null) {
                             CompressionUtil.checkChecksum(checksum, uncompressed, currentChecksum);
                         }
-                        ByteBuf buffer = uncompressed;
+                        Buffer buffer = uncompressed;
                         uncompressed = null;
                         currentState = State.INIT_BLOCK;
                         return buffer;
@@ -277,7 +297,7 @@ public final class Lz4Decompressor implements Decompressor {
                         streamCorrupted(e);
                     } finally {
                         if (uncompressed != null) {
-                            uncompressed.release();
+                            uncompressed.close();
                         }
                     }
                 default:

@@ -18,6 +18,8 @@ package io.netty5.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
@@ -158,12 +160,12 @@ public final class ZlibCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf uncompressed, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer uncompressed, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
                 return compressData(uncompressed, allocator);
             default:
@@ -171,10 +173,10 @@ public final class ZlibCompressor implements Compressor {
         }
     }
 
-    private ByteBuf compressData(ByteBuf uncompressed, ByteBufAllocator allocator) {
+    private Buffer compressData(Buffer uncompressed, BufferAllocator allocator) {
         int len = uncompressed.readableBytes();
         if (len == 0) {
-            return Unpooled.EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
 
         int sizeEstimate = (int) Math.ceil(len * 1.001) + 12;
@@ -190,21 +192,21 @@ public final class ZlibCompressor implements Compressor {
                     // no op
             }
         }
-        ByteBuf out = allocator.buffer(sizeEstimate);
+        Buffer out = allocator.allocate(sizeEstimate);
+        assert out.countWritableComponents() == 1;
 
-        if (uncompressed.nioBufferCount() == 1) {
-            ByteBuffer in = uncompressed.internalNioBuffer(uncompressed.readerIndex(), len);
-            compressData(in, out);
-        } else {
-            ByteBuffer[] ins = uncompressed.nioBuffers(uncompressed.readerIndex(), len);
-            for (ByteBuffer in: ins) {
-                compressData(in, out);
+        try (var readableIteration = uncompressed.forEachReadable()) {
+            for (var readableComponent = readableIteration.first();
+                 readableComponent != null; readableComponent = readableComponent.next()) {
+                compressData(readableComponent.readableBuffer(), out);
+                // TODO: Is this needed ?
+                readableComponent.skipReadable(readableComponent.readableBytes());
             }
         }
         return out;
     }
 
-    private void compressData(ByteBuffer in, ByteBuf out) {
+    private void compressData(ByteBuffer in, Buffer out) {
         try {
             if (writeHeader) {
                 writeHeader = false;
@@ -226,28 +228,28 @@ public final class ZlibCompressor implements Compressor {
                     // Consumed everything
                     break;
                 } else {
-                    if (!out.isWritable()) {
+                    if (out.writableBytes() == 0) {
                         // We did not consume everything but the buffer is not writable anymore. Increase the
                         // capacity to make more room.
-                        out.ensureWritable(out.writerIndex());
+                        out.ensureWritable(out.writerOffset());
                     }
                 }
             }
         } catch (Throwable cause) {
-            out.release();
+            out.close();
             throw cause;
         }
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                ByteBuf footer = allocator.heapBuffer();
+                Buffer footer = allocator.allocate(256);
                 try {
                     if (writeHeader && wrapper == ZlibWrapper.GZIP) {
                         // Write the GZIP header first if not written yet. (i.e. user wrote nothing.)
@@ -263,19 +265,19 @@ public final class ZlibCompressor implements Compressor {
                     if (wrapper == ZlibWrapper.GZIP) {
                         int crcValue = (int) crc.getValue();
                         int uncBytes = deflater.getTotalIn();
-                        footer.writeByte(crcValue);
-                        footer.writeByte(crcValue >>> 8);
-                        footer.writeByte(crcValue >>> 16);
-                        footer.writeByte(crcValue >>> 24);
-                        footer.writeByte(uncBytes);
-                        footer.writeByte(uncBytes >>> 8);
-                        footer.writeByte(uncBytes >>> 16);
-                        footer.writeByte(uncBytes >>> 24);
+                        footer.writeByte((byte) crcValue);
+                        footer.writeByte((byte) (crcValue >>> 8));
+                        footer.writeByte((byte) (crcValue >>> 16));
+                        footer.writeByte((byte) (crcValue >>> 24));
+                        footer.writeByte((byte) uncBytes);
+                        footer.writeByte((byte) (uncBytes >>> 8));
+                        footer.writeByte((byte) (uncBytes >>> 16));
+                        footer.writeByte((byte) (uncBytes >>> 24));
                     }
                     deflater.end();
                     return footer;
                 } catch (Throwable cause) {
-                    footer.release();
+                    footer.close();
                     throw cause;
                 }
             default:
@@ -301,28 +303,29 @@ public final class ZlibCompressor implements Compressor {
         state = State.CLOSED;
     }
 
-    private void deflate(ByteBuf out) {
-        if (out.hasArray()) {
-            int numBytes;
-            do {
-                int writerIndex = out.writerIndex();
-                numBytes = deflater.deflate(
-                        out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
-                out.writerIndex(writerIndex + numBytes);
-            } while (numBytes > 0);
-        } else if (out.nioBufferCount() == 1) {
-            // Use internalNioBuffer because nioBuffer is allowed to copy,
-            // which is fine for reading but not for writing.
-            int numBytes;
-            do {
-                int writerIndex = out.writerIndex();
-                ByteBuffer buffer = out.internalNioBuffer(writerIndex, out.writableBytes());
-                numBytes = deflater.deflate(buffer, Deflater.SYNC_FLUSH);
-                out.writerIndex(writerIndex + numBytes);
-            } while (numBytes > 0);
-        } else {
+    private void deflate(Buffer out) {
+        if (out.countWritableComponents() > 1) {
             throw new IllegalArgumentException(
                     "Don't know how to deflate buffer without array or NIO buffer count of 1: " + out);
+        }
+        try (var writableIteration = out.forEachWritable()) {
+            var writableComponent = writableIteration.first();
+            if (writableComponent.hasWritableArray()) {
+                int numBytes;
+                do {
+                    int writerOffset = writableComponent.writableArrayOffset();
+                    numBytes = deflater.deflate(writableComponent.writableArray(), writerOffset,
+                            writableComponent.writableBytes(), Deflater.SYNC_FLUSH);
+                    writableComponent.skipWritable(numBytes);
+                } while (numBytes > 0);
+            } else {
+                int numBytes;
+                do {
+                    ByteBuffer buffer = writableComponent.writableBuffer();
+                    numBytes = deflater.deflate(buffer, Deflater.SYNC_FLUSH);
+                    writableComponent.skipWritable(numBytes);
+                } while (numBytes > 0);
+            }
         }
     }
 }

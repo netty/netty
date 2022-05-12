@@ -18,6 +18,7 @@ package io.netty5.handler.codec.compression;
 import com.ning.compress.lzf.LZFDecoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 
 public class LzfEncoderTest extends AbstractEncoderTest {
@@ -28,12 +29,13 @@ public class LzfEncoderTest extends AbstractEncoderTest {
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        byte[] compressedArray = new byte[compressed.readableBytes()];
-        compressed.readBytes(compressedArray);
-        compressed.release();
+    protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
+        try (compressed) {
+            byte[] compressedArray = new byte[compressed.readableBytes()];
+            compressed.readBytes(compressedArray, 0, compressedArray.length);
 
-        byte[] decompressed = LZFDecoder.decode(compressedArray);
-        return Unpooled.wrappedBuffer(decompressed);
+            byte[] decompressed = LZFDecoder.decode(compressedArray);
+            return channel.bufferAllocator().copyOf(decompressed);
+        }
     }
 }

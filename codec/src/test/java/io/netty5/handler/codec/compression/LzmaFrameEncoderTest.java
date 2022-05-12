@@ -15,10 +15,9 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
@@ -28,6 +27,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,45 +42,56 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
     @ParameterizedTest
     @MethodSource("smallData")
     @Override
-    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
+    public void testCompressionOfBatchedFlowOfData(Buffer data) throws Exception {
         testCompressionOfBatchedFlow(data);
     }
 
     @Override
-    protected void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
-        List<Integer> originalLengths = new ArrayList<>();
-        final int dataLength = data.readableBytes();
-        int written = 0, length = rand.nextInt(50);
-        while (written + length < dataLength) {
-            ByteBuf in = data.retainedSlice(written, length);
-            assertTrue(channel.writeOutbound(in));
-            written += length;
+    protected void testCompressionOfBatchedFlow(final Buffer data) throws Exception {
+        try (Buffer expected = data.copy()) {
+            List<Integer> originalLengths = new ArrayList<>();
+            final int dataLength = data.readableBytes();
+            int written = 0, length = rand.nextInt(50);
+            while (written + length < dataLength) {
+                Buffer in = data.readSplit(length);
+                assertTrue(channel.writeOutbound(in));
+                written += length;
+                originalLengths.add(length);
+                length = rand.nextInt(50);
+            }
+            length = dataLength - written;
+            Buffer in = data.readSplit(length);
             originalLengths.add(length);
-            length = rand.nextInt(50);
-        }
-        length = dataLength - written;
-        ByteBuf in = data.retainedSlice(written, dataLength - written);
-        originalLengths.add(length);
-        assertTrue(channel.writeOutbound(in));
-        assertTrue(channel.finish());
+            assertTrue(channel.writeOutbound(in));
+            assertTrue(channel.finish());
 
-        CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        int i = 0;
-        while ((msg = channel.readOutbound()) != null) {
-            ByteBuf decompressedMsg = decompress(msg, originalLengths.get(i++));
-            decompressed.addComponent(true, decompressedMsg);
-        }
-        assertEquals(originalLengths.size(), i);
-        assertEquals(data, decompressed);
+            class TestSupplier implements Supplier<Buffer> {
+                int proccessed;
+                @Override
+                public Buffer get() {
+                    Buffer msg = channel.readOutbound();
+                    if (msg == null) {
+                        return null;
+                    }
+                    try {
+                        return decompress(msg, originalLengths.get(proccessed++));
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+            }
 
-        decompressed.release();
-        data.release();
+            TestSupplier supplier = new TestSupplier();
+            try (CompositeBuffer decompressed = CompressionTestUtils.compose(channel.bufferAllocator(), supplier)) {
+                assertEquals(originalLengths.size(), supplier.proccessed);
+                assertEquals(expected, decompressed);
+            }
+        }
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
+    protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
+        InputStream is = new BufferInputStream(compressed.send());
         LzmaInputStream lzmaIs = null;
         byte[] decompressed = new byte[originalLength];
         try {
@@ -107,6 +118,6 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
             }
         }
 
-        return Unpooled.wrappedBuffer(decompressed);
+        return channel.bufferAllocator().copyOf(decompressed);
     }
 }

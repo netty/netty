@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 import java.util.zip.Adler32;
@@ -28,7 +27,7 @@ import static io.netty5.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
 import static io.netty5.handler.codec.compression.FastLz.MAGIC_NUMBER;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded by {@link FastLzCompressor} using the FastLZ algorithm.
+ * Uncompresses a {@link Buffer} encoded by {@link FastLzCompressor} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
@@ -79,7 +78,7 @@ public final class FastLzDecompressor implements Decompressor {
     private int currentChecksum;
 
     private FastLzDecompressor(Checksum checksum) {
-        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        this.checksum = checksum == null ? null : new ByteBufChecksum(checksum);
     }
 
     /**
@@ -119,13 +118,13 @@ public final class FastLzDecompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+    public Buffer decompress(Buffer in, BufferAllocator allocator) throws DecompressionException {
         switch (currentState) {
             case CLOSED:
                 throw new DecompressionException("Decompressor closed");
             case DONE:
             case CORRUPTED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case INIT_BLOCK:
                 if (in.readableBytes() < 4) {
                     return null;
@@ -158,15 +157,14 @@ public final class FastLzDecompressor implements Decompressor {
                     return null;
                 }
 
-                final int idx = in.readerIndex();
+                final int idx = in.readerOffset();
                 final int originalLength = this.originalLength;
 
-                ByteBuf output = null;
+                Buffer output = null;
                 try {
                     if (isCompressed) {
-
-                        output = allocator.buffer(originalLength);
-                        int outputOffset = output.writerIndex();
+                        output = allocator.allocate(originalLength);
+                        int outputOffset = output.writerOffset();
                         final int decompressedBytes = FastLz.decompress(in, idx, chunkLength,
                                 output, outputOffset, originalLength);
                         if (originalLength != decompressedBytes) {
@@ -174,15 +172,16 @@ public final class FastLzDecompressor implements Decompressor {
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
                                     originalLength, decompressedBytes));
                         }
-                        output.writerIndex(output.writerIndex() + decompressedBytes);
+                        output.skipWritable(decompressedBytes);
+                        in.skipReadable(chunkLength);
                     } else {
-                        output = in.retainedSlice(idx, chunkLength);
+                        output = in.readSplit(chunkLength);
                     }
 
                     final ByteBufChecksum checksum = this.checksum;
                     if (hasChecksum && checksum != null) {
                         checksum.reset();
-                        checksum.update(output, output.readerIndex(), output.readableBytes());
+                        checksum.update(output, output.readerOffset(), output.readableBytes());
                         final int checksumResult = (int) checksum.getValue();
                         if (checksumResult != currentChecksum) {
                             streamCorrupted(String.format(
@@ -191,20 +190,19 @@ public final class FastLzDecompressor implements Decompressor {
                         }
                     }
 
-                    final ByteBuf data;
+                    final Buffer data;
                     if (output.readableBytes() > 0) {
                         data = output;
                         output = null;
                     } else {
                         data = null;
                     }
-                    in.skipBytes(chunkLength);
 
                     currentState = State.INIT_BLOCK;
                     return data;
                 } finally {
                     if (output != null) {
-                        output.release();
+                        output.close();
                     }
                 }
             default:

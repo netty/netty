@@ -15,110 +15,66 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 import java.nio.ByteBuffer;
-import java.util.zip.Adler32;
-import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * {@link Checksum} implementation which can directly act on a {@link ByteBuf}.
- *
- * Implementations may optimize access patterns depending on if the {@link ByteBuf} is backed by a
- * byte array ({@link ByteBuf#hasArray()} is {@code true}) or not.
+ * {@link Checksum} implementation which can directly act on a {@link Buffer}.
  */
-abstract class ByteBufChecksum implements Checksum {
+class ByteBufChecksum implements Checksum {
 
-    private final io.netty.util.ByteProcessor updateProcessor = value -> {
-        update(value);
-        return true;
-    };
+    private final Checksum checksum;
 
-    static ByteBufChecksum wrapChecksum(Checksum checksum) {
-        requireNonNull(checksum, "checksum");
-        if (checksum instanceof ByteBufChecksum) {
-            return (ByteBufChecksum) checksum;
-        }
-        if (checksum instanceof Adler32) {
-            return new OptimizedByteBufChecksum<>((Adler32) checksum) {
-                @Override
-                public void update(ByteBuffer b) {
-                    checksum.update(b);
-                }
-            };
-        }
-        if (checksum instanceof CRC32) {
-            return new OptimizedByteBufChecksum<>((CRC32) checksum) {
-                @Override
-                public void update(ByteBuffer b) {
-                    checksum.update(b);
-                }
-            };
-        }
-        return new SlowByteBufChecksum<>(checksum);
+    ByteBufChecksum(Checksum checksum) {
+        this.checksum = requireNonNull(checksum);
+    }
+
+    @Override
+    public void update(int b) {
+        checksum.update(b);
+    }
+
+    @Override
+    public void update(byte[] b, int off, int len) {
+        checksum.update(b, off, len);
+    }
+
+    @Override
+    public long getValue() {
+        return checksum.getValue();
+    }
+
+    @Override
+    public void reset() {
+        checksum.reset();
     }
 
     /**
      * @see #update(byte[], int, int)
      */
-    public void update(ByteBuf b, int off, int len) {
-        if (b.hasArray()) {
-            update(b.array(), b.arrayOffset() + off, len);
-        } else {
-            b.forEachByte(off, len, updateProcessor);
-        }
-    }
-
-    private abstract static class OptimizedByteBufChecksum<T extends Checksum> extends SlowByteBufChecksum<T> {
-        OptimizedByteBufChecksum(T checksum) {
-            super(checksum);
-        }
-
-        @Override
-        public void update(ByteBuf b, int off, int len) {
-            if (b.hasArray()) {
-                update(b.array(), b.arrayOffset() + off, len);
-            } else {
-                try {
-                    update(CompressionUtil.safeNioBuffer(b, off, len));
-                } catch (Throwable cause) {
-                    throw new Error();
+    public void update(Buffer b, int off, int len) {
+        int readerOffset = b.readerOffset();
+        b.readerOffset(off);
+        try {
+            try (var iteration = b.forEachReadable()) {
+                for (var c = iteration.first(); c != null; c = c.next()) {
+                    ByteBuffer componentBuffer = c.readableBuffer();
+                    if (componentBuffer.remaining() > len) {
+                        componentBuffer.limit(componentBuffer.position() + len);
+                        update(componentBuffer);
+                        break;
+                    } else {
+                        len -= componentBuffer.remaining();
+                        update(componentBuffer);
+                    }
                 }
             }
-        }
-
-        public abstract void update(ByteBuffer b);
-    }
-
-    private static class SlowByteBufChecksum<T extends Checksum> extends ByteBufChecksum {
-
-        protected final T checksum;
-
-        SlowByteBufChecksum(T checksum) {
-            this.checksum = checksum;
-        }
-
-        @Override
-        public void update(int b) {
-            checksum.update(b);
-        }
-
-        @Override
-        public void update(byte[] b, int off, int len) {
-            checksum.update(b, off, len);
-        }
-
-        @Override
-        public long getValue() {
-            return checksum.getValue();
-        }
-
-        @Override
-        public void reset() {
-            checksum.reset();
+        } finally {
+            b.readerOffset(readerOffset);
         }
     }
 }

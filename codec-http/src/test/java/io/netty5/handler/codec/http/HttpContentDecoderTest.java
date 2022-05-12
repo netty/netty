@@ -16,9 +16,8 @@
 
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -656,11 +655,11 @@ public class HttpContentDecoderTest {
             @Override
             protected Decompressor newContentDecoder(String contentEncoding) {
                 return new Decompressor() {
-                    private ByteBuf input;
+                    private Buffer input;
                     @Override
-                    public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
-                        if (input.isReadable()) {
-                            final ByteBuf slice = input.readRetainedSlice(input.readableBytes());
+                    public Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException {
+                        if (input.readableBytes() > 0) {
+                            final Buffer slice = input.readSplit(input.readableBytes());
                             this.input = input;
                             return slice;
                         }
@@ -680,7 +679,7 @@ public class HttpContentDecoderTest {
                     @Override
                     public void close() {
                         if (input != null) {
-                            input.release();
+                            input.close();
                         }
                         throw new DecoderException();
                     }

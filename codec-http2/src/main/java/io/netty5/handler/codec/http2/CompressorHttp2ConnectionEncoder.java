@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -153,11 +154,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
 
         try {
-            ByteBuf buf = compressor.compress(data, ctx.alloc());
+            ByteBuf buf = ByteBufAdaptor.intoByteBuf(compressor.compress(
+                    ByteBufAdaptor.extractOrCopy(ctx.bufferAllocator(), data), ctx.bufferAllocator()));
             if (!buf.isReadable()) {
                 buf.release();
                 if (endOfStream) {
-                    buf = compressor.finish(ctx.alloc());
+                    buf = ByteBufAdaptor.intoByteBuf(compressor.finish(ctx.bufferAllocator()));
                     return super.writeData(ctx, streamId, buf, padding,
                             true);
                 }
@@ -171,7 +173,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
                 combiner.add(future);
 
-                buf = compressor.finish(ctx.alloc());
+                buf = ByteBufAdaptor.intoByteBuf(compressor.finish(ctx.bufferAllocator()));
 
                 // Padding is only communicated once on the first iteration
                 future = super.writeData(ctx, streamId, buf, 0, true);

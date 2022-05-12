@@ -15,14 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
 
 import static io.netty5.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
@@ -48,67 +46,49 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         return new EmbeddedChannel(new DecompressionHandler(Lz4Decompressor.newFactory(true)));
     }
 
+    private void assertIllegalInput(int idx, byte value, String msg) {
+        Buffer in = channel.bufferAllocator().copyOf(DATA);
+        in.setByte(idx, value);
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), msg);
+    }
+
     @Test
     public void testUnexpectedBlockIdentifier() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[1] = 0x00;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unexpected block identifier");
+        assertIllegalInput(1, (byte) 0x00, "unexpected block identifier");
     }
 
     @Test
     public void testInvalidCompressedLength() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[12] = (byte) 0xFF;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "invalid compressedLength");
+        assertIllegalInput(12, (byte) 0xFF, "invalid compressedLength");
     }
 
     @Test
     public void testInvalidDecompressedLength() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[16] = (byte) 0xFF;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "invalid decompressedLength");
+        assertIllegalInput(16, (byte) 0xFF, "invalid decompressedLength");
     }
 
     @Test
     public void testDecompressedAndCompressedLengthMismatch() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[13] = 0x01;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "mismatch");
+        assertIllegalInput(13, (byte) 0x01, "mismatch");
     }
 
     @Test
     public void testUnexpectedBlockType() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[8] = 0x36;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unexpected blockType");
+        assertIllegalInput(8, (byte) 0x36, "unexpected blockType");
     }
 
     @Test
     public void testMismatchingChecksum() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[17] = 0x01;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "mismatching checksum");
+        assertIllegalInput(17, (byte) 0x01, "mismatching checksum");
     }
 
     @Test
     public void testChecksumErrorOfLastBlock() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[44] = 0x01;
+        Buffer in = channel.bufferAllocator().copyOf(DATA);
+        in.setByte(44, (byte) 0x01);
 
         assertThrows(DecompressionException.class,
-            () -> tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data)), "checksum error");
+            () -> tryDecodeAndCatchBufLeaks(channel, in), "checksum error");
     }
 
     @Override

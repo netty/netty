@@ -17,9 +17,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -27,7 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the brotli format.
+ * Uncompresses a {@link Buffer} encoded with the brotli format.
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
@@ -86,15 +85,15 @@ public final class BrotliDecompressor implements Decompressor {
         decoder = new DecoderJNI.Wrapper(inputBufferSize);
     }
 
-    private ByteBuf pull(ByteBufAllocator alloc) {
+    private Buffer pull(BufferAllocator alloc) {
         ByteBuffer nativeBuffer = decoder.pull();
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
-        ByteBuf copy = alloc.buffer(nativeBuffer.remaining());
+        Buffer copy = alloc.allocate(nativeBuffer.remaining());
         copy.writeBytes(nativeBuffer);
         return copy;
     }
 
-    private static int readBytes(ByteBuf in, ByteBuffer dest) {
+    private static int readBytes(Buffer in, ByteBuffer dest) {
         int limit = Math.min(in.readableBytes(), dest.remaining());
         ByteBuffer slice = dest.slice();
         slice.limit(limit);
@@ -104,12 +103,12 @@ public final class BrotliDecompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
+    public Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException {
         switch (state) {
             case CLOSED:
                 throw new DecompressionException("Decompressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
                 for (;;) {
                     switch (decoder.getStatus()) {
@@ -124,7 +123,7 @@ public final class BrotliDecompressor implements Decompressor {
                                 return pull(allocator);
                             }
 
-                            if (!input.isReadable()) {
+                            if (input.readableBytes() == 0) {
                                 return null;
                             }
 

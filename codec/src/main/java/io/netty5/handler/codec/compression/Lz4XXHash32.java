@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import net.jpountz.xxhash.StreamingXXHash32;
 import net.jpountz.xxhash.XXHash32;
 import net.jpountz.xxhash.XXHashFactory;
@@ -56,32 +56,79 @@ public final class Lz4XXHash32 extends ByteBufChecksum {
 
     @SuppressWarnings("WeakerAccess")
     public Lz4XXHash32(int seed) {
+        super(new Checksum() {
+            @Override
+            public void update(int b) {
+                throw new Error();
+            }
+
+            @Override
+            public void update(byte[] b, int off, int len) {
+                throw new Error();
+            }
+
+            @Override
+            public long getValue() {
+                throw new Error();
+            }
+
+            @Override
+            public void reset() {
+                throw new Error();
+            }
+        });
         this.seed = seed;
     }
 
     @Override
     public void update(int b) {
-        throw new UnsupportedOperationException();
+        update(new byte[] { (byte) b }, 0, 1);
+    }
+
+    private void checkUsed() {
+        if (used) {
+            throw new IllegalStateException();
+        }
     }
 
     @Override
     public void update(byte[] b, int off, int len) {
-        if (used) {
-            throw new IllegalStateException();
-        }
+        checkUsed();
         value = XXHASH32.hash(b, off, len, seed);
         used = true;
     }
 
     @Override
-    public void update(ByteBuf b, int off, int len) {
-        if (used) {
-            throw new IllegalStateException();
-        }
-        if (b.hasArray()) {
-            value = XXHASH32.hash(b.array(), b.arrayOffset() + off, len, seed);
+    public void update(ByteBuffer buffer) {
+        checkUsed();
+        value = XXHASH32.hash(buffer, seed);
+        used = true;
+    }
+
+    @Override
+    public void update(Buffer b, int off, int len) {
+        checkUsed();
+        if (b.countReadableComponents() > 1) {
+            byte[] bytes = new byte[len];
+            b.copyInto(off, bytes, 0, bytes.length);
+            value = XXHASH32.hash(bytes, 0, bytes.length, seed);
         } else {
-            value = XXHASH32.hash(CompressionUtil.safeNioBuffer(b, off, len), seed);
+            int oldOffset = b.readerOffset();
+            b.readerOffset(off);
+            try (var readableIteration = b.forEachReadable()) {
+                for (var readableComponent = readableIteration.first();
+                     readableComponent != null; readableComponent = readableComponent.next()) {
+                    if (readableComponent.hasReadableArray()) {
+                        value = XXHASH32.hash(readableComponent.readableArray(),
+                                readableComponent.readableArrayOffset(), len, seed);
+                    } else {
+                        ByteBuffer nioBuffer = readableComponent.readableBuffer();
+                        value = XXHASH32.hash(nioBuffer, nioBuffer.position(), len, seed);
+                    }
+                }
+            } finally {
+                b.readerOffset(oldOffset);
+            }
         }
         used = true;
     }

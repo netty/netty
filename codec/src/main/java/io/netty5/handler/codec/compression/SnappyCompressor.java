@@ -15,16 +15,16 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
 import static io.netty5.handler.codec.compression.Snappy.calculateChecksum;
 
 /**
- * Compresses a {@link ByteBuf} using the Snappy framing format.
+ * Compresses a {@link Buffer} using the Snappy framing format.
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
@@ -66,15 +66,15 @@ public final class SnappyCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case Finished:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case Closed:
                 throw new CompressionException("Compressor closed");
             default:
                 // TODO: Make some smart decision about the initial capacity.
-                ByteBuf out = allocator.buffer();
+                Buffer out = allocator.allocate(256);
                 try {
                     if (state == State.Init) {
                         state = State.Started;
@@ -86,26 +86,29 @@ public final class SnappyCompressor implements Compressor {
                     int dataLength = in.readableBytes();
                     if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
                         for (;;) {
-                            final int lengthIdx = out.writerIndex() + 1;
+                            final int lengthIdx = out.writerOffset() + 1;
                             if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
-                                ByteBuf slice = in.readSlice(dataLength);
-                                writeUnencodedChunk(slice, out, dataLength);
-                                break;
+                                try (Buffer slice = in.readSplit(dataLength)) {
+                                    writeUnencodedChunk(slice, out, dataLength);
+                                    break;
+                                }
                             }
 
                             out.writeInt(0);
                             if (dataLength > Short.MAX_VALUE) {
-                                ByteBuf slice = in.readSlice(Short.MAX_VALUE);
-                                calculateAndWriteChecksum(slice, out);
-                                snappy.encode(slice, out, Short.MAX_VALUE);
-                                setChunkLength(out, lengthIdx);
-                                dataLength -= Short.MAX_VALUE;
+                                try (Buffer slice = in.readSplit(Short.MAX_VALUE)) {
+                                    calculateAndWriteChecksum(slice, out);
+                                    snappy.encode(slice, out, Short.MAX_VALUE);
+                                    setChunkLength(out, lengthIdx);
+                                    dataLength -= Short.MAX_VALUE;
+                                }
                             } else {
-                                ByteBuf slice = in.readSlice(dataLength);
-                                calculateAndWriteChecksum(slice, out);
-                                snappy.encode(slice, out, dataLength);
-                                setChunkLength(out, lengthIdx);
-                                break;
+                                try (Buffer slice = in.readSplit(dataLength)) {
+                                    calculateAndWriteChecksum(slice, out);
+                                    snappy.encode(slice, out, dataLength);
+                                    setChunkLength(out, lengthIdx);
+                                    break;
+                                }
                             }
                         }
                     } else {
@@ -113,14 +116,14 @@ public final class SnappyCompressor implements Compressor {
                     }
                     return out;
                 } catch (Throwable cause) {
-                    out.release();
+                    out.close();
                     throw cause;
                 }
         }
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case Closed:
                 throw new CompressionException("Compressor closed");
@@ -128,7 +131,7 @@ public final class SnappyCompressor implements Compressor {
             case Init:
             case Started:
                 state = State.Finished;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }
@@ -155,19 +158,21 @@ public final class SnappyCompressor implements Compressor {
         state = State.Closed;
     }
 
-    private static void writeUnencodedChunk(ByteBuf in, ByteBuf out, int dataLength) {
-        out.writeByte(1);
+    private static void writeUnencodedChunk(Buffer in, Buffer out, int dataLength) {
+        out.writeByte((byte) 1);
         writeChunkLength(out, dataLength + 4);
         calculateAndWriteChecksum(in, out);
-        out.writeBytes(in, dataLength);
+        in.copyInto(in.readerOffset(), out, out.writerOffset(), dataLength);
+        in.skipReadable(dataLength);
+        out.skipWritable(dataLength);
     }
 
-    private static void setChunkLength(ByteBuf out, int lengthIdx) {
-        int chunkLength = out.writerIndex() - lengthIdx - 3;
+    private static void setChunkLength(Buffer out, int lengthIdx) {
+        int chunkLength = out.writerOffset() - lengthIdx - 3;
         if (chunkLength >>> 24 != 0) {
             throw new CompressionException("compressed data too large: " + chunkLength);
         }
-        out.setMediumLE(lengthIdx, chunkLength);
+        out.setMedium(lengthIdx, BufferUtil.reverseMedium(chunkLength));
     }
 
     /**
@@ -176,8 +181,8 @@ public final class SnappyCompressor implements Compressor {
      * @param out The buffer to write to
      * @param chunkLength The length to write
      */
-    private static void writeChunkLength(ByteBuf out, int chunkLength) {
-        out.writeMediumLE(chunkLength);
+    private static void writeChunkLength(Buffer out, int chunkLength) {
+        out.writeMedium(BufferUtil.reverseMedium(chunkLength));
     }
 
     /**
@@ -186,7 +191,7 @@ public final class SnappyCompressor implements Compressor {
      * @param slice The data to calculate the checksum for
      * @param out The output buffer to write the checksum to
      */
-    private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
-        out.writeIntLE(calculateChecksum(slice));
+    private static void calculateAndWriteChecksum(Buffer slice, Buffer out) {
+        out.writeInt(Integer.reverseBytes(calculateChecksum(slice)));
     }
 }

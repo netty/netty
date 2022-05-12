@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 import java.util.Arrays;
 
@@ -299,7 +299,7 @@ final class Bzip2HuffmanStageEncoder {
     /**
      * Write out the selector list and Huffman tables.
      */
-    private void writeSelectorsAndHuffmanTables(ByteBuf out) {
+    private void writeSelectorsAndHuffmanTables(Buffer out) {
         final Bzip2BitWriter writer = this.writer;
         final byte[] selectors = this.selectors;
         final int totalSelectors = selectors.length;
@@ -338,7 +338,7 @@ final class Bzip2HuffmanStageEncoder {
     /**
      * Writes out the encoded block data.
      */
-    private void writeBlockData(ByteBuf out) {
+    private void writeBlockData(Buffer out) {
         final Bzip2BitWriter writer = this.writer;
         final int[][] huffmanMergedCodeSymbols = this.huffmanMergedCodeSymbols;
         final byte[] selectors = this.selectors;
@@ -359,7 +359,7 @@ final class Bzip2HuffmanStageEncoder {
     /**
      * Encodes and writes the block data.
      */
-    void encode(ByteBuf out) {
+    void encode(Buffer out) {
         // Create optimised selector list and Huffman tables
         generateHuffmanOptimisationSeeds();
         for (int i = 3; i >= 0; i--) {

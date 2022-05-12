@@ -15,46 +15,46 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 /**
  * Compressor that takes care of compress some input.
  */
 public interface Compressor extends AutoCloseable {
     /**
-     * This method will read from the input {@link ByteBuf} and compress into a new {@link ByteBuf} that will be
-     * allocated (if needed) from the {@link ByteBufAllocator}. This method is expected to consume all data from the
+     * This method will read from the input {@link Buffer} and compress into a new {@link Buffer} that will be
+     * allocated (if needed) from the {@link BufferAllocator}. This method is expected to consume all data from the
      * input but <strong>not</strong> take ownership. The caller is responsible to release the input buffer after
      * this method returns.
      *
-     * @param input         the {@link ByteBuf} that contains the data to be compressed.
-     * @param allocator     the {@link ByteBufAllocator} that is used to allocate a new buffer (if needed) to write the
+     * @param input         the {@link Buffer} that contains the data to be compressed.
+     * @param allocator     the {@link BufferAllocator} that is used to allocate a new buffer (if needed) to write the
      *                      compressed bytes too.
-     * @return              the {@link ByteBuf} that contains the compressed data. The caller of this method takes
+     * @return              the {@link Buffer} that contains the compressed data. The caller of this method takes
      *                      ownership of the buffer. The return value will <strong>never</strong> be {@code null}.
      * @throws CompressionException   thrown if an compression error was encountered or the compressor was closed
      * already.
      */
-    ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException;
+    Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException;
 
     /**
-     * By calling this method we signal that the compression stream is marked as finish. The returned {@link ByteBuf}
+     * By calling this method we signal that the compression stream is marked as finish. The returned {@link Buffer}
      * might contain a "trailer" which marks the end of the stream.
      *
-     * @return  the {@link ByteBuf} which represent the end of the compression stream, which might be empty if the
+     * @return  the {@link Buffer} which represent the end of the compression stream, which might be empty if the
      *          compressor don't need a trailer to signal the end. The caller of this method takes
      *          ownership of the buffer. The return value will <strong>never</strong> be {@code null}.
-     * @throws CompressionException   thrown if an compression error was encountered or the compressor was closed
+     * @throws CompressionException   thrown if a compression error was encountered or the compressor was closed
      * already.
      */
-    ByteBuf finish(ByteBufAllocator allocator) throws CompressionException;
+    Buffer finish(BufferAllocator allocator) throws CompressionException;
 
     /**
      * Returns {@code} true if the compressor was finished or closed. This might happen because someone explicit called
-     * {@link #finish(ByteBufAllocator)} / {@link #close()} or the compressor implementation did decide to close itself
+     * {@link #finish(BufferAllocator)} / {@link #close()} or the compressor implementation did decide to close itself
      * due a compression error which can't be recovered. After {@link #isFinished()} returns {@code true} the
-     * {@link #compress(ByteBuf, ByteBufAllocator)} method will just return an empty buffer without consuming anything
+     * {@link #compress(Buffer, BufferAllocator)} method will just return an empty buffer without consuming anything
      * from its input buffer.
      *
      * @return  {@code true }if the compressor was marked as finished, {@code false} otherwise.
@@ -70,8 +70,8 @@ public interface Compressor extends AutoCloseable {
 
     /**#
      * Close the compressor. After this method was called {@link #isFinished()}
-     * will return {@code true} as well and it is not allowed to call {@link #compress(ByteBuf, ByteBufAllocator)} or
-     * {@link #finish(ByteBufAllocator)} anymore
+     * will return {@code true} as well and it is not allowed to call {@link #compress(Buffer, BufferAllocator)} or
+     * {@link #finish(BufferAllocator)} anymore
 -     */
     @Override
     void close();

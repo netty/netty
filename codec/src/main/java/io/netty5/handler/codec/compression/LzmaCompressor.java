@@ -15,11 +15,10 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.BufferOutputStream;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import lzma.sdk.lzma.Base;
@@ -32,7 +31,7 @@ import java.util.function.Supplier;
 import static lzma.sdk.lzma.Encoder.EMatchFinderTypeBT4;
 
 /**
- * Compresses a {@link ByteBuf} using the LZMA algorithm.
+ * Compresses a {@link Buffer} using the LZMA algorithm.
  *
  * See <a href="https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">LZMA</a>
  * and <a href="https://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
@@ -219,29 +218,29 @@ public final class LzmaCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
 
                 final int length = in.readableBytes();
-                ByteBuf out = allocateBuffer(in, allocator);
+                Buffer out = allocateBuffer(in, allocator);
                 try {
-                    try (InputStream bbIn = new ByteBufInputStream(in);
-                         ByteBufOutputStream bbOut = new ByteBufOutputStream(out)) {
+                    try (InputStream bbIn = new BufferInputStream(in.send());
+                         BufferOutputStream bbOut = new BufferOutputStream(out)) {
                         bbOut.writeByte(properties);
                         bbOut.writeInt(littleEndianDictionarySize);
                         bbOut.writeLong(Long.reverseBytes(length));
                         encoder.code(bbIn, bbOut, -1, -1, null);
                     }
                 } catch (IOException e) {
-                    out.release();
+                    out.close();
                     throw new CompressionException(e);
                 } catch (Throwable cause) {
-                    out.release();
+                    out.close();
                     throw cause;
                 }
                 return out;
@@ -250,10 +249,10 @@ public final class LzmaCompressor implements Compressor {
         }
     }
 
-    private static ByteBuf allocateBuffer(ByteBuf in, ByteBufAllocator allocator) {
+    private static Buffer allocateBuffer(Buffer in, BufferAllocator allocator) {
         final int length = in.readableBytes();
         final int maxOutputLength = maxOutputBufferLength(length);
-        return allocator.ioBuffer(maxOutputLength);
+        return allocator.allocate(maxOutputLength);
     }
 
     /**
@@ -276,14 +275,14 @@ public final class LzmaCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }

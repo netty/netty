@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,26 +34,21 @@ public class SnappyFrameEncoderTest {
 
     @Test
     public void testSmallAmountOfDataIsUncompressed() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            'n', 'e', 't', 't', 'y'
+        Buffer in = channel.bufferAllocator().copyOf(new byte[]{
+                'n', 'e', 't', 't', 'y'
         });
 
         channel.writeOutbound(in);
         assertTrue(channel.finish());
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
-            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-             0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, 0x2e, -0x47, 'n', 'e', 't', 't', 'y'
+        CompressionTestUtils.assertOutbound(channel, new byte[] {
+                (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+                0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, 0x2e, -0x47, 'n', 'e', 't', 't', 'y'
         });
-        ByteBuf actual = channel.readOutbound();
-        assertEquals(expected, actual);
-
-        expected.release();
-        actual.release();
     }
 
     @Test
     public void testLargeAmountOfDataIsCompressed() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+        Buffer in = channel.bufferAllocator().copyOf(new byte[] {
             'n', 'e', 't', 't', 'y', 'n', 'e', 't', 't', 'y',
             'n', 'e', 't', 't', 'y', 'n', 'e', 't', 't', 'y'
         });
@@ -62,49 +56,32 @@ public class SnappyFrameEncoderTest {
         channel.writeOutbound(in);
         assertTrue(channel.finish());
 
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
-            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-             0x00, 0x0E, 0x00, 0x00, 0x3b, 0x36, -0x7f, 0x37,
-                   0x14, 0x10,
-                   'n', 'e', 't', 't', 'y',
-                   0x3a, 0x05, 0x00
+        CompressionTestUtils.assertOutbound(channel, new byte[] {
+                (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+                0x00, 0x0E, 0x00, 0x00, 0x3b, 0x36, -0x7f, 0x37,
+                0x14, 0x10,
+                'n', 'e', 't', 't', 'y',
+                0x3a, 0x05, 0x00
         });
-        ByteBuf actual = channel.readOutbound();
-        assertEquals(expected, actual);
-
-        expected.release();
-        actual.release();
     }
 
     @Test
     public void testStreamStartIsOnlyWrittenOnce() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+        Buffer in = channel.bufferAllocator().copyOf(new byte[] {
             'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeOutbound(in.retain());
-        in.readerIndex(0); // rewind the buffer to write the same data
+        channel.writeOutbound(in.copy());
         channel.writeOutbound(in);
         assertTrue(channel.finish());
 
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
+        try (Buffer expected = channel.bufferAllocator().copyOf(new byte[] {
             (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
              0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, 0x2e, -0x47, 'n', 'e', 't', 't', 'y',
              0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, 0x2e, -0x47, 'n', 'e', 't', 't', 'y',
-        });
-
-        CompositeByteBuf actual = Unpooled.compositeBuffer();
-        for (;;) {
-            ByteBuf m = channel.readOutbound();
-            if (m == null) {
-                break;
-            }
-            actual.addComponent(true, m);
+        }); CompositeBuffer actual = CompressionTestUtils.compose(channel.bufferAllocator(), channel::readOutbound)) {
+            assertEquals(expected, actual);
         }
-        assertEquals(expected, actual);
-
-        expected.release();
-        actual.release();
     }
 
     /**
@@ -114,7 +91,7 @@ public class SnappyFrameEncoderTest {
      */
     @Test
     public void testInputBufferOverseek() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+        Buffer in = channel.bufferAllocator().copyOf(new byte[] {
              11,    0, // literal
               0,    0,    0,    0, // 1st copy
              16,   65,   96,  119, -22,   79,  -43,   76,  -75,  -93,
@@ -150,8 +127,6 @@ public class SnappyFrameEncoderTest {
         });
 
         channel.writeOutbound(in);
-        assertTrue(channel.finish());
-        ByteBuf out = channel.readOutbound();
-        out.release();
+        assertTrue(channel.finishAndReleaseAll());
     }
 }

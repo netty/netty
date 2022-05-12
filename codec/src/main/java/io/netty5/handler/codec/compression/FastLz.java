@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * Core of FastLZ compression algorithm.
@@ -53,13 +53,13 @@ final class FastLz {
     static final int MAX_CHUNK_LENGTH = 0xFFFF;
 
     /**
-     * Do not call {@link #compress(ByteBuf, int, int, ByteBuf, int, int)} for input buffers
+     * Do not call {@link #compress(Buffer, int, int, Buffer, int, int)} for input buffers
      * which length less than this value.
      */
     static final int MIN_LENGTH_TO_COMPRESSION = 32;
 
     /**
-     * In this case {@link #compress(ByteBuf, int, int, ByteBuf, int, int)} will choose level
+     * In this case {@link #compress(Buffer, int, int, Buffer, int, int)} will choose level
      * automatically depending on the length of the input buffer. If length less than
      * {@link #MIN_RECOMENDED_LENGTH_FOR_LEVEL_2} {@link #LEVEL_1} will be chosen,
      * otherwise {@link #LEVEL_2}.
@@ -93,8 +93,8 @@ final class FastLz {
      * If the input is not compressible, the return value might be larger than length (input buffer size).
      */
     @SuppressWarnings("IdentityBinaryExpression")
-    static int compress(final ByteBuf input, final int inOffset, final int inLength,
-                        final ByteBuf output, final int outOffset, final int proposedLevel) {
+    static int compress(final Buffer input, final int inOffset, final int inLength,
+                        final Buffer output, final int outOffset, final int proposedLevel) {
         final int level;
         if (proposedLevel == LEVEL_AUTO) {
             level = inLength < MIN_RECOMENDED_LENGTH_FOR_LEVEL_2 ? LEVEL_1 : LEVEL_2;
@@ -143,7 +143,7 @@ final class FastLz {
 
         /* we start with literal copy */
         copy = 2;
-        output.setByte(outOffset + op++, MAX_COPY - 1);
+        output.setByte(outOffset + op++, (byte) (MAX_COPY - 1));
         output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
         output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
 
@@ -208,7 +208,7 @@ final class FastLz {
                     copy++;
                     if (copy == MAX_COPY) {
                         copy = 0;
-                        output.setByte(outOffset + op++, MAX_COPY - 1);
+                        output.setByte(outOffset + op++, (byte) (MAX_COPY - 1));
                     }
                     continue;
                 }
@@ -226,7 +226,7 @@ final class FastLz {
                             copy++;
                             if (copy == MAX_COPY) {
                                 copy = 0;
-                                output.setByte(outOffset + op++, MAX_COPY - 1);
+                                output.setByte(outOffset + op++, (byte) (MAX_COPY - 1));
                             }
                             continue;
                         }
@@ -353,7 +353,7 @@ final class FastLz {
             htab[hval] = ip++;
 
             /* assuming literal copy */
-            output.setByte(outOffset + op++, MAX_COPY - 1);
+            output.setByte(outOffset + op++, (byte) (MAX_COPY - 1));
 
             continue;
 
@@ -378,7 +378,7 @@ final class FastLz {
             copy++;
             if (copy == MAX_COPY) {
                 copy = 0;
-                output.setByte(outOffset + op++, MAX_COPY - 1);
+                output.setByte(outOffset + op++, (byte) (MAX_COPY - 1));
             }
         }
 
@@ -392,7 +392,7 @@ final class FastLz {
 
         if (level == LEVEL_2) {
             /* marker for fastlz2 */
-            output.setByte(outOffset, output.getByte(outOffset) | 1 << 5);
+            output.setByte(outOffset, (byte) (output.getByte(outOffset) | 1 << 5));
         }
 
         return op;
@@ -406,8 +406,8 @@ final class FastLz {
      * Decompression is memory safe and guaranteed not to write the output buffer
      * more than what is specified in outLength.
      */
-    static int decompress(final ByteBuf input, final int inOffset, final int inLength,
-                          final ByteBuf output, final int outOffset, final int outLength) {
+    static int decompress(final Buffer input, final int inOffset, final int inLength,
+                          final Buffer output, final int outOffset, final int outLength) {
         //int level = ((*(const flzuint8*)input) >> 5) + 1;
         final int level = (input.getByte(inOffset) >> 5) + 1;
         if (level != LEVEL_1 && level != LEVEL_2) {
@@ -542,14 +542,14 @@ final class FastLz {
         return op;
     }
 
-    private static int hashFunction(ByteBuf p, int offset) {
+    private static int hashFunction(Buffer p, int offset) {
         int v = readU16(p, offset);
         v ^= readU16(p, offset + 1) ^ v >> 16 - HASH_LOG;
         v &= HASH_MASK;
         return v;
     }
 
-    private static int readU16(ByteBuf data, int offset) {
+    private static int readU16(Buffer data, int offset) {
         if (offset + 1 >= data.readableBytes()) {
             return data.getUnsignedByte(offset);
         }

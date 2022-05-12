@@ -19,9 +19,8 @@ import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkDecoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
@@ -32,7 +31,7 @@ import static com.ning.compress.lzf.LZFChunk.BYTE_Z;
 import static com.ning.compress.lzf.LZFChunk.HEADER_LEN_NOT_COMPRESSED;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the LZF format.
+ * Uncompresses a {@link Buffer} encoded with the LZF format.
  *
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
@@ -128,12 +127,12 @@ public final class LzfDecompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+    public Buffer decompress(Buffer in, BufferAllocator allocator) throws DecompressionException {
         try {
             switch (currentState) {
                 case FINISHED:
                 case CORRUPTED:
-                    return Unpooled.EMPTY_BUFFER;
+                    return allocator.allocate(0);
                 case CLOSED:
                     throw new DecompressionException("Decompressor closed");
                 case INIT_BLOCK:
@@ -200,53 +199,40 @@ public final class LzfDecompressor implements Decompressor {
                     final int originalLength = this.originalLength;
 
                     if (isCompressed) {
-                        final int idx = in.readerIndex();
-
-                        final byte[] inputArray;
-                        final int inPos;
-                        if (in.hasArray()) {
-                            inputArray = in.array();
-                            inPos = in.arrayOffset() + idx;
-                        } else {
-                            inputArray = recycler.allocInputBuffer(chunkLength);
-                            in.getBytes(idx, inputArray, 0, chunkLength);
-                            inPos = 0;
-                        }
-
-                        ByteBuf uncompressed = allocator.heapBuffer(originalLength, originalLength);
-                        final byte[] outputArray;
-                        final int outPos;
-                        if (uncompressed.hasArray()) {
-                            outputArray = uncompressed.array();
-                            outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
-                        } else {
-                            outputArray = new byte[originalLength];
-                            outPos = 0;
-                        }
-
-                        try {
-                            decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
-                            if (uncompressed.hasArray()) {
-                                uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                            } else {
-                                uncompressed.writeBytes(outputArray);
-                            }
-                            in.skipBytes(chunkLength);
-                            currentState = State.INIT_BLOCK;
-                            ByteBuf data = uncompressed;
-                            uncompressed = null;
-                            return data;
-                        } finally {
-                            if (uncompressed != null) {
-                                uncompressed.release();
-                            }
-                            if (!in.hasArray()) {
-                                recycler.releaseInputBuffer(inputArray);
+                        if (in.countReadableComponents() == 1) {
+                            try (var readableIteration = in.forEachReadable()) {
+                                var readableComponent = readableIteration.first();
+                                final byte[] inputArray;
+                                final int inPos;
+                                byte[] outputArray = recycler.allocOutputBuffer(originalLength);
+                                final int outPos = 0;
+                                if (readableComponent.hasReadableArray()) {
+                                    inputArray = readableComponent.readableArray();
+                                    inPos = readableComponent.readableArrayOffset();
+                                } else {
+                                    final int idx = in.readerOffset();
+                                    inputArray = recycler.allocInputBuffer(chunkLength);
+                                    in.copyInto(idx, inputArray, 0, chunkLength);
+                                    inPos = 0;
+                                }
+                                try {
+                                    decoder.decodeChunk(inputArray, inPos,
+                                            outputArray, outPos, outPos + originalLength);
+                                    in.skipReadable(chunkLength);
+                                    currentState = State.INIT_BLOCK;
+                                    return allocator.allocate(originalLength)
+                                            .writeBytes(outputArray, 0, originalLength);
+                                } finally {
+                                    if (!readableComponent.hasReadableArray()) {
+                                        recycler.releaseInputBuffer(inputArray);
+                                    }
+                                    recycler.releaseOutputBuffer(outputArray);
+                                }
                             }
                         }
                     } else if (chunkLength > 0) {
                         currentState = State.INIT_BLOCK;
-                        return in.readRetainedSlice(chunkLength);
+                        return in.readSplit(chunkLength);
                     } else {
                         currentState = State.INIT_BLOCK;
                     }
