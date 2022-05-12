@@ -45,7 +45,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testReadPendingIsResetAfterEachRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, (sb, cb) -> testReadPendingIsResetAfterEachRead(sb, cb));
+        run(testInfo, this::testReadPendingIsResetAfterEachRead);
     }
 
     public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb)

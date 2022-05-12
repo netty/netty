@@ -145,11 +145,8 @@ final class PoolChunk implements PoolChunkMetric {
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
-    private static final AllocatorControl CONTROL = new AllocatorControl() {
-        @Override
-        public BufferAllocator getAllocator() {
-            throw new AssertionError("PoolChunk base allocations should never need to access their allocator.");
-        }
+    private static final AllocatorControl CONTROL = () -> {
+        throw new AssertionError("PoolChunk base allocations should never need to access their allocator.");
     };
 
     static final int IS_SUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;

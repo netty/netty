@@ -135,13 +135,10 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     protected Owned<ByteBufBuffer> prepareSend() {
         final ByteBuf delegate = this.delegate;
         final int implicitCapacityLimit = this.implicitCapacityLimit;
-        return new Owned<>() {
-            @Override
-            public ByteBufBuffer transferOwnership(Drop<ByteBufBuffer> drop) {
-                ByteBufBuffer buffer = new ByteBufBuffer(control, delegate, drop);
-                buffer.implicitCapacityLimit(implicitCapacityLimit);
-                return buffer;
-            }
+        return drop -> {
+            ByteBufBuffer buffer = new ByteBufBuffer(control, delegate, drop);
+            buffer.implicitCapacityLimit(implicitCapacityLimit);
+            return buffer;
         };
     }
 

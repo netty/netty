@@ -48,12 +48,6 @@ public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoderForBuf
             return null;
         }
 
-        return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), frame.split(),
-                                             new DnsMessageUtil.DnsQueryFactory() {
-            @Override
-            public DnsQuery newQuery(int id, DnsOpCode dnsOpCode) {
-                return new DefaultDnsQuery(id, dnsOpCode);
-            }
-        });
+        return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), frame.split(), DefaultDnsQuery::new);
     }
 }

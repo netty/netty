@@ -1315,9 +1315,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
 
     private static void executeChannelRead(final ChannelHandlerContext ctx, final Buffer decodedOut) {
         try {
-            ctx.executor().execute(() -> {
-                ctx.fireChannelRead(decodedOut);
-            });
+            ctx.executor().execute(() -> ctx.fireChannelRead(decodedOut));
         } catch (RejectedExecutionException e) {
             decodedOut.close();
             throw e;
@@ -1427,12 +1425,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
      */
     private final class SslTasksRunner implements Runnable {
         private final boolean inUnwrap;
-        private final Runnable runCompleteTask = new Runnable() {
-            @Override
-            public void run() {
-                runComplete();
-            }
-        };
+        private final Runnable runCompleteTask = this::runComplete;
 
         SslTasksRunner(boolean inUnwrap) {
             this.inUnwrap = inUnwrap;
@@ -1583,12 +1576,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             // decoding.
             //
             // See https://github.com/netty/netty-tcnative/issues/680
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    resumeOnEventExecutor();
-                }
-            });
+            executor.execute(this::resumeOnEventExecutor);
         }
 
         @Override

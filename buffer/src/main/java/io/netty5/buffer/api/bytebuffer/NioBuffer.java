@@ -1118,18 +1118,15 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         int implicitCapacityLimit = this.implicitCapacityLimit;
         ByteBuffer base = this.base;
         ByteBuffer rmem = this.rmem;
-        return new Owned<>() {
-            @Override
-            public NioBuffer transferOwnership(Drop<NioBuffer> drop) {
-                NioBuffer copy = new NioBuffer(base, rmem, control, drop);
-                copy.roff = roff;
-                copy.woff = woff;
-                copy.implicitCapacityLimit = implicitCapacityLimit;
-                if (readOnly) {
-                    copy.makeReadOnly();
-                }
-                return copy;
+        return drop -> {
+            NioBuffer copy = new NioBuffer(base, rmem, control, drop);
+            copy.roff = roff;
+            copy.woff = woff;
+            copy.implicitCapacityLimit = implicitCapacityLimit;
+            if (readOnly) {
+                copy.makeReadOnly();
             }
+            return copy;
         };
     }
 

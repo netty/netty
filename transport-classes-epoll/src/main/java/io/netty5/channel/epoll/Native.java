@@ -92,12 +92,7 @@ public final class Native {
                 // Just ignore
             }
         }
-        Unix.registerInternal(new Runnable() {
-            @Override
-            public void run() {
-                registerUnix();
-            }
-        });
+        Unix.registerInternal(Native::registerUnix);
     }
 
     private static native int registerUnix();

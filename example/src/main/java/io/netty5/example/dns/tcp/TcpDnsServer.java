@@ -98,15 +98,12 @@ public final class TcpDnsServer {
                     }
                 });
         final Channel channel = bootstrap.bind(DNS_SERVER_PORT).get();
-        Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    clientQuery();
-                    channel.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+            try {
+                clientQuery();
+                channel.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }, 1000, TimeUnit.MILLISECONDS);
         channel.closeFuture().sync();
