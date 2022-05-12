@@ -53,6 +53,7 @@ public final class RejectedExecutionHandlers {
             @Override
             public void rejected(Runnable task, SingleThreadEventExecutor executor) {
                 if (!executor.inEventLoop()) {
+                    // 循环尝试一定的次数
                     for (int i = 0; i < retries; i++) {
                         // Try to wake up the executor so it will empty its task queue.
                         executor.wakeup(false);

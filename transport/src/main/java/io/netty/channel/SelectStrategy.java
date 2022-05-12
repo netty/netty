@@ -26,10 +26,13 @@ import io.netty.util.IntSupplier;
 public interface SelectStrategy {
 
     /**
+     * 表示使用阻塞 select 的策略
      * Indicates a blocking select should follow.
      */
     int SELECT = -1;
+
     /**
+     * 表示需要进行重试的策略。
      * Indicates the IO loop should be retried, no blocking select to follow directly.
      */
     int CONTINUE = -2;

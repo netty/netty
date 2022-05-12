@@ -380,8 +380,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
+        // cas 更新结果
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
+            // 如果存在 waiters，则进行唤醒
             if (checkNotifyWaiters()) {
+                // 如果存在 listeners，则唤醒
                 notifyListeners();
             }
             return true;
