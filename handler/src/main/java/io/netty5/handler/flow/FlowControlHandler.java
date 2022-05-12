@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.MessageToByteEncoder;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
 import io.netty5.util.internal.logging.InternalLogger;

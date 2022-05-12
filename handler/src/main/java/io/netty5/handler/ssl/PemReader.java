@@ -16,7 +16,6 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;

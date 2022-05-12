@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketGatheringWriteTest extends AbstractSocketTest {
