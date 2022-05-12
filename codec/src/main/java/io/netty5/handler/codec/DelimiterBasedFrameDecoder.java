@@ -130,7 +130,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
                 for (int i = 0; i < delimiters.length; i++) {
                     Buffer d = delimiters[i];
                     validateDelimiter(d);
-                    this.delimiters[i] = d.copy(d.readerOffset(), d.readableBytes(), true);
+                    this.delimiters[i] = d.copy(true);
                 }
             } catch (IllegalArgumentException e) {
                 re = e;

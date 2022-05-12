@@ -46,7 +46,7 @@ class PemValue extends BufferHolder<PemValue> implements PemEncoded {
     @Override
     public PemValue copy() {
         Buffer buffer = getBuffer();
-        return new PemValue(buffer.copy(buffer.readerOffset(), buffer.readableBytes(), true));
+        return new PemValue(buffer.copy(true));
     }
 
     @Override

@@ -18,7 +18,6 @@ package io.netty5.buffer.api.tests;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
-import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
@@ -171,6 +170,24 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeInt(42);
+            try (Buffer copy = buf.copy(true)) {
+                assertTrue(copy.readOnly());
+                assertThat(copy.readInt()).isEqualTo(42);
+            }
+            buf.makeReadOnly();
+            try (Buffer copy = buf.copy(true)) {
+                assertTrue(copy.readOnly());
+                assertThat(copy.readInt()).isEqualTo(42);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfBufferWithOffsetsMustBeReadOnlyWhenRequested(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeInt(42);
             try (Buffer copy = buf.copy(0, 4, true)) {
                 assertTrue(copy.readOnly());
                 assertThat(copy.readInt()).isEqualTo(42);
@@ -299,10 +316,40 @@ public class BufferLifeCycleTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    void copyOfWritableWithReadOnlyMustNotInfluenceOwnership(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            try (Buffer copy = buf.copy(true)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                assertTrue(isOwned((ResourceSupport<?, ?>) copy));
+                copy.send().close();
+            }
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+            buf.send().close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     void copyOfWritableWithOffsetAndSizeAndReadOnlyMustNotInfluenceOwnership(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8, true)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                assertTrue(isOwned((ResourceSupport<?, ?>) copy));
+                copy.send().close();
+            }
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+            buf.send().close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void copyOfReadOnlyWithReadOnlyMustNotInfluenceOwnership(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).makeReadOnly()) {
+            try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
                 copy.send().close();
@@ -372,6 +419,34 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                copy.send().close();
+            }
+            // Verify that the copy is closed properly afterwards.
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void sendOnCopyOfWritableWithReadOnlyMustNotThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            try (Buffer copy = buf.copy(true)) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+                copy.send().close();
+            }
+            // Verify that the copy is closed properly afterwards.
+            assertTrue(isOwned((ResourceSupport<?, ?>) buf));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void sendOnCopyOfReadOnlyWithReadOnlyMustNotThrow(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8).makeReadOnly()) {
+            try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 copy.send().close();
             }

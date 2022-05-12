@@ -80,7 +80,7 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
     @Override
     public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
         Buffer origin = copyOf(bytes).makeReadOnly();
-        return () -> origin.copy(origin.readerOffset(), origin.readableBytes(), true);
+        return () -> origin.copy(true);
     }
 
     @Override

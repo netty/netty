@@ -676,7 +676,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Returns a copy of the given region of this buffer.
      * Modifying the content of the returned buffer will not affect this buffers contents.
-     * The two buffers will  maintain separate offsets.
+     * The two buffers will maintain separate offsets.
      * This method does not modify {@link #readerOffset()} or {@link #writerOffset()} of this buffer.
      * <p>
      * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copy,
@@ -699,9 +699,36 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
+     * Returns a copy of this buffer's readable bytes, with the given read-only setting.
+     * Modifying the content of the returned buffer will not affect this buffers contents.
+     * The two buffers will maintain separate offsets.
+     * This method does not modify {@link #readerOffset()} or {@link #writerOffset()} of this buffer.
+     * <p>
+     * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copy,
+     * so that the entire contents of the copy is ready to be read.
+     * <p>
+     * The returned buffer will be read-only if, and only if, the {@code readOnly} argument is {@code true}, and it
+     * will not be read-only if the argument is {@code false}.
+     * This is the case regardless of the {@linkplain #readOnly() read-only state} of this buffer.
+     * <p>
+     * If this buffer is read-only, and a read-only copy is requested, then implementations <em>may</em> use structural
+     * sharing and have both buffers backed by the same underlying memory.
+     *
+     * @param readOnly The desired {@link #readOnly()} state of the returned buffer.
+     * @return A new buffer instance, with independent {@link #readerOffset()} and {@link #writerOffset()},
+     * that contains a copy of the given region of this buffer.
+     * @throws IllegalArgumentException if the {@code offset} or {@code length} reaches outside the bounds of the
+     * buffer.
+     * @throws BufferClosedException if this buffer is closed.
+     */
+    default Buffer copy(boolean readOnly) {
+        return copy(readerOffset(), readableBytes(), readOnly);
+    }
+
+    /**
      * Returns a copy of the given region of this buffer.
      * Modifying the content of the returned buffer will not affect this buffers contents.
-     * The two buffers will  maintain separate offsets.
+     * The two buffers will maintain separate offsets.
      * This method does not modify {@link #readerOffset()} or {@link #writerOffset()} of this buffer.
      * <p>
      * The copy is created with a {@linkplain #writerOffset() write offset} equal to the length of the copy,

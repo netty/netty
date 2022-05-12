@@ -230,7 +230,7 @@ public abstract class BufferTestSupport {
         @Override
         public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
             Buffer parent = delegate.copyOf(bytes).makeReadOnly();
-            return () -> parent.copy(0, parent.readableBytes(), true);
+            return () -> parent.copy(true);
         }
 
         @Override

@@ -190,7 +190,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     @Override
     public PemX509Certificate copy() {
-        return new PemX509Certificate(content.copy(content.readerOffset(), content.readableBytes(), true));
+        return new PemX509Certificate(content.copy(true));
     }
 
     @Override

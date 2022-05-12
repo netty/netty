@@ -129,7 +129,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Object pingPong() throws Exception {
-        return chan.pipeline().writeAndFlush(abyte.copy(0, 1, true)).sync();
+        return chan.pipeline().writeAndFlush(abyte.copy(true)).sync();
     }
 
     @Benchmark
