@@ -29,7 +29,7 @@ public class BufferStubTest {
     void testAllOverridesDefined() throws NoSuchMethodException {
         for (Method m : Buffer.class.getMethods()) {
            Method stubMethod = BufferStub.class.getMethod(m.getName(), m.getParameterTypes());
-           assertEquals(BufferStub.class, stubMethod.getDeclaringClass());
+           assertEquals(BufferStub.class, stubMethod.getDeclaringClass(), stubMethod + " not overridden");
         }
     }
 }
