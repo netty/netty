@@ -597,6 +597,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public Buffer copy(boolean readOnly) {
+        return delegate.copy(readOnly);
+    }
+
+    @Override
     public Send<Buffer> send() {
         return delegate.send();
     }
