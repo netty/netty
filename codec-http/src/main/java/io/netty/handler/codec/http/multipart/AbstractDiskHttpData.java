@@ -82,7 +82,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         String newpostfix;
         String diskFilename = getDiskFilename();
         if (diskFilename != null) {
-            newpostfix = '_' + diskFilename;
+            newpostfix = '_' + Integer.toString(diskFilename.hashCode());
         } else {
             newpostfix = getPostfix();
         }

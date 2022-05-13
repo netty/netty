@@ -35,6 +35,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
@@ -1002,4 +1003,41 @@ public class HttpPostRequestDecoderTest {
             assertTrue(req.release());
         }
     }
+
+    /**
+     * when diskFilename contain "\" create temp file error
+     */
+    @Test
+    void testHttpPostStandardRequestDecoderToDiskNameContainingUnauthorizedChar() throws UnsupportedEncodingException {
+        StringBuffer sb = new StringBuffer();
+        byte[] bodyBytes = ("aaaa/bbbb=aaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaaaaaaaaa" +
+                "aaaaaaaaaaaaaaaaaaa").getBytes(CharsetUtil.US_ASCII);
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req =
+                new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1,
+                HttpMethod.POST,
+                "/",
+                content);
+        HttpPostStandardRequestDecoder decoder = null;
+        try {
+            decoder = new HttpPostStandardRequestDecoder(
+                    new DefaultHttpDataFactory(true),
+                    req
+            );
+            decoder.destroy();
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            if (null != decoder) {
+                decoder.destroy();
+            }
+            fail("Was not expecting an exception");
+        } finally {
+            assertTrue(req.release());
+        }
+    }
+
 }
