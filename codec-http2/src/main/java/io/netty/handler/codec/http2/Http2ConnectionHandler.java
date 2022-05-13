@@ -77,6 +77,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private final Http2ConnectionEncoder encoder;
     private final Http2Settings initialSettings;
     private final boolean decoupleCloseAndGoAway;
+    private final boolean flushPreface;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
@@ -88,10 +89,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings, boolean decoupleCloseAndGoAway) {
+        this(decoder, encoder, initialSettings, decoupleCloseAndGoAway, true);
+    }
+
+    protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                     Http2Settings initialSettings, boolean decoupleCloseAndGoAway,
+                                     boolean flushPreface) {
         this.initialSettings = checkNotNull(initialSettings, "initialSettings");
         this.decoder = checkNotNull(decoder, "decoder");
         this.encoder = checkNotNull(encoder, "encoder");
         this.decoupleCloseAndGoAway = decoupleCloseAndGoAway;
+        this.flushPreface = flushPreface;
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
@@ -251,10 +259,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // The channel just became active - send the connection preface to the remote endpoint.
             sendPreface(ctx);
 
-            // As we don't know if any channelReadComplete() events will be triggered at all we need to ensure we
-            // also flush. Otherwise the remote peer might never see the preface / settings frame.
-            // See https://github.com/netty/netty/issues/12089
-            ctx.flush();
+            if (flushPreface) {
+                // As we don't know if any channelReadComplete() events will be triggered at all we need to ensure we
+                // also flush. Otherwise the remote peer might never see the preface / settings frame.
+                // See https://github.com/netty/netty/issues/12089
+                ctx.flush();
+            }
         }
 
         @Override

@@ -82,6 +82,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     private boolean decoupleCloseAndGoAway;
+    private boolean flushPreface = true;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates an Http2Connection.
@@ -484,6 +485,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected boolean decoupleCloseAndGoAway() {
         return decoupleCloseAndGoAway;
+    }
+
+    /**
+     * Determine if the {@code PREFACE} should be automatically flushed when the {@link Channel} becomes active or not.
+     *
+     * @param flushPreface {@code true} to automatically flush, {@code false otherwise}.
+     * @return {@code this}.
+     */
+    protected B flushPreface(boolean flushPreface) {
+        this.flushPreface = flushPreface;
+        return self();
+    }
+
+    /**
+     *  Determine if the {@code PREFACE} should be automatically flushed when the {@link Channel} becomes active or not.
+     */
+    protected boolean flushPreface() {
+        return flushPreface;
     }
 
     /**

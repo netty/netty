@@ -61,6 +61,15 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         this.httpScheme = httpScheme;
     }
 
+    protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                           Http2Settings initialSettings, boolean validateHeaders,
+                                           boolean decoupleCloseAndGoAway, boolean flushPreface,
+                                           HttpScheme httpScheme) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway, flushPreface);
+        this.validateHeaders = validateHeaders;
+        this.httpScheme = httpScheme;
+    }
+
     /**
      * Get the next stream id either from the {@link HttpHeaders} object or HTTP/2 codec
      *
