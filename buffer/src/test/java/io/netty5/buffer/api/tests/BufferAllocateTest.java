@@ -17,11 +17,13 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Isolated
 public class BufferAllocateTest extends BufferTestSupport {
 
     @ParameterizedTest
