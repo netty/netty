@@ -428,48 +428,50 @@ public interface Statics {
             nl = UNCHECKED_LOAD_BYTE_BUFFER;
         }
 
-        int n = haystack.readableBytes();
-        int m = needle.readableBytes();
-        if (m == 0) {
+        int haystackLen = haystack.readableBytes();
+        int needleLen = needle.readableBytes();
+        if (needleLen == 0) {
             return 0;
         }
 
         // When the needle has only one byte that can be read,
         // the Buffer.bytesBefore() method can be used
-        if (m == 1) {
+        if (needleLen == 1) {
             return haystack.bytesBefore(needle.getByte(needle.readerOffset()));
         }
 
         int needleStart = needle.readerOffset();
         int haystackStart = haystack.readerOffset();
-        long suffixes =  maxFixes(needle, nl, m, needleStart, true);
-        long prefixes = maxFixes(needle, nl, m, needleStart, false);
-        int ell = Math.max((int) (suffixes >> 32), (int) (prefixes >> 32));
+        long suffixes =  maxFixes(needle, nl, needleLen, needleStart, true);
+        long prefixes = maxFixes(needle, nl, needleLen, needleStart, false);
+        int maxSuffix = Math.max((int) (suffixes >> 32), (int) (prefixes >> 32));
         int period = Math.max((int) suffixes, (int) prefixes);
-        int length = Math.min(m - period, ell + 1);
+        int length = Math.min(needleLen - period, maxSuffix + 1);
 
         if (equalsInner(needle, needleStart, needle, needleStart + period, length)) {
-            return bytesBeforeInnerPeriodic(haystack, hl, needle, nl, n, m, needleStart, haystackStart, ell, period);
+            return bytesBeforeInnerPeriodic(
+                    haystack, hl, needle, nl, haystackLen, needleLen, needleStart, haystackStart, maxSuffix, period);
         }
-        return bytesBeforeInnerNonPeriodic(haystack, hl, needle, nl, n, m, needleStart, haystackStart, ell);
+        return bytesBeforeInnerNonPeriodic(
+                haystack, hl, needle, nl, haystackLen, needleLen, needleStart, haystackStart, maxSuffix);
     }
 
     private static int bytesBeforeInnerPeriodic(Buffer haystack, UncheckedLoadByte hl,
                                                 Buffer needle, UncheckedLoadByte nl,
-                                                int n, int m, int needleStart, int haystackStart, int ell, int period) {
-        int i;
+                                                int haystackLen, int needleLen, int needleStart, int haystackStart,
+                                                int maxSuffix, int period) {
         int j = 0;
         int memory = -1;
-        while (j <= n - m) {
-            i = Math.max(ell, memory) + 1;
-            while (i < m && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
+        while (j <= haystackLen - needleLen) {
+            int i = Math.max(maxSuffix, memory) + 1;
+            while (i < needleLen && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
                 ++i;
             }
-            if (i > n) {
+            if (i > haystackLen) {
                 return -1;
             }
-            if (i >= m) {
-                i = ell;
+            if (i >= needleLen) {
+                i = maxSuffix;
                 while (i > memory && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
                     --i;
                 }
@@ -477,9 +479,9 @@ public interface Statics {
                     return j;
                 }
                 j += period;
-                memory = m - period - 1;
+                memory = needleLen - period - 1;
             } else {
-                j += i - ell;
+                j += i - maxSuffix;
                 memory = -1;
             }
         }
@@ -488,20 +490,20 @@ public interface Statics {
 
     private static int bytesBeforeInnerNonPeriodic(Buffer haystack, UncheckedLoadByte hl,
                                                    Buffer needle, UncheckedLoadByte nl,
-                                                   int n, int m, int needleStart, int haystackStart, int ell) {
-        int i;
+                                                   int haystackLen, int needleLen, int needleStart, int haystackStart,
+                                                   int maxSuffix) {
         int j = 0;
-        int period = Math.max(ell + 1, m - ell - 1) + 1;
-        while (j <= n - m) {
-            i = ell + 1;
-            while (i < m && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
+        int period = Math.max(maxSuffix + 1, needleLen - maxSuffix - 1) + 1;
+        while (j <= haystackLen - needleLen) {
+            int i = maxSuffix + 1;
+            while (i < needleLen && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
                 ++i;
             }
-            if (i > n) {
+            if (i > haystackLen) {
                 return -1;
             }
-            if (i >= m) {
-                i = ell;
+            if (i >= needleLen) {
+                i = maxSuffix;
                 while (i >= 0 && nl.load(needle, i + needleStart) == hl.load(haystack, i + j + haystackStart)) {
                     --i;
                 }
@@ -510,40 +512,38 @@ public interface Statics {
                 }
                 j += period;
             } else {
-                j += i - ell;
+                j += i - maxSuffix;
             }
         }
         return -1;
     }
 
-    private static long maxFixes(Buffer needle, UncheckedLoadByte nl, int m, int start, boolean isSuffix) {
-        int p = 1;
-        int ms = -1;
-        int j = start;
+    private static long maxFixes(Buffer needle, UncheckedLoadByte nl, int needleLen, int start, boolean isSuffix) {
+        int period = 1;
+        int maxSuffix = -1;
+        int lastRest = start;
         int k = 1;
-        byte a;
-        byte b;
-        while (j + k < m) {
-            a = nl.load(needle, j + k);
-            b = nl.load(needle, ms + k);
+        while (lastRest + k < needleLen) {
+            byte a = nl.load(needle, lastRest + k);
+            byte b = nl.load(needle, maxSuffix + k);
             boolean suffix = isSuffix ? a < b : a > b;
             if (suffix) {
-                j += k;
+                lastRest += k;
                 k = 1;
-                p = j - ms;
+                period = lastRest - maxSuffix;
             } else if (a == b) {
-                if (k != p) {
+                if (k != period) {
                     ++k;
                 } else {
-                    j += p;
+                    lastRest += period;
                     k = 1;
                 }
             } else {
-                ms = j;
-                j = ms + 1;
-                k = p = 1;
+                maxSuffix = lastRest;
+                lastRest = maxSuffix + 1;
+                k = period = 1;
             }
         }
-        return ((long) ms << 32) + p;
+        return ((long) maxSuffix << 32) + period;
     }
 }
