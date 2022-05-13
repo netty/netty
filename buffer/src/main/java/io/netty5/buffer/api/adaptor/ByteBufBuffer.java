@@ -317,6 +317,9 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (length == 0) {
             return 0;
         }
+        if (!channel.isOpen()) {
+            throw new ClosedChannelException();
+        }
         int bytesRead = delegate.setBytes(writerOffset(), channel, position, length);
         if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
             skipWritable(bytesRead);
