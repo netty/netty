@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.StackWalker.Option;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -1017,6 +1018,17 @@ public final class PlatformDependent {
      */
     public static <C> Deque<C> newConcurrentDeque() {
         return new ConcurrentLinkedDeque<>();
+    }
+
+    public static Object unwrapUnsafeOrNull() {
+        if (!hasUnsafe()) {
+            return null;
+        }
+        Class<?> callerClass = StackWalker.getInstance(Set.of(Option.RETAIN_CLASS_REFERENCE), 1).getCallerClass();
+        if (!callerClass.isAnnotationPresent(io.netty5.util.internal.UnsafeAccess.class)) {
+            return null;
+        }
+        return PlatformDependent0.UNSAFE;
     }
 
     private static boolean isWindows0() {

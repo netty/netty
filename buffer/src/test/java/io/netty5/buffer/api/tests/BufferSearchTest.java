@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class BufferSearchTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustThrowOnInaccessibleBuffer(Fixture fixture) {
+    public void bytesBeforeByteMustThrowOnInaccessibleBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer buffer = allocator.allocate(8);
             buffer.writeLong(0x0102030405060708L);
@@ -44,7 +45,24 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustFindNeedleAtStart(Fixture fixture) {
+    public void bytesBeforeBufferMustThrowOnInaccessibleBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer needle = allocator.copyOf(new byte[] { 0x03, 0x04 })) {
+            Buffer buffer = allocator.allocate(8);
+            buffer.writeLong(0x0102030405060708L);
+            assertThat(buffer.bytesBefore(needle)).isEqualTo(2);
+            var send = buffer.send();
+            assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
+            Buffer received = send.receive();
+            assertThat(received.bytesBefore(needle)).isEqualTo(2);
+            received.close();
+            assertThrows(IllegalStateException.class, () -> received.bytesBefore((byte) 0));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteMustFindNeedleAtStart(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
             fillBuffer(buf);
@@ -59,7 +77,22 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustFindNeedleAfterStart(Fixture fixture) {
+    public void bytesBeforeBufferMustFindNeedleAtStart(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128);
+             Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
+            fillBuffer(buf);
+            buf.setMedium(3, needle.getMedium(0));
+            buf.skipReadable(3);
+            assertThat(buf.bytesBefore(needle))
+                    .as("bytesBefore(Buffer(%X)) should be 0", needle.getMedium(0))
+                    .isEqualTo(0);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteMustFindNeedleAfterStart(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
             fillBuffer(buf);
@@ -74,7 +107,22 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustFindNeedleCloseToEndOffset(Fixture fixture) {
+    public void bytesBeforeBufferMustFindNeedleAfterStart(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128);
+             Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
+            fillBuffer(buf);
+            buf.setMedium(3, needle.getMedium(0));
+            buf.skipReadable(2);
+            assertThat(buf.bytesBefore(needle))
+                    .as("bytesBefore(Buffer(%X)) should be 0", needle.getMedium(0))
+                    .isEqualTo(1);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteMustFindNeedleCloseToEndOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
             fillBuffer(buf);
@@ -93,7 +141,26 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustFindNeedlePriorToEndOffset(Fixture fixture) {
+    public void bytesBeforeBufferMustFindNeedleCloseToEndOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128);
+             Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
+            fillBuffer(buf);
+            int offset = buf.capacity() - 5;
+            buf.setMedium(offset, needle.getMedium(0));
+            while (buf.readableBytes() > 3) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
+                        .isEqualTo(offset);
+                offset--;
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteMustFindNeedlePriorToEndOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
             fillBuffer(buf);
@@ -112,7 +179,26 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeMustNotFindNeedleOutsideReadableRange(Fixture fixture) {
+    public void bytesBeforeBufferMustFindNeedlePriorToEndOffset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128);
+             Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
+            fillBuffer(buf);
+            int offset = buf.capacity() - 3;
+            buf.setMedium(offset, needle.getMedium(0));
+            while (buf.readableBytes() > 3) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
+                        .isEqualTo(offset);
+                offset--;
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteMustNotFindNeedleOutsideReadableRange(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(128)) {
             fillBuffer(buf);
@@ -132,10 +218,80 @@ public class BufferSearchTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bytesBeforeOnEmptyBufferMustNotFindAnything(Fixture fixture) {
+    public void bytesBeforeBufferMustNotFindNeedleOutsideReadableRange(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(128);
+             Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
+            fillBuffer(buf);
+            int offset = buf.capacity() - 3;
+            buf.setMedium(offset, needle.getMedium(0));
+            // Pull the write-offset down by one, leaving needle just outside readable range.
+            buf.writerOffset(buf.writerOffset() - 1);
+            while (buf.readableBytes() > 1) {
+                assertThat(buf.bytesBefore(needle))
+                        .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
+                        .isEqualTo(-1);
+                buf.skipReadable(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeByteOnEmptyBufferMustNotFindAnything(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(0)) {
             assertThat(buf.bytesBefore((byte) 0)).isEqualTo(-1);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeBufferOnHaystackSmallerThanNeedleMustNotFindAnything(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer needle = allocator.allocate(3).writeMedium(0)) {
+            try (Buffer buffer = allocator.allocate(0)) {
+                assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
+            }
+            try (Buffer buffer = allocator.allocate(1).writerOffset(1)) {
+                assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
+            }
+            try (Buffer buffer = allocator.allocate(2).writerOffset(2)) {
+                assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
+            }
+            try (Buffer buffer = allocator.allocate(3).writerOffset(3)) {
+                assertThat(buffer.bytesBefore(needle)).isEqualTo(0);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void bytesBeforeMatchingBufferNeedles(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+            Buffer haystack = allocator.copyOf("abc123".getBytes(StandardCharsets.UTF_8))) {
+
+            try (Buffer needle = allocator.copyOf("a".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(0, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("bc".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(1, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("c".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(2, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("abc12".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(0, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("abcdef".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(-1, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("abc12x".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(-1, haystack.bytesBefore(needle));
+            }
+            try (Buffer needle = allocator.copyOf("abc123def".getBytes(StandardCharsets.UTF_8))) {
+                assertEquals(-1, haystack.bytesBefore(needle));
+            }
         }
     }
 

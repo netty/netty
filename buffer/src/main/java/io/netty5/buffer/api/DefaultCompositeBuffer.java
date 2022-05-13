@@ -621,6 +621,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public int bytesBefore(Buffer needle) {
+        return Statics.bytesBefore(this, null, needle, null);
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return openCursor(readerOffset(), readableBytes());
     }

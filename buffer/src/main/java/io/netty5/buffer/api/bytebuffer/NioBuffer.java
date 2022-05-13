@@ -32,6 +32,7 @@ import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.Statics.UncheckedLoadByte;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
@@ -355,6 +356,20 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         }
 
         return -1;
+    }
+
+    @Override
+    public int bytesBefore(Buffer needle) {
+        UncheckedLoadByte uncheckedLoadByte = NioBuffer::uncheckedLoadByte;
+        return Statics.bytesBefore(this, uncheckedLoadByte,
+                                   needle, needle instanceof NioBuffer ? uncheckedLoadByte : null);
+    }
+
+    /**
+     * Used by {@link #bytesBefore(Buffer)}.
+     */
+    private static byte uncheckedLoadByte(Buffer buffer, int offset) {
+        return ((NioBuffer) buffer).rmem.get(offset);
     }
 
     @Override

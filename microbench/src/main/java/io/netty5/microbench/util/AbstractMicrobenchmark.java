@@ -57,11 +57,9 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
         final String[] customArgs;
         if (disableHarnessExecutor) {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0"};
+            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m"};
         } else {
             customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0",
                     "-Djmh.executor=CUSTOM",
                     "-Djmh.executor.class=io.netty5.microbench.util.AbstractMicrobenchmark$HarnessExecutor"};
         }
@@ -85,6 +83,12 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
         if (getForks() >= 0) {
             runnerOptions.forks(getForks());
         }
+        // Async Profiler.
+//        runnerOptions.addProfiler(org.openjdk.jmh.profile.AsyncProfiler.class,
+//                                  "output=flamegraph;libPath=/<path>/async-profiler/build/libasyncProfiler.dylib");
+
+        // Assembly profiler on Mac OS.
+//        runnerOptions.addProfiler("dtraceasm");
 
         return runnerOptions;
     }

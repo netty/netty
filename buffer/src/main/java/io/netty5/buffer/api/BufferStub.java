@@ -166,6 +166,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public int bytesBefore(Buffer needle) {
+        return delegate.bytesBefore(needle);
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return delegate.openCursor();
     }

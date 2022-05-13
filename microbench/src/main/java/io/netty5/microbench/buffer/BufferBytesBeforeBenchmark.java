@@ -69,8 +69,10 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     private Buffer[] data;
     private int i;
 
-    @Param({ "0" })
+    @Param({ "-91" })
     private byte needleByte;
+    private Buffer needleBuffer;
+    private int needleBufferLength = 5;
 
     @Param({
             "true",
@@ -83,12 +85,6 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     })
     private boolean noUnsafe;
 
-    @Param({
-            "false",
-            "true",
-    })
-    private boolean pooled;
-
     @Setup(Level.Trial)
     public void init() {
         SplittableRandom random = new SplittableRandom(seed);
@@ -96,8 +92,11 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
         data = new Buffer[permutations];
         MemoryManager memoryManager = noUnsafe ? new ByteBufferMemoryManager() : new UnsafeMemoryManager();
         BufferAllocator allocator = MemoryManager.using(memoryManager, () -> direct?
-                pooled? BufferAllocator.offHeapPooled() : BufferAllocator.offHeapUnpooled() :
-                pooled? BufferAllocator.onHeapPooled() : BufferAllocator.onHeapUnpooled());
+                BufferAllocator.offHeapUnpooled() : BufferAllocator.onHeapUnpooled());
+        needleBuffer = allocator.allocate(needleBufferLength);
+        for (int j = 0; j < needleBufferLength; j++) {
+            needleBuffer.writeByte((byte) (needleByte + j));
+        }
         for (int i = 0; i < permutations; ++i) {
             data[i] = allocator.allocate(size);
             data[i].skipWritable(size);
@@ -105,16 +104,13 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
                 int value = random.nextInt(Byte.MIN_VALUE, Byte.MAX_VALUE + 1);
                 // turn any found value into something different
                 if (value == needleByte) {
-                    if (needleByte != 1) {
-                        value = 1;
-                    } else {
-                        value = 0;
-                    }
+                    value = ~value;
                 }
                 data[i].setByte(j, (byte) value);
             }
-            final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
-            data[i].setByte(foundIndex, needleByte);
+            for (int k = 0; k < needleBufferLength; k++) {
+                data[i].setByte(data[i].capacity() - needleBufferLength + k, needleBuffer.getByte(k));
+            }
         }
         allocator.close();
     }
@@ -124,8 +120,13 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int indexOf() {
+    public int bytesBeforeByte() {
         return getData().bytesBefore(needleByte);
+    }
+
+    @Benchmark
+    public int bytesBeforeBuffer() {
+        return getData().bytesBefore(needleBuffer);
     }
 
     @TearDown

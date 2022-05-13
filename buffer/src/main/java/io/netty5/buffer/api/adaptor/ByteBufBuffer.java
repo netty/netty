@@ -346,6 +346,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     @Override
+    public int bytesBefore(Buffer needle) {
+        return Statics.bytesBefore(this, null, needle, null);
+    }
+
+    @Override
     public ByteCursor openCursor() {
         return openCursor(readerOffset(), readableBytes());
     }
