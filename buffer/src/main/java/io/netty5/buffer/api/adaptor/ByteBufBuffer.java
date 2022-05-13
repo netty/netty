@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -300,6 +301,27 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             skipReadable(bytesWritten);
         }
         return bytesWritten;
+    }
+
+    @Override
+    public int transferFrom(FileChannel channel, long position, int length) throws IOException {
+        checkPositiveOrZero(position, "position");
+        checkPositiveOrZero(length, "length");
+        if (!isAccessible()) {
+            throw attachTrace(bufferIsClosed(this));
+        }
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
+        length = Math.min(writableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
+        int bytesRead = delegate.setBytes(writerOffset(), channel, position, length);
+        if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
+            skipWritable(bytesRead);
+        }
+        return bytesRead;
     }
 
     @Override

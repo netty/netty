@@ -23,6 +23,7 @@ import io.netty5.util.SafeCloseable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -542,6 +543,45 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             skipReadable(totalBytesWritten);
         }
         return totalBytesWritten;
+    }
+
+    @Override
+    public int transferFrom(FileChannel channel, long position, int length) throws IOException {
+        checkPositiveOrZero(position, "position");
+        checkPositiveOrZero(length, "length");
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
+        length = Math.min(writableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
+        checkWriteBounds(writerOffset(), length);
+        ByteBufferCollector collector = new ByteBufferCollector(countWritableComponents());
+        forEachWritable(0, collector);
+        ByteBuffer[] byteBuffers = collector.buffers;
+        int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
+        int totalBytesRead = 0;
+        try {
+            for (int i = 0; i < bufferCount; i++) {
+                int bytesRead = channel.read(byteBuffers[i], position + totalBytesRead);
+                if (bytesRead == -1) {
+                    if (i == 0) {
+                        return -1; // If we're end-of-stream on the first read, immediately return -1.
+                    }
+                    break;
+                }
+                totalBytesRead = addExact(totalBytesRead, bytesRead);
+            }
+        } finally {
+            if (totalBytesRead > 0) { // Don't skipWritable if total is 0 or -1
+                skipWritable(totalBytesRead);
+            }
+        }
+        return totalBytesRead;
     }
 
     @Override

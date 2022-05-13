@@ -217,6 +217,17 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustThrowIfBufferIsClosed(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfBufferIsClosed(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustThrowIfBufferIsClosed(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfBufferIsClosed(fixture, true);
+    }
+
+    private static void doTransferFromMustThrowIfBufferIsClosed(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             long position = channel.position();
@@ -224,12 +235,24 @@ public class BufferAndChannelTest extends BufferTestSupport {
             long size = channel.size();
             Buffer empty = allocator.allocate(0);
             empty.close();
-            assertThrows(BufferClosedException.class, () -> empty.transferFrom(channel, 8));
+            assertThrows(BufferClosedException.class, () -> {
+                if (withPosition) {
+                    empty.transferFrom(channel, 4 + position, 8);
+                } else {
+                    empty.transferFrom(channel, 8);
+                }
+            });
             assertThat(channel.position()).isEqualTo(position);
             assertThat(channel.size()).isEqualTo(size);
             Buffer withAvailableSpace = allocator.allocate(8);
             withAvailableSpace.close();
-            assertThrows(BufferClosedException.class, () -> withAvailableSpace.transferFrom(channel, 8));
+            assertThrows(BufferClosedException.class, () -> {
+                if (withPosition) {
+                    withAvailableSpace.transferFrom(channel, 4 + position, 8);
+                } else {
+                    withAvailableSpace.transferFrom(channel, 8);
+                }
+            });
             assertThat(channel.position()).isEqualTo(position);
             assertThat(channel.size()).isEqualTo(size);
         } finally {
@@ -240,15 +263,25 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustCapAtWritableBytes(Fixture fixture) throws IOException {
+        doTransferFromMustCapAtWritableBytes(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustCapAtWritableBytes(Fixture fixture) throws IOException {
+        doTransferFromMustCapAtWritableBytes(fixture, true);
+    }
+
+    private static void doTransferFromMustCapAtWritableBytes(Fixture fixture, boolean withPosition) throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(3)) {
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             long position = channel.position();
             assertThat(channel.write(data, position)).isEqualTo(8);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 8);
+            int bytesRead = withPosition ? buf.transferFrom(channel, 4 + position, 8) : buf.transferFrom(channel, 8);
             assertThat(bytesRead).isEqualTo(3);
-            assertThat(channel.position()).isEqualTo(3 + position);
+            assertThat(channel.position()).isEqualTo(withPosition ? position : 3 + position);
             assertThat(channel.size()).isEqualTo(size);
             assertThat(buf.writableBytes()).isZero();
             assertThat(buf.readableBytes()).isEqualTo(3);
@@ -260,15 +293,25 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustCapAtLength(Fixture fixture) throws IOException {
+        doTransferFromMustCapAtLength(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustCapAtLength(Fixture fixture) throws IOException {
+        doTransferFromMustCapAtLength(fixture, true);
+    }
+
+    private static void doTransferFromMustCapAtLength(Fixture fixture, boolean withPosition) throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             long position = channel.position();
             assertThat(channel.write(data, position)).isEqualTo(8);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 3);
+            int bytesRead = withPosition ? buf.transferFrom(channel, 4 + position, 3) : buf.transferFrom(channel, 3);
             assertThat(bytesRead).isEqualTo(3);
-            assertThat(channel.position()).isEqualTo(3 + position);
+            assertThat(channel.position()).isEqualTo(withPosition ? position : 3 + position);
             assertThat(channel.size()).isEqualTo(size);
             assertThat(buf.writableBytes()).isEqualTo(5);
             assertThat(buf.readableBytes()).isEqualTo(3);
@@ -280,9 +323,25 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustThrowIfChannelIsClosed(Fixture fixture) {
+        doTransferFromMustThrowIfChannelIsClosed(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustThrowIfChannelIsClosed(Fixture fixture) {
+        doTransferFromMustThrowIfChannelIsClosed(fixture, true);
+    }
+
+    private static void doTransferFromMustThrowIfChannelIsClosed(Fixture fixture, boolean withPosition) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            assertThrows(ClosedChannelException.class, () -> buf.transferFrom(closedChannel, 8));
+            assertThrows(ClosedChannelException.class, () -> {
+                if (withPosition) {
+                    buf.transferFrom(closedChannel, 4, 8);
+                } else {
+                    buf.transferFrom(closedChannel, 8);
+                }
+            });
             assertTrue(buf.isAccessible());
             assertThat(buf.writableBytes()).isEqualTo(8);
         }
@@ -291,9 +350,25 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustThrowIfChannelIsNull(Fixture fixture) {
+        doTransferFromMustThrowIfChannelIsNull(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustThrowIfChannelIsNull(Fixture fixture) {
+        doTransferFromMustThrowIfChannelIsNull(fixture, true);
+    }
+
+    private static void doTransferFromMustThrowIfChannelIsNull(Fixture fixture, boolean withPosition) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            assertThrows(NullPointerException.class, () -> buf.transferFrom(null, 8));
+            assertThrows(NullPointerException.class, () -> {
+                if (withPosition) {
+                    buf.transferFrom(null, 4, 8);
+                } else {
+                    buf.transferFrom(null, 8);
+                }
+            });
             assertTrue(buf.isAccessible());
             assertThat(buf.writableBytes()).isEqualTo(8);
         }
@@ -302,13 +377,30 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustThrowIfLengthIsNegative(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfLengthIsNegative(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustThrowIfLengthIsNegative(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfLengthIsNegative(fixture, true);
+    }
+
+    private static void doTransferFromMustThrowIfLengthIsNegative(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long position = channel.position();
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             assertThat(channel.write(data, position)).isEqualTo(8);
             long size = channel.size();
-            assertThrows(IllegalArgumentException.class, () -> buf.transferFrom(channel, -1));
+            assertThrows(IllegalArgumentException.class, () -> {
+                if (withPosition) {
+                    buf.transferFrom(channel, 4 + position, -1);
+                } else {
+                    buf.transferFrom(channel, -1);
+                }
+            });
             assertTrue(buf.isAccessible());
             assertThat(buf.writableBytes()).isEqualTo(8);
             assertThat(channel.position()).isEqualTo(position);
@@ -321,13 +413,24 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustIgnoreZeroLengthOperations(Fixture fixture) throws IOException {
+        doTransferFromMustIgnoreZeroLengthOperations(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustIgnoreZeroLengthOperations(Fixture fixture) throws IOException {
+        doTransferFromMustIgnoreZeroLengthOperations(fixture, true);
+    }
+
+    private static void doTransferFromMustIgnoreZeroLengthOperations(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long position = channel.position();
             ByteBuffer data = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             assertThat(channel.write(data, position)).isEqualTo(8);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 0);
+            int bytesRead = withPosition ? buf.transferFrom(channel, 4 + position, 0) : buf.transferFrom(channel, 0);
             assertThat(bytesRead).isEqualTo(0);
             assertThat(buf.readableBytes()).isZero();
             assertThat(buf.writableBytes()).isEqualTo(8);
@@ -341,6 +444,17 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustMoveDataFromChannel(Fixture fixture) throws IOException {
+        doTransferFromMustMoveDataFromChannel(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustMoveDataFromChannel(Fixture fixture) throws IOException {
+        doTransferFromMustMoveDataFromChannel(fixture, true);
+    }
+
+    private static void doTransferFromMustMoveDataFromChannel(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long value = ThreadLocalRandom.current().nextLong();
@@ -348,9 +462,9 @@ public class BufferAndChannelTest extends BufferTestSupport {
             long position = channel.position();
             assertThat(channel.write(data, position)).isEqualTo(8);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 8);
+            int bytesRead = withPosition ? buf.transferFrom(channel, position, 8) : buf.transferFrom(channel, 8);
             assertThat(bytesRead).isEqualTo(8);
-            assertThat(channel.position()).isEqualTo(8 + position);
+            assertThat(channel.position()).isEqualTo(withPosition ? position : 8 + position);
             assertThat(channel.size()).isEqualTo(size);
             assertThat(buf.readableBytes()).isEqualTo(8);
             assertEquals(value, buf.readLong());
@@ -362,16 +476,27 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustNotReadBeyondEndOfChannel(Fixture fixture) throws IOException {
+        doTransferFromMustNotReadBeyondEndOfChannel(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustNotReadBeyondEndOfChannel(Fixture fixture) throws IOException {
+        doTransferFromMustNotReadBeyondEndOfChannel(fixture, true);
+    }
+
+    private static void doTransferFromMustNotReadBeyondEndOfChannel(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             ByteBuffer data = ByteBuffer.allocate(8).putInt(0x01020304).flip();
             long position = channel.position();
             assertThat(channel.write(data, position)).isEqualTo(4);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 8);
+            int bytesRead = withPosition ? buf.transferFrom(channel, position, 8) : buf.transferFrom(channel, 8);
             assertThat(bytesRead).isEqualTo(4);
             assertThat(buf.readableBytes()).isEqualTo(4);
-            assertThat(channel.position()).isEqualTo(4 + position);
+            assertThat(channel.position()).isEqualTo(withPosition ? position : 4 + position);
             assertThat(channel.size()).isEqualTo(size);
         } finally {
             channel.position(channel.size());
@@ -381,11 +506,22 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustReturnMinusOneForEndOfStream(Fixture fixture) throws IOException {
+        doTransferFromMustReturnMinusOneForEndOfStream(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustReturnMinusOneForEndOfStream(Fixture fixture) throws IOException {
+        doTransferFromMustReturnMinusOneForEndOfStream(fixture, true);
+    }
+
+    private static void doTransferFromMustReturnMinusOneForEndOfStream(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long position = channel.position();
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 8);
+            int bytesRead = withPosition ? buf.transferFrom(channel, position, 8) : buf.transferFrom(channel, 8);
             assertThat(bytesRead).isEqualTo(-1);
             assertThat(buf.readableBytes()).isEqualTo(0);
             assertThat(channel.position()).isEqualTo(position);
@@ -431,17 +567,28 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustStartFromWritableOffset(Fixture fixture) throws IOException {
+        doTransferFromMustStartFromWritableOffset(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustStartFromWritableOffset(Fixture fixture) throws IOException {
+        doTransferFromMustStartFromWritableOffset(fixture, true);
+    }
+
+    private static void doTransferFromMustStartFromWritableOffset(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(4)) {
             ByteBuffer data = ByteBuffer.allocate(4).putInt(0x01020304).flip();
             long position = channel.position();
             assertThat(channel.write(data, position)).isEqualTo(4);
             long size = channel.size();
-            int bytesRead = buf.transferFrom(channel, 2);
-            bytesRead += buf.transferFrom(channel, 2);
+            int bytesRead = withPosition ? buf.transferFrom(channel, position, 2) : buf.transferFrom(channel, 2);
+            bytesRead += withPosition ? buf.transferFrom(channel, 2 + position, 2) : buf.transferFrom(channel, 2);
             assertThat(bytesRead).isEqualTo(4);
             assertThat(buf.readableBytes()).isEqualTo(4);
-            assertThat(channel.position()).isEqualTo(4 + position);
+            assertThat(channel.position()).isEqualTo(withPosition ? position : 4 + position);
             assertThat(channel.size()).isEqualTo(size);
             for (int i = 0; i < buf.readableBytes(); i++) {
                 assertThat(buf.readByte()).isEqualTo(data.get(i));
@@ -454,11 +601,28 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromMustThrowIfBufferIsReadOnly(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfBufferIsReadOnly(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionMustThrowIfBufferIsReadOnly(Fixture fixture) throws IOException {
+        doTransferFromMustThrowIfBufferIsReadOnly(fixture, true);
+    }
+
+    private static void doTransferFromMustThrowIfBufferIsReadOnly(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8).writeLong(0x0102030405060708L).makeReadOnly()) {
             long position = channel.position();
             long size = channel.size();
-            assertThrows(BufferReadOnlyException.class, () -> buf.transferFrom(channel, 8));
+            assertThrows(BufferReadOnlyException.class, () -> {
+                if (withPosition) {
+                    buf.transferFrom(channel, 4 + position, 8);
+                } else {
+                    buf.transferFrom(channel, 8);
+                }
+            });
             assertThat(buf.readableBytes()).isEqualTo(8);
             assertThat(channel.position()).isEqualTo(position);
             assertThat(channel.size()).isEqualTo(size);
@@ -468,11 +632,27 @@ public class BufferAndChannelTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     public void transferFromZeroBytesMustNotThrowOnClosedChannel(Fixture fixture) throws IOException {
+        doTransferFromZeroBytesMustNotThrowOnClosedChannel(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferFromWithPositionZeroBytesMustNotThrowOnClosedChannel(Fixture fixture) throws IOException {
+        doTransferFromZeroBytesMustNotThrowOnClosedChannel(fixture, true);
+    }
+
+    private static void doTransferFromZeroBytesMustNotThrowOnClosedChannel(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer empty = allocator.allocate(0);
              Buffer notEmpty = allocator.allocate(4)) {
-            empty.transferFrom(closedChannel, 4);
-            notEmpty.transferFrom(closedChannel, 0);
+            if (withPosition) {
+                empty.transferFrom(closedChannel, 4, 4);
+                notEmpty.transferFrom(closedChannel, 4, 0);
+            } else {
+                empty.transferFrom(closedChannel, 4);
+                notEmpty.transferFrom(closedChannel, 0);
+            }
         }
     }
 

@@ -19,6 +19,7 @@ import io.netty5.buffer.api.ComponentIterator.Next;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
@@ -135,6 +136,11 @@ public class BufferStub implements Buffer {
     @Override
     public int transferTo(WritableByteChannel channel, int length) throws IOException {
         return delegate.transferTo(channel, length);
+    }
+
+    @Override
+    public int transferFrom(FileChannel channel, long position, int length) throws IOException {
+        return delegate.transferFrom(channel, position, length);
     }
 
     @Override
