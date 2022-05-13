@@ -39,6 +39,7 @@ import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -326,6 +327,28 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         int bytesWritten = channel.write(readableBuffer().limit(length));
         skipReadable(bytesWritten);
         return bytesWritten;
+    }
+
+    @Override
+    public int transferFrom(FileChannel channel, long position, int length) throws IOException {
+        checkPositiveOrZero(position, "position");
+        checkPositiveOrZero(length, "length");
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        if (readOnly()) {
+            throw bufferIsReadOnly(this);
+        }
+        length = Math.min(writableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
+        checkSet(writerOffset(), length);
+        int bytesRead = channel.read(writableBuffer().limit(length), position);
+        if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
+            skipWritable(bytesRead);
+        }
+        return bytesRead;
     }
 
     @Override

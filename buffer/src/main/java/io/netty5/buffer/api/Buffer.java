@@ -21,6 +21,7 @@ import io.netty5.buffer.api.internal.Statics;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -327,6 +328,24 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws IOException If the write-operation on the channel failed for some reason.
      */
     int transferTo(WritableByteChannel channel, int length) throws IOException;
+
+    /**
+     * Read from the given channel starting from the given position and write to this buffer.
+     * The number of bytes actually read from the channel are returned, or -1 is returned if the channel has reached
+     * the end-of-stream.
+     * No more than the given {@code length} of bytes, or the number of {@linkplain #writableBytes() writable bytes},
+     * will be read from the channel, whichever is smaller.
+     * The channel's position is not modified.
+     * The {@linkplain #writerOffset() writer-offset} of this buffer will likewise be advanced by the number of bytes
+     * read.
+     *
+     * @param channel The channel to read from.
+     * @param position The file position.
+     * @param length The maximum number of bytes to read.
+     * @return The actual number of bytes read, possibly zero, or -1 if the end-of-stream has been reached.
+     * @throws IOException If the read-operation on the channel failed for some reason.
+     */
+    int transferFrom(FileChannel channel, long position, int length) throws IOException;
 
     /**
      * Read from the given channel and write to this buffer.
