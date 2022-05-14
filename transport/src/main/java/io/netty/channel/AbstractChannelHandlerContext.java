@@ -206,6 +206,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
+        // 获得下一个 Inbound 节点的执行器
+        // 调用下一个 Inbound 节点的 Channel active 方法
         invokeChannelActive(findContextInbound(MASK_CHANNEL_ACTIVE));
         return this;
     }
@@ -227,11 +229,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelActive() {
         if (invokeHandler()) {
             try {
+                // 触发 handler 的 channelActive 方法
                 ((ChannelInboundHandler) handler()).channelActive(this);
             } catch (Throwable t) {
+                // 通知 Inbound 事件的传播，发生异常
                 invokeExceptionCaught(t);
             }
         } else {
+            // 跳过，传播 Inbound 事件给下一个节点
             fireChannelActive();
         }
     }
@@ -278,6 +283,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         ObjectUtil.checkNotNull(cause, "cause");
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
+            // Context 触发移除执行逻辑
             next.invokeExceptionCaught(cause);
         } else {
             try {
@@ -299,6 +305,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeExceptionCaught(final Throwable cause) {
         if (invokeHandler()) {
             try {
+                // 回调 handler 的异常处理方法
                 handler().exceptionCaught(this, cause);
             } catch (Throwable error) {
                 if (logger.isDebugEnabled()) {
@@ -480,13 +487,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
+        // 判断是否为合法的 Promise 对象
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
         }
 
+        // 获得下一个 Outbound 节点
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_BIND);
         EventExecutor executor = next.executor();
+        // 调用下一个 Outbound 节点的 bind 方法
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
@@ -501,13 +511,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
+        // 判断是否符合的 ChannelHandler（状态是否正常）
         if (invokeHandler()) {
             try {
+                // 调用该 ChannelHandler 的 bind 方法
                 ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
             } catch (Throwable t) {
+                // 通知 Outbound 事件的传播，发生异常
                 notifyOutboundHandlerException(t, promise);
             }
         } else {
+            // 跳过，传播 Outbound 事件给下一个节点
             bind(localAddress, promise);
         }
     }
@@ -841,6 +855,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
         ObjectUtil.checkNotNull(promise, "promise");
 
+        // 已完成且未取消
         if (promise.isDone()) {
             // Check if the promise was cancelled and if so signal that the processing of the operation
             // should not be performed.
@@ -852,20 +867,24 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
+        // channel 不一致
         if (promise.channel() != channel()) {
             throw new IllegalArgumentException(String.format(
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
 
+        // 不是默认实现
         if (promise.getClass() == DefaultChannelPromise.class) {
             return false;
         }
 
+        // VoidChannelPromise 类型校验
         if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
 
+        // CloseFuture
         if (promise instanceof AbstractChannel.CloseFuture) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
@@ -914,6 +933,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final boolean setAddComplete() {
         for (;;) {
             int oldState = handlerState;
+            // 并发场景下，该步骤可能出现线程安全问题，所以cas的方式更新状态。
             if (oldState == REMOVE_COMPLETE) {
                 return false;
             }
@@ -934,7 +954,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final void callHandlerAdded() throws Exception {
         // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
+        // 设置 AbstractChannelHandlerContext 已添加
         if (setAddComplete()) {
+            // 回调 ChannelHandler 添加完成( added )事件
             handler().handlerAdded(this);
         }
     }
@@ -942,13 +964,20 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final void callHandlerRemoved() throws Exception {
         try {
             // Only call handlerRemoved(...) if we called handlerAdded(...) before.
+            // 只有 ADD_COMPLETE 状态才能进行移除 handler 的操作
             if (handlerState == ADD_COMPLETE) {
                 handler().handlerRemoved(this);
             }
         } finally {
             // Mark the handler as removed in any case.
+            // 设置移除完成状态
             setRemoved();
         }
+    }
+
+    @Override
+    public boolean isRemoved() {
+        return handlerState == REMOVE_COMPLETE;
     }
 
     /**
@@ -966,11 +995,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public boolean isRemoved() {
-        return handlerState == REMOVE_COMPLETE;
-    }
-
-    @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
         return channel().attr(key);
     }
@@ -983,6 +1007,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private static boolean safeExecute(EventExecutor executor, Runnable runnable,
             ChannelPromise promise, Object msg, boolean lazy) {
         try {
+            // 基于 executor 执行 runnable
             if (lazy && executor instanceof AbstractEventExecutor) {
                 ((AbstractEventExecutor) executor).lazyExecute(runnable);
             } else {

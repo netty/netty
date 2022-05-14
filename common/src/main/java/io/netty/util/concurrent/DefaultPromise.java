@@ -196,10 +196,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (listener == null) {
                     break;
                 }
+                // 缓存 listener
                 addListener0(listener);
             }
         }
 
+        // 已完成，即 result 不为null
         if (isDone()) {
             notifyListeners();
         }
@@ -488,6 +490,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (executor.inEventLoop()) {
             final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
             final int stackDepth = threadLocals.futureListenerStackDepth();
+            // 记录 listener 执行的栈深度，超过指定阈值就不再执行
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
                 threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
@@ -587,6 +590,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void addListener0(GenericFutureListener<? extends Future<? super V>> listener) {
+        // 多个时通过 DefaultFutureListeners 缓存，里面包含了一个 listener 数组，并且维护了一些 listener 类型的数据
         if (listeners == null) {
             listeners = listener;
         } else if (listeners instanceof DefaultFutureListeners) {
@@ -616,6 +620,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
             if (checkNotifyWaiters()) {
+                // 通知监听器
                 notifyListeners();
             }
             return true;
