@@ -41,7 +41,14 @@ import io.netty.util.internal.TypeParameterMatcher;
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
 
+    /**
+     * 类型匹配器(传入的消息类型，是不是I的实现类)
+     */
     private final TypeParameterMatcher matcher;
+
+    /**
+     * 使用完消息，是否自动释放
+     */
     private final boolean autoRelease;
 
     /**
@@ -93,15 +100,18 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         boolean release = true;
         try {
+            // 判断是否为匹配的消息
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
+                // 处理消息（子类实现）
                 channelRead0(ctx, imsg);
             } else {
                 release = false;
                 ctx.fireChannelRead(msg);
             }
         } finally {
+            // 判断，是否要释放消息
             if (autoRelease && release) {
                 ReferenceCountUtil.release(msg);
             }

@@ -75,9 +75,11 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         // Normally this method will never be called as handlerAdded(...) should call initChannel(...) and remove
         // the handler.
+        // 初始化 Channel
         if (initChannel(ctx)) {
             // we called initChannel(...) so we need to call now pipeline.fireChannelRegistered() to ensure we not
             // miss an event.
+            // 传播 Channel Registered 事件
             ctx.pipeline().fireChannelRegistered();
 
             // We are done with init the Channel, removing all the state for the Channel now.
@@ -133,6 +135,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
                 exceptionCaught(ctx, cause);
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline();
+                // 从 pipeline 中移除当前 ChannelInitializer 实现的handler，避免重新初始化。
                 if (pipeline.context(this) != null) {
                     pipeline.remove(this);
                 }

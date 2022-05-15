@@ -91,6 +91,8 @@ public class ReadTimeoutHandler extends IdleStateHandler {
     }
 
     /**
+     * 广播读异常并关闭 channel
+     *
      * Is called when a read timeout was detected.
      */
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
