@@ -402,7 +402,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public Buffer implicitCapacityLimit(int limit) {
+    public CompositeBuffer implicitCapacityLimit(int limit) {
         checkImplicitCapacity(limit,  capacity());
         implicitCapacityLimit = limit;
         return this;

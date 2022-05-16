@@ -311,4 +311,7 @@ public interface CompositeBuffer extends Buffer {
 
     @Override
     CompositeBuffer setDouble(int woff, double value);
+
+    @Override
+    CompositeBuffer implicitCapacityLimit(int limit);
 }
