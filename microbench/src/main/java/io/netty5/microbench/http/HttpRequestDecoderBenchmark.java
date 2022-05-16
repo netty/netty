@@ -15,7 +15,8 @@
  */
 package io.netty5.microbench.http;
 
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.MemoryManager;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
@@ -91,21 +92,24 @@ public class HttpRequestDecoderBenchmark extends AbstractMicrobenchmark {
 
         final int headerLength = content.length - CONTENT_LENGTH;
 
-        // split up the header
-        for (int a = 0; a < headerLength;) {
-            int amount = fragmentSize;
-            if (a + amount > headerLength) {
-                amount = headerLength -  a;
+        try (Buffer wrappedContent = MemoryManager.unsafeWrap(content)) {
+            // split up the header
+            for (int a = 0; a < headerLength;) {
+                int amount = fragmentSize;
+                if (a + amount > headerLength) {
+                    amount = headerLength - a;
+                }
+
+                // if header is done it should produce an HttpRequest
+                channel.writeInbound(wrappedContent.readSplit(amount));
+                a += amount;
             }
 
-            // if header is done it should produce an HttpRequest
-            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount).asReadOnly());
-            a += amount;
-        }
-
-        for (int i = CONTENT_LENGTH; i > 0; i --) {
-            // Should produce HttpContent
-            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1).asReadOnly());
+            int readableBytes = wrappedContent.readableBytes();
+            for (int i = CONTENT_LENGTH; i > 0; i--) {
+                // Should produce HttpContent
+                channel.writeInbound(wrappedContent.copy(readableBytes - i, 1, true));
+            }
         }
     }
 }

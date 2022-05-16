@@ -15,9 +15,8 @@
  */
 package io.netty5.microbench.http;
 
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
@@ -47,8 +46,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-
 @State(Scope.Benchmark)
 @Fork(1)
 @Threads(1)
@@ -61,6 +58,7 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     private HttpRequest contentLengthRequest;
     private HttpRequest chunkedRequest;
     private Buffer content;
+    private BufferAllocator allocator;
     private ChannelHandlerContext context;
 
     @Param({ "true", "false" })
@@ -68,8 +66,10 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setup() {
+        allocator = pooledAllocator ? BufferAllocator.offHeapPooled() :
+                BufferAllocator.offHeapUnpooled();
         byte[] bytes = new byte[256];
-        content = preferredAllocator().allocate(bytes.length);
+        content = allocator.allocate(bytes.length);
         content.writeBytes(bytes);
         Buffer testContent = content.copy().makeReadOnly();
         HttpHeaders headersWithChunked = new DefaultHttpHeaders(false);
@@ -85,8 +85,7 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
         lastContent = new DefaultLastHttpContent(testContent, false);
 
         encoder = new HttpRequestEncoder();
-        context = new EmbeddedChannelWriteReleaseHandlerContext(pooledAllocator ? PooledByteBufAllocator.DEFAULT :
-                UnpooledByteBufAllocator.DEFAULT, encoder) {
+        context = new EmbeddedChannelWriteReleaseHandlerContext(allocator, encoder) {
             @Override
             protected void handleException(Throwable t) {
                 handleUnexpectedException(t);
@@ -98,6 +97,7 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     public void teardown() {
         content.close();
         content = null;
+        allocator.close();
     }
 
     @Benchmark
