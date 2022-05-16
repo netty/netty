@@ -148,15 +148,17 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
-    public void skipReadable(int delta) {
+    public UnsafeBuffer skipReadable(int delta) {
         checkPositiveOrZero(delta, "delta");
         readerOffset(readerOffset() + delta);
+        return this;
     }
 
     @Override
-    public void skipWritable(int delta) {
+    public UnsafeBuffer skipWritable(int delta) {
         checkPositiveOrZero(delta, "delta");
         writerOffset(writerOffset() + delta);
+        return this;
     }
 
     @Override

@@ -83,7 +83,8 @@ public interface WritableComponent {
      * Move the write-offset to indicate that the given number of bytes were written to this component.
      *
      * @param byteCount The number of bytes written to this component.
+     * @return itself.
      * @see Buffer#skipWritable(int)
      */
-    void skipWritable(int byteCount);
+    WritableComponent skipWritable(int byteCount);
 }
