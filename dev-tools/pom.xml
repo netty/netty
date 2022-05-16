@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty5-dev-tools</artifactId>
-  <version>5.0.1.Alpha2-SNAPSHOT</version>
+  <version>5.0.0.Alpha3-SNAPSHOT</version>
 
   <name>Netty5/Dev-Tools</name>
 
