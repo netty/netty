@@ -160,13 +160,6 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     @Override
-    public Buffer skipReadable(int delta) {
-        checkPositiveOrZero(delta, "delta");
-        delegate.readerIndex(delegate.readerIndex() + delta);
-        return this;
-    }
-
-    @Override
     public Buffer readerOffset(int offset) {
         delegate.readerIndex(offset);
         return this;
@@ -175,13 +168,6 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     @Override
     public int writerOffset() {
         return delegate.writerIndex();
-    }
-
-    @Override
-    public Buffer skipWritable(int delta) {
-        checkPositiveOrZero(delta, "delta");
-        delegate.writerIndex(delegate.writerIndex() + delta);
-        return this;
     }
 
     @Override

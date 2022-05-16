@@ -342,30 +342,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public int readableBytes() {
-        return writerOffset() - readerOffset();
-    }
-
-    @Override
-    public int writableBytes() {
-        return capacity() - writerOffset();
-    }
-
-    @Override
-    public CompositeBuffer skipReadable(int delta) {
-        checkPositiveOrZero(delta, "delta");
-        readerOffset(readerOffset() + delta);
-        return this;
-    }
-
-    @Override
-    public CompositeBuffer skipWritable(int delta) {
-        checkPositiveOrZero(delta, "delta");
-        writerOffset(writerOffset() + delta);
-        return this;
-    }
-
-    @Override
     public CompositeBuffer fill(byte value) {
         if (closed) {
             throw bufferIsClosed(this);
