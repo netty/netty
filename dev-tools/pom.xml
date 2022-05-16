@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty5-dev-tools</artifactId>
-  <version>5.0.0.Alpha2</version>
+  <version>5.0.0.Alpha2-SNAPSHOT</version>
 
   <name>Netty5/Dev-Tools</name>
 
@@ -50,8 +50,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <scm>
-    <tag>netty-5.0.0.Alpha2</tag>
-  </scm>
 </project>
