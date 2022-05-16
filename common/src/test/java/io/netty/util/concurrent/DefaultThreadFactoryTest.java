@@ -16,6 +16,7 @@
 
 package io.netty.util.concurrent;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -31,31 +32,38 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultThreadFactoryTest {
+
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDescendantThreadGroups() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
+        boolean securityManagerSet = false;
         try {
-            // install security manager that only allows parent thread groups to mess with descendant thread groups
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public void checkAccess(ThreadGroup g) {
-                    final ThreadGroup source = Thread.currentThread().getThreadGroup();
+            try {
+                // install security manager that only allows parent thread groups to mess with descendant thread groups
+                System.setSecurityManager(new SecurityManager() {
+                    @Override
+                    public void checkAccess(ThreadGroup g) {
+                        final ThreadGroup source = Thread.currentThread().getThreadGroup();
 
-                    if (source != null) {
-                        if (!source.parentOf(g)) {
-                            throw new SecurityException("source group is not an ancestor of the target group");
+                        if (source != null) {
+                            if (!source.parentOf(g)) {
+                                throw new SecurityException("source group is not an ancestor of the target group");
+                            }
+                            super.checkAccess(g);
                         }
-                        super.checkAccess(g);
                     }
-                }
 
-                // so we can restore the security manager at the end of the test
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
+                    // so we can restore the security manager at the end of the test
+                    @Override
+                    public void checkPermission(Permission perm) {
+                    }
+                });
+            } catch (UnsupportedOperationException e) {
+                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
+            }
+            securityManagerSet = true;
 
             // holder for the thread factory, plays the role of a global singleton
             final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
@@ -114,7 +122,9 @@ public class DefaultThreadFactoryTest {
 
             assertEquals(2, counter.get());
         } finally {
-            System.setSecurityManager(current);
+            if (securityManagerSet) {
+                System.setSecurityManager(current);
+            }
         }
     }
 
@@ -141,19 +151,26 @@ public class DefaultThreadFactoryTest {
     public void testDefaultThreadFactoryInheritsThreadGroupFromSecurityManager() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
+        boolean securityManagerSet = false;
         try {
             final ThreadGroup sticky = new ThreadGroup("sticky");
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public ThreadGroup getThreadGroup() {
-                    return sticky;
-                }
+            try {
+                System.setSecurityManager(new SecurityManager() {
+                    @Override
+                    public ThreadGroup getThreadGroup() {
+                        return sticky;
+                    }
 
-                // so we can restore the security manager at the end of the test
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
+                    // so we can restore the security manager at the end of the test
+                    @Override
+                    public void checkPermission(Permission perm) {
+                    }
+                });
+            } catch (UnsupportedOperationException e) {
+                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
+            }
+            securityManagerSet = true;
+
             runStickyThreadGroupTest(
                     new Callable<DefaultThreadFactory>() {
                         @Override
@@ -163,7 +180,9 @@ public class DefaultThreadFactoryTest {
                     },
                     sticky);
         } finally {
-            System.setSecurityManager(current);
+            if (securityManagerSet) {
+                System.setSecurityManager(current);
+            }
         }
     }
 

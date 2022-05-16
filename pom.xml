@@ -182,6 +182,28 @@
       </properties>
     </profile>
     <profile>
+      <id>java18</id>
+      <activation>
+        <jdk>18</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- This is the minimum supported by Java12+ -->
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
+      </properties>
+    </profile>
+    <profile>
       <id>java17</id>
       <activation>
         <jdk>17</jdk>
