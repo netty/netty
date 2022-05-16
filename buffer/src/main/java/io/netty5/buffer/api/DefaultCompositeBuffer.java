@@ -352,15 +352,17 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public void skipReadable(int delta) {
+    public CompositeBuffer skipReadable(int delta) {
         checkPositiveOrZero(delta, "delta");
         readerOffset(readerOffset() + delta);
+        return this;
     }
 
     @Override
-    public void skipWritable(int delta) {
+    public CompositeBuffer skipWritable(int delta) {
         checkPositiveOrZero(delta, "delta");
         writerOffset(writerOffset() + delta);
+        return this;
     }
 
     @Override
@@ -2129,10 +2131,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         @Override
-        public void skipReadable(int byteCount) {
+        public ReadableComponent skipReadable(int byteCount) {
             ((ReadableComponent) currentComponent).skipReadable(byteCount);
             compositeBuffer.readerOffset(pastOffset + currentReadSkip + byteCount);
             currentReadSkip += byteCount; // This needs to be after the bounds-checks.
+            return this;
         }
 
         @Override
@@ -2171,10 +2174,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         @Override
-        public void skipWritable(int byteCount) {
+        public WritableComponent skipWritable(int byteCount) {
             ((WritableComponent) currentComponent).skipWritable(byteCount);
             compositeBuffer.writerOffset(pastOffset + currentWriteSkip + byteCount);
             currentWriteSkip += byteCount; // This needs to be after the bounds-checks.
+            return this;
         }
 
         @Override

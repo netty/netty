@@ -108,7 +108,8 @@ public interface ReadableComponent {
      * Move the read-offset to indicate that the given number of bytes were read from this component.
      *
      * @param byteCount The number of bytes read from this component.
+     * @return itself.
      * @see Buffer#skipReadable(int)
      */
-    void skipReadable(int byteCount);
+    ReadableComponent skipReadable(int byteCount);
 }

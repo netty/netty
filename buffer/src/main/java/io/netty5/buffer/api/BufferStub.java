@@ -54,8 +54,9 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public void skipReadable(int delta) {
+    public Buffer skipReadable(int delta) {
         delegate.skipReadable(delta);
+        return this;
     }
 
     @Override
@@ -70,8 +71,9 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public void skipWritable(int delta) {
+    public Buffer skipWritable(int delta) {
         delegate.skipWritable(delta);
+        return this;
     }
 
     @Override

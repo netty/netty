@@ -147,6 +147,12 @@ public interface CompositeBuffer extends Buffer {
     CompositeBuffer writerOffset(int offset);
 
     @Override
+    CompositeBuffer skipReadable(int delta);
+
+    @Override
+    CompositeBuffer skipWritable(int delta);
+
+    @Override
     CompositeBuffer fill(byte value);
 
     @Override
