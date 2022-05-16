@@ -32,7 +32,10 @@ import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.Statics.UncheckedLoadByte;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.UnsafeAccess;
+import sun.misc.Unsafe;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
@@ -53,11 +56,13 @@ import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
+@UnsafeAccess
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
+    private static final Unsafe UNSAFE = (Unsafe) PlatformDependent.unwrapUnsafeOrNull();
     private UnsafeMemory memory; // The memory liveness; monitored by Cleaner.
     private Object base; // On-heap address reference object, or null for off-heap.
     private long baseOffset; // Offset of this buffer into the memory.
@@ -424,6 +429,25 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         } finally {
             Reference.reachabilityFence(memory);
         }
+    }
+
+    @Override
+    public int bytesBefore(Buffer needle) {
+        try {
+            UncheckedLoadByte uncheckedLoadByte = UnsafeBuffer::uncheckedLoadByte;
+            return Statics.bytesBefore(this, uncheckedLoadByte,
+                                       needle, needle instanceof UnsafeBuffer ? uncheckedLoadByte : null);
+        } finally {
+            Reference.reachabilityFence(memory);
+        }
+    }
+
+    /**
+     * Used by {@link #bytesBefore(Buffer)}.
+     */
+    private static byte uncheckedLoadByte(Buffer buffer, int offset) {
+        UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
+        return UNSAFE.getByte(unsafeBuffer.base, unsafeBuffer.address + offset);
     }
 
     @Override
