@@ -39,7 +39,7 @@ import static java.lang.invoke.MethodHandles.lookup;
  *
  * @param <T> The concrete {@link BufferHolder} type.
  */
-public abstract class BufferHolder<T extends BufferHolder<T>> implements Resource<T> {
+public abstract class BufferHolder<T extends Resource<T>> implements Resource<T> {
     private static final VarHandle BUF = Statics.findVarHandle(lookup(), BufferHolder.class, "buf", Buffer.class);
     private Buffer buf;
 
