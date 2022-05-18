@@ -21,9 +21,11 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.api.internal.ArcDrop;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SystemPropertyUtil;
 
 import java.lang.ref.Cleaner;
 import java.util.function.Function;
@@ -39,6 +41,9 @@ import static io.netty5.buffer.api.internal.Statics.convert;
  * {@link io.netty5.buffer.api.BufferAllocator}.
  */
 public final class UnsafeMemoryManager implements MemoryManager {
+    private static final boolean FREE_IMMEDIATELY = SystemPropertyUtil.getBoolean(
+            "io.netty5.buffer.api.unsafe.UnsafeMemoryManager.freeDirectMemoryImmediately", true);
+
     public UnsafeMemoryManager() {
         if (!PlatformDependent.hasUnsafe()) {
             UnsupportedOperationException notSupported = new UnsupportedOperationException("Unsafe is not available.");
@@ -59,13 +64,19 @@ public final class UnsafeMemoryManager implements MemoryManager {
         final UnsafeMemory memory;
         final int size32 = Math.toIntExact(size);
         Cleaner cleaner = Statics.CLEANER;
+        Drop<Buffer> drop = Statics.NO_OP_DROP;
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             base = null;
             address = PlatformDependent.allocateMemory(size);
             Statics.MEM_USAGE_NATIVE.add(size);
             PlatformDependent.setMemory(address, size, (byte) 0);
             memory = new UnsafeMemory(base, address, size32);
-            cleaner.register(memory, new FreeAddress(address, size32));
+            FreeAddress freeAddress = new FreeAddress(address, size32);
+            if (FREE_IMMEDIATELY) {
+                drop = ArcDrop.wrap(freeAddress);
+            } else {
+                cleaner.register(memory, freeAddress);
+            }
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
             base = new byte[size32];
             address = PlatformDependent.byteArrayBaseOffset();
@@ -77,18 +88,13 @@ public final class UnsafeMemoryManager implements MemoryManager {
         } else {
             throw new IllegalArgumentException("Unknown allocation type: " + allocationType);
         }
-        return createBuffer(memory, size32, control, dropDecorator.apply(drop()));
+        return createBuffer(memory, size32, control, dropDecorator.apply(drop));
     }
 
     @Override
     public Buffer allocateConstChild(Buffer readOnlyConstParent) {
         UnsafeBuffer buf = (UnsafeBuffer) readOnlyConstParent;
         return buf.newConstChild();
-    }
-
-    private static Drop<Buffer> drop() {
-        // We cannot reliably drop unsafe memory. We have to rely on the cleaner to do that.
-        return Statics.NO_OP_DROP;
     }
 
     @Override
