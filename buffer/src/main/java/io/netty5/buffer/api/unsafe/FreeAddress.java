@@ -15,10 +15,12 @@
  */
 package io.netty5.buffer.api.unsafe;
 
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.internal.PlatformDependent;
 
-class FreeAddress implements Runnable {
+class FreeAddress implements Runnable, Drop<Buffer> {
     private final long address;
     private final int size;
 
@@ -31,5 +33,24 @@ class FreeAddress implements Runnable {
     public void run() {
         PlatformDependent.freeMemory(address);
         Statics.MEM_USAGE_NATIVE.add(-size);
+    }
+
+    @Override
+    public void drop(Buffer obj) {
+        run();
+    }
+
+    @Override
+    public Drop<Buffer> fork() {
+        throw new IllegalStateException(this + " cannot fork. Must be guarded by an ArcDrop.");
+    }
+
+    @Override
+    public void attach(Buffer obj) {
+    }
+
+    @Override
+    public String toString() {
+        return String.format("FreeAddress(0x%x, %s bytes)", address, size);
     }
 }
