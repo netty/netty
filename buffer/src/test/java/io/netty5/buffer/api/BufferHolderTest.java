@@ -35,6 +35,29 @@ class BufferHolderTest {
         }
     }
 
+    @Test
+    public void bufferHolderInterface() {
+        Buffer buf = onHeapUnpooled().allocate(0);
+        try (Example first = new DefaultExample(buf)) {
+            Example second = first.send().receive();
+            second.close();
+        }
+    }
+
+    private interface Example extends Resource<Example> {
+    }
+
+    private final class DefaultExample extends BufferHolder<Example> implements Example {
+        protected DefaultExample(Buffer buf) {
+            super(buf);
+        }
+
+        @Override
+        protected Example receive(Buffer buf) {
+            return new DefaultExample(buf);
+        }
+    }
+
     @SuppressWarnings({ "SimplifiableJUnitAssertion", "rawtypes", "EqualsBetweenInconvertibleTypes" })
     @Test
     public void testDifferentClassesAreNotEqual() {
