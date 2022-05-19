@@ -130,7 +130,7 @@ class Hidden {
                     "parse");
 
             builder.allowBlockingCallsInside(
-                    "io.netty5.util.NetUil$SoMaxConnAction",
+                    "io.netty5.util.NetUtil$SoMaxConnAction",
                     "run");
 
             builder.nonBlockingThreadPredicate(p -> thread ->
