@@ -488,10 +488,15 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Determine if the {@code PREFACE} should be automatically flushed when the {@link Channel} becomes active or not.
+     * Determine if the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">Preface</a>
+     * should be automatically flushed when the {@link Channel} becomes active or not.
+     * <p>
+     * Client may choose to opt-out from this automatic behavior and manage flush manually if it's ready to send
+     * request frames immediately after the preface. It may help to avoid unnecessary latency.
      *
      * @param flushPreface {@code true} to automatically flush, {@code false otherwise}.
      * @return {@code this}.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">HTTP/2 Connection Preface</a>
      */
     protected B flushPreface(boolean flushPreface) {
         this.flushPreface = flushPreface;
@@ -499,7 +504,14 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     *  Determine if the {@code PREFACE} should be automatically flushed when the {@link Channel} becomes active or not.
+     * Determine if the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">Preface</a>
+     * should be automatically flushed when the {@link Channel} becomes active or not.
+     * <p>
+     * Client may choose to opt-out from this automatic behavior and manage flush manually if it's ready to send
+     * request frames immediately after the preface. It may help to avoid unnecessary latency.
+     *
+     * @return {@code true} if automatically flushed.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">HTTP/2 Connection Preface</a>
      */
     protected boolean flushPreface() {
         return flushPreface;
