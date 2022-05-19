@@ -28,6 +28,8 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+
 /**
  * A life cycled buffer of memory, with separate reader and writer offsets.
  * <p>
@@ -138,7 +140,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws IllegalArgumentException if the given delta is negative.
      * @throws BufferClosedException if this buffer is closed.
      */
-    Buffer skipReadable(int delta);
+    default Buffer skipReadable(int delta) {
+        checkPositiveOrZero(delta, "delta");
+        readerOffset(readerOffset() + delta);
+        return this;
+    }
 
     /**
      * Set the reader offset. Make the next read happen from the given offset into the buffer.
@@ -168,7 +174,11 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this buffer is closed.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
-    Buffer skipWritable(int delta);
+    default Buffer skipWritable(int delta) {
+        checkPositiveOrZero(delta, "delta");
+        writerOffset(writerOffset() + delta);
+        return this;
+    }
 
     /**
      * Set the writer offset. Make the next write happen at the given offset.
@@ -185,12 +195,16 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     /**
      * Returns the number of readable bytes which is equal to {@code (writerOffset() - readerOffset())}.
      */
-    int readableBytes();
+    default int readableBytes() {
+        return writerOffset() - readerOffset();
+    }
 
     /**
      * Returns the number of writable bytes which is equal to {@code (capacity() - writerOffset())}.
      */
-    int writableBytes();
+    default int writableBytes() {
+        return capacity() - writerOffset();
+    }
 
     /**
      * Fills the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link
