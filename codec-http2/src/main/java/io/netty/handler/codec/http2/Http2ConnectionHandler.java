@@ -259,7 +259,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // The channel just became active - send the connection preface to the remote endpoint.
             sendPreface(ctx);
 
-            if (flushPreface) {
+            if (flushPreface && ctx.pipeline().get(SslHandler.class) == null) {
                 // As we don't know if any channelReadComplete() events will be triggered at all we need to ensure we
                 // also flush. Otherwise the remote peer might never see the preface / settings frame.
                 // See https://github.com/netty/netty/issues/12089
