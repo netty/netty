@@ -21,13 +21,13 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.unix.DomainDatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.AbstractClientSocketTest;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.FileNotFoundException;
 import java.util.List;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -53,7 +53,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
                                       .bind(KQueueSocketTestPermutation.newSocketAddress()).get();
                 ch.writeAndFlush(new DomainDatagramPacket(
-                        ch.bufferAllocator().copyOf("test".getBytes(CharsetUtil.US_ASCII)),
+                        ch.bufferAllocator().copyOf("test", US_ASCII),
                         KQueueSocketTestPermutation.newSocketAddress())).sync();
                 fail("Expected FileNotFoundException");
             } catch (Exception e) {

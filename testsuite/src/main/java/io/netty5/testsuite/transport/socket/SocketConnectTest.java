@@ -170,7 +170,7 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     private static Object writeAsciiBuffer(Channel sc, String seq) {
-        return DefaultBufferAllocators.preferredAllocator().copyOf(seq.getBytes(US_ASCII));
+        return DefaultBufferAllocators.preferredAllocator().copyOf(seq, US_ASCII);
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {

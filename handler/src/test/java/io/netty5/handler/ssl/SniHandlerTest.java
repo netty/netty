@@ -553,7 +553,7 @@ public class SniHandlerTest {
                                    sslContext.newEngine(offHeapAllocator(), sniHost, -1)))
                            .connect(address).get();
 
-                    cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!".getBytes(UTF_8)))
+                    cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!", UTF_8))
                             .syncUninterruptibly();
 
                     // Notice how the server's SslContext refCnt is 2 as it is incremented when the SSLEngine is created

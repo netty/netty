@@ -22,6 +22,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +43,25 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
                 assertThat(buffer.readableBytes()).isEqualTo(array.length);
                 for (int i = 0; i < array.length; i++) {
                     byte b = array[i];
+                    byte a = buffer.readByte();
+                    if (b != a) {
+                        fail("Wrong contents at offset %s. Expected %s but was %s.", i, b, a);
+                    }
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfStringMustContainContents(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            String str = "abcdef";
+            try (Buffer buffer = allocator.copyOf(str, StandardCharsets.US_ASCII)) {
+                assertThat(buffer.capacity()).isEqualTo(str.length());
+                assertThat(buffer.readableBytes()).isEqualTo(str.length());
+                for (int i = 0; i < str.length(); i++) {
+                    byte b = (byte) str.charAt(i);
                     byte a = buffer.readByte();
                     if (b != a) {
                         fail("Wrong contents at offset %s. Expected %s but was %s.", i, b, a);
@@ -76,6 +97,53 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void copyOfStringMustNotBeReadOnly(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            String str = "abcdef";
+            try (Buffer buffer = allocator.copyOf(str, StandardCharsets.US_ASCII)) {
+                assertFalse(buffer.readOnly());
+                buffer.ensureWritable(Long.BYTES, 1, true);
+                buffer.writeLong(0x0102030405060708L);
+                assertThat(buffer.capacity()).isGreaterThanOrEqualTo(str.length() + Long.BYTES);
+                assertThat(buffer.readableBytes()).isEqualTo(str.length() + Long.BYTES);
+                for (int i = 0; i < str.length(); i++) {
+                    byte b = (byte) str.charAt(i);
+                    byte a = buffer.readByte();
+                    if (b != a) {
+                        fail("Wrong contents at offset %s. Expected %s but was %s.", i, b, a);
+                    }
+                }
+                assertEquals(0x0102030405060708L, buffer.readLong());
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfStringMustMustUseCharset(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            String str = "Yum! 美味的西瓜"; // Delicious watermelon.
+            Charset[] charsets = { StandardCharsets.UTF_8, StandardCharsets.UTF_16LE, StandardCharsets.UTF_16BE };
+
+            for (Charset charset : charsets) {
+                byte[] expected = str.getBytes(charset);
+                try (Buffer buffer = allocator.copyOf(str, charset)) {
+                    for (int i = 0; i < expected.length; i++) {
+                        byte b = expected[i];
+                        byte a = buffer.readByte();
+                        if (b != a) {
+                            fail("Wrong contents at offset %s. Expected %s but was %s, using charset %s.",
+                                 i, b, a, charset);
+                        }
+                    }
+                    assertThat(buffer.readableBytes()).isZero();
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void copyOfByteArrayMustNotReflectChangesToArray(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             byte[] array = { 1, 1, 1, 1, 1, 1, 1, 1 };
@@ -91,6 +159,18 @@ public class BufferCopyAllocateTest extends BufferTestSupport {
     public void copyOfEmptyByteArrayMustProduceEmptyBuffer(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.copyOf(EmptyArrays.EMPTY_BYTES)) {
+            assertThat(buffer.capacity()).isZero();
+            assertTrue(buffer.isAccessible());
+            buffer.ensureWritable(4);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(4);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void copyOfEmptyStringMustProduceEmptyBuffer(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.copyOf("", StandardCharsets.US_ASCII)) {
             assertThat(buffer.capacity()).isZero();
             assertTrue(buffer.isAccessible());
             buffer.ensureWritable(4);

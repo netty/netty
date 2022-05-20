@@ -18,7 +18,7 @@ package io.netty5.example.http.websocketx.server;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 
-import java.nio.charset.StandardCharsets;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * Generates the demo HTML page which is served at http://localhost:8080/
@@ -28,7 +28,7 @@ public final class WebSocketServerIndexPage {
     private static final String NEWLINE = "\r\n";
 
     public static Buffer getContent(BufferAllocator allocator, String webSocketLocation) {
-        final byte[] content = ("<html><head><title>Web Socket Test</title></head>" + NEWLINE +
+        final String content = "<html><head><title>Web Socket Test</title></head>" + NEWLINE +
                 "<body>" + NEWLINE +
                 "<script type=\"text/javascript\">" + NEWLINE +
                 "var socket;" + NEWLINE +
@@ -70,8 +70,8 @@ public final class WebSocketServerIndexPage {
                 "<textarea id=\"responseText\" style=\"width:500px;height:300px;\"></textarea>" + NEWLINE +
                 "</form>" + NEWLINE +
                 "</body>" + NEWLINE +
-                "</html>" + NEWLINE).getBytes(StandardCharsets.US_ASCII);
-        return allocator.copyOf(content);
+                "</html>" + NEWLINE;
+        return allocator.copyOf(content, US_ASCII);
     }
 
     private WebSocketServerIndexPage() {

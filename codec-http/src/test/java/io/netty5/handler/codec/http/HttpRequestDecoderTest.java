@@ -388,9 +388,9 @@ public class HttpRequestDecoderTest {
     private void testHeaderNameStartsWithControlChar(int controlChar) {
         Buffer requestBuffer = preferredAllocator().allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
-                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
+                "Host: netty.io\r\n", US_ASCII);
         requestBuffer.writeByte((byte) controlChar);
-        requestBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        requestBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", US_ASCII);
         testInvalidHeaders0(requestBuffer);
     }
 
@@ -422,10 +422,10 @@ public class HttpRequestDecoderTest {
     private void testHeaderNameEndsWithControlChar(int controlChar) {
         Buffer requestBuffer = preferredAllocator().allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
-                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
-        requestBuffer.writeCharSequence("Transfer-Encoding", CharsetUtil.US_ASCII);
+                "Host: netty.io\r\n", US_ASCII);
+        requestBuffer.writeCharSequence("Transfer-Encoding", US_ASCII);
         requestBuffer.writeByte((byte) controlChar);
-        requestBuffer.writeCharSequence(": chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        requestBuffer.writeCharSequence(": chunked\r\n\r\n", US_ASCII);
         testInvalidHeaders0(requestBuffer);
     }
 
@@ -552,12 +552,12 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testHttpMessageDecoderResult() {
-        byte[] requestStr = ("PUT /some/path HTTP/1.1\r\n" +
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
                 "Content-Length: 11\r\n" +
                 "Connection: close\r\n\r\n" +
-                "Lorem ipsum").getBytes(US_ASCII);
+                "Lorem ipsum";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(requestStr, US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isSuccess());
         assertThat(request.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
@@ -570,9 +570,8 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
-    private static void testInvalidHeaders0(String requestStr) {
-        byte[] request = requestStr.getBytes(US_ASCII);
-        testInvalidHeaders0(preferredAllocator().copyOf(request));
+    private static void testInvalidHeaders0(String request) {
+        testInvalidHeaders0(preferredAllocator().copyOf(request, US_ASCII));
     }
 
     private static void testInvalidHeaders0(Buffer requestBuffer) {

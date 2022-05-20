@@ -172,7 +172,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         String requestString = "GET / HTTP/1.1\r\n" +
                          "Host: example.com\r\n\r\n";
-        Buffer inbound = onHeapAllocator().copyOf(requestString.getBytes(CharsetUtil.US_ASCII));
+        Buffer inbound = onHeapAllocator().copyOf(requestString, CharsetUtil.US_ASCII);
 
         assertTrue(channel.writeInbound(inbound));
 
@@ -245,7 +245,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     private void validateClearTextUpgrade(String upgradeString) {
         setUpServerChannel();
 
-        Buffer upgrade = onHeapAllocator().copyOf(upgradeString.getBytes(CharsetUtil.US_ASCII));
+        Buffer upgrade = onHeapAllocator().copyOf(upgradeString, CharsetUtil.US_ASCII);
 
         assertFalse(channel.writeInbound(upgrade));
 

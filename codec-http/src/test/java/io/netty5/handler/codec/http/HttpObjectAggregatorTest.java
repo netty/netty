@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResultProvider;
@@ -26,12 +25,13 @@ import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.CompositeBuffer.isComposite;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -53,10 +53,8 @@ public class HttpObjectAggregatorTest {
 
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         message.headers().set(of("X-Test"), true);
-        final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         HttpContent<?> chunk3 = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
         assertFalse(embedder.writeInbound(message));
@@ -93,10 +91,8 @@ public class HttpObjectAggregatorTest {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
         message.headers().set(of("X-Test"), true);
         HttpUtil.setTransferEncodingChunked(message, true);
-        final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
         LastHttpContent<?> trailer = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         trailer.trailingHeaders().set(of("X-Trailer"), true);
@@ -122,10 +118,8 @@ public class HttpObjectAggregatorTest {
     public void testOversizedRequest() {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(4));
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
-        final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         final HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         assertFalse(embedder.writeInbound(message));
@@ -146,9 +140,9 @@ public class HttpObjectAggregatorTest {
     public void testOversizedRequestWithContentLengthAndDecoder() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(4, false));
-        assertFalse(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "PUT /upload HTTP/1.1\r\n" +
-                        "Content-Length: 5\r\n\r\n", CharsetUtil.US_ASCII)));
+        assertFalse(embedder.writeInbound(embedder.bufferAllocator().copyOf("PUT /upload HTTP/1.1\r\n" +
+                                                                            "Content-Length: 5\r\n\r\n",
+                                                                            US_ASCII)));
 
         assertNull(embedder.readInbound());
 
@@ -165,9 +159,9 @@ public class HttpObjectAggregatorTest {
 
         assertNull(embedder.readOutbound());
 
-        assertFalse(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "PUT /upload HTTP/1.1\r\n" +
-                        "Content-Length: 2\r\n\r\n", CharsetUtil.US_ASCII)));
+        assertFalse(embedder.writeInbound(embedder.bufferAllocator().copyOf("PUT /upload HTTP/1.1\r\n" +
+                                                                            "Content-Length: 2\r\n\r\n",
+                                                                            US_ASCII)));
 
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
@@ -177,9 +171,9 @@ public class HttpObjectAggregatorTest {
 
         assertTrue(embedder.isOpen());
 
-        assertFalse(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(), new byte[] { 1 })));
+        assertFalse(embedder.writeInbound(embedder.bufferAllocator().copyOf(new byte[] { 1 })));
         assertNull(embedder.readOutbound());
-        assertTrue(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(), new byte[] { 2 })));
+        assertTrue(embedder.writeInbound(embedder.bufferAllocator().copyOf(new byte[] { 2 })));
         assertNull(embedder.readOutbound());
 
         FullHttpRequest request = embedder.readInbound();
@@ -281,10 +275,8 @@ public class HttpObjectAggregatorTest {
         final EmbeddedChannel embedder =
                 new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(4));
         HttpResponse message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -308,10 +300,8 @@ public class HttpObjectAggregatorTest {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         message.headers().set(of("X-Test"), true);
         message.headers().set(of("Transfer-Encoding"), of("Chunked"));
-        final byte[] test = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(test));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
         HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
         assertFalse(embedder.writeInbound(message));
@@ -334,7 +324,7 @@ public class HttpObjectAggregatorTest {
     public void testBadRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(1024 * 1024));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().copyOf("GET / HTTP/1.0 with extra\r\n", UTF_8));
         Object inbound = ch.readInbound();
         assertThat(inbound, is(instanceOf(FullHttpRequest.class)));
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
@@ -346,7 +336,7 @@ public class HttpObjectAggregatorTest {
     public void testBadResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(1024 * 1024));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(ch.bufferAllocator().copyOf("HTTP/1.0 BAD_CODE Bad Server\r\n", UTF_8));
         Object inbound = ch.readInbound();
         assertThat(inbound, is(instanceOf(FullHttpResponse.class)));
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
@@ -363,10 +353,8 @@ public class HttpObjectAggregatorTest {
         HttpUtil.set100ContinueExpected(message, true);
         HttpUtil.setContentLength(message, 16);
 
-        final byte[] some = "some".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(some));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("some", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         // Send a request with 100-continue + large Content-Length header value.
@@ -417,10 +405,10 @@ public class HttpObjectAggregatorTest {
         }
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), aggregator);
 
-        assertFalse(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "GET / HTTP/1.1\r\n" +
-                        "Expect: chocolate=yummy\r\n" +
-                        "Content-Length: 100\r\n\r\n", CharsetUtil.US_ASCII)));
+        assertFalse(embedder.writeInbound(embedder.bufferAllocator().copyOf("GET / HTTP/1.1\r\n" +
+                                                                            "Expect: chocolate=yummy\r\n" +
+                                                                            "Content-Length: 100\r\n\r\n",
+                                                                            US_ASCII)));
         assertNull(embedder.readInbound());
 
         final FullHttpResponse response = embedder.readOutbound();
@@ -435,8 +423,8 @@ public class HttpObjectAggregatorTest {
             assertTrue(embedder.isOpen());
 
             // the decoder should be reset by the aggregator at this point and be able to decode the next request
-            assertTrue(embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                    "GET / HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII)));
+            assertTrue(embedder.writeInbound(
+                    embedder.bufferAllocator().copyOf("GET / HTTP/1.1\r\n\r\n", US_ASCII)));
 
             final FullHttpRequest request = embedder.readInbound();
             assertThat(request.method(), is(HttpMethod.GET));
@@ -452,10 +440,9 @@ public class HttpObjectAggregatorTest {
     public void testValidRequestWith100ContinueAndDecoder() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(100));
-        embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-            "GET /upload HTTP/1.1\r\n" +
-                "Expect: 100-continue\r\n" +
-                "Content-Length: 0\r\n\r\n", CharsetUtil.US_ASCII));
+        embedder.writeInbound(embedder.bufferAllocator().copyOf("GET /upload HTTP/1.1\r\n" +
+                                                                "Expect: 100-continue\r\n" +
+                                                                "Content-Length: 0\r\n\r\n", US_ASCII));
 
         FullHttpResponse response = embedder.readOutbound();
         assertEquals(HttpResponseStatus.CONTINUE, response.status());
@@ -470,10 +457,9 @@ public class HttpObjectAggregatorTest {
     public void testOversizedRequestWith100ContinueAndDecoder() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(4));
-        embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "PUT /upload HTTP/1.1\r\n" +
-                        "Expect: 100-continue\r\n" +
-                        "Content-Length: 100\r\n\r\n", CharsetUtil.US_ASCII));
+        embedder.writeInbound(embedder.bufferAllocator().copyOf("PUT /upload HTTP/1.1\r\n" +
+                                                                "Expect: 100-continue\r\n" +
+                                                                "Content-Length: 100\r\n\r\n", US_ASCII));
 
         assertNull(embedder.readInbound());
 
@@ -485,8 +471,8 @@ public class HttpObjectAggregatorTest {
         assertTrue(embedder.isOpen());
 
         // The decoder should be reset by the aggregator at this point and be able to decode the next request.
-        embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "GET /max-upload-size HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII));
+        embedder.writeInbound(
+                embedder.bufferAllocator().copyOf("GET /max-upload-size HTTP/1.1\r\n\r\n", US_ASCII));
 
         FullHttpRequest request = embedder.readInbound();
         assertThat(request.method(), is(HttpMethod.GET));
@@ -501,10 +487,9 @@ public class HttpObjectAggregatorTest {
     public void testOversizedRequestWith100ContinueAndDecoderCloseConnection() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(),
                 new HttpObjectAggregator<DefaultHttpContent>(4, true));
-        embedder.writeInbound(copiedBuffer(embedder.bufferAllocator(),
-                "PUT /upload HTTP/1.1\r\n" +
-                        "Expect: 100-continue\r\n" +
-                        "Content-Length: 100\r\n\r\n", CharsetUtil.US_ASCII));
+        embedder.writeInbound(embedder.bufferAllocator().copyOf("PUT /upload HTTP/1.1\r\n" +
+                                                                "Expect: 100-continue\r\n" +
+                                                                "Content-Length: 100\r\n\r\n", US_ASCII));
 
         assertNull(embedder.readInbound());
 
@@ -527,10 +512,8 @@ public class HttpObjectAggregatorTest {
         HttpUtil.set100ContinueExpected(message, true);
         HttpUtil.setContentLength(message, 16);
 
-        final byte[] some = "some".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf(some));
-        final byte[] test2 = "test".getBytes(StandardCharsets.US_ASCII);
-        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf(test2));
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("some", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         // Send a request with 100-continue + large Content-Length header value.
@@ -588,7 +571,7 @@ public class HttpObjectAggregatorTest {
         try {
             // Aggregate: POST
             HttpRequest request1 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-            final byte[] data = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+            final byte[] data = "Hello, World!".getBytes(UTF_8);
             HttpContent<?> content1 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             request1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
@@ -651,8 +634,8 @@ public class HttpObjectAggregatorTest {
         try {
             // Aggregate: text/plain
             HttpResponse response1 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            final byte[] data = "Hello, World!".getBytes(StandardCharsets.UTF_8);
-            HttpContent<?> content1 = new DefaultHttpContent(preferredAllocator().copyOf(data));
+            HttpContent<?> content1 = new DefaultHttpContent(preferredAllocator().copyOf(
+                    "Hello, World!", UTF_8));
             response1.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
             assertTrue(channel.writeInbound(response1, content1,
@@ -668,8 +651,8 @@ public class HttpObjectAggregatorTest {
 
             // Don't aggregate: application/json
             HttpResponse response2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            final byte[] data2 = "{key: 'value'}".getBytes(StandardCharsets.UTF_8);
-            HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(data2));
+            HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(
+                    "{key: 'value'}", UTF_8));
             response2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 
             try {
@@ -689,13 +672,5 @@ public class HttpObjectAggregatorTest {
         } finally {
           channel.close();
         }
-    }
-
-    private static Buffer copiedBuffer(BufferAllocator allocator, String data, Charset charset) {
-        return copiedBuffer(allocator, data.getBytes(charset));
-    }
-
-    private static Buffer copiedBuffer(BufferAllocator allocator, byte[] bytes) {
-        return allocator.copyOf(bytes);
     }
 }

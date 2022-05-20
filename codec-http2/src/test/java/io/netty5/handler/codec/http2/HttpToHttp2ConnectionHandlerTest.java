@@ -357,7 +357,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testInvalidStreamId() throws Exception {
         bootstrapEnv(2, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, POST, "/foo", preferredAllocator().copyOf("foobar".getBytes(UTF_8)));
+                HTTP_1_1, POST, "/foo", preferredAllocator().copyOf("foobar", UTF_8));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
@@ -384,7 +384,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         bootstrapEnv(3, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
-                preferredAllocator().copyOf(text.getBytes(UTF_8)));
+                preferredAllocator().copyOf(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example-origin.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -422,7 +422,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         bootstrapEnv(4, 1, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
-                preferredAllocator().copyOf(text.getBytes(UTF_8)));
+                preferredAllocator().copyOf(text, UTF_8));
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
@@ -482,9 +482,9 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         final DefaultHttpContent httpContent = new DefaultHttpContent(
-                preferredAllocator().copyOf(text.getBytes(UTF_8)));
+                preferredAllocator().copyOf(text, UTF_8));
         final LastHttpContent<?> lastHttpContent = new DefaultLastHttpContent(
-                preferredAllocator().copyOf(text2.getBytes(StandardCharsets.UTF_8)));
+                preferredAllocator().copyOf(text2, UTF_8));
 
         lastHttpContent.trailingHeaders().add(of("trailing"), of("bar"));
 

@@ -191,7 +191,7 @@ public class OcspTest {
         ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!".getBytes(UTF_8)));
+                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!", UTF_8));
                 ctx.fireChannelActive();
             }
         };
@@ -284,7 +284,7 @@ public class OcspTest {
         ChannelHandler serverHandler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!".getBytes(UTF_8)));
+                ctx.writeAndFlush(ctx.bufferAllocator().copyOf("Hello, World!", UTF_8));
                 ctx.fireChannelActive();
             }
         };

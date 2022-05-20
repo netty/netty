@@ -1159,10 +1159,10 @@ public abstract class SSLEngineTest {
     }
 
     protected void runTest(String expectedApplicationProtocol) throws Exception {
-        try (Buffer clientMessage = onHeapAllocator().copyOf("I am a client".getBytes(UTF_8))) {
+        try (Buffer clientMessage = onHeapAllocator().copyOf("I am a client", UTF_8)) {
             writeAndVerifyReceived(clientMessage, clientChannel, serverLatch, serverReceiver);
         }
-        try (Buffer serverMessage = onHeapAllocator().copyOf("I am a server".getBytes(UTF_8))) {
+        try (Buffer serverMessage = onHeapAllocator().copyOf("I am a server", UTF_8)) {
             writeAndVerifyReceived(serverMessage, serverConnectedChannel, clientLatch, clientReceiver);
         }
         verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);

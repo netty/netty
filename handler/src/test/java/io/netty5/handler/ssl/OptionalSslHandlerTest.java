@@ -28,6 +28,7 @@ import org.mockito.MockitoAnnotations;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
@@ -55,7 +56,7 @@ public class OptionalSslHandlerTest {
     @Test
     public void handlerRemoved() throws Exception {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
-        try (Buffer payload = onHeapAllocator().copyOf("plaintext".getBytes(StandardCharsets.UTF_8))) {
+        try (Buffer payload = onHeapAllocator().copyOf("plaintext", UTF_8)) {
             handler.decode(context, payload);
             verify(pipeline).remove(handler);
         }
@@ -75,7 +76,7 @@ public class OptionalSslHandlerTest {
                 return HANDLER_NAME;
             }
         };
-        try (Buffer payload = onHeapAllocator().copyOf("plaintext".getBytes(StandardCharsets.UTF_8))) {
+        try (Buffer payload = onHeapAllocator().copyOf("plaintext", UTF_8)) {
             handler.decode(context, payload);
             verify(pipeline).replace(handler, HANDLER_NAME, nonSslHandler);
         }

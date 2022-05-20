@@ -160,8 +160,7 @@ public class HttpServerCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
-        final byte[] data = "HEAD / HTTP/1.1\r\n\r\n".getBytes(StandardCharsets.UTF_8);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("HEAD / HTTP/1.1\r\n\r\n", StandardCharsets.UTF_8)));
 
         HttpRequest request = ch.readInbound();
         assertEquals(HttpMethod.HEAD, request.method());
@@ -184,6 +183,6 @@ public class HttpServerCodecTest {
     }
 
     private static Buffer prepareDataChunk(BufferAllocator allocator, int size) {
-        return allocator.copyOf("a".repeat(Math.max(0, size)).getBytes(StandardCharsets.UTF_8));
+        return allocator.copyOf("a".repeat(Math.max(0, size)), StandardCharsets.UTF_8);
     }
 }

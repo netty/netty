@@ -53,7 +53,7 @@ public class DatagramPacketDecoderTest {
     public void testDecode() {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
-        Buffer content = DefaultBufferAllocators.preferredAllocator().copyOf("netty".getBytes(CharsetUtil.UTF_8));
+        Buffer content = DefaultBufferAllocators.preferredAllocator().copyOf("netty", CharsetUtil.UTF_8);
         assertTrue(channel.writeInbound(new DatagramPacket(content, recipient, sender)));
         assertEquals("netty", channel.readInbound());
     }
