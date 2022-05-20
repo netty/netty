@@ -37,7 +37,6 @@ import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.util.CharsetUtil;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;

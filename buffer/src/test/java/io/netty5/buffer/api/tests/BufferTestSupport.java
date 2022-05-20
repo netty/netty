@@ -55,7 +55,6 @@ import static io.netty5.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty5.buffer.api.tests.Fixture.Properties.HEAP;
 import static io.netty5.buffer.api.tests.Fixture.Properties.POOLED;
 import static io.netty5.buffer.api.tests.Fixture.Properties.UNCLOSEABLE;
-import static java.nio.ByteOrder.BIG_ENDIAN;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;

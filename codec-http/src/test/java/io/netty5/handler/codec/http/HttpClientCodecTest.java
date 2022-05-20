@@ -32,14 +32,12 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.PrematureChannelClosureException;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.util.ReferenceCountUtil.release;

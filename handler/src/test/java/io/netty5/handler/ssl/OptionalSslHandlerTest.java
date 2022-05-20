@@ -25,8 +25,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import java.nio.charset.StandardCharsets;
-
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.verify;

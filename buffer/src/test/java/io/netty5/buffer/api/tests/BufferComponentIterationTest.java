@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
-import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.internal.Statics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

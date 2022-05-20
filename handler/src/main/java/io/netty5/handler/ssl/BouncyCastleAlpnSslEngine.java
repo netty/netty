@@ -17,7 +17,6 @@ package io.netty5.handler.ssl;
 
 import javax.net.ssl.SSLEngine;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 final class BouncyCastleAlpnSslEngine extends JdkAlpnSslEngine {

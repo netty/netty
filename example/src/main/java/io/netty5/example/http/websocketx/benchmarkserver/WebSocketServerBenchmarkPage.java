@@ -18,8 +18,6 @@ package io.netty5.example.http.websocketx.benchmarkserver;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 
-import java.nio.charset.StandardCharsets;
-
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**

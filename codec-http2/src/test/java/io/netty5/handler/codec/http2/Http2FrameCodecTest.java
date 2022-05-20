@@ -48,7 +48,6 @@ import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;

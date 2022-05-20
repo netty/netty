@@ -20,12 +20,10 @@ import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResultProvider;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
-import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.CompositeBuffer.isComposite;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;

@@ -16,7 +16,6 @@
 package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.LeakInfo;
 import io.netty5.buffer.api.LeakInfo.TracePoint;
 import io.netty5.buffer.api.Owned;
