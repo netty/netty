@@ -45,6 +45,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
@@ -129,6 +130,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private final List<String> unmodifiableCiphers;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
+    private final String endpointIdentificationAlgorithm;
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslContext> leak;
@@ -209,7 +211,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                                   boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+                                   boolean leakDetection, String endpointIdentificationAlgorithm,
+                                   Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
         super(startTls);
 
@@ -273,6 +276,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         unmodifiableCiphers = new ArrayList<>(suitesSet);
 
         this.apn = requireNonNull(apn, "apn");
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;
@@ -474,7 +478,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
-        return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
+        ReferenceCountedOpenSslEngine engine = new ReferenceCountedOpenSslEngine(
+                this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
+        if (isClient() && endpointIdentificationAlgorithm != null) {
+            SSLParameters sslParameters = engine.getSSLParameters();
+            sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+            engine.setSSLParameters(sslParameters);
+        }
+        return engine;
     }
 
     /**

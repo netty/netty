@@ -45,7 +45,7 @@ final class JdkSslClientContext extends JdkSslContext {
         super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
           trustManagerFactory, null, null,
           null, null, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
-          ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
+          ciphers, cipherFilter, apn, ClientAuth.NONE, null, false, null);
     }
 
     JdkSslClientContext(Provider sslContextProvider,
@@ -61,11 +61,13 @@ final class JdkSslClientContext extends JdkSslContext {
                         String[] protocols,
                         long sessionCacheSize,
                         long sessionTimeout,
-                        String keyStore)
+                        String keyStore,
+                        String endpointIdentificationAlgorithm)
       throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
           keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, keyStore),
-          true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false);
+          true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false,
+                endpointIdentificationAlgorithm);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider,
