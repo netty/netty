@@ -30,10 +30,12 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   String endpointIdentificationAlgorithm,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, enableOcsp, false,
+                endpointIdentificationAlgorithm, options);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
@@ -42,7 +44,8 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, enableOcsp, false,
+                null, options);
     }
 
     @Override

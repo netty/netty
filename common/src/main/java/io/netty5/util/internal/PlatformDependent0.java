@@ -51,6 +51,7 @@ final class PlatformDependent0 {
     private static final Method ALIGN_SLICE;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final int ANDROID_API_VERSION = androidApiVersion0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
@@ -921,6 +922,25 @@ final class PlatformDependent0 {
             logger.debug("Platform: Android");
         }
         return isAndroid;
+    }
+
+    static int androidApiVersion() {
+        return ANDROID_API_VERSION;
+    }
+
+    private static int androidApiVersion0() {
+        if (!isAndroid0()) {
+            return -1;
+        }
+        try {
+            Class<?> klass = Class.forName("android.os.Build");
+            Field version = klass.getDeclaredField("VERSION");
+            return version.getInt(null);
+        } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException e) {
+            logger.debug("Unable to identify android api version [errorType={}]",
+                    e.getClass().getSimpleName());
+            return -1;
+        }
     }
 
     private static boolean explicitTryReflectionSetAccessible0() {

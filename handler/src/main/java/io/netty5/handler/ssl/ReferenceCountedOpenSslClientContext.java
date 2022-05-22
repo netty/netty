@@ -60,10 +60,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
-                                         boolean enableOcsp, String keyStore,
+                                         boolean enableOcsp, String keyStore, String endpointIdentificationAlgorithm,
                                          Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, protocols, false, enableOcsp, true, options);
+              ClientAuth.NONE, protocols, false, enableOcsp, true,
+                endpointIdentificationAlgorithm, options);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,

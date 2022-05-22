@@ -17,6 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty5.handler.ssl.util.TrustManagerFactoryWrapper;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.UnstableApi;
 
 import javax.net.ssl.KeyManager;
@@ -48,6 +49,8 @@ import static java.util.Objects.requireNonNull;
 public final class SslContextBuilder {
     @SuppressWarnings("rawtypes")
     private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
+
+    private static final String DEFAULT_ENDPOINT_IDENTIFICATION_ALGORITHM = "HTTPS";
 
     /**
      * Creates a builder for new client-side {@link SslContext}.
@@ -205,6 +208,7 @@ public final class SslContextBuilder {
     private String[] protocols;
     private boolean startTls;
     private boolean enableOcsp;
+    private String endpointIdentificationAlgorithm = DEFAULT_ENDPOINT_IDENTIFICATION_ALGORITHM;
     private String keyStoreType = KeyStore.getDefaultType();
     private final Map<SslContextOption<?>, Object> options = new HashMap<>();
 
@@ -585,6 +589,41 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Enables DNS name identification during TLS handshake
+     * Has similar effect if call
+     * <pre>
+     * {@code
+     * SSLParameters sslParameters = new SSLParameters();
+     * sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+     * engine.setSslParameters(sslParameters);
+     * }
+     * </pre>
+     *
+     * @see SslContextBuilder#endpointIdentificationAlgorithm(String)
+     *
+     */
+    public SslContextBuilder hostNameIdentification(boolean enableHostNameIdentification) {
+        return endpointIdentificationAlgorithm(enableHostNameIdentification ?
+                DEFAULT_ENDPOINT_IDENTIFICATION_ALGORITHM : null);
+    }
+
+    /**
+     * Set endpoint identification algorithm during TLS handshake
+     * Has similar effect if call
+     * <pre>
+     * {@code
+     * SSLParameters sslParameters = new SSLParameters();
+     * sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+     * engine.setSslParameters(sslParameters);
+     * }
+     * </pre>
+     */
+    public SslContextBuilder endpointIdentificationAlgorithm(String endpointIdentificationAlgorithm) {
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        return this;
+    }
+
+    /**
      * Enables OCSP stapling. Please note that not all {@link SslProvider} implementations support OCSP
      * stapling and an exception will be thrown upon {@link #build()}.
      *
@@ -608,10 +647,14 @@ public final class SslContextBuilder {
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
                 enableOcsp, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
+            String endpointIA = null;
+            if (!PlatformDependent.isAndroid() || PlatformDependent.androidApiVersion() >= 24) {
+                endpointIA = endpointIdentificationAlgorithm;
+            }
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
-                    toArray(options.entrySet(), EMPTY_ENTRIES));
+                    endpointIA, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 

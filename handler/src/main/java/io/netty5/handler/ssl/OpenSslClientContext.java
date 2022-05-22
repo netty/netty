@@ -39,10 +39,10 @@ final class OpenSslClientContext extends OpenSslContext {
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
                                 long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         Map.Entry<SslContextOption<?>, Object>... options)
+                         String endpointIdentificationAlgorithm, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, false, enableOcsp, options);
+                ClientAuth.NONE, protocols, false, enableOcsp, endpointIdentificationAlgorithm, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);

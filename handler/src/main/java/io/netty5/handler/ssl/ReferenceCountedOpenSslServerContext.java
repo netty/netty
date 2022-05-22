@@ -70,7 +70,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
-              clientAuth, protocols, startTls, enableOcsp, true, options);
+              clientAuth, protocols, startTls, enableOcsp, true, null, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {

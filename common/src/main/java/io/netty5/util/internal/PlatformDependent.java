@@ -253,6 +253,13 @@ public final class PlatformDependent {
     }
 
     /**
+     * Returns Android api version level or {@code -1} if it is impossible to determine the version
+     */
+    public static int androidApiVersion() {
+        return PlatformDependent0.androidApiVersion();
+    }
+
+    /**
      * Return {@code true} if the JVM is running on Windows
      */
     public static boolean isWindows() {
