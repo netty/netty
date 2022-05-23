@@ -21,7 +21,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.buffer.api.adaptor.ByteBufAllocatorAdaptor;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 

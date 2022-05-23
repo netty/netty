@@ -44,7 +44,7 @@ public class WebSocketProtocolHandlerTest {
     @Test
     public void testPingFrame() {
         String message = "Hello, world";
-        Buffer pingData = preferredAllocator().copyOf(message.getBytes(UTF_8));
+        Buffer pingData = preferredAllocator().copyOf(message, UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
         PingWebSocketFrame inputMessage = new PingWebSocketFrame(pingData);
@@ -73,10 +73,10 @@ public class WebSocketProtocolHandlerTest {
 
         // When
         assertFalse(channel.writeInbound(
-                new PingWebSocketFrame(preferredAllocator().copyOf(text1.getBytes(UTF_8))),
+                new PingWebSocketFrame(preferredAllocator().copyOf(text1, UTF_8)),
                 new TextWebSocketFrame(preferredAllocator(), text2),
                 new TextWebSocketFrame(preferredAllocator(), text3),
-                new PingWebSocketFrame(preferredAllocator().copyOf(text4.getBytes(UTF_8))
+                new PingWebSocketFrame(preferredAllocator().copyOf(text4, UTF_8)
                 )));
 
         // Then - no messages were handled or propagated

@@ -151,10 +151,9 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
         // Decide whether to close the connection or not.
         boolean keepAlive = HttpUtil.isKeepAlive(request);
         // Build the response object.
-        final byte[] bytes = buf.toString().getBytes(UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,
-                ctx.bufferAllocator().copyOf(bytes));
+                ctx.bufferAllocator().copyOf(buf.toString(), UTF_8));
 
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 

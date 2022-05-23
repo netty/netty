@@ -168,6 +168,6 @@ public class Base64Test {
     }
 
     private static Buffer copiedBuffer(String str, Charset charset) {
-        return onHeapAllocator().copyOf(str.getBytes(charset));
+        return onHeapAllocator().copyOf(str, charset);
     }
 }

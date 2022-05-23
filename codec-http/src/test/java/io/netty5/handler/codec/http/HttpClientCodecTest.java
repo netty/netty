@@ -32,7 +32,6 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.PrematureChannelClosureException;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
@@ -43,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.util.ReferenceCountUtil.release;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -117,8 +117,7 @@ public class HttpClientCodecTest {
         }
 
         assertNull(ch.readInbound());
-        final byte[] responseBytes = INCOMPLETE_CHUNKED_RESPONSE.getBytes(ISO_8859_1);
-        ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes));
+        ch.writeInbound(ch.bufferAllocator().copyOf(INCOMPLETE_CHUNKED_RESPONSE, ISO_8859_1));
         assertThat(ch.readInbound(), instanceOf(HttpResponse.class));
         ((HttpContent<?>) ch.readInbound()).close(); // Chunk 'first'
         ((HttpContent<?>) ch.readInbound()).close(); // Chunk 'second'
@@ -153,15 +152,14 @@ public class HttpClientCodecTest {
                               and the client should still handle this.
                               See RFC 7230, 3.3.3: https://tools.ietf.org/html/rfc7230#section-3.3.3.
                              */
-                            final byte[] bytes = ("HTTP/1.0 200 OK\r\n" +
+                            final String reply = "HTTP/1.0 200 OK\r\n" +
                                     "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
-                                    "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1);
-                            sChannel.writeAndFlush(ch.bufferAllocator().copyOf(bytes))
+                                    "Content-Type: text/html\r\n\r\n";
+                            sChannel.writeAndFlush(ch.bufferAllocator().copyOf(reply, ISO_8859_1))
                                     .addListener(future -> {
                                         assertTrue(future.isSuccess());
-                                        final byte[] bytes1 = "<html><body>hello half closed!</body></html>\r\n"
-                                                .getBytes(CharsetUtil.ISO_8859_1);
-                                        sChannel.writeAndFlush(ch.bufferAllocator().copyOf(bytes1))
+                                        final String reply2 = "<html><body>hello half closed!</body></html>\r\n";
+                                        sChannel.writeAndFlush(ch.bufferAllocator().copyOf(reply2, ISO_8859_1))
                                                 .addListener(future1 -> {
                                                     assertTrue(future1.isSuccess());
                                                     sChannel.shutdownOutput();
@@ -246,8 +244,7 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, httpMethod, "http://localhost/",
                         ch.bufferAllocator().allocate(0))),
                 "Channel outbound write failed.");
-        final byte[] responseBytes = response.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(response, ISO_8859_1)),
                 "Channel inbound write failed.");
 
         for (;;) {
@@ -300,16 +297,14 @@ public class HttpClientCodecTest {
         request.headers().set(HttpHeaderNames.UPGRADE, "TLS/1.2");
         assertTrue(ch.writeOutbound(request), "Channel outbound write failed.");
 
-        final byte[] bytes = SWITCHING_PROTOCOLS_RESPONSE.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(bytes)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(SWITCHING_PROTOCOLS_RESPONSE, ISO_8859_1)),
                 "Channel inbound write failed.");
         Object switchingProtocolsResponse = ch.readInbound();
         assertNotNull(switchingProtocolsResponse, "No response received");
         assertThat("Response was not decoded", switchingProtocolsResponse, instanceOf(FullHttpResponse.class));
         ((FullHttpResponse) switchingProtocolsResponse).close();
 
-        final byte[] bytes2 = SWITCHING_PROTOCOLS_RESPONSE.getBytes(ISO_8859_1);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(bytes2)),
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(SWITCHING_PROTOCOLS_RESPONSE, ISO_8859_1)),
                 "Channel inbound write failed");
         Object finalResponse = ch.readInbound();
         assertNotNull(finalResponse, "No response received");
@@ -320,14 +315,13 @@ public class HttpClientCodecTest {
 
     @Test
     public void testWebSocketResponse() {
-        byte[] data = ("HTTP/1.1 101 Switching Protocols\r\n" +
-                       "Upgrade: websocket\r\n" +
-                       "Connection: Upgrade\r\n" +
-                       "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
-                       "Sec-WebSocket-Protocol: chat\r\n\r\n")
-                .getBytes(CharsetUtil.US_ASCII);
+        String data = "HTTP/1.1 101 Switching Protocols\r\n" +
+                      "Upgrade: websocket\r\n" +
+                      "Connection: Upgrade\r\n" +
+                      "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
+                      "Sec-WebSocket-Protocol: chat\r\n\r\n";
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data, US_ASCII)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -344,12 +338,12 @@ public class HttpClientCodecTest {
 
     @Test
     public void testWebDavResponse() {
-        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
-                       "Status-URI: Status-URI:http://status.com; 404\r\n" +
-                       "\r\n" +
-                       "1234567812345678").getBytes();
+        String data = "HTTP/1.1 102 Processing\r\n" +
+                      "Status-URI: Status-URI:http://status.com; 404\r\n" +
+                      "\r\n" +
+                      "1234567812345678";
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data, US_ASCII)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -364,19 +358,19 @@ public class HttpClientCodecTest {
 
     @Test
     public void testInformationalResponseKeepsPairsInSync() {
-        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
+        String data = "HTTP/1.1 102 Processing\r\n" +
                 "Status-URI: Status-URI:http://status.com; 404\r\n" +
-                "\r\n").getBytes();
-        byte[] data2 = ("HTTP/1.1 200 OK\r\n" +
+                "\r\n";
+        String data2 = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 8\r\n" +
                 "\r\n" +
-                "12345678").getBytes();
+                "12345678";
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/",
                 ch.bufferAllocator().allocate(0))));
         ((Buffer) ch.readOutbound()).close();
         assertNull(ch.readOutbound());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data, US_ASCII)));
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
@@ -390,7 +384,7 @@ public class HttpClientCodecTest {
                 ch.bufferAllocator().allocate(0))));
         ((Buffer) ch.readOutbound()).close();
         assertNull(ch.readOutbound());
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data2)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data2, US_ASCII)));
 
         res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -416,9 +410,8 @@ public class HttpClientCodecTest {
                 ch.bufferAllocator().allocate(0));
         assertTrue(ch.writeOutbound(request));
 
-        final byte[] responseBytes = response.getBytes(UTF_8);
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)));
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(responseBytes)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(response, UTF_8)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(response, UTF_8)));
         FullHttpResponse resp = ch.readInbound();
         assertTrue(resp.decoderResult().isSuccess());
         resp.close();

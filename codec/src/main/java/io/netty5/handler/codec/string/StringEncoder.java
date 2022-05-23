@@ -74,6 +74,6 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
             return;
         }
 
-        out.add(ctx.bufferAllocator().copyOf(msg.toString().getBytes(charset)));
+        out.add(ctx.bufferAllocator().copyOf(msg.toString(), charset));
     }
 }

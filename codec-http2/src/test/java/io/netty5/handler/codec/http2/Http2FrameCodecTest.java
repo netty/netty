@@ -911,10 +911,10 @@ public class Http2FrameCodecTest {
         // Check if we could make it accessible which may fail on java9.
         Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
-        byte[] longString = new String(new char[70000]).replace("\0", "*").getBytes(UTF_8);
+        String longString = new String(new char[70000]).replace("\0", "*");
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
-                preferredAllocator().copyOf(longString));
+                preferredAllocator().copyOf(longString, UTF_8));
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
             "HTTP/2", request);

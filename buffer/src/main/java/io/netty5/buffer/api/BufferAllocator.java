@@ -20,6 +20,7 @@ import io.netty5.buffer.api.pool.PooledBufferAllocator;
 import io.netty5.util.SafeCloseable;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.function.Supplier;
 
@@ -209,6 +210,24 @@ public interface BufferAllocator extends SafeCloseable {
      * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
      */
     default Buffer copyOf(byte[] bytes) {
+        return allocate(bytes.length).writeBytes(bytes);
+    }
+
+    /**
+     * Allocate a {@link Buffer} with the same size and contents of the given {@link String},
+     * when interpreted as a sequence of bytes with the given {@link Charset}.
+     * This may throw an {@link OutOfMemoryError} if there is not enough free memory available to allocate a
+     * {@link Buffer} of the requested size.
+     * <p>
+     * The allocated buffer will use big endian byte order.
+     *
+     * @param str The {@link String} that determines the size and contents of the new buffer.
+     * @param charset The {@link Charset} that determines how to turn the string into a sequence of bytes.
+     * @return The newly allocated {@link Buffer}.
+     * @throws IllegalStateException if this allocator has been {@linkplain #close() closed}.
+     */
+    default Buffer copyOf(String str, Charset charset) {
+        byte[] bytes = str.getBytes(charset);
         return allocate(bytes.length).writeBytes(bytes);
     }
 

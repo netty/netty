@@ -137,7 +137,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (client) {
-                ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
+                ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD, US_ASCII));
             }
         }
 
@@ -151,7 +151,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                 if (client) {
                     ctx.close();
                 } else {
-                    ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD.getBytes(US_ASCII)));
+                    ctx.writeAndFlush(preferredAllocator().copyOf(EXPECTED_PAYLOAD, US_ASCII));
                 }
             }
         }

@@ -131,7 +131,7 @@ public final class BufferUtil {
      * result.
      */
     public static Buffer writeAscii(BufferAllocator alloc, CharSequence seq) {
-        return alloc.copyOf(seq.toString().getBytes(StandardCharsets.US_ASCII));
+        return alloc.copyOf(seq.toString(), StandardCharsets.US_ASCII);
     }
 
     /**

@@ -19,9 +19,10 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.CharsetUtil;
 
 import java.util.Random;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
@@ -46,8 +47,8 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<D
     @Override
     public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         System.err.println(packet);
-        if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
-            Buffer message = ctx.bufferAllocator().copyOf(("QOTM: " + nextQuote()).getBytes(CharsetUtil.UTF_8));
+        if ("QOTM?".equals(packet.content().toString(UTF_8))) {
+            Buffer message = ctx.bufferAllocator().copyOf("QOTM: " + nextQuote(), UTF_8);
             ctx.write(new DatagramPacket(message, packet.sender()));
         }
     }

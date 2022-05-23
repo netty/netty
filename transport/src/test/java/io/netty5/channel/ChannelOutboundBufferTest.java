@@ -112,7 +112,7 @@ public class ChannelOutboundBufferTest {
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
         assertEquals(0, buffer.nioBufferCount());
 
-        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
         buffer.addMessage(buf, buf.readableBytes(), channel.newPromise());
         assertEquals(0, buffer.nioBufferCount(), "Should still be 0 as not flushed yet");
         buffer.addFlush();
@@ -161,7 +161,7 @@ public class ChannelOutboundBufferTest {
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
 
-        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
         for (int i = 0; i < 64; i++) {
             buffer.addMessage(buf.copy(), buf.readableBytes(), channel.newPromise());
         }
@@ -217,7 +217,7 @@ public class ChannelOutboundBufferTest {
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
 
-        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
         @SuppressWarnings("unchecked")
         var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
         CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
@@ -277,7 +277,7 @@ public class ChannelOutboundBufferTest {
 
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
 
-        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
         assertEquals(4, buf.readableBytes());
         @SuppressWarnings("unchecked")
         var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
@@ -324,7 +324,7 @@ public class ChannelOutboundBufferTest {
     public void removeBytes() {
         TestChannel channel = new TestChannel();
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
-        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1".getBytes(CharsetUtil.US_ASCII));
+        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
         int size = buf.readableBytes();
         buffer.addMessage(buf, size, channel.newPromise());
         buffer.addFlush();

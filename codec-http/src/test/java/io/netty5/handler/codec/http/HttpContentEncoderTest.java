@@ -30,6 +30,7 @@ import io.netty5.handler.codec.compression.Compressor;
 import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
@@ -382,8 +383,7 @@ public class HttpContentEncoderTest {
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED);
         res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         ch.writeOutbound(res);
-        final byte[] contentBytes = content.getBytes(CharsetUtil.UTF_8);
-        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().copyOf(contentBytes)));
+        ch.writeOutbound(new DefaultHttpContent(preferredAllocator().copyOf(content, StandardCharsets.UTF_8)));
         ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
 
         assertEncodedResponse(ch);

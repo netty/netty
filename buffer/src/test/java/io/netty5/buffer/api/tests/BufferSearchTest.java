@@ -269,27 +269,27 @@ public class BufferSearchTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void bytesBeforeMatchingBufferNeedles(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-            Buffer haystack = allocator.copyOf("abc123".getBytes(StandardCharsets.UTF_8))) {
+            Buffer haystack = allocator.copyOf("abc123", StandardCharsets.UTF_8)) {
 
-            try (Buffer needle = allocator.copyOf("a".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("a", StandardCharsets.UTF_8)) {
                 assertEquals(0, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("bc".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("bc", StandardCharsets.UTF_8)) {
                 assertEquals(1, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("c".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("c", StandardCharsets.UTF_8)) {
                 assertEquals(2, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("abc12".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("abc12", StandardCharsets.UTF_8)) {
                 assertEquals(0, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("abcdef".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("abcdef", StandardCharsets.UTF_8)) {
                 assertEquals(-1, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("abc12x".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("abc12x", StandardCharsets.UTF_8)) {
                 assertEquals(-1, haystack.bytesBefore(needle));
             }
-            try (Buffer needle = allocator.copyOf("abc123def".getBytes(StandardCharsets.UTF_8))) {
+            try (Buffer needle = allocator.copyOf("abc123def", StandardCharsets.UTF_8)) {
                 assertEquals(-1, haystack.bytesBefore(needle));
             }
         }

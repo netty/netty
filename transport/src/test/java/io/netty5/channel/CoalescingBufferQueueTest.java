@@ -60,8 +60,8 @@ public class CoalescingBufferQueueTest {
         };
         emptyPromise = newPromise();
 
-        cat = BufferAllocator.offHeapUnpooled().copyOf("cat".getBytes(CharsetUtil.US_ASCII));
-        mouse = BufferAllocator.offHeapUnpooled().copyOf("mouse".getBytes(CharsetUtil.US_ASCII));
+        cat = BufferAllocator.offHeapUnpooled().copyOf("cat", CharsetUtil.US_ASCII);
+        mouse = BufferAllocator.offHeapUnpooled().copyOf("mouse", CharsetUtil.US_ASCII);
     }
 
     @AfterEach
@@ -77,7 +77,7 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(8, false);
         Promise<Void> aggregatePromise = newPromise();
         assertEquals("catmous", dequeue(7, aggregatePromise));
-        Buffer remainder = BufferAllocator.offHeapUnpooled().copyOf("mous".getBytes(CharsetUtil.US_ASCII));
+        Buffer remainder = BufferAllocator.offHeapUnpooled().copyOf("mous", CharsetUtil.US_ASCII);
         writeQueue.addFirst(remainder, aggregatePromise);
         Promise<Void> aggregatePromise2 = newPromise();
         assertEquals("mouse", dequeue(5, aggregatePromise2));

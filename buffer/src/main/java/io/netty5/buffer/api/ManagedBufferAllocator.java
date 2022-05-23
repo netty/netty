@@ -16,7 +16,9 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.WrappingAllocation;
 
+import java.nio.charset.Charset;
 import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.internal.Statics.allocatorClosedException;
@@ -60,6 +62,19 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
                 this, bytes.length, standardDrop(manager), allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
+    }
+
+    @Override
+    public Buffer copyOf(String str, Charset charset) {
+        if (!allocationType.isDirect()) {
+            // For on-heap buffers we can optimise a bit, and allocate with just one copy operation.
+            byte[] bytes = str.getBytes(charset);
+            // We use a wrapping allocation type, because the byte array is guaranteed by String to be un-aliased.
+            WrappingAllocation allocation = new WrappingAllocation(bytes);
+            Buffer buffer = manager.allocateShared(this, bytes.length, standardDrop(manager), allocation);
+            return buffer.writerOffset(bytes.length);
+        }
+        return BufferAllocator.super.copyOf(str, charset);
     }
 
     @Override

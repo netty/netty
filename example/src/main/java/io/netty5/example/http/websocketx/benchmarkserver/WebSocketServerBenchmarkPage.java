@@ -28,7 +28,7 @@ public final class WebSocketServerBenchmarkPage {
     private static final String NEWLINE = "\r\n";
 
     public static Buffer getContent(BufferAllocator allocator, String webSocketLocation) {
-        final byte[] content = ("<html><head><title>Web Socket Performance Test</title></head>" + NEWLINE +
+        final String content = "<html><head><title>Web Socket Performance Test</title></head>" + NEWLINE +
                 "<body>" + NEWLINE +
                 "<h2>WebSocket Performance Test</h2>" + NEWLINE +
                 "<label>Connection Status:</label>" + NEWLINE +
@@ -182,8 +182,8 @@ public final class WebSocketServerBenchmarkPage {
                 "}" + NEWLINE +
                 "</script>" + NEWLINE +
                 "</body>" + NEWLINE +
-                "</html>" + NEWLINE).getBytes(US_ASCII);
-        return allocator.copyOf(content);
+                "</html>" + NEWLINE;
+        return allocator.copyOf(content, US_ASCII);
     }
 
     private WebSocketServerBenchmarkPage() {
