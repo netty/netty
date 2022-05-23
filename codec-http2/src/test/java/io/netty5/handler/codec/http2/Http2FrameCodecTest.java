@@ -218,7 +218,7 @@ public class Http2FrameCodecTest {
         Http2Connection conn = new DefaultHttp2Connection(true);
         Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
-        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
+        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false, true);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
         AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
