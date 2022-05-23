@@ -825,7 +825,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 2, 1, 1);
+        bootstrapEnv(1, 1, 3, 1, 1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
