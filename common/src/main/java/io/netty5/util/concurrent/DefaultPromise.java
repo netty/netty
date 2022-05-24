@@ -472,10 +472,23 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     private void notifyListeners() {
-        safeExecute(executor(), this::notifyListenersNow);
+        safeExecute(executor(), new NotifyListeners(this));
     }
 
-    @SuppressWarnings("unchecked")
+    private static final class NotifyListeners implements Runnable {
+        private final DefaultPromise<?> promise;
+
+        private NotifyListeners(DefaultPromise<?> promise) {
+            this.promise = promise;
+        }
+
+        @Override
+        public void run() {
+            promise.notifyListenersNow();
+        }
+    }
+
+    @SuppressWarnings({ "unchecked", "MethodOnlyUsedFromInnerClass" })
     private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
