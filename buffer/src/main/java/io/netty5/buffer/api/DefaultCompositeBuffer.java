@@ -1144,7 +1144,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public int readUnsignedShort() {
-        return prepRead(Short.BYTES).readShort();
+        return prepRead(Short.BYTES).readUnsignedShort();
     }
 
     @Override
@@ -1188,12 +1188,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public int readUnsignedMedium() {
-        return prepRead(3).readMedium();
+        return prepRead(3).readUnsignedMedium();
     }
 
     @Override
     public int getUnsignedMedium(int roff) {
-        return prepGet(roff, 3).getMedium(subOffset);
+        return prepGet(roff, 3).getUnsignedMedium(subOffset);
     }
 
     @Override

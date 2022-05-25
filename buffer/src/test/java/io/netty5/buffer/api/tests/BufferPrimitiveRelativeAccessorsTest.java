@@ -129,6 +129,20 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    void relativeReadAndGetOfUnsignedByte(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            int value = Byte.MAX_VALUE * 2;
+            buf.setUnsignedByte(0, value);
+            assertEquals(value, buf.getUnsignedByte(0));
+            buf.writeUnsignedByte(value);
+            assertEquals(value, buf.readUnsignedByte());
+            assertEquals(0, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     void relativeReadOfUnsignedByteMustNotBoundsCheckWhenReadOffsetAndSizeIsEqualToWriteOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
@@ -432,6 +446,20 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    void relativeReadAndGetOfUnsignedShort(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            int value = Short.MAX_VALUE * 2;
+            buf.setUnsignedShort(0, value);
+            assertEquals(value, buf.getUnsignedShort(0));
+            buf.writeUnsignedShort(value);
+            assertEquals(value, buf.readUnsignedShort());
+            assertEquals(0, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     void relativeReadOfUnsignedShortMustNotBoundsCheckWhenReadOffsetAndSizeIsEqualToWriteOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
@@ -634,6 +662,20 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    void relativeReadAndGetOfUnsignedMedium(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            int value = 0xFFFFFF;
+            buf.setUnsignedMedium(0, value);
+            assertEquals(value, buf.getUnsignedMedium(0));
+            buf.writeUnsignedMedium(value);
+            assertEquals(value, buf.readUnsignedMedium());
+            assertEquals(0, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     void relativeReadOfUnsignedMediumMustNotBoundsCheckWhenReadOffsetAndSizeIsEqualToWriteOffset(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
@@ -831,6 +873,20 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
             assertEquals(4, buf.writableBytes());
             assertThrows(IndexOutOfBoundsException.class, () -> buf.makeReadOnly().readInt());
             assertEquals(3, buf.readableBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void relativeReadAndGetOfUnsignedInt(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            long value = Integer.MAX_VALUE * 2L;
+            buf.setUnsignedInt(0, value);
+            assertEquals(value, buf.getUnsignedInt(0));
+            buf.writeUnsignedInt(value);
+            assertEquals(value, buf.readUnsignedInt());
+            assertEquals(0, buf.readableBytes());
         }
     }
 
