@@ -100,8 +100,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         Http2ConnectionDecoder decoder,
                         Http2Settings initialSettings,
                         ChannelHandler inboundStreamHandler,
-                        ChannelHandler upgradeStreamHandler, boolean decoupleCloseAndGoAway) {
-        super(encoder, decoder, initialSettings, decoupleCloseAndGoAway);
+                        ChannelHandler upgradeStreamHandler, boolean decoupleCloseAndGoAway, boolean flushPreface) {
+        super(encoder, decoder, initialSettings, decoupleCloseAndGoAway, flushPreface);
         this.inboundStreamHandler = inboundStreamHandler;
         this.upgradeStreamHandler = upgradeStreamHandler;
     }

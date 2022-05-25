@@ -163,8 +163,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             new IntObjectHashMap<>(8);
 
     Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
-                    boolean decoupleCloseAndGoAway) {
-        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
+                    boolean decoupleCloseAndGoAway, boolean flushPreface) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway, flushPreface);
 
         decoder.frameListener(new FrameListener());
         connection().addListener(new ConnectionListener());
