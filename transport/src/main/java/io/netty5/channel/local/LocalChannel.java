@@ -16,6 +16,9 @@
 package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.Resource;
+import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -26,6 +29,7 @@ import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -324,7 +328,15 @@ public class LocalChannel extends AbstractChannel {
                     // It is possible the peer could have closed while we are writing, and in this case we should
                     // simulate real socket behavior and ensure the write operation is failed.
                     if (peer.state == State.CONNECTED) {
-                        peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
+                        if (msg instanceof ReferenceCounted) {
+                            peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
+                        } else if (msg instanceof ResourceSupport) {
+                            peer.inboundBuffer.add(Statics.acquire((ResourceSupport<?, ?>) msg));
+                        } else if (msg instanceof Resource) {
+                            peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
+                        } else {
+                            peer.inboundBuffer.add(msg);
+                        }
                         in.remove();
                     } else {
                         if (exception == null) {
