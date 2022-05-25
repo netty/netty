@@ -29,7 +29,7 @@ import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
+import io.netty.util.ReferenceCounted;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
