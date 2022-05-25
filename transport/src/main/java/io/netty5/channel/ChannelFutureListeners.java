@@ -30,27 +30,45 @@ public final class ChannelFutureListeners {
      * A {@link FutureContextListener} that closes the {@link ChannelOutboundInvoker} which is associated with
      * the specified {@link Future}.
      */
-    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE = (c, f) -> c.close();
+    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE = new Close();
 
     /**
      * A {@link FutureContextListener} that closes the {@link ChannelOutboundInvoker} when the operation ended up with
      * a failure or cancellation rather than a success.
      */
-    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE_ON_FAILURE = (c, f) -> {
-        if (f.isFailed()) {
-            c.close();
-        }
-    };
+    public static final FutureContextListener<ChannelOutboundInvoker, Object> CLOSE_ON_FAILURE = new CloseOnFailure();
 
     /**
-     * A {@link FutureContextListener} that forwards the {@link Throwable} of the {@link Future} into the {@link
-     * ChannelPipeline}. This mimics the old behavior of Netty 3.
+     * A {@link FutureContextListener} that forwards the {@link Throwable} of the {@link Future} into the
+     * {@link ChannelPipeline}. This mimics the old behavior of Netty 3.
      */
-    public static final FutureContextListener<Channel, Object> FIRE_EXCEPTION_ON_FAILURE = (c, f) -> {
-        if (f.isFailed()) {
-            c.pipeline().fireExceptionCaught(f.cause());
-        }
-    };
+    public static final FutureContextListener<Channel, Object> FIRE_EXCEPTION_ON_FAILURE = new FireExceptionOnFailure();
 
-    private ChannelFutureListeners() { }
+    private ChannelFutureListeners() {
+    }
+
+    private static final class Close implements FutureContextListener<ChannelOutboundInvoker, Object> {
+        @Override
+        public void operationComplete(ChannelOutboundInvoker context, Future<?> future) throws Exception {
+            context.close();
+        }
+    }
+
+    private static final class CloseOnFailure implements FutureContextListener<ChannelOutboundInvoker, Object> {
+        @Override
+        public void operationComplete(ChannelOutboundInvoker context, Future<?> future) throws Exception {
+            if (future.isFailed()) {
+                context.close();
+            }
+        }
+    }
+
+    private static final class FireExceptionOnFailure implements FutureContextListener<Channel, Object> {
+        @Override
+        public void operationComplete(Channel context, Future<?> future) throws Exception {
+            if (future.isFailed()) {
+                context.pipeline().fireExceptionCaught(future.cause());
+            }
+        }
+    }
 }
