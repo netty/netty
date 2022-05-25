@@ -154,7 +154,7 @@ public abstract class AbstractIntegrationTest {
     protected void testIdentity(final byte[] data, boolean heapBuffer) {
         initChannels();
         final ByteBuf in = heapBuffer? Unpooled.wrappedBuffer(data) :
-                Unpooled.directBuffer(data.length).setBytes(0, data);
+                Unpooled.directBuffer(data.length).writeBytes(data);
         final CompositeByteBuf compressed = Unpooled.compositeBuffer();
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
 
