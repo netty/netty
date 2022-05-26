@@ -614,6 +614,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return sslWrote;
     }
 
+    public void bioSetFd(int fd) {
+        SSL.bioSetFd(this.ssl, fd);
+    }
+
     /**
      * Write encrypted data to the OpenSSL network BIO.
      */
