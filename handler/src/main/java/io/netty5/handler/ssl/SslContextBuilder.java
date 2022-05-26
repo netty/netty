@@ -604,7 +604,7 @@ public final class SslContextBuilder {
      * Note: This parameter makes sense only when new ssl engine created with specified peer host
      *
      * @see SslContextBuilder#endpointIdentificationAlgorithm(String)
-     * @see SslContext#newEngine(BufferAllocator, String, int
+     * @see SslContext#newEngine(BufferAllocator, String, int)
      * @see SslContext#newHandler(BufferAllocator, String, int)
      */
     public SslContextBuilder hostNameIdentification(boolean enableHostNameIdentification) {
@@ -667,10 +667,6 @@ public final class SslContextBuilder {
         }
     }
 
-    private static boolean isSupportedHostIdentification() {
-        return !PlatformDependent.isAndroid() || PlatformDependent.androidApiVersion() >= 24;
-    }
-
     private static <T> T[] toArray(Iterable<? extends T> iterable, T[] prototype) {
         if (iterable == null) {
             return null;
@@ -680,5 +676,9 @@ public final class SslContextBuilder {
             list.add(element);
         }
         return list.toArray(prototype);
+    }
+
+    private static boolean isSupportedHostIdentification() {
+        return !PlatformDependent.isAndroid() || PlatformDependent.androidApiVersion() >= 24;
     }
 }
