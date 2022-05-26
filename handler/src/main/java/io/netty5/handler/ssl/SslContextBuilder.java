@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty5.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty5.util.internal.PlatformDependent;
@@ -208,7 +209,8 @@ public final class SslContextBuilder {
     private String[] protocols;
     private boolean startTls;
     private boolean enableOcsp;
-    private String endpointIdentificationAlgorithm = DEFAULT_ENDPOINT_IDENTIFICATION_ALGORITHM;
+    private String endpointIdentificationAlgorithm = isSupportedHostIdentification() ?
+            DEFAULT_ENDPOINT_IDENTIFICATION_ALGORITHM : null;
     private String keyStoreType = KeyStore.getDefaultType();
     private final Map<SslContextOption<?>, Object> options = new HashMap<>();
 
@@ -589,7 +591,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Enables DNS name identification during TLS handshake.
+     * Enables DNS name identification after TLS handshake.
      * This method has similar effect as if the following snippet of code has been written:
      * <pre>
      * {@code
@@ -599,8 +601,11 @@ public final class SslContextBuilder {
      * }
      * </pre>
      *
-     * @see SslContextBuilder#endpointIdentificationAlgorithm(String)
+     * Note: This parameter makes sense only when new ssl engine created with specified peer host
      *
+     * @see SslContextBuilder#endpointIdentificationAlgorithm(String)
+     * @see SslContext#newEngine(BufferAllocator, String, int
+     * @see SslContext#newHandler(BufferAllocator, String, int)
      */
     public SslContextBuilder hostNameIdentification(boolean enableHostNameIdentification) {
         return endpointIdentificationAlgorithm(enableHostNameIdentification ?
@@ -608,7 +613,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Sets endpoint identification algorithm during TLS handshake.
+     * Sets endpoint identification algorithm after TLS handshake.
      * This method has similar effect as if the following snippet of code has been written:
      * <pre>
      * {@code
@@ -617,8 +622,16 @@ public final class SslContextBuilder {
      * engine.setSslParameters(sslParameters);
      * }
      * </pre>
+     *
+     * Note: This parameter makes sense only when new ssl engine created with specified peer host
+     *
+     * @see SslContext#newEngine(BufferAllocator, String, int)
+     * @see SslContext#newHandler(BufferAllocator, String, int)
      */
     public SslContextBuilder endpointIdentificationAlgorithm(String endpointIdentificationAlgorithm) {
+        if (endpointIdentificationAlgorithm != null && !isSupportedHostIdentification()) {
+            throw new IllegalArgumentException("Host identification algorithm is not support on current platform.");
+        }
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         return this;
     }
@@ -647,15 +660,15 @@ public final class SslContextBuilder {
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
                 enableOcsp, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
-            String endpointIA = null;
-            if (!PlatformDependent.isAndroid() || PlatformDependent.androidApiVersion() >= 24) {
-                endpointIA = endpointIdentificationAlgorithm;
-            }
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
-                    endpointIA, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    endpointIdentificationAlgorithm, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
+    }
+
+    private static boolean isSupportedHostIdentification() {
+        return !PlatformDependent.isAndroid() || PlatformDependent.androidApiVersion() >= 24;
     }
 
     private static <T> T[] toArray(Iterable<? extends T> iterable, T[] prototype) {

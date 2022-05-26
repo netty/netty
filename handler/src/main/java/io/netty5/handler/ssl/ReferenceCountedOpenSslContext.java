@@ -480,7 +480,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         ReferenceCountedOpenSslEngine engine = new ReferenceCountedOpenSslEngine(
                 this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
-        if (isClient() && endpointIdentificationAlgorithm != null) {
+        if (isClient() && endpointIdentificationAlgorithm != null && peerHost != null) {
             SSLParameters sslParameters = engine.getSSLParameters();
             sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
             engine.setSSLParameters(sslParameters);

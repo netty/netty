@@ -178,7 +178,7 @@ public class JdkSslContext extends SslContext {
      * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
      * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
-     * ApplicationProtocolConfig, ClientAuth, String[], boolean, String)}
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
     @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient,
@@ -197,7 +197,7 @@ public class JdkSslContext extends SslContext {
      * @param apn the {@link ApplicationProtocolConfig} to use.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
      * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
-     * ApplicationProtocolConfig, ClientAuth, String[], boolean, String)}
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
     @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
@@ -327,7 +327,13 @@ public class JdkSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(BufferAllocator alloc, String peerHost, int peerPort) {
-        return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort), alloc);
+        SSLEngine engine = context().createSSLEngine(peerHost, peerPort);
+        if (isClient() && endpointIdentificationAlgorithm != null && peerHost != null) {
+            SSLParameters sslParameters = engine.getSSLParameters();
+            sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+            engine.setSSLParameters(sslParameters);
+        }
+        return configureAndWrapEngine(engine, alloc);
     }
 
     @SuppressWarnings("deprecation")
@@ -348,11 +354,6 @@ public class JdkSslContext extends SslContext {
                 default:
                     throw new Error("Unknown auth " + clientAuth);
             }
-        }
-        if (isClient() && endpointIdentificationAlgorithm != null) {
-            SSLParameters sslParameters = engine.getSSLParameters();
-            sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
-            engine.setSSLParameters(sslParameters);
         }
         JdkApplicationProtocolNegotiator.SslEngineWrapperFactory factory = apn.wrapperFactory();
         if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
