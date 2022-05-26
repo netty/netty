@@ -382,7 +382,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void priorityUsingHigherValuedStreamIdDoesNotPreventUsingLowerStreamId() throws Exception {
-        bootstrapEnv(1, 1, 2, 0);
+        bootstrapEnv(1, 1, 3, 0);
 
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, () -> {
