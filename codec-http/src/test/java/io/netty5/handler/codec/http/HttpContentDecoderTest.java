@@ -659,7 +659,7 @@ public class HttpContentDecoderTest {
                     @Override
                     public Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException {
                         if (input.readableBytes() > 0) {
-                            final Buffer slice = input.readSplit(input.readableBytes());
+                            final Buffer slice = input.split();
                             this.input = input;
                             return slice;
                         }

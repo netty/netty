@@ -194,12 +194,12 @@ public class SnappyTest {
                 // copy of "rotocols"
                 0x11, 0x4c,
         };
-        try (Buffer in = BufferAllocator.onHeapUnpooled().copyOf(srcStr.getBytes(StandardCharsets.US_ASCII));
+        try (Buffer in = BufferAllocator.onHeapUnpooled().copyOf(srcStr, StandardCharsets.US_ASCII);
             Buffer out = BufferAllocator.onHeapUnpooled().allocate(180);
             Buffer outDecoded = BufferAllocator.onHeapUnpooled().allocate(256);
             Buffer expected = BufferAllocator.onHeapUnpooled().copyOf(expectedBytes);
             Buffer expectedDecoded = BufferAllocator.onHeapUnpooled().copyOf(
-                    srcStr.getBytes(StandardCharsets.US_ASCII))) {
+                    srcStr, StandardCharsets.US_ASCII)) {
             snappy.encode(in, out, in.readableBytes());
 
             assertEquals(expected, out, "Encoded result was incorrect");

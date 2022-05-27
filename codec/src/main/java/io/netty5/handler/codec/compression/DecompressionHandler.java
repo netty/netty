@@ -64,7 +64,7 @@ public final class DecompressionHandler extends ByteToMessageDecoderForBuffer {
     @Override
     protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         if (decompressor == null) {
-            ctx.fireChannelRead(in.readSplit(in.readableBytes()));
+            ctx.fireChannelRead(in.split());
             return;
         }
         while (!decompressor.isFinished()) {
@@ -80,7 +80,7 @@ public final class DecompressionHandler extends ByteToMessageDecoderForBuffer {
         if (discardBytesAfterFinished) {
             in.skipReadable(in.readableBytes());
         } else {
-            ctx.fireChannelRead(in.readSplit(in.readableBytes()));
+            ctx.fireChannelRead(in.split());
         }
     }
 

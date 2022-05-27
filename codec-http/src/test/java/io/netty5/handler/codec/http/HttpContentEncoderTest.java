@@ -57,8 +57,7 @@ public class HttpContentEncoderTest {
                 private boolean finished;
                 @Override
                 public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
-                    Buffer out = allocator.allocate(256);
-                    out.writeBytes(String.valueOf(input.readableBytes()).getBytes(CharsetUtil.US_ASCII));
+                    Buffer out = allocator.copyOf(String.valueOf(input.readableBytes()), CharsetUtil.US_ASCII);
                     input.skipReadable(input.readableBytes());
                     return out;
                 }
