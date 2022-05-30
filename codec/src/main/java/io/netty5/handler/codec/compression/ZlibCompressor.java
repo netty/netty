@@ -199,8 +199,6 @@ public final class ZlibCompressor implements Compressor {
             for (var readableComponent = readableIteration.first();
                  readableComponent != null; readableComponent = readableComponent.next()) {
                 compressData(readableComponent.readableBuffer(), out);
-                // TODO: Is this needed ?
-                readableComponent.skipReadable(readableComponent.readableBytes());
             }
         }
         return out;

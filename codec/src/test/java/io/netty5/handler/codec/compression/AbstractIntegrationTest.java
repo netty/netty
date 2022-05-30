@@ -160,7 +160,7 @@ public abstract class AbstractIntegrationTest {
                 }
             }
         } finally {
-            //closeChannels();
+            closeChannels();
         }
     }
 }

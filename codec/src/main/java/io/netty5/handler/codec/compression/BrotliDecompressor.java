@@ -88,9 +88,7 @@ public final class BrotliDecompressor implements Decompressor {
     private Buffer pull(BufferAllocator alloc) {
         ByteBuffer nativeBuffer = decoder.pull();
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
-        Buffer copy = alloc.allocate(nativeBuffer.remaining());
-        copy.writeBytes(nativeBuffer);
-        return copy;
+        return alloc.copyOf(nativeBuffer);
     }
 
     private static int readBytes(Buffer in, ByteBuffer dest) {

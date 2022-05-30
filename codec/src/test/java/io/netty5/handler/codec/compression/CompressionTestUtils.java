@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,8 +18,11 @@ package io.netty5.handler.codec.compression;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.Send;
 import io.netty5.channel.embedded.EmbeddedChannel;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +58,7 @@ final class CompressionTestUtils {
     }
 
     static CompositeBuffer compose(BufferAllocator allocator, Supplier<Buffer> supplier) {
-        CompositeBuffer compositeBuffer = allocator.compose();
+        List<Send<Buffer>> bufferList = new ArrayList<>();
         for (;;) {
             try (Buffer msg = supplier.get()) {
                 if (msg == null) {
@@ -68,13 +71,13 @@ final class CompressionTestUtils {
                 if (msg.writableBytes() > 0) {
                     // We also can't compose buffers that will have writer-offset gaps.
                     // Trim off the excess with split.
-                    compositeBuffer.extendWith(msg.split().send());
+                    bufferList.add(msg.split().send());
                 } else {
-                    compositeBuffer.extendWith(msg.send());
+                    bufferList.add(msg.send());
                 }
             }
         }
-        return compositeBuffer;
+        return allocator.compose(bufferList);
     }
 
     private CompressionTestUtils() { }

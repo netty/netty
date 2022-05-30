@@ -50,7 +50,7 @@ public final class FastLzCompressor implements Compressor {
     /**
      * Underlying checksum calculator in use.
      */
-    private final ByteBufChecksum checksum;
+    private final BufferChecksum checksum;
 
     private enum State {
         PROCESSING,
@@ -73,7 +73,7 @@ public final class FastLzCompressor implements Compressor {
      */
     private FastLzCompressor(int level, Checksum checksum) {
         this.level = level;
-        this.checksum = checksum == null ? null : new ByteBufChecksum(checksum);
+        this.checksum = checksum == null ? null : new BufferChecksum(checksum);
     }
 
     /**
@@ -148,9 +148,9 @@ public final class FastLzCompressor implements Compressor {
     }
 
     private Buffer compressData(Buffer in, BufferAllocator allocator) {
-        final ByteBufChecksum checksum = this.checksum;
-        // TODO: Is this a good size ?
-        Buffer out = allocator.allocate(in.readableBytes() / 2);
+        final BufferChecksum checksum = this.checksum;
+        // for text compression it can at max half the size, lets try to keep a bit of head-room.
+        Buffer out = allocator.allocate((int) ((double) in.readableBytes() / 1.5));
         for (;;) {
             if (in.readableBytes() == 0) {
                 return out;

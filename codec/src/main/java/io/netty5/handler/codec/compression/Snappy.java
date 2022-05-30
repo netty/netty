@@ -499,8 +499,7 @@ public final class Snappy {
     private static void copyRegion(Buffer out, int initialIndex, int offset, int length) {
         out.readerOffset(initialIndex - offset);
         out.copyInto(out.readerOffset(), out, out.writerOffset(), length);
-        out.skipReadable(length);
-        out.skipWritable(length);
+        out.skipWritable(length).skipReadable(length);
     }
 
     /**

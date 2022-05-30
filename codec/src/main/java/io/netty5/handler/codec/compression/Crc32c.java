@@ -25,7 +25,7 @@ import java.util.zip.Checksum;
  * The implementation of this class has been sourced from the Appendix of RFC 3309,
  * but with masking due to Java not being able to support unsigned types.
  */
-class Crc32c extends ByteBufChecksum {
+class Crc32c extends BufferChecksum {
     private static final int[] CRC_TABLE = {
             0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4,
             0xC79A971F, 0x35F1141C, 0x26A1E7E8, 0xD4CA64EB,

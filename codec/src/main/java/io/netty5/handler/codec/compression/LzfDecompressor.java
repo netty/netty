@@ -18,6 +18,7 @@ package io.netty5.handler.codec.compression;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkDecoder;
 import com.ning.compress.lzf.LZFChunk;
+import com.ning.compress.lzf.LZFException;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
@@ -202,33 +203,32 @@ public final class LzfDecompressor implements Decompressor {
                         if (in.countReadableComponents() == 1) {
                             try (var readableIteration = in.forEachReadable()) {
                                 var readableComponent = readableIteration.first();
-                                final byte[] inputArray;
-                                final int inPos;
-                                byte[] outputArray = recycler.allocOutputBuffer(originalLength);
-                                final int outPos = 0;
                                 if (readableComponent.hasReadableArray()) {
-                                    inputArray = readableComponent.readableArray();
-                                    inPos = readableComponent.readableArrayOffset();
-                                } else {
-                                    final int idx = in.readerOffset();
-                                    inputArray = recycler.allocInputBuffer(chunkLength);
-                                    in.copyInto(idx, inputArray, 0, chunkLength);
-                                    inPos = 0;
-                                }
-                                try {
-                                    decoder.decodeChunk(inputArray, inPos,
-                                            outputArray, outPos, outPos + originalLength);
-                                    in.skipReadable(chunkLength);
-                                    currentState = State.INIT_BLOCK;
-                                    return allocator.allocate(originalLength)
-                                            .writeBytes(outputArray, 0, originalLength);
-                                } finally {
-                                    if (!readableComponent.hasReadableArray()) {
-                                        recycler.releaseInputBuffer(inputArray);
+                                    byte[] inputArray = readableComponent.readableArray();
+                                    int inPos = readableComponent.readableArrayOffset();
+                                    try {
+                                        Buffer out = decompress(allocator, inputArray, inPos, originalLength);
+                                        in.skipReadable(chunkLength);
+                                        currentState = State.INIT_BLOCK;
+                                        return out;
+                                    } finally {
+                                        if (!readableComponent.hasReadableArray()) {
+                                            recycler.releaseInputBuffer(inputArray);
+                                        }
                                     }
-                                    recycler.releaseOutputBuffer(outputArray);
                                 }
                             }
+                        }
+                        final int idx = in.readerOffset();
+                        byte[] inputArray = recycler.allocInputBuffer(chunkLength);
+                        in.copyInto(idx, inputArray, 0, chunkLength);
+                        try {
+                            Buffer out = decompress(allocator, inputArray, 0, originalLength);
+                            in.skipReadable(chunkLength);
+                            currentState = State.INIT_BLOCK;
+                            return out;
+                        } finally {
+                            recycler.releaseInputBuffer(inputArray);
                         }
                     } else if (chunkLength > 0) {
                         currentState = State.INIT_BLOCK;
@@ -249,6 +249,19 @@ public final class LzfDecompressor implements Decompressor {
                 throw (DecompressionException) e;
             }
             throw new DecompressionException(e);
+        }
+    }
+
+    private Buffer decompress(BufferAllocator allocator, byte[] inputArray, int offset, int len)
+            throws LZFException  {
+        byte[] outputArray = recycler.allocOutputBuffer(len);
+        try {
+            decoder.decodeChunk(inputArray, offset,
+                    outputArray, 0, len);
+            return allocator.allocate(len)
+                    .writeBytes(outputArray, 0, len);
+        } finally {
+            recycler.releaseOutputBuffer(outputArray);
         }
     }
 

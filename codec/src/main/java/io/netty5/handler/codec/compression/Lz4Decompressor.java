@@ -71,7 +71,7 @@ public final class Lz4Decompressor implements Decompressor {
     /**
      * Underlying checksum calculator in use.
      */
-    private ByteBufChecksum checksum;
+    private BufferChecksum checksum;
 
     /**
      * Type of current block.
@@ -105,7 +105,7 @@ public final class Lz4Decompressor implements Decompressor {
     private Lz4Decompressor(LZ4Factory factory, Checksum checksum) {
         decompressor = factory.fastDecompressor();
         this.checksum = checksum == null ? null : checksum instanceof Lz4XXHash32 ? (Lz4XXHash32) checksum :
-                new ByteBufChecksum(checksum);
+                new BufferChecksum(checksum);
     }
 
     /**
@@ -178,6 +178,7 @@ public final class Lz4Decompressor implements Decompressor {
             }
         }
     }
+
     @Override
     public Buffer decompress(Buffer in, BufferAllocator allocator) throws DecompressionException {
         try {
@@ -250,7 +251,7 @@ public final class Lz4Decompressor implements Decompressor {
                         return null;
                     }
 
-                    final ByteBufChecksum checksum = this.checksum;
+                    final BufferChecksum checksum = this.checksum;
                     Buffer uncompressed = null;
 
                     try {

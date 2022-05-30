@@ -272,7 +272,7 @@ public class SnappyTest {
     public void testLarge2ByteLiteralLengthAndCopyOffset() {
         try (Buffer compressed = BufferAllocator.onHeapUnpooled().allocate(256);
             Buffer actualDecompressed = BufferAllocator.onHeapUnpooled().allocate(256);
-             Buffer expectedDecompressed = BufferAllocator.onHeapUnpooled().allocate(256)) {
+            Buffer expectedDecompressed = BufferAllocator.onHeapUnpooled().allocate(256)) {
             expectedDecompressed.writeByte((byte) 0x01);
             for (int i = 0; i < 0x8000; i++) {
                 expectedDecompressed.writeByte((byte) 0);

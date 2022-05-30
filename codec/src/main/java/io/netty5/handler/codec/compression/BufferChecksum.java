@@ -25,11 +25,11 @@ import static java.util.Objects.requireNonNull;
 /**
  * {@link Checksum} implementation which can directly act on a {@link Buffer}.
  */
-class ByteBufChecksum implements Checksum {
+class BufferChecksum implements Checksum {
 
     private final Checksum checksum;
 
-    ByteBufChecksum(Checksum checksum) {
+    BufferChecksum(Checksum checksum) {
         this.checksum = requireNonNull(checksum);
     }
 

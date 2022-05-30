@@ -22,7 +22,7 @@ final class CompressionUtil {
 
     private CompressionUtil() { }
 
-    static void checkChecksum(ByteBufChecksum checksum, Buffer uncompressed, int currentChecksum) {
+    static void checkChecksum(BufferChecksum checksum, Buffer uncompressed, int currentChecksum) {
         checksum.reset();
         checksum.update(uncompressed,
                 uncompressed.readerOffset(), uncompressed.readableBytes());

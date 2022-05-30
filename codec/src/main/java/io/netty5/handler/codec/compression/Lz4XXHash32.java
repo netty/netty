@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
 /**
- * A special-purpose {@link ByteBufChecksum} implementation for use with
+ * A special-purpose {@link BufferChecksum} implementation for use with
  * {@link Lz4Compressor} and {@link Lz4Decompressor}.
  *
  * {@link StreamingXXHash32#asChecksum()} has a particularly nasty implementation
@@ -46,7 +46,7 @@ import java.util.zip.Checksum;
  * {@link Lz4Compressor} and {@link Lz4Decompressor}:
  * {@code reset()}, followed by one {@code update()}, followed by {@code getValue()}.
  */
-public final class Lz4XXHash32 extends ByteBufChecksum {
+public final class Lz4XXHash32 extends BufferChecksum {
 
     private static final XXHash32 XXHASH32 = XXHashFactory.fastestInstance().hash32();
 
