@@ -301,7 +301,8 @@ public final class ZlibDecompressor implements Decompressor {
                 }
             }
 
-            in.skipReadable(readableBytes - inflater.getRemaining());
+            int remaining = inflater.getRemaining();
+            in.skipReadable(readableBytes - remaining);
 
             if (readFooter) {
                 gzipState = GzipState.FOOTER_START;

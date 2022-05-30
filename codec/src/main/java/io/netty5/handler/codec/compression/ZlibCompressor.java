@@ -308,22 +308,24 @@ public final class ZlibCompressor implements Compressor {
         }
         try (var writableIteration = out.forEachWritable()) {
             var writableComponent = writableIteration.first();
+            int written = 0;
             if (writableComponent.hasWritableArray()) {
-                int numBytes;
-                do {
-                    int writerOffset = writableComponent.writableArrayOffset();
-                    numBytes = deflater.deflate(writableComponent.writableArray(), writerOffset,
-                            writableComponent.writableBytes(), Deflater.SYNC_FLUSH);
-                    writableComponent.skipWritable(numBytes);
-                } while (numBytes > 0);
+                int writerOffset = writableComponent.writableArrayOffset();
+                byte[] array = writableComponent.writableArray();
+                int writable = writableComponent.writableBytes();
+                for (int numBytes = 1; numBytes > 0;
+                     written += numBytes, writerOffset += numBytes, writable -= numBytes) {
+                    numBytes = deflater.deflate(array, writerOffset,
+                            writable, Deflater.SYNC_FLUSH);
+                }
             } else {
-                int numBytes;
-                do {
-                    ByteBuffer buffer = writableComponent.writableBuffer();
+                ByteBuffer buffer = writableComponent.writableBuffer();
+                for (int numBytes = 1; numBytes > 0; written += numBytes) {
                     numBytes = deflater.deflate(buffer, Deflater.SYNC_FLUSH);
-                    writableComponent.skipWritable(numBytes);
-                } while (numBytes > 0);
+                }
             }
+            writableComponent.skipWritable(written);
+
         }
     }
 }
