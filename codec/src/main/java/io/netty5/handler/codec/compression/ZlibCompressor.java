@@ -193,14 +193,13 @@ public final class ZlibCompressor implements Compressor {
             }
         }
         Buffer out = allocator.allocate(sizeEstimate);
-        assert out.countWritableComponents() == 1;
 
         try (var readableIteration = uncompressed.forEachReadable()) {
-            for (var readableComponent = readableIteration.first();
-                 readableComponent != null; readableComponent = readableComponent.next()) {
+            for (var readableComponent = readableIteration.first(); readableComponent != null; readableComponent = readableComponent.next()) {
                 compressData(readableComponent.readableBuffer(), out);
             }
         }
+
         return out;
     }
 
@@ -266,7 +265,7 @@ public final class ZlibCompressor implements Compressor {
                         footer.writeByte((byte) crcValue);
                         footer.writeByte((byte) (crcValue >>> 8));
                         footer.writeByte((byte) (crcValue >>> 16));
-                        footer.writeByte((byte) (crcValue >>> 24));
+                        footer.writeByte((byte) ((crcValue >>> 24)));
                         footer.writeByte((byte) uncBytes);
                         footer.writeByte((byte) (uncBytes >>> 8));
                         footer.writeByte((byte) (uncBytes >>> 16));
@@ -302,30 +301,28 @@ public final class ZlibCompressor implements Compressor {
     }
 
     private void deflate(Buffer out) {
-        if (out.countWritableComponents() > 1) {
-            throw new IllegalArgumentException(
-                    "Don't know how to deflate buffer without array or NIO buffer count of 1: " + out);
-        }
         try (var writableIteration = out.forEachWritable()) {
-            var writableComponent = writableIteration.first();
-            int written = 0;
-            if (writableComponent.hasWritableArray()) {
-                int writerOffset = writableComponent.writableArrayOffset();
-                byte[] array = writableComponent.writableArray();
-                int writable = writableComponent.writableBytes();
-                for (int numBytes = 1; numBytes > 0;
-                     written += numBytes, writerOffset += numBytes, writable -= numBytes) {
-                    numBytes = deflater.deflate(array, writerOffset,
-                            writable, Deflater.SYNC_FLUSH);
-                }
-            } else {
-                ByteBuffer buffer = writableComponent.writableBuffer();
-                for (int numBytes = 1; numBytes > 0; written += numBytes) {
-                    numBytes = deflater.deflate(buffer, Deflater.SYNC_FLUSH);
+            for (var writableComponent = writableIteration.first(); writableComponent != null; writableComponent = writableComponent.next()) {
+                if (writableComponent.hasWritableArray()) {
+                    for (;;) {
+                        int numBytes = deflater.deflate(
+                                writableComponent.writableArray(), writableComponent.writableArrayOffset(),  writableComponent.writableBytes(), Deflater.SYNC_FLUSH);
+                        if (numBytes <= 0) {
+                            break;
+                        }
+                        writableComponent.skipWritable(numBytes);
+                    }
+                } else {
+                    for (;;) {
+                        int numBytes = deflater.deflate(writableComponent.writableBuffer(), Deflater.SYNC_FLUSH);
+                        if (numBytes <= 0) {
+                            break;
+                        }
+                        writableComponent.skipWritable(numBytes);
+                    }
                 }
             }
-            writableComponent.skipWritable(written);
-
         }
+
     }
 }
