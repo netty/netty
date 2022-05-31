@@ -195,7 +195,8 @@ public final class ZlibCompressor implements Compressor {
         Buffer out = allocator.allocate(sizeEstimate);
 
         try (var readableIteration = uncompressed.forEachReadable()) {
-            for (var readableComponent = readableIteration.first(); readableComponent != null; readableComponent = readableComponent.next()) {
+            for (var readableComponent = readableIteration.first();
+                 readableComponent != null; readableComponent = readableComponent.next()) {
                 compressData(readableComponent.readableBuffer(), out);
             }
         }
@@ -302,11 +303,13 @@ public final class ZlibCompressor implements Compressor {
 
     private void deflate(Buffer out) {
         try (var writableIteration = out.forEachWritable()) {
-            for (var writableComponent = writableIteration.first(); writableComponent != null; writableComponent = writableComponent.next()) {
+            for (var writableComponent = writableIteration.first();
+                 writableComponent != null; writableComponent = writableComponent.next()) {
                 if (writableComponent.hasWritableArray()) {
                     for (;;) {
                         int numBytes = deflater.deflate(
-                                writableComponent.writableArray(), writableComponent.writableArrayOffset(),  writableComponent.writableBytes(), Deflater.SYNC_FLUSH);
+                                writableComponent.writableArray(), writableComponent.writableArrayOffset(),
+                                writableComponent.writableBytes(), Deflater.SYNC_FLUSH);
                         if (numBytes <= 0) {
                             break;
                         }
@@ -323,6 +326,5 @@ public final class ZlibCompressor implements Compressor {
                 }
             }
         }
-
     }
 }

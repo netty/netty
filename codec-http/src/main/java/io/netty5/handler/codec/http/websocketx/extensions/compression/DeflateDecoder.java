@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
@@ -31,11 +31,10 @@ import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 
 /**
  * Deflate implementation of a payload decompressor for
@@ -119,24 +118,35 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         boolean readable = msg.binaryData().readableBytes() > 0;
         boolean emptyDeflateBlock = isEmptyDeflateBlock(msg.binaryData());
 
-        decoder.writeInbound(intoByteBuf(msg.binaryData()));
+        decoder.writeInbound(msg.binaryData());
         if (appendFrameTail(msg)) {
-            decoder.writeInbound(intoByteBuf(FRAME_TAIL.get()));
+            decoder.writeInbound(FRAME_TAIL.get());
         }
 
-        CompositeBuffer compositeDecompressedContent = ctx.bufferAllocator().compose();
+        List<Send<Buffer>> bufferList = new ArrayList<>();
         for (;;) {
-            ByteBuf partUncompressedContent = decoder.readInbound();
+            Buffer partUncompressedContent = decoder.readInbound();
             if (partUncompressedContent == null) {
                 break;
             }
-            if (!partUncompressedContent.isReadable()) {
-                partUncompressedContent.release();
+            if (partUncompressedContent.readableBytes() == 0) {
+                partUncompressedContent.close();
                 continue;
             }
-            compositeDecompressedContent.extendWith(extractOrCopy(ctx.bufferAllocator(),
-                    partUncompressedContent).send());
+            if (partUncompressedContent.readerOffset() != 0) {
+                // We can't compose buffers that will have reader-offset gaps.
+                partUncompressedContent.readSplit(0).close(); // Trim off already-read bytes at the beginning.
+            }
+            if (partUncompressedContent.writableBytes() > 0) {
+                // We also can't compose buffers that will have writer-offset gaps.
+                // Trim off the excess with split.
+                bufferList.add(partUncompressedContent.split().send());
+            } else {
+                bufferList.add(partUncompressedContent.send());
+            }
         }
+        CompositeBuffer compositeDecompressedContent = ctx.bufferAllocator().compose(bufferList);
+
         // Correctly handle empty frames
         // See https://github.com/netty/netty/issues/4348
         if (!emptyDeflateBlock && readable && compositeDecompressedContent.countReadableComponents() <= 0) {
