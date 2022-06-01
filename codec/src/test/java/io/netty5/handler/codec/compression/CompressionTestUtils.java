@@ -72,6 +72,7 @@ final class CompressionTestUtils {
                     // We also can't compose buffers that will have writer-offset gaps.
                     // Trim off the excess with split.
                     bufferList.add(msg.split().send());
+                    msg.close();
                 } else {
                     bufferList.add(msg.send());
                 }

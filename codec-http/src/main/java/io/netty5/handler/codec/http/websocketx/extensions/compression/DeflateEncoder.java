@@ -153,6 +153,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                 // We also can't compose buffers that will have writer-offset gaps.
                 // Trim off the excess with split.
                 bufferList.add(partCompressedContent.split().send());
+                partCompressedContent.close();
             } else {
                 bufferList.add(partCompressedContent.send());
             }
