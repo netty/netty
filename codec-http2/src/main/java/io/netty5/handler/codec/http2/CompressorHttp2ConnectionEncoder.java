@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.BrotliCompressor;
 import io.netty5.handler.codec.compression.BrotliOptions;
 import io.netty5.handler.codec.compression.CompressionOptions;
@@ -74,8 +75,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * with default implementation of {@link StandardCompressionOptions}
      */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
-        this(delegate, StandardCompressionOptions.brotli(), StandardCompressionOptions.gzip(),
-                StandardCompressionOptions.deflate());
+        this(delegate, defaultCompressionOptions());
     }
 
     /**
@@ -114,7 +114,13 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         ObjectUtil.deepCheckNotNull("CompressionOptions", compressionOptionsArgs);
 
         for (CompressionOptions compressionOptions : compressionOptionsArgs) {
-            if (compressionOptions instanceof BrotliOptions) {
+            // BrotliOptions' class initialization depends on Brotli classes being on the classpath.
+            // The Brotli.isAvailable check ensures that BrotliOptions will only get instantiated if Brotli is on
+            // the classpath.
+            // This results in the static analysis of native-image identifying the instanceof BrotliOptions check
+            // and thus BrotliOptions itself as unreachable, enabling native-image to link all classes at build time
+            // and not complain about the missing Brotli classes.
+            if (Brotli.isAvailable() && compressionOptions instanceof BrotliOptions) {
                 brotliOptions = (BrotliOptions) compressionOptions;
             } else if (compressionOptions instanceof GzipOptions) {
                 gzipCompressionOptions = (GzipOptions) compressionOptions;
@@ -140,6 +146,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 }
             }
         });
+    }
+
+    private static CompressionOptions[] defaultCompressionOptions() {
+        if (Brotli.isAvailable()) {
+            return new CompressionOptions[] {
+                    StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.gzip(),
+                    StandardCompressionOptions.deflate() };
+        }
+        return new CompressionOptions[] { StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     @Override
@@ -248,7 +264,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.ZLIB);
         }
-        if (brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
+        if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return BrotliCompressor.newFactory(brotliOptions.parameters()).get();
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {

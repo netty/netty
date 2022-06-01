@@ -174,8 +174,13 @@ public class HttpContentCompressor extends HttpContentEncoder {
         } else {
             ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
             for (CompressionOptions compressionOption : compressionOptions) {
-                if (compressionOption instanceof BrotliOptions) {
-                    // if we have BrotliOptions, it means Brotli is available
+                // BrotliOptions' class initialization depends on Brotli classes being on the classpath.
+                // The Brotli.isAvailable check ensures that BrotliOptions will only get instantiated if Brotli is
+                // on the classpath.
+                // This results in the static analysis of native-image identifying the instanceof BrotliOptions check
+                // and thus BrotliOptions itself as unreachable, enabling native-image to link all classes
+                // at build time and not complain about the missing Brotli classes.
+                if (Brotli.isAvailable() && compressionOption instanceof BrotliOptions) {
                     brotliOptions = (BrotliOptions) compressionOption;
                 } else if (compressionOption instanceof GzipOptions) {
                     gzipOptions = (GzipOptions) compressionOption;
@@ -205,7 +210,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
             this.factories.put("deflate", ZlibCompressor.newFactory(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel()));
         }
-        if (this.brotliOptions != null) {
+
+        if (Brotli.isAvailable() && this.brotliOptions != null) {
             this.factories.put("br", BrotliCompressor.newFactory(brotliOptions.parameters()));
         }
         if (this.zstdOptions != null) {
