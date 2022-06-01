@@ -277,6 +277,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @Override
     void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
+        // 此处的 handler 是 ChannelInitializer的实现
         p.addLast(config.handler());
 
         setChannelOptions(channel, newOptionsArray(), logger);

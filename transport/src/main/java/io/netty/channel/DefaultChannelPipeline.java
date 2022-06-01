@@ -106,6 +106,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
 
+        // 通过双向链表链接ChannelHandlerContext
         tail = new TailContext(this);
         head = new HeadContext(this);
 

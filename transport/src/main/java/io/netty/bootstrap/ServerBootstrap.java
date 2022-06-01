@@ -127,6 +127,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
+    // 初始化和配置了一些属性，并添加了 handler
     @Override
     void init(Channel channel) {
         // 初始化 Channel 的可选项集合
@@ -211,13 +212,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
-
+            // 触发读事件时，Channel生命周期处理
             child.pipeline().addLast(childHandler);
-
+            // 设置 options 及 属性
             setChannelOptions(child, childOptions, logger);
             setAttributes(child, childAttrs);
 
             try {
+                // 进行客户端 channel 的注册
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

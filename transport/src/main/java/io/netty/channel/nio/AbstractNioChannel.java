@@ -426,7 +426,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
-            // 注册感兴趣的事件
+            // 注册感兴趣的事件(已有事件和缓存的事件都进行配置)
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

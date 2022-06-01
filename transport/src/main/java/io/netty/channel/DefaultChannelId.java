@@ -56,6 +56,7 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     static {
+        // 1、processId 先从环境变量中读取，没配置使用默认生成策略。
         int processId = -1;
         String customProcessId = SystemPropertyUtil.get("io.netty.processId");
         if (customProcessId != null) {
@@ -82,6 +83,7 @@ public final class DefaultChannelId implements ChannelId {
 
         PROCESS_ID = processId;
 
+        // 2、machineId
         byte[] machineId = null;
         String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
         if (customMachineId != null) {

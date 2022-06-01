@@ -500,6 +500,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
+            // 安全执行
             safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
@@ -1004,6 +1005,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return channel().hasAttr(key);
     }
 
+    // 安全执行，不会抛出异常
     private static boolean safeExecute(EventExecutor executor, Runnable runnable,
             ChannelPromise promise, Object msg, boolean lazy) {
         try {

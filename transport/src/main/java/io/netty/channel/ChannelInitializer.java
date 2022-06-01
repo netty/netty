@@ -102,6 +102,8 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     }
 
     /**
+     * 注意并没有广播 handlerAdded 事件。默认情况下，handler 都是通过ChannelInitializer初始化加入ChannelPipeline中的。
+     *
      * {@inheritDoc} If override this method ensure you call super!
      */
     @Override
@@ -126,6 +128,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
 
     @SuppressWarnings("unchecked")
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
+        // 防止重复调用
         if (initMap.add(ctx)) { // Guard against re-entrance.
             try {
                 initChannel((C) ctx.channel());
@@ -136,6 +139,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline();
                 // 从 pipeline 中移除当前 ChannelInitializer 实现的handler，避免重新初始化。
+                // 注意此处的移除操作，与initMap结合，保证了initChannel()方法不会在handlerAdded、channelRegistered两个事件中被重复调用
                 if (pipeline.context(this) != null) {
                     pipeline.remove(this);
                 }

@@ -534,12 +534,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
-                            // 处理 Channel 感兴趣的就绪 IO 事件
+                            // 1、处理 Channel 感兴趣的就绪 IO 事件
                             processSelectedKeys();
                         }
                     } finally {
                         // Ensure we always run tasks.
-                        // 运行所有普通任务和定时任务，不限制时间
+                        // 2、运行所有普通任务和定时任务，不限制时间
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {

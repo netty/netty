@@ -70,8 +70,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
+        // 默认id实现，由MACHINE_ID + PROCESS_ID + SEQUENCE + TIMESTAMP + RANDOM生成，其中shortValue去除了随机数，所以可能会重复。
         id = newId();
+        // 真实的I/O操作，都是由该类实现的
         unsafe = newUnsafe();
+        // DefaultChannelPipeline
         pipeline = newChannelPipeline();
     }
 
@@ -469,7 +472,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            // 校验 Channel 和 eventLoop 类型是否匹配
+            // 校验 Channel 和 eventLoop 类型是否匹配(例如都是NIO)
             if (!isCompatible(eventLoop)) {
                 promise.setFailure(
                         new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
@@ -511,7 +514,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // 记录是否为首次注册
                 boolean firstRegistration = neverRegistered;
 
-                // 执行注册逻辑
+                // 1、执行注册逻辑
                 doRegister();
 
                 // 标记首次注册为 false
@@ -521,20 +524,24 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 2、handler added 逻辑
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
+                // 3、channelRegistered 逻辑
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
                 if (isActive()) {
                     if (firstRegistration) {
+                        // 4、已被 active 且第一次 register，触发 ChannelActive 事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         // This channel was registered before and autoRead() is set. This means we need to begin read
                         // again so that we process inbound data.
                         //
                         // See https://github.com/netty/netty/issues/4805
+                        // 准备开始读操作
                         beginRead();
                     }
                 }
@@ -571,7 +578,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // 记录 Channel 是否激活(是否绑定端口了)
             boolean wasActive = isActive();
             try {
-                // 通过元素nio channel进行了绑定端口的操作
+                // 通过原生 nio channel进行了绑定端口的操作
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
