@@ -385,6 +385,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public int implicitCapacityLimit() {
+        return implicitCapacityLimit;
+    }
+
+    @Override
     public CompositeBuffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGetBounds(offset, length);

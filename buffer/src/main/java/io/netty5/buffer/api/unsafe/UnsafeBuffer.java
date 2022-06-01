@@ -205,6 +205,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
+    public int implicitCapacityLimit() {
+        return implicitCapacityLimit;
+    }
+
+    @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGet(offset, length);

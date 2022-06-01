@@ -228,6 +228,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     @Override
+    public int implicitCapacityLimit() {
+        return implicitCapacityLimit;
+    }
+
+    @Override
     public void copyInto(int srcPos, byte[] dest, int destPos, int length) {
         if (!isAccessible()) {
             throw attachTrace(bufferIsClosed(this));
