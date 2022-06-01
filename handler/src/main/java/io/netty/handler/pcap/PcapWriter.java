@@ -36,6 +36,12 @@ final class PcapWriter implements Closeable {
     private final OutputStream outputStream;
 
     /**
+     * {@code true} if we want to synchronize on the {@link OutputStream} while writing
+     * else {@code false}.
+     */
+    private final boolean sharedOutputStream;
+
+    /**
      * Set to {@code true} if {@link #outputStream} is closed.
      */
     private boolean isClosed;
@@ -44,8 +50,9 @@ final class PcapWriter implements Closeable {
      * This uses {@link OutputStream} for writing Pcap.
      * Pcap Global Header is not written on construction.
      */
-    PcapWriter(OutputStream outputStream) {
+    PcapWriter(OutputStream outputStream, boolean sharedOutputStream) {
         this.outputStream = outputStream;
+        this.sharedOutputStream = sharedOutputStream;
     }
 
     /**
@@ -54,8 +61,9 @@ final class PcapWriter implements Closeable {
      *
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    PcapWriter(OutputStream outputStream, ByteBuf byteBuf) throws IOException {
+    PcapWriter(OutputStream outputStream, ByteBuf byteBuf, boolean sharedOutputStream) throws IOException {
         this.outputStream = outputStream;
+        this.sharedOutputStream = sharedOutputStream;
 
         PcapHeaders.writeGlobalHeader(byteBuf);
         byteBuf.readBytes(outputStream, byteBuf.readableBytes());
@@ -83,8 +91,15 @@ final class PcapWriter implements Closeable {
                 packet.readableBytes()
         );
 
-        packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
-        packet.readBytes(outputStream, packet.readableBytes());
+        if (sharedOutputStream) {
+            synchronized (outputStream) {
+                packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
+                packet.readBytes(outputStream, packet.readableBytes());
+            }
+        } else {
+            packetHeaderBuf.readBytes(outputStream, packetHeaderBuf.readableBytes());
+            packet.readBytes(outputStream, packet.readableBytes());
+        }
     }
 
     @Override
@@ -94,7 +109,9 @@ final class PcapWriter implements Closeable {
         } else {
             isClosed = true;
             outputStream.flush();
-            outputStream.close();
+            if (!sharedOutputStream) {
+                outputStream.close();
+            }
             logger.debug("PcapWriter is now closed");
         }
     }

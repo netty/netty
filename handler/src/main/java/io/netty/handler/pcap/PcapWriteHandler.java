@@ -91,6 +91,12 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     private final boolean writePcapGlobalHeader;
 
     /**
+     * {@code true} if we want to synchronize on the {@link OutputStream} while writing
+     * else {@code false}.
+     */
+    private final boolean sharedOutputStream;
+
+    /**
      * TCP Sender Segment Number.
      * It'll start with 1 and keep incrementing with number of bytes read/sent.
      */
@@ -148,9 +154,45 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                              {@link NullPointerException}
      */
     public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
+        this(outputStream, captureZeroByte, writePcapGlobalHeader, false);
+    }
+
+    /**
+     * Create new {@link PcapWriteHandler} Instance
+     *
+     * @param outputStream          OutputStream where Pcap data will be written. Call {@link #close()} to close this
+     *                              OutputStream.
+     * @param captureZeroByte       Set to {@code true} to enable capturing packets with empty (0 bytes) payload.
+     *                              Otherwise, if set to {@code false}, empty packets will be filtered out.
+     * @param writePcapGlobalHeader Set to {@code true} to write Pcap Global Header on initialization.
+     *                              Otherwise, if set to {@code false}, Pcap Global Header will not be written
+     *                              on initialization. This could when writing Pcap data on a existing file where
+     *                              Pcap Global Header is already present.
+     * @param sharedOutputStream    Set to {@code true} if multiple {@link PcapWriteHandler} instances will be
+     *                              writing to the same {@link OutputStream} concurrently, and write locking is
+     *                              required. Otherwise, if set to {@code false}, no locking will be done.
+     *                              Additionally, {@link #close} will not close the underlying {@code OutputStream}.
+     *                              Note: it is probably an error to have both {@code writePcapGlobalHeader} and
+     *                              {@code sharedOutputStream} set to {@code true} at the same time.
+     * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
+     *                              {@link NullPointerException}
+     */
+    public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader,
+            boolean sharedOutputStream) {
         this.outputStream = ObjectUtil.checkNotNull(outputStream, "OutputStream");
         this.captureZeroByte = captureZeroByte;
         this.writePcapGlobalHeader = writePcapGlobalHeader;
+        this.sharedOutputStream = sharedOutputStream;
+    }
+
+    /**
+     * Writes the Pcap Global Header to the provided {@code OutputStream}
+     *
+     * @param outputStream OutputStream where Pcap data will be written.
+     * @throws IOException if there is an error writing to the {@code OutputStream}
+     */
+    public static void writeGlobalHeader(OutputStream outputStream) throws IOException {
+        outputStream.write(PcapHeaders.GLOBAL_HEADER);
     }
 
     @Override
@@ -165,7 +207,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
             ByteBuf byteBuf = byteBufAllocator.buffer();
             try {
-                this.pCapWriter = new PcapWriter(this.outputStream, byteBuf);
+                this.pCapWriter = new PcapWriter(this.outputStream, byteBuf, sharedOutputStream);
             } catch (IOException ex) {
                 ctx.channel().close();
                 ctx.fireExceptionCaught(ex);
@@ -174,7 +216,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 byteBuf.release();
             }
         } else {
-            this.pCapWriter = new PcapWriter(this.outputStream);
+            this.pCapWriter = new PcapWriter(this.outputStream, sharedOutputStream);
         }
 
         // If Channel belongs to `SocketChannel` then we're handling TCP.
