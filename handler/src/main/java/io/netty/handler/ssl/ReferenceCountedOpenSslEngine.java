@@ -229,6 +229,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
+        engineMap = context.engineMap;
+        enableOcsp = context.enableOcsp;
+        this.jdkCompatibilityMode = jdkCompatibilityMode;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
@@ -309,13 +312,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         } else {
             session = new DefaultOpenSslSession(context.sessionContext());
         }
-        engineMap = context.engineMap;
-        enableOcsp = context.enableOcsp;
+
         if (!context.sessionContext().useKeyManager()) {
             session.setLocalCertificate(context.keyCertChain);
         }
 
-        this.jdkCompatibilityMode = jdkCompatibilityMode;
         Lock readerLock = context.ctxLock.readLock();
         readerLock.lock();
         final long finalSsl;
@@ -561,7 +562,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized void shutdown() {
         if (!destroyed) {
             destroyed = true;
-            engineMap.remove(ssl);
+            // Let's check if engineMap is null as it could be in theory if we throw an OOME during the construction of
+            // ReferenceCountedOpenSslEngine (before we assign the field). This is needed as shutdown() is called from
+            // the finalizer as well.
+            if (engineMap != null) {
+                engineMap.remove(ssl);
+            }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
 
