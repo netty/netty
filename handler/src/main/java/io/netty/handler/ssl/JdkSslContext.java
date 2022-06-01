@@ -110,11 +110,11 @@ public class JdkSslContext extends SslContext {
             supportedCiphers = Collections.unmodifiableSet(supportedCiphers(engine));
             defaultCiphers = Collections.unmodifiableList(defaultCiphers(engine, supportedCiphers));
 
-            List<String> ciphersNonTLSv13 = new ArrayList<String>(DEFAULT_CIPHERS);
+            List<String> ciphersNonTLSv13 = new ArrayList<String>(defaultCiphers);
             ciphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
             defaultCiphersNonTLSv13 = Collections.unmodifiableList(ciphersNonTLSv13);
 
-            Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<String>(SUPPORTED_CIPHERS);
+            Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<String>(supportedCiphers);
             suppertedCiphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
             supportedCiphersNonTLSv13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
         }
