@@ -266,7 +266,7 @@ public final class ZlibCompressor implements Compressor {
                         footer.writeByte((byte) crcValue);
                         footer.writeByte((byte) (crcValue >>> 8));
                         footer.writeByte((byte) (crcValue >>> 16));
-                        footer.writeByte((byte) ((crcValue >>> 24)));
+                        footer.writeByte((byte) (crcValue >>> 24));
                         footer.writeByte((byte) uncBytes);
                         footer.writeByte((byte) (uncBytes >>> 8));
                         footer.writeByte((byte) (uncBytes >>> 16));

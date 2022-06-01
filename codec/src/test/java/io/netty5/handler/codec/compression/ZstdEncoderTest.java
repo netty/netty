@@ -54,12 +54,8 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     public void testCompressionOfLargeBatchedFlow(final Buffer data) throws Exception {
         final int dataLength = data.readableBytes();
         try (Buffer expected = data.copy()) {
-            Buffer in = data.readSplit(65535);
-            assertTrue(channel.writeOutbound(in));
-
-            Buffer in2 = data.readSplit(dataLength - 65535);
-            assertTrue(channel.writeOutbound(in2));
-
+            assertTrue(channel.writeOutbound(data.readSplit(data.readableBytes() / 2)));
+            assertTrue(channel.writeOutbound(data.split()));
             assertTrue(channel.finish());
 
             try (Buffer decompressed = readDecompressed(dataLength)) {
