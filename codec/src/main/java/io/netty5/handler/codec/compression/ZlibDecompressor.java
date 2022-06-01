@@ -295,10 +295,9 @@ public final class ZlibDecompressor implements Decompressor {
                             readFooter = true;
                         }
                         break;
-                    } else {
-                        decompressed = prepareDecompressBuffer(allocator, decompressed, inflater.getRemaining() << 1);
                     }
                 }
+                decompressed = prepareDecompressBuffer(allocator, decompressed, inflater.getRemaining() << 1);
             }
 
             int remaining = inflater.getRemaining();
@@ -552,21 +551,14 @@ public final class ZlibDecompressor implements Decompressor {
             return buf;
         }
 
-        // TODO: Fix me
-        /*
-        // this always expands the buffer if possible, even if the expansion is less than preferredSize
-        // we throw the exception only if the buffer could not be expanded at all
-        // this means that one final attempt to deserialize will always be made with the buffer at maxAllocation
-        if (buffer.ensureWritable(preferredSize, true) == 1) {
-            // buffer must be consumed so subclasses don't add it to output
-            // we therefore duplicate it when calling decompressionBufferExhausted() to guarantee non-interference
-            // but wait until after to consume it so the subclass can tell how much output is really in the buffer
-            decompressionBufferExhausted(buffer.duplicate());
+        // TODO:
+        buffer.ensureWritable(preferredSize);
+        if (buffer.writableBytes() < preferredSize) {
+            decompressionBufferExhausted(buffer);
             buffer.skipReadable(buffer.readableBytes());
             throw new DecompressionException(
-                    "Decompression buffer has reached maximum size: " + buffer.maxCapacity());
+                    "Decompression buffer has reached maximum size: " + buffer.capacity());
         }
-        */
         return buffer;
     }
 
