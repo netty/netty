@@ -18,9 +18,8 @@ package io.netty5.handler.codec.compression;
 import com.aayushatharva.brotli4j.decoder.Decoder;
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,32 +43,40 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        byte[] compressedArray = new byte[compressed.readableBytes()];
-        compressed.readBytes(compressedArray);
-        compressed.release();
+    protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
+        try (compressed) {
+            byte[] compressedArray = new byte[compressed.readableBytes()];
+            compressed.readBytes(compressedArray, 0, compressedArray.length);
 
-        DirectDecompress decompress = Decoder.decompress(compressedArray);
-        if (decompress.getResultStatus() == DecoderJNI.Status.ERROR) {
-            throw new DecompressionException("Brotli stream corrupted");
+            DirectDecompress decompress = Decoder.decompress(compressedArray);
+            if (decompress.getResultStatus() == DecoderJNI.Status.ERROR) {
+                throw new DecompressionException("Brotli stream corrupted");
+            }
+
+            byte[] decompressed = decompress.getDecompressedData();
+            return BufferAllocator.onHeapUnpooled().copyOf(decompressed);
         }
-
-        byte[] decompressed = decompress.getDecompressedData();
-        return Unpooled.wrappedBuffer(decompressed);
     }
 
     @Override
-    protected ByteBuf readDecompressed(final int dataLength) throws Exception {
-        CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readOutbound()) != null) {
-            if (msg.isReadable()) {
-                decompressed.addComponent(true, decompress(msg, -1));
-            } else {
-                msg.release();
+    protected Buffer readDecompressed(final int dataLength) throws Exception {
+        return CompressionTestUtils.compose(channel.bufferAllocator(), () -> {
+            for (;;) {
+                Buffer msg = channel.readOutbound();
+                if (msg == null) {
+                    return null;
+                }
+                if (msg.readableBytes() == 0) {
+                    msg.close();
+                } else {
+                    try {
+                        return decompress(msg, -1);
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
             }
-        }
-        return decompressed;
+        });
     }
 
     static boolean isNotSupported() {

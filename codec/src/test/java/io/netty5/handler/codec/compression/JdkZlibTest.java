@@ -15,16 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.AbstractByteBufAllocator;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.EmptyArrays;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
@@ -120,10 +116,18 @@ public class JdkZlibTest {
         HEAP,
         DIRECT;
 
-        ByteBuf allocate(byte[] bytes) {
+        Buffer allocate(byte[] bytes) {
             switch (this) {
-            case HEAP: return Unpooled.wrappedBuffer(bytes);
-            case DIRECT: return Unpooled.directBuffer(bytes.length).writeBytes(bytes);
+            case HEAP: return BufferAllocator.onHeapUnpooled().copyOf(bytes);
+            case DIRECT: return BufferAllocator.offHeapUnpooled().copyOf(bytes);
+            }
+            return fail("Fall-through should not be possible: " + this);
+        }
+
+        BufferAllocator allocator() {
+            switch (this) {
+                case HEAP: return BufferAllocator.onHeapUnpooled();
+                case DIRECT: return BufferAllocator.offHeapUnpooled();
             }
             return fail("Fall-through should not be possible: " + this);
         }
@@ -189,35 +193,29 @@ public class JdkZlibTest {
             Data data, BufferType inBuf, BufferType outBuf, ZlibWrapper inWrap, ZlibWrapper outWrap) {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(inWrap));
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(outWrap));
-        chEncoder.config().setAllocator(new UnpooledByteBufAllocator(inBuf == BufferType.DIRECT));
-        chDecoder.config().setAllocator(new UnpooledByteBufAllocator(outBuf == BufferType.DIRECT));
+        chEncoder.config().setBufferAllocator(inBuf.allocator());
+        chDecoder.config().setBufferAllocator(outBuf.allocator());
 
         try {
             if (data != Data.NONE) {
                 chEncoder.writeOutbound(inBuf.allocate(data.bytes));
                 chEncoder.flush();
 
-                for (;;) {
-                    ByteBuf deflatedData = chEncoder.readOutbound();
-                    if (deflatedData == null) {
-                        break;
-                    }
-                    chDecoder.writeInbound(deflatedData);
-                }
+                transferData(chEncoder, chDecoder);
 
                 byte[] decompressed = new byte[data.bytes.length];
                 int offset = 0;
                 for (;;) {
-                    ByteBuf buf = chDecoder.readInbound();
-                    if (buf == null) {
-                        break;
-                    }
-                    int length = buf.readableBytes();
-                    buf.readBytes(decompressed, offset, length);
-                    offset += length;
-                    buf.release();
-                    if (offset == decompressed.length) {
-                        break;
+                    try (Buffer buf = chDecoder.readInbound()) {
+                        if (buf == null) {
+                            break;
+                        }
+                        int length = buf.readableBytes();
+                        buf.readBytes(decompressed, offset, length);
+                        offset += length;
+                        if (offset == decompressed.length) {
+                            break;
+                        }
                     }
                 }
                 assertArrayEquals(data.bytes, decompressed);
@@ -225,14 +223,7 @@ public class JdkZlibTest {
             }
 
             // Closing an encoder channel will generate a footer.
-            assertTrue(chEncoder.finish());
-            for (;;) {
-                Object msg = chEncoder.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
+            assertTrue(chEncoder.finishAndReleaseAll());
             // But, the footer will be decoded into nothing. It's only for validation.
             assertFalse(chDecoder.finish());
         } finally {
@@ -244,82 +235,70 @@ public class JdkZlibTest {
     @Test
     public void testGZIP2() throws Exception {
         byte[] bytes = "message".getBytes(CharsetUtil.UTF_8);
-        ByteBuf data = Unpooled.wrappedBuffer(bytes);
-        ByteBuf deflatedData = Unpooled.wrappedBuffer(gzip(bytes));
-
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
-        try {
-            while (deflatedData.isReadable()) {
-                chDecoderGZip.writeInbound(deflatedData.readRetainedSlice(1));
-            }
-            deflatedData.release();
-            assertTrue(chDecoderGZip.finish());
-            ByteBuf buf = Unpooled.buffer();
-            for (;;) {
-                ByteBuf b = chDecoderGZip.readInbound();
-                if (b == null) {
-                    break;
+        try (Buffer data = BufferAllocator.onHeapUnpooled().copyOf(bytes);
+             Buffer deflatedData = BufferAllocator.onHeapUnpooled().copyOf(gzip(bytes))) {
+            EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+            try {
+                while (deflatedData.readableBytes() > 0) {
+                    chDecoderGZip.writeInbound(deflatedData.readSplit(1));
                 }
-                buf.writeBytes(b);
-                b.release();
+                assertTrue(chDecoderGZip.finish());
+                try (Buffer composed = CompressionTestUtils.compose(
+                        chDecoderGZip.bufferAllocator(), chDecoderGZip::readInbound)) {
+                    assertEquals(composed, data);
+                }
+                assertNull(chDecoderGZip.readInbound());
+            } finally {
+                dispose(chDecoderGZip);
             }
-            assertEquals(buf, data);
-            assertNull(chDecoderGZip.readInbound());
-            data.release();
-            buf.release();
-        } finally {
-            dispose(chDecoderGZip);
         }
     }
 
-    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
+    private static void transferData(EmbeddedChannel in, EmbeddedChannel out) {
+        for (;;) {
+            Buffer deflatedData = in.readOutbound();
+            if (deflatedData == null) {
+                break;
+            }
+            out.writeInbound(deflatedData);
+        }
+    }
+
+    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, Buffer data) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
 
-        try {
-            chEncoder.writeOutbound(data.retain());
+        try (data) {
+            chEncoder.writeOutbound(data.copy());
             chEncoder.flush();
-            data.readerIndex(0);
 
-            for (;;) {
-                ByteBuf deflatedData = chEncoder.readOutbound();
-                if (deflatedData == null) {
-                    break;
-                }
-                chDecoderZlib.writeInbound(deflatedData);
-            }
+            transferData(chEncoder, chDecoderZlib);
 
             byte[] decompressed = new byte[data.readableBytes()];
             int offset = 0;
             for (;;) {
-                ByteBuf buf = chDecoderZlib.readInbound();
-                if (buf == null) {
-                    break;
-                }
-                int length = buf.readableBytes();
-                buf.readBytes(decompressed, offset, length);
-                offset += length;
-                buf.release();
-                if (offset == decompressed.length) {
-                    break;
+                try (Buffer buf = chDecoderZlib.readInbound()) {
+                    if (buf == null) {
+                        break;
+                    }
+                    int length = buf.readableBytes();
+                    buf.readBytes(decompressed, offset, length);
+                    offset += length;
+                    if (offset == decompressed.length) {
+                        break;
+                    }
                 }
             }
-            assertEquals(data, Unpooled.wrappedBuffer(decompressed));
+            try (Buffer decompBuffer = chDecoderZlib.bufferAllocator().copyOf(decompressed)) {
+                assertEquals(data, decompBuffer);
+            }
             assertNull(chDecoderZlib.readInbound());
 
             // Closing an encoder channel will generate a footer.
-            assertTrue(chEncoder.finish());
-            for (;;) {
-                Object msg = chEncoder.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
+            assertTrue(chEncoder.finishAndReleaseAll());
+
             // But, the footer will be decoded into nothing. It's only for validation.
             assertFalse(chDecoderZlib.finish());
-
-            data.release();
         } finally {
             dispose(chEncoder);
             dispose(chDecoderZlib);
@@ -334,26 +313,10 @@ public class JdkZlibTest {
             // Closing an encoder channel without writing anything should generate both header and footer.
             assertTrue(chEncoder.finish());
 
-            for (;;) {
-                ByteBuf deflatedData = chEncoder.readOutbound();
-                if (deflatedData == null) {
-                    break;
-                }
-                chDecoderZlib.writeInbound(deflatedData);
-            }
+            transferData(chEncoder, chDecoderZlib);
 
             // Decoder should not generate anything at all.
-            boolean decoded = false;
-            for (;;) {
-                ByteBuf buf = chDecoderZlib.readInbound();
-                if (buf == null) {
-                    break;
-                }
-
-                buf.release();
-                decoded = true;
-            }
-            assertFalse(decoded, "should decode nothing");
+            assertNull(chDecoderZlib.readInbound(), "should decode nothing");
 
             assertFalse(chDecoderZlib.finish());
         } finally {
@@ -363,54 +326,29 @@ public class JdkZlibTest {
     }
 
     private static void dispose(EmbeddedChannel ch) {
-        if (ch.finish()) {
-            for (;;) {
-                Object msg = ch.readInbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-            for (;;) {
-                Object msg = ch.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-        }
+        ch.finishAndReleaseAll();
     }
 
     // Test for https://github.com/netty/netty/issues/2572
     private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(decoderWrapper));
-        chDecoder.writeInbound(Unpooled.copiedBuffer(compressed));
+        chDecoder.writeInbound(chDecoder.bufferAllocator().copyOf(compressed));
         assertTrue(chDecoder.finish());
 
-        ByteBuf decoded = Unpooled.buffer(data.length);
-
-        for (;;) {
-            ByteBuf buf = chDecoder.readInbound();
-            if (buf == null) {
-                break;
-            }
-            decoded.writeBytes(buf);
-            buf.release();
+        try (Buffer expected = chDecoder.bufferAllocator().copyOf(data);
+             Buffer decoded = CompressionTestUtils.compose(chDecoder.bufferAllocator(), chDecoder::readInbound)) {
+            assertEquals(expected, decoded);
         }
-        assertEquals(Unpooled.copiedBuffer(data), decoded);
-        decoded.release();
     }
 
     private void testCompressSmall(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
-        testCompress0(encoderWrapper, decoderWrapper, Unpooled.wrappedBuffer(BYTES_SMALL));
-        testCompress0(encoderWrapper, decoderWrapper,
-                Unpooled.directBuffer(BYTES_SMALL.length).writeBytes(BYTES_SMALL));
+        testCompress0(encoderWrapper, decoderWrapper, BufferAllocator.onHeapUnpooled().copyOf(BYTES_SMALL));
+        testCompress0(encoderWrapper, decoderWrapper, BufferAllocator.offHeapUnpooled().copyOf(BYTES_SMALL));
     }
 
     private void testCompressLarge(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
-        testCompress0(encoderWrapper, decoderWrapper, Unpooled.wrappedBuffer(BYTES_LARGE));
-        testCompress0(encoderWrapper, decoderWrapper,
-                Unpooled.directBuffer(BYTES_LARGE.length).writeBytes(BYTES_LARGE));
+        testCompress0(encoderWrapper, decoderWrapper, BufferAllocator.onHeapUnpooled().copyOf(BYTES_LARGE));
+        testCompress0(encoderWrapper, decoderWrapper, BufferAllocator.offHeapUnpooled().copyOf(BYTES_LARGE));
     }
 
     @Test
@@ -447,42 +385,32 @@ public class JdkZlibTest {
     private void testGZIPCompressOnly0(byte[] data) throws IOException {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP));
         if (data != null) {
-            chEncoder.writeOutbound(Unpooled.wrappedBuffer(data));
+            chEncoder.writeOutbound(chEncoder.bufferAllocator().copyOf(data));
         }
         assertTrue(chEncoder.finish());
 
-        ByteBuf encoded = Unpooled.buffer();
-        for (;;) {
-            ByteBuf buf = chEncoder.readOutbound();
-            if (buf == null) {
-                break;
-            }
-            encoded.writeBytes(buf);
-            buf.release();
-        }
+        Buffer encoded = CompressionTestUtils.compose(chEncoder.bufferAllocator(), chEncoder::readOutbound);
 
-        ByteBuf decoded = Unpooled.buffer();
-        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true));
-        try {
-            byte[] buf = new byte[8192];
-            for (;;) {
-                int readBytes = stream.read(buf);
-                if (readBytes < 0) {
-                    break;
+        try (Buffer decoded = chEncoder.bufferAllocator().allocate(256)) {
+            try (GZIPInputStream stream = new GZIPInputStream(new BufferInputStream(encoded.send()))) {
+                byte[] buf = new byte[8192];
+                for (;;) {
+                    int readBytes = stream.read(buf);
+                    if (readBytes < 0) {
+                        break;
+                    }
+                    decoded.writeBytes(buf, 0, readBytes);
                 }
-                decoded.writeBytes(buf, 0, readBytes);
             }
-        } finally {
-            stream.close();
-        }
 
-        if (data != null) {
-            assertEquals(Unpooled.wrappedBuffer(data), decoded);
-        } else {
-            assertFalse(decoded.isReadable());
+            if (data != null) {
+                try (Buffer expected = chEncoder.bufferAllocator().copyOf(data)) {
+                    assertEquals(expected, decoded);
+                }
+            } else {
+                assertFalse(decoded.readableBytes() > 0);
+            }
         }
-
-        decoded.release();
     }
 
     @Test
@@ -507,24 +435,6 @@ public class JdkZlibTest {
     }
 
     @Test
-    public void testMaxAllocation() throws Exception {
-        int maxAllocation = 1024;
-        ChannelHandler decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
-        EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
-        TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
-        chDecoder.config().setAllocator(alloc);
-
-        try {
-            chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
-            fail("decompressed size > maxAllocation, so should have thrown exception");
-        } catch (DecompressionException e) {
-            assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
-            assertEquals(maxAllocation, alloc.getMaxAllocation());
-            assertFalse(chDecoder.finish());
-        }
-    }
-
-    @Test
     // verifies backward compatibility
     public void testConcatenatedStreamsReadFirstOnly() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
@@ -532,13 +442,13 @@ public class JdkZlibTest {
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
 
-            assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
+            assertTrue(chDecoderGZip.writeInbound(chDecoderGZip.bufferAllocator().copyOf(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
             assertEquals(1, messages.size());
 
-            ByteBuf msg = (ByteBuf) messages.poll();
-            assertEquals("a", msg.toString(CharsetUtil.UTF_8));
-            ReferenceCountUtil.release(msg);
+            try (Buffer msg = (Buffer) messages.poll()) {
+                assertEquals("a", msg.toString(CharsetUtil.UTF_8));
+            }
         } finally {
             assertFalse(chDecoderGZip.finish());
             chDecoderGZip.close();
@@ -553,14 +463,14 @@ public class JdkZlibTest {
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
 
-            assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
+            assertTrue(chDecoderGZip.writeInbound(chDecoderGZip.bufferAllocator().copyOf(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
             assertEquals(2, messages.size());
 
             for (String s : Arrays.asList("a", "b")) {
-                ByteBuf msg = (ByteBuf) messages.poll();
-                assertEquals(s, msg.toString(CharsetUtil.UTF_8));
-                ReferenceCountUtil.release(msg);
+                try (Buffer msg = (Buffer) messages.poll()) {
+                    assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                }
             }
         } finally {
             assertFalse(chDecoderGZip.finish());
@@ -577,21 +487,21 @@ public class JdkZlibTest {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
 
             // Let's feed the input byte by byte to simulate fragmentation.
-            ByteBuf buf = Unpooled.copiedBuffer(bytes);
-            boolean written = false;
-            while (buf.isReadable()) {
-                written |= chDecoderGZip.writeInbound(buf.readRetainedSlice(1));
+            try (Buffer buf = chDecoderGZip.bufferAllocator().copyOf(bytes)) {
+                boolean written = false;
+                while (buf.readableBytes() > 0) {
+                    written |= chDecoderGZip.writeInbound(buf.readSplit(1));
+                }
+                assertTrue(written);
             }
-            buf.release();
 
-            assertTrue(written);
             Queue<Object> messages = chDecoderGZip.inboundMessages();
             assertEquals(2, messages.size());
 
             for (String s : Arrays.asList("a", "b")) {
-                ByteBuf msg = (ByteBuf) messages.poll();
-                assertEquals(s, msg.toString(CharsetUtil.UTF_8));
-                ReferenceCountUtil.release(msg);
+                try (Buffer msg = (Buffer) messages.poll()) {
+                    assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                }
             }
         } finally {
             assertFalse(chDecoderGZip.finish());
@@ -608,68 +518,64 @@ public class JdkZlibTest {
         out.write(bytes);
         out.close();
 
-        byte[] compressed = bytesOut.toByteArray();
-        ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
         EmbeddedChannel channel = new EmbeddedChannel(
                 new DecompressionHandler(ZlibDecompressor.newFactory(ZlibWrapper.GZIP, true)));
+
+        byte[] compressed = bytesOut.toByteArray();
+        Buffer buffer = channel.bufferAllocator().allocate(compressed.length * 2)
+                .writeBytes(compressed).writeBytes(compressed);
+
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
-        assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));
+        assertTrue(channel.writeInbound(buffer.readSplit(compressed.length - 1)));
         assertTrue(channel.writeInbound(buffer));
         assertTrue(channel.finish());
 
-        ByteBuf uncompressedBuffer = Unpooled.wrappedBuffer(bytes);
-        ByteBuf read = channel.readInbound();
-        assertEquals(uncompressedBuffer, read);
-        read.release();
-
-        read = channel.readInbound();
-        assertEquals(uncompressedBuffer, read);
-        read.release();
+        try (Buffer uncompressedBuffer = channel.bufferAllocator().copyOf(bytes)) {
+            try (Buffer read = channel.readInbound()) {
+                assertEquals(uncompressedBuffer, read);
+            }
+            try (Buffer read = channel.readInbound()) {
+                assertEquals(uncompressedBuffer, read);
+            }
+        }
 
         assertNull(channel.readInbound());
-        uncompressedBuffer.release();
     }
 
     @Test
     public void testGZIP3() throws Exception {
-        byte[] bytes = "Foo".getBytes(CharsetUtil.UTF_8);
-        ByteBuf data = Unpooled.wrappedBuffer(bytes);
-        ByteBuf deflatedData = Unpooled.wrappedBuffer(
-                new byte[]{
-                        31, -117, // magic number
-                        8, // CM
-                        2, // FLG.FHCRC
-                        0, 0, 0, 0, // MTIME
-                        0, // XFL
-                        7, // OS
-                        -66, -77, // CRC16
-                        115, -53, -49, 7, 0, // compressed blocks
-                        -63, 35, 62, -76, // CRC32
-                        3, 0, 0, 0 // ISIZE
-                }
-        );
-
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+
+        byte[] bytes = "Foo".getBytes(CharsetUtil.UTF_8);
+        Buffer data = chDecoderGZip.bufferAllocator().copyOf(bytes);
+
         try {
-            while (deflatedData.isReadable()) {
-                chDecoderGZip.writeInbound(deflatedData.readRetainedSlice(1));
-            }
-            deflatedData.release();
-            assertTrue(chDecoderGZip.finish());
-            ByteBuf buf = Unpooled.buffer();
-            for (;;) {
-                ByteBuf b = chDecoderGZip.readInbound();
-                if (b == null) {
-                    break;
+            try (Buffer deflatedData = chDecoderGZip.bufferAllocator().copyOf(
+                    new byte[]{
+                            31, -117, // magic number
+                            8, // CM
+                            2, // FLG.FHCRC
+                            0, 0, 0, 0, // MTIME
+                            0, // XFL
+                            7, // OS
+                            -66, -77, // CRC16
+                            115, -53, -49, 7, 0, // compressed blocks
+                            -63, 35, 62, -76, // CRC32
+                            3, 0, 0, 0 // ISIZE
+                    }
+            )) {
+                while (deflatedData.readableBytes() > 0) {
+                    chDecoderGZip.writeInbound(deflatedData.readSplit(1));
                 }
-                buf.writeBytes(b);
-                b.release();
             }
-            assertEquals(buf, data);
+
+            assertTrue(chDecoderGZip.finish());
+            try (Buffer buf = CompressionTestUtils.compose(
+                    chDecoderGZip.bufferAllocator(), chDecoderGZip::readInbound)) {
+                assertEquals(buf, data);
+            }
             assertNull(chDecoderGZip.readInbound());
-            data.release();
-            buf.release();
         } finally {
             dispose(chDecoderGZip);
         }
@@ -689,35 +595,5 @@ public class JdkZlibTest {
         stream.write(bytes);
         stream.close();
         return out.toByteArray();
-    }
-
-    private static final class TestByteBufAllocator extends AbstractByteBufAllocator {
-        private final ByteBufAllocator wrapped;
-        private int maxAllocation;
-
-        TestByteBufAllocator(ByteBufAllocator wrapped) {
-            this.wrapped = wrapped;
-        }
-
-        public int getMaxAllocation() {
-            return maxAllocation;
-        }
-
-        @Override
-        public boolean isDirectBufferPooled() {
-            return wrapped.isDirectBufferPooled();
-        }
-
-        @Override
-        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-            maxAllocation = Math.max(maxAllocation, maxCapacity);
-            return wrapped.heapBuffer(initialCapacity, maxCapacity);
-        }
-
-        @Override
-        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-            maxAllocation = Math.max(maxAllocation, maxCapacity);
-            return wrapped.directBuffer(initialCapacity, maxCapacity);
-        }
     }
 }

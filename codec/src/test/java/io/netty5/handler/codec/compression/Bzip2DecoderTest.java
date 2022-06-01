@@ -15,14 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
 
 import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
 import static io.netty5.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
@@ -47,7 +45,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         return new EmbeddedChannel(new DecompressionHandler(Bzip2Decompressor.newFactory()));
     }
 
-    private void writeInboundDestroyAndExpectDecompressionException(ByteBuf in) {
+    private void writeInboundDestroyAndExpectDecompressionException(Buffer in) {
         try {
             channel.writeInbound(in);
         } finally {
@@ -57,7 +55,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testUnexpectedStreamIdentifier() {
-        ByteBuf in = Unpooled.buffer();
+        Buffer in = channel.bufferAllocator().allocate(32);
         in.writeLong(1823080128301928729L); //random value
         assertThrows(DecompressionException.class,
             () -> writeInboundDestroyAndExpectDecompressionException(in), "Unexpected stream identifier contents");
@@ -65,18 +63,18 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testInvalidBlockSize() {
-        ByteBuf in = Unpooled.buffer();
+        Buffer in = channel.bufferAllocator().allocate(32);
         in.writeMedium(MAGIC_NUMBER);
-        in.writeByte('0');  //incorrect block size
+        in.writeByte((byte) '0');  //incorrect block size
 
         assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "block size is invalid");
     }
 
     @Test
     public void testBadBlockHeader() {
-        ByteBuf in = Unpooled.buffer();
+        Buffer in = channel.bufferAllocator().allocate(32);
         in.writeMedium(MAGIC_NUMBER);
-        in.writeByte('1');  //block size
+        in.writeByte((byte) '1');  //block size
         in.writeMedium(11); //incorrect block header
         in.writeMedium(11); //incorrect block header
         in.writeInt(11111); //block CRC
@@ -86,9 +84,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testStreamCrcErrorOfEmptyBlock() {
-        ByteBuf in = Unpooled.buffer();
+        Buffer in = channel.bufferAllocator().allocate(32);
         in.writeMedium(MAGIC_NUMBER);
-        in.writeByte('1');  //block size
+        in.writeByte((byte) '1');  //block size
         in.writeMedium(END_OF_STREAM_MAGIC_1);
         in.writeMedium(END_OF_STREAM_MAGIC_2);
         in.writeInt(1);  //wrong storedCombinedCRC
@@ -96,49 +94,41 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "stream CRC error");
     }
 
-    @Test
-    public void testStreamCrcError() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[41] = (byte) 0xDD;
+    private void testInvalidInput(int idx, byte value, String msg) {
+        final Buffer data = channel.bufferAllocator().copyOf(DATA);
+        data.setByte(idx, value);
 
         assertThrows(DecompressionException.class,
-            () -> tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data)), "stream CRC error");
+                () -> tryDecodeAndCatchBufLeaks(channel, data), msg);
+    }
+
+    @Test
+    public void testStreamCrcError() {
+        testInvalidInput(41, (byte) 0xDD, "stream CRC error");
     }
 
     @Test
     public void testIncorrectHuffmanGroupsNumber() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[25] = 0x70;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "incorrect huffman groups number");
+        testInvalidInput(25, (byte) 0x70, "incorrect huffman groups number");
     }
 
     @Test
     public void testIncorrectSelectorsNumber() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[25] = 0x2F;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "incorrect selectors number");
+        testInvalidInput(25, (byte) 0x2F, "incorrect selectors number");
     }
 
     @Test
     public void testBlockCrcError() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[11] = 0x77;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
+        final Buffer in = channel.bufferAllocator().copyOf(DATA);
+        in.setByte(11, (byte) 0x77);
         assertThrows(DecompressionException.class,
             () -> writeInboundDestroyAndExpectDecompressionException(in), "block CRC error");
     }
 
     @Test
     public void testStartPointerInvalid() {
-        final byte[] data = Arrays.copyOf(DATA, DATA.length);
-        data[14] = (byte) 0xFF;
-
-        ByteBuf in = Unpooled.wrappedBuffer(data);
+        final Buffer in = channel.bufferAllocator().copyOf(DATA);
+        in.setByte(14, (byte) 0xFF);
         assertThrows(DecompressionException.class,
             () -> writeInboundDestroyAndExpectDecompressionException(in), "start pointer invalid");
     }

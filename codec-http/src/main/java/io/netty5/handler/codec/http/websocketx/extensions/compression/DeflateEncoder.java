@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
@@ -30,13 +30,12 @@ import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.FRAME_TAIL_LENGTH;
 
 /**
@@ -95,13 +94,13 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
-        final ByteBuf compressedContent;
+        final Buffer compressedContent;
         if (msg.binaryData().readableBytes() > 0) {
             compressedContent = compressContent(ctx, msg);
         } else if (msg.isFinalFragment()) {
             // Set empty DEFLATE block manually for unknown buffer size
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
-            compressedContent = intoByteBuf(EMPTY_DEFLATE_BLOCK.get());
+            compressedContent = EMPTY_DEFLATE_BLOCK.get();
         } else {
             msg.close();
             throw new CodecException("cannot compress content buffer");
@@ -109,16 +108,13 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         final WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
-            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg),
-                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {
-            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg),
-                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else if (msg instanceof ContinuationWebSocketFrame) {
-            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg),
-                    extractOrCopy(ctx.bufferAllocator(), compressedContent));
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else {
-            compressedContent.release();
+            compressedContent.close();
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
 
@@ -131,29 +127,39 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         super.handlerRemoved(ctx);
     }
 
-    private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
+    private Buffer compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
         if (encoder == null) {
             encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.NONE, compressionLevel, windowSize, 8));
         }
 
-        encoder.writeOutbound(intoByteBuf(msg.binaryData()));
+        encoder.writeOutbound(msg.binaryData());
 
-        CompositeByteBuf fullCompressedContent = ctx.alloc().compositeBuffer();
+        List<Send<Buffer>> bufferList = new ArrayList<>();
         for (;;) {
-            ByteBuf partCompressedContent = encoder.readOutbound();
+            Buffer partCompressedContent = encoder.readOutbound();
             if (partCompressedContent == null) {
                 break;
             }
-            if (!partCompressedContent.isReadable()) {
-                partCompressedContent.release();
+            if (partCompressedContent.readableBytes() == 0) {
+                partCompressedContent.close();
                 continue;
             }
-            fullCompressedContent.addComponent(true, partCompressedContent);
+            if (partCompressedContent.readerOffset() != 0) {
+                // We can't compose buffers that will have reader-offset gaps.
+                partCompressedContent.readSplit(0).close(); // Trim off already-read bytes at the beginning.
+            }
+            if (partCompressedContent.writableBytes() > 0) {
+                // We also can't compose buffers that will have writer-offset gaps.
+                // Trim off the excess with split.
+                bufferList.add(partCompressedContent.split().send());
+                partCompressedContent.close();
+            } else {
+                bufferList.add(partCompressedContent.send());
+            }
         }
 
-        if (fullCompressedContent.numComponents() <= 0) {
-            fullCompressedContent.release();
+        if (bufferList.isEmpty()) {
             throw new CodecException("cannot read compressed buffer");
         }
 
@@ -161,10 +167,11 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             cleanup();
         }
 
-        ByteBuf compressedContent;
+        Buffer compressedContent;
+        CompositeBuffer fullCompressedContent = ctx.bufferAllocator().compose(bufferList);
         if (removeFrameTail(msg)) {
             int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL_LENGTH;
-            compressedContent = fullCompressedContent.slice(0, realLength);
+            compressedContent = fullCompressedContent.readerOffset(0).writerOffset(realLength);
         } else {
             compressedContent = fullCompressedContent;
         }

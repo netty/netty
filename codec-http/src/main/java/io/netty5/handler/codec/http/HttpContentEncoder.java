@@ -15,10 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.MessageToMessageCodec;
@@ -30,7 +28,6 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
 import static java.util.Objects.requireNonNull;
 
@@ -266,10 +263,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private boolean encodeContent(ChannelHandlerContext ctx, HttpContent<?> c, List<Object> out) {
         Buffer content = c.payload();
 
-        encode(content, ctx.alloc(), ctx.bufferAllocator(), out);
+        encode(content, ctx.bufferAllocator(), out);
 
         if (c instanceof LastHttpContent) {
-            finishEncode(ctx.alloc(), ctx.bufferAllocator(), out);
+            finishEncode(ctx.bufferAllocator(), out);
             LastHttpContent<?> last = (LastHttpContent<?>) c;
 
             // Generate an additional chunk if the decoder produced
@@ -334,9 +331,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(Buffer in, ByteBufAllocator byteBufAllocator, BufferAllocator allocator, List<Object> out) {
-        Buffer compressed = extractOrCopy(allocator, compressor.compress(ByteBufAdaptor.intoByteBuf(in),
-                byteBufAllocator));
+    private void encode(Buffer in, BufferAllocator allocator, List<Object> out) {
+        Buffer compressed = compressor.compress(in, allocator);
         if (compressed.readableBytes() == 0) {
             compressed.close();
             return;
@@ -344,8 +340,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         out.add(new DefaultHttpContent(compressed));
     }
 
-    private void finishEncode(ByteBufAllocator byteBufAllocator, BufferAllocator allocator, List<Object> out) {
-        Buffer trailer = extractOrCopy(allocator, compressor.finish(byteBufAllocator));
+    private void finishEncode(BufferAllocator allocator, List<Object> out) {
+        Buffer trailer = compressor.finish(allocator);
         if (trailer.readableBytes() == 0) {
             trailer.close();
             return;

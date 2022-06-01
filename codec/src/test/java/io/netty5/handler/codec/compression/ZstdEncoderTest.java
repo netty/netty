@@ -16,10 +16,9 @@
 package io.netty5.handler.codec.compression;
 
 import com.github.luben.zstd.ZstdInputStream;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +41,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(BufferAllocator.onHeapUnpooled());
     }
 
     @Override
@@ -52,34 +51,28 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
+    public void testCompressionOfLargeBatchedFlow(final Buffer data) throws Exception {
         final int dataLength = data.readableBytes();
-        int written = 0;
+        try (Buffer expected = data.copy()) {
+            assertTrue(channel.writeOutbound(data.readSplit(data.readableBytes() / 2)));
+            assertTrue(channel.writeOutbound(data.split()));
+            assertTrue(channel.finish());
 
-        ByteBuf in = data.retainedSlice(written, 65535);
-        assertTrue(channel.writeOutbound(in));
-
-        ByteBuf in2 = data.retainedSlice(65535, dataLength - 65535);
-        assertTrue(channel.writeOutbound(in2));
-
-        assertTrue(channel.finish());
-
-        ByteBuf decompressed = readDecompressed(dataLength);
-        assertEquals(data, decompressed);
-
-        decompressed.release();
-        data.release();
+            try (Buffer decompressed = readDecompressed(dataLength)) {
+                assertEquals(expected, decompressed);
+            }
+        }
     }
 
     @ParameterizedTest
     @MethodSource("smallData")
-    public void testCompressionOfSmallBatchedFlow(final ByteBuf data) throws Exception {
+    public void testCompressionOfSmallBatchedFlow(final Buffer data) throws Exception {
         testCompressionOfBatchedFlow(data);
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
+    protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
+        InputStream is = new BufferInputStream(compressed.send());
         ZstdInputStream zstdIs = null;
         byte[] decompressed = new byte[originalLength];
         try {
@@ -102,6 +95,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
             }
         }
 
-        return Unpooled.wrappedBuffer(decompressed);
+        return BufferAllocator.onHeapUnpooled().copyOf(decompressed);
     }
 }

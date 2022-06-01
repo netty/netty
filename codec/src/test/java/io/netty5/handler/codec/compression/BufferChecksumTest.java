@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import net.jpountz.xxhash.XXHashFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ import java.util.zip.Checksum;
 import static io.netty5.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ByteBufChecksumTest {
+public class BufferChecksumTest {
 
     private static final byte[] BYTE_ARRAY = new byte[1024];
 
@@ -40,41 +40,39 @@ public class ByteBufChecksumTest {
 
     @Test
     public void testHeapByteBufUpdate() {
-        testUpdate(Unpooled.wrappedBuffer(BYTE_ARRAY));
+        testUpdate(BufferAllocator.onHeapUnpooled().copyOf(BYTE_ARRAY));
     }
 
     @Test
     public void testDirectByteBufUpdate() {
-        ByteBuf buf = Unpooled.directBuffer(BYTE_ARRAY.length);
+        Buffer buf = BufferAllocator.offHeapUnpooled().allocate(BYTE_ARRAY.length);
         buf.writeBytes(BYTE_ARRAY);
         testUpdate(buf);
     }
 
-    private static void testUpdate(ByteBuf buf) {
-        try {
+    private static void testUpdate(Buffer buf) {
+        try (buf) {
             // all variations of xxHash32: slow and naive, optimised, wrapped optimised;
             // the last two should be literally identical, but it's best to guard against
             // an accidental regression in ByteBufChecksum#wrapChecksum(Checksum)
-            testUpdate(xxHash32(DEFAULT_SEED), ByteBufChecksum.wrapChecksum(xxHash32(DEFAULT_SEED)), buf);
+            testUpdate(xxHash32(DEFAULT_SEED), new BufferChecksum(xxHash32(DEFAULT_SEED)), buf);
             testUpdate(xxHash32(DEFAULT_SEED), new Lz4XXHash32(DEFAULT_SEED), buf);
-            testUpdate(xxHash32(DEFAULT_SEED), ByteBufChecksum.wrapChecksum(new Lz4XXHash32(DEFAULT_SEED)), buf);
+            testUpdate(xxHash32(DEFAULT_SEED), new BufferChecksum(new Lz4XXHash32(DEFAULT_SEED)), buf);
 
             // CRC32 and Adler32, special-cased to use ReflectiveByteBufChecksum
-            testUpdate(new CRC32(), ByteBufChecksum.wrapChecksum(new CRC32()), buf);
-            testUpdate(new Adler32(), ByteBufChecksum.wrapChecksum(new Adler32()), buf);
-        } finally {
-            buf.release();
+            testUpdate(new CRC32(), new BufferChecksum(new CRC32()), buf);
+            testUpdate(new Adler32(), new BufferChecksum(new Adler32()), buf);
         }
     }
 
-    private static void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf) {
+    private static void testUpdate(Checksum checksum, BufferChecksum wrapped, Buffer buf) {
         testUpdate(checksum, wrapped, buf, 0, BYTE_ARRAY.length);
         testUpdate(checksum, wrapped, buf, 0, BYTE_ARRAY.length - 1);
         testUpdate(checksum, wrapped, buf, 1, BYTE_ARRAY.length - 1);
         testUpdate(checksum, wrapped, buf, 1, BYTE_ARRAY.length - 2);
     }
 
-    private static void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf, int off, int len) {
+    private static void testUpdate(Checksum checksum, BufferChecksum wrapped, Buffer buf, int off, int len) {
         checksum.reset();
         wrapped.reset();
 

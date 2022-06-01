@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
+import java.util.zip.Checksum;
+
 /**
  * Implements CRC32-C as defined in:
  * "Optimization of Cyclic Redundancy-CHeck Codes with 24 and 32 Parity Bits",
@@ -23,7 +25,7 @@ package io.netty5.handler.codec.compression;
  * The implementation of this class has been sourced from the Appendix of RFC 3309,
  * but with masking due to Java not being able to support unsigned types.
  */
-class Crc32c extends ByteBufChecksum {
+class Crc32c extends BufferChecksum {
     private static final int[] CRC_TABLE = {
             0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4,
             0xC79A971F, 0x35F1141C, 0x26A1E7E8, 0xD4CA64EB,
@@ -94,29 +96,33 @@ class Crc32c extends ByteBufChecksum {
     private static final long LONG_MASK = 0xFFFFFFFFL;
     private static final int BYTE_MASK = 0xFF;
 
-    private int crc = ~0;
+    Crc32c() {
+        super(new Checksum() {
+            private int crc = ~0;
 
-    @Override
-    public void update(int b) {
-        crc = crc32c(crc, b);
-    }
+            @Override
+            public void update(int b) {
+                crc = crc32c(crc, b);
+            }
 
-    @Override
-    public void update(byte[] buffer, int offset, int length) {
-        int end = offset + length;
-        for (int i = offset; i < end; i++) {
-            update(buffer[i]);
-        }
-    }
+            @Override
+            public void update(byte[] b, int off, int len) {
+                int end = off + len;
+                for (int i = off; i < end; i++) {
+                    update(b[i]);
+                }
+            }
 
-    @Override
-    public long getValue() {
-        return (crc ^ LONG_MASK) & LONG_MASK;
-    }
+            @Override
+            public long getValue() {
+                return (crc ^ LONG_MASK) & LONG_MASK;
+            }
 
-    @Override
-    public void reset() {
-        crc = ~0;
+            @Override
+            public void reset() {
+                crc = ~0;
+            }
+        });
     }
 
     private static int crc32c(int crc, int b) {

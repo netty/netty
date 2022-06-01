@@ -16,8 +16,10 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -25,7 +27,7 @@ import java.util.function.Supplier;
 /**
  * {@link ByteToMessageDecoder} that uses a {@link Decompressor} for decompressing incoming {@link ByteBuf}s.
  */
-public final class DecompressionHandler extends ByteToMessageDecoder {
+public final class DecompressionHandler extends ByteToMessageDecoderForBuffer {
 
     private final Supplier<? extends Decompressor> decompressorSupplier;
     private final boolean discardBytesAfterFinished;
@@ -60,25 +62,25 @@ public final class DecompressionHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         if (decompressor == null) {
-            ctx.fireChannelRead(in.readRetainedSlice(in.readableBytes()));
+            ctx.fireChannelRead(in.split());
             return;
         }
         while (!decompressor.isFinished()) {
-            int idx = in.readerIndex();
-            ByteBuf decompressed = decompressor.decompress(in, ctx.alloc());
+            int idx = in.readerOffset();
+            Buffer decompressed = decompressor.decompress(in, ctx.bufferAllocator());
             if (decompressed != null) {
                 ctx.fireChannelRead(decompressed);
-            } else if (idx == in.readerIndex()) {
+            } else if (idx == in.readerOffset()) {
                 return;
             }
         }
         assert decompressor.isFinished();
         if (discardBytesAfterFinished) {
-            in.skipBytes(in.readableBytes());
+            in.skipReadable(in.readableBytes());
         } else {
-            ctx.fireChannelRead(in.readRetainedSlice(in.readableBytes()));
+            ctx.fireChannelRead(in.split());
         }
     }
 

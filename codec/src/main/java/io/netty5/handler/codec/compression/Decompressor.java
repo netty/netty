@@ -15,17 +15,17 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 /**
  * Decompressor that takes care of decompress some input.
  */
 public interface Decompressor extends AutoCloseable {
     /**
-     * This method will read from the input {@link ByteBuf} and decompress into a new {@link ByteBuf} that will be
-     * allocated (if needed) from the {@link ByteBufAllocator}. If there is not enough readable data in the
-     * {@link ByteBuf} to process it will return {@code null}.
+     * This method will read from the input {@link Buffer} and decompress into a new {@link Buffer} that will be
+     * allocated (if needed) from the {@link BufferAllocator}. If there is not enough readable data in the
+     * {@link Buffer} to process it will return {@code null}.
      *
      * This method should be called in a loop as long:
      *
@@ -36,17 +36,17 @@ public interface Decompressor extends AutoCloseable {
      * </li>
      * Otherwise this method should be called again once there is more data in the input buffer.
      *
-     * @param input         the {@link ByteBuf} that contains the data to be decompressed.
-     * @param allocator     the {@link ByteBufAllocator} that is used to allocate a new buffer (if needed) to write the
+     * @param input         the {@link Buffer} that contains the data to be decompressed.
+     * @param allocator     the {@link BufferAllocator} that is used to allocate a new buffer (if needed) to write the
      *                      decompressed bytes too.
-     * @return              the {@link ByteBuf} that contains the decompressed data. The caller of this method takes
+     * @return              the {@link Buffer} that contains the decompressed data. The caller of this method takes
      *                      ownership of the buffer. The return value will be {@code null} if there is not enough data
      *                      readable in the input to make any progress. In this case the user should call it again once
      *                      there is more data ready to be consumed.
      * @throws DecompressionException   thrown if an decompression error was encountered or the decompressor was closed
      *                                  before.
      */
-    ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException;
+    Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException;
 
     /**
      * Returns {@code} true if the decompressor was finish. This might be because the decompressor was explicitly closed
@@ -65,7 +65,7 @@ public interface Decompressor extends AutoCloseable {
 
     /**
      * Close the decompressor. After this method was called {@link #isFinished()}
-     * will return {@code true} as well and it is not allowed to call {@link #decompress(ByteBuf, ByteBufAllocator)}
+     * will return {@code true} as well and it is not allowed to call {@link #decompress(Buffer, BufferAllocator)}
      * anymore.
      */
     @Override

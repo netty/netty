@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 
@@ -34,8 +33,8 @@ public class Bzip2EncoderTest extends AbstractEncoderTest {
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
+    protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
+        InputStream is = new BufferInputStream(compressed.send());
         BZip2CompressorInputStream bzip2Is = null;
         byte[] decompressed = new byte[originalLength];
         try {
@@ -58,6 +57,6 @@ public class Bzip2EncoderTest extends AbstractEncoderTest {
             }
         }
 
-        return Unpooled.wrappedBuffer(decompressed);
+        return channel.bufferAllocator().copyOf(decompressed);
     }
 }

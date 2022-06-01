@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.ning.compress.lzf.LZFEncoder;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -38,20 +38,20 @@ public class LzfDecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testUnexpectedBlockIdentifier() {
-        ByteBuf in = Unpooled.buffer();
-        in.writeShort(0x1234);  //random value
-        in.writeByte(BLOCK_TYPE_NON_COMPRESSED);
-        in.writeShort(0);
+        Buffer in = channel.bufferAllocator().allocate(8);
+        in.writeShort((short) 0x1234);  //random value
+        in.writeByte((byte) BLOCK_TYPE_NON_COMPRESSED);
+        in.writeShort((short) 0);
 
         assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unexpected block identifier");
     }
 
     @Test
     public void testUnknownTypeOfChunk() {
-        ByteBuf in = Unpooled.buffer();
+        Buffer in = channel.bufferAllocator().allocate(8);
         in.writeByte(BYTE_Z);
         in.writeByte(BYTE_V);
-        in.writeByte(0xFF);   //random value
+        in.writeByte((byte) 0xFF);   //random value
         in.writeInt(0);
 
         assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unknown type of chunk");

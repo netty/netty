@@ -15,15 +15,11 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.handler.codec.compression.Decompressor;
-
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
@@ -160,20 +156,19 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void decodeContent(ChannelHandlerContext ctx, HttpContent<?> c) {
         final Buffer payload = c.payload();
-        ByteBuf content = intoByteBuf(payload);
 
         assert decompressor != null;
 
         while (!decompressor.isFinished()) {
-            int idx = content.readerIndex();
-            ByteBuf decompressed = decompressor.decompress(content, ctx.alloc());
+            int idx = payload.readerOffset();
+            Buffer decompressed = decompressor.decompress(payload, ctx.bufferAllocator());
             if (decompressed != null) {
-                if (!decompressed.isReadable()) {
-                    decompressed.release();
+                if (decompressed.readableBytes() == 0) {
+                    decompressed.close();
                     return;
                 }
-                ctx.fireChannelRead(new DefaultHttpContent(extractOrCopy(ctx.bufferAllocator(), decompressed)));
-            } else if (idx == content.readerIndex()) {
+                ctx.fireChannelRead(new DefaultHttpContent(decompressed));
+            } else if (idx == payload.readerOffset()) {
                 break;
             }
         }

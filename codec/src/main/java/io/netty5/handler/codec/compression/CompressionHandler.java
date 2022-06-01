@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
@@ -28,7 +28,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
 
 /**
- * {@link ChannelHandler} which uses a {@link Compressor} for compressing the written {@link ByteBuf}s.
+ * {@link ChannelHandler} which uses a {@link Compressor} for compressing the written {@link Buffer}s.
  */
 public final class CompressionHandler implements ChannelHandler {
 
@@ -92,22 +92,20 @@ public final class CompressionHandler implements ChannelHandler {
 
     @Override
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        if (compressor == null || !(msg instanceof ByteBuf)) {
+        if (compressor == null || !(msg instanceof Buffer)) {
             return ctx.write(msg);
         }
-        ByteBuf input = (ByteBuf) msg;
+        Buffer input = (Buffer) msg;
         if (compressor.isFinished()) {
             if (discardBytesAfterFinished) {
-                input.release();
+                input.close();
                 return ctx.newSucceededFuture();
             }
             return ctx.write(msg);
         }
-        try {
-            ByteBuf buffer = compressor.compress(input, ctx.alloc());
+        try (input) {
+            Buffer buffer = compressor.compress(input, ctx.bufferAllocator());
             return ctx.write(buffer);
-        } finally {
-            input.release();
         }
     }
 
@@ -120,9 +118,9 @@ public final class CompressionHandler implements ChannelHandler {
         if (compressor == null || compressor.isFinished()) {
             return closeCtx ? ctx.close() : ctx.newSucceededFuture();
         }
-        ByteBuf buffer = compressor.finish(ctx.alloc());
-        if (!buffer.isReadable()) {
-            buffer.release();
+        Buffer buffer = compressor.finish(ctx.bufferAllocator());
+        if (buffer.readableBytes() == 0) {
+            buffer.close();
             return closeCtx ? ctx.close() : ctx.newSucceededFuture();
         }
         if (closeCtx) {

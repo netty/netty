@@ -16,9 +16,8 @@
 
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
@@ -45,7 +44,7 @@ import static io.netty5.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Compresses a {@link ByteBuf} using the LZ4 format.
+ * Compresses a {@link Buffer} using the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
  * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
@@ -73,7 +72,7 @@ public final class Lz4Compressor implements Compressor {
     /**
      * Underlying checksum calculator in use.
      */
-    private final ByteBufChecksum checksum;
+    private final BufferChecksum checksum;
 
     /**
      * Compression level of current LZ4 encoder (depends on {@link #blockSize}).
@@ -160,7 +159,8 @@ public final class Lz4Compressor implements Compressor {
     private Lz4Compressor(LZ4Factory factory, boolean highCompressor, int blockSize,
                           Checksum checksum, int maxEncodeSize) {
         compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
-        this.checksum = ByteBufChecksum.wrapChecksum(checksum);
+        this.checksum = checksum == null ? null : checksum instanceof Lz4XXHash32 ? (Lz4XXHash32) checksum :
+                new BufferChecksum(checksum);
 
         compressionLevel = compressionLevel(blockSize);
         this.blockSize = blockSize;
@@ -180,7 +180,7 @@ public final class Lz4Compressor implements Compressor {
         return compressionLevel;
     }
 
-    private ByteBuf allocateBuffer(ByteBufAllocator allocator, ByteBuf msg) {
+    private Buffer allocateBuffer(BufferAllocator allocator, Buffer msg) {
         int targetBufSize = 0;
         int remaining = msg.readableBytes();
 
@@ -204,30 +204,30 @@ public final class Lz4Compressor implements Compressor {
                                                      "allowable size (%d bytes)", targetBufSize, maxEncodeSize));
         }
 
-        return allocator.buffer(targetBufSize);
+        return allocator.allocate(targetBufSize);
     }
 
     @Override
-    public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
-                if (!input.isReadable()) {
-                    return Unpooled.EMPTY_BUFFER;
+                if (input.readableBytes() == 0) {
+                    return allocator.allocate(0);
                 }
 
-                ByteBuf out = allocateBuffer(allocator, input);
+                Buffer out = allocateBuffer(allocator, input);
                 try {
                     // We need to compress as long as we have input to read as we are limited by the blockSize that
                     // is used.
-                    while (input.isReadable()) {
+                    while (input.readableBytes() > 0) {
                         compressData(input, out);
                     }
                 } catch (Throwable cause) {
-                    out.release();
+                    out.close();
                     throw cause;
                 }
                 return out;
@@ -237,7 +237,7 @@ public final class Lz4Compressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
@@ -245,16 +245,16 @@ public final class Lz4Compressor implements Compressor {
             case PROCESSING:
                 state = State.FINISHED;
 
-                final ByteBuf footer = allocator.buffer(HEADER_LENGTH);
+                final Buffer footer = allocator.allocate(HEADER_LENGTH);
                 footer.ensureWritable(HEADER_LENGTH);
-                final int idx = footer.writerIndex();
+                final int idx = footer.writerOffset();
                 footer.setLong(idx, MAGIC_NUMBER);
                 footer.setByte(idx + TOKEN_OFFSET, (byte) (BLOCK_TYPE_NON_COMPRESSED | compressionLevel));
                 footer.setInt(idx + COMPRESSED_LENGTH_OFFSET, 0);
                 footer.setInt(idx + DECOMPRESSED_LENGTH_OFFSET, 0);
                 footer.setInt(idx + CHECKSUM_OFFSET, 0);
 
-                footer.writerIndex(idx + HEADER_LENGTH);
+                footer.skipWritable(HEADER_LENGTH);
                 return footer;
             default:
                 throw new IllegalStateException();
@@ -280,8 +280,8 @@ public final class Lz4Compressor implements Compressor {
      *
      * Encodes the input buffer into {@link #blockSize} chunks in the output buffer.
      */
-    private void compressData(ByteBuf in, ByteBuf out) {
-        int inReaderIndex = in.readerIndex();
+    private void compressData(Buffer in, Buffer out) {
+        int inReaderIndex = in.readerOffset();
         int flushableBytes = Math.min(in.readableBytes(), blockSize);
         assert flushableBytes > 0;
         checksum.reset();
@@ -290,33 +290,55 @@ public final class Lz4Compressor implements Compressor {
 
         final int bufSize = compressor.maxCompressedLength(flushableBytes) + HEADER_LENGTH;
         out.ensureWritable(bufSize);
-        final int idx = out.writerIndex();
-        int compressedLength;
+        final int idx = out.writerOffset();
+        int compressedLength = 0;
         try {
-            ByteBuffer outNioBuffer = out.internalNioBuffer(idx + HEADER_LENGTH, out.writableBytes() - HEADER_LENGTH);
-            int pos = outNioBuffer.position();
-            // We always want to start at position 0 as we take care of reusing the buffer in the encode(...) loop.
-            compressor.compress(in.internalNioBuffer(inReaderIndex, flushableBytes), outNioBuffer);
-            compressedLength = outNioBuffer.position() - pos;
+            out.skipWritable(HEADER_LENGTH);
+            assert out.countWritableComponents() == 1;
+            int readable = flushableBytes;
+
+            try (var writableIteration = out.forEachWritable()) {
+                var writableComponent = writableIteration.first();
+                try (var readableIteration = in.forEachReadable()) {
+                    for (var readableComponent = readableIteration.first();
+                         readableComponent != null; readableComponent = readableComponent.next()) {
+                        ByteBuffer outNioBuffer = writableComponent.writableBuffer();
+                        int pos = outNioBuffer.position();
+                        ByteBuffer inNioBuffer = readableComponent.readableBuffer();
+                        if (inNioBuffer.remaining() > readable) {
+                            inNioBuffer.limit(inNioBuffer.position() + readable);
+                            compressor.compress(inNioBuffer, outNioBuffer);
+                            compressedLength += outNioBuffer.position() - pos;
+                            break;
+                        } else {
+                            readable -= inNioBuffer.remaining();
+                            compressor.compress(inNioBuffer, outNioBuffer);
+                            compressedLength += outNioBuffer.position() - pos;
+                        }
+                    }
+                }
+            }
         } catch (LZ4Exception e) {
             throw new CompressionException(e);
+        } finally {
+            out.writerOffset(idx);
         }
         final int blockType;
         if (compressedLength >= flushableBytes) {
             blockType = BLOCK_TYPE_NON_COMPRESSED;
             compressedLength = flushableBytes;
-            out.setBytes(idx + HEADER_LENGTH, in, inReaderIndex, flushableBytes);
+            in.copyInto(inReaderIndex, out, idx + HEADER_LENGTH, flushableBytes);
         } else {
             blockType = BLOCK_TYPE_COMPRESSED;
         }
 
         out.setLong(idx, MAGIC_NUMBER);
         out.setByte(idx + TOKEN_OFFSET, (byte) (blockType | compressionLevel));
-        out.setIntLE(idx + COMPRESSED_LENGTH_OFFSET, compressedLength);
-        out.setIntLE(idx + DECOMPRESSED_LENGTH_OFFSET, flushableBytes);
-        out.setIntLE(idx + CHECKSUM_OFFSET, check);
-        out.writerIndex(idx + HEADER_LENGTH + compressedLength);
+        out.setInt(idx + COMPRESSED_LENGTH_OFFSET, Integer.reverseBytes(compressedLength));
+        out.setInt(idx + DECOMPRESSED_LENGTH_OFFSET, Integer.reverseBytes(flushableBytes));
+        out.setInt(idx + CHECKSUM_OFFSET, Integer.reverseBytes(check));
+        out.writerOffset(idx + HEADER_LENGTH + compressedLength);
 
-        in.readerIndex(inReaderIndex + flushableBytes);
+        in.readerOffset(inReaderIndex + flushableBytes);
     }
 }

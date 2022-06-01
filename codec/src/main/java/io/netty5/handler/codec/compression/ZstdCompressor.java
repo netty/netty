@@ -16,9 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.util.internal.ObjectUtil;
 
@@ -31,7 +30,7 @@ import static io.netty5.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
 import static io.netty5.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 
 /**
- *  Compresses a {@link ByteBuf} using the Zstandard algorithm.
+ *  Compresses a {@link Buffer} using the Zstandard algorithm.
  *  See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdCompressor implements Compressor {
@@ -114,7 +113,7 @@ public final class ZstdCompressor implements Compressor {
         this.maxEncodeSize = maxEncodeSize;
     }
 
-    private ByteBuf allocateBuffer(ByteBufAllocator allocator, ByteBuf msg) {
+    private Buffer allocateBuffer(BufferAllocator allocator, Buffer msg) {
         int remaining = msg.readableBytes();
 
         long bufferSize = 0;
@@ -129,26 +128,27 @@ public final class ZstdCompressor implements Compressor {
                     "the maximum allowable size (" + maxEncodeSize + " bytes)");
         }
 
-        return msg.isDirect() ? allocator.directBuffer((int) bufferSize) : allocator.heapBuffer((int) bufferSize);
+        // TODO: It would be better if we could allocate depending on the input type
+        return allocator.allocate((int) bufferSize);
     }
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
-                if (!in.isReadable()) {
-                    return Unpooled.EMPTY_BUFFER;
+                if (in.readableBytes() == 0) {
+                    return allocator.allocate(0);
                 }
-                ByteBuf out = allocateBuffer(allocator, in);
+                Buffer out = allocateBuffer(allocator, in);
                 try {
                     compressData(in, out);
                     return out;
                 } catch (Throwable cause) {
-                    out.release();
+                    out.close();
                     throw cause;
                 }
             default:
@@ -157,14 +157,14 @@ public final class ZstdCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }
@@ -185,7 +185,7 @@ public final class ZstdCompressor implements Compressor {
         state = State.CLOSED;
     }
 
-    private void compressData(ByteBuf in, ByteBuf out) {
+    private void compressData(Buffer in, Buffer out) {
         final int flushableBytes = in.readableBytes();
         if (flushableBytes == 0) {
             return;
@@ -193,30 +193,57 @@ public final class ZstdCompressor implements Compressor {
 
         final int bufSize = (int) Zstd.compressBound(flushableBytes);
         out.ensureWritable(bufSize);
-        final int idx = out.writerIndex();
-        int compressedLength;
         try {
-            if (in.isDirect()) {
-                ByteBuffer inNioBuffer = in.internalNioBuffer(in.readerIndex(), flushableBytes);
-                ByteBuffer outNioBuffer = out.internalNioBuffer(idx, out.writableBytes());
-                compressedLength = Zstd.compress(
-                        outNioBuffer,
-                        inNioBuffer,
-                        compressionLevel);
-            } else {
-                byte[] inArray = in.array();
-                int inOffset = in.readerIndex() + in.arrayOffset();
-                byte[] outArray = out.array();
-                int outOffset = out.writerIndex() + out.arrayOffset();
-                compressedLength = (int) Zstd.compressByteArray(
-                        outArray, outOffset, out.writableBytes(), inArray, inOffset, flushableBytes, compressionLevel);
-            }
+            assert out.countWritableComponents() == 1;
+            try (var writableIteration = out.forEachWritable()) {
+                var writableComponent = writableIteration.first();
+                try (var readableIteration = in.forEachReadable()) {
+                    for (var readableComponent = readableIteration.first();
+                         readableComponent != null; readableComponent = readableComponent.next()) {
+                        final int compressedLength;
+                        if (in.isDirect() && out.isDirect()) {
+                            ByteBuffer inNioBuffer = readableComponent.readableBuffer();
+                            compressedLength = Zstd.compress(
+                                    writableComponent.writableBuffer(),
+                                    inNioBuffer,
+                                    compressionLevel);
+                        } else {
+                            final byte[] inArray;
+                            final int inOffset;
+                            final int inLen = readableComponent.readableBytes();
+                            if (readableComponent.hasReadableArray()) {
+                                inArray = readableComponent.readableArray();
+                                inOffset = readableComponent.readableArrayOffset();
+                            } else {
+                                inArray = new byte[inLen];
+                                readableComponent.readableBuffer().get(inArray);
+                                inOffset = 0;
+                            }
 
-            in.skipBytes(in.readableBytes());
+                            final byte[] outArray;
+                            final int outOffset;
+                            final int outLen = writableComponent.writableBytes();
+                            if (writableComponent.hasWritableArray()) {
+                                outArray = writableComponent.writableArray();
+                                outOffset = writableComponent.writableArrayOffset();
+                            } else {
+                                outArray = new byte[out.writableBytes()];
+                                outOffset = 0;
+                            }
+
+                            compressedLength = (int) Zstd.compressByteArray(
+                                    outArray, outOffset, outLen, inArray, inOffset, inLen, compressionLevel);
+                            if (!writableComponent.hasWritableArray()) {
+                                writableComponent.writableBuffer().put(outArray);
+                            }
+                        }
+                        writableComponent.skipWritable(compressedLength);
+                        readableComponent.skipReadable(readableComponent.readableBytes());
+                    }
+                }
+            }
         } catch (Exception e) {
             throw new CompressionException(e);
         }
-
-        out.writerIndex(idx + compressedLength);
     }
 }

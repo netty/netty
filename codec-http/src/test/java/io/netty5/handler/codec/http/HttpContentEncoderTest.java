@@ -16,9 +16,8 @@
 
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -57,17 +56,16 @@ public class HttpContentEncoderTest {
             return new Result("test", new Compressor() {
                 private boolean finished;
                 @Override
-                public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
-                    ByteBuf out = allocator.buffer();
-                    out.writeBytes(String.valueOf(input.readableBytes()).getBytes(CharsetUtil.US_ASCII));
-                    input.skipBytes(input.readableBytes());
+                public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
+                    Buffer out = allocator.copyOf(String.valueOf(input.readableBytes()), CharsetUtil.US_ASCII);
+                    input.skipReadable(input.readableBytes());
                     return out;
                 }
 
                 @Override
-                public ByteBuf finish(ByteBufAllocator allocator) {
+                public Buffer finish(BufferAllocator allocator) {
                     finished = true;
-                    return Unpooled.EMPTY_BUFFER;
+                    return allocator.allocate(0);
                 }
 
                 @Override
@@ -438,17 +436,17 @@ public class HttpContentEncoderTest {
             @Override
             protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
                 return new Result("myencoding", new Compressor() {
-                    private ByteBuf input;
+                    private Buffer input;
 
                     @Override
-                    public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+                    public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
                         this.input = input;
-                        return input.retainedSlice();
+                        return input.copy();
                     }
 
                     @Override
-                    public ByteBuf finish(ByteBufAllocator allocator) {
-                        return Unpooled.EMPTY_BUFFER;
+                    public Buffer finish(BufferAllocator allocator) {
+                        return allocator.allocate(0);
                     }
 
                     @Override
@@ -464,7 +462,7 @@ public class HttpContentEncoderTest {
                     @Override
                     public void close() {
                         if (input != null) {
-                            input.release();
+                            input.close();
                         }
                         throw new EncoderException();
                     }

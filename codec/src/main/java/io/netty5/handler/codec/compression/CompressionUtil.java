@@ -15,18 +15,17 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
-import java.nio.ByteBuffer;
 
 final class CompressionUtil {
 
     private CompressionUtil() { }
 
-    static void checkChecksum(ByteBufChecksum checksum, ByteBuf uncompressed, int currentChecksum) {
+    static void checkChecksum(BufferChecksum checksum, Buffer uncompressed, int currentChecksum) {
         checksum.reset();
         checksum.update(uncompressed,
-                uncompressed.readerIndex(), uncompressed.readableBytes());
+                uncompressed.readerOffset(), uncompressed.readableBytes());
 
         final int checksumResult = (int) checksum.getValue();
         if (checksumResult != currentChecksum) {
@@ -34,15 +33,5 @@ final class CompressionUtil {
                     "stream corrupted: mismatching checksum: %d (expected: %d)",
                     checksumResult, currentChecksum));
         }
-    }
-
-    static ByteBuffer safeNioBuffer(ByteBuf buffer) {
-        return buffer.nioBufferCount() == 1 ? buffer.internalNioBuffer(buffer.readerIndex(), buffer.readableBytes())
-                : buffer.nioBuffer();
-    }
-
-    static ByteBuffer safeNioBuffer(ByteBuf buffer, int index, int length) {
-        return buffer.nioBufferCount() == 1 ? buffer.internalNioBuffer(index, length)
-                : buffer.nioBuffer(index, length);
     }
 }

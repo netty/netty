@@ -20,16 +20,15 @@ import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.util.ChunkEncoderFactory;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
 import static com.ning.compress.lzf.LZFChunk.MAX_CHUNK_LEN;
 
 /**
- * Compresses a {@link ByteBuf} using the LZF format.
+ * Compresses a {@link Buffer} using the LZF format.
  * <p>
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
@@ -177,66 +176,54 @@ public final class LzfCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
-                final int length = in.readableBytes();
-                final int idx = in.readerIndex();
-                final byte[] input;
-                final int inputPtr;
-                if (in.hasArray()) {
-                    input = in.array();
-                    inputPtr = in.arrayOffset() + idx;
-                } else {
-                    input = recycler.allocInputBuffer(length);
-                    in.getBytes(idx, input, 0, length);
-                    inputPtr = 0;
+                if (in.readableBytes() == 0) {
+                    return allocator.allocate(0);
+                }
+                try (var readableIteration = in.forEachReadable()) {
+                    var readableComponent = readableIteration.first();
+                    final int length = readableComponent.readableBytes();
+                    final byte[] input;
+                    final int inputPtr;
+
+                    if (readableComponent.hasReadableArray()) {
+                        input = readableComponent.readableArray();
+                        inputPtr = readableComponent.readableArrayOffset();
+                    } else {
+                        input = recycler.allocInputBuffer(length);
+                        readableComponent.readableBuffer().get(input, 0, length);
+                        inputPtr = 0;
+                    }
+
+                    // Estimate may apparently under-count by one in some cases.
+                    final byte[] output = recycler.allocOutputBuffer(LZFEncoder.estimateMaxWorkspaceSize(length) + 1);
+                    try {
+                        final int outputLength;
+                        if (length >= compressThreshold) {
+                            // compress.
+                            outputLength = encodeCompress(input, inputPtr, length, output, 0);
+                        } else {
+                            // not compress.
+                            outputLength = encodeNonCompress(input, inputPtr, length, output, 0);
+                        }
+
+                        readableComponent.skipReadable(length);
+
+                        if (!readableComponent.hasReadableArray()) {
+                            recycler.releaseInputBuffer(input);
+                        }
+                        return allocator.allocate(outputLength).writeBytes(output, 0, outputLength);
+                    } finally {
+                        recycler.releaseOutputBuffer(output);
+                    }
                 }
 
-                // Estimate may apparently under-count by one in some cases.
-                final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length) + 1;
-                ByteBuf out = allocator.heapBuffer(maxOutputLength);
-                try {
-                    out.ensureWritable(maxOutputLength);
-                    final byte[] output;
-                    final int outputPtr;
-                    if (out.hasArray()) {
-                        output = out.array();
-                        outputPtr = out.arrayOffset() + out.writerIndex();
-                    } else {
-                        output = new byte[maxOutputLength];
-                        outputPtr = 0;
-                    }
-
-                    final int outputLength;
-                    if (length >= compressThreshold) {
-                        // compress.
-                        outputLength = encodeCompress(input, inputPtr, length, output, outputPtr);
-                    } else {
-                        // not compress.
-                        outputLength = encodeNonCompress(input, inputPtr, length, output, outputPtr);
-                    }
-
-                    if (out.hasArray()) {
-                        out.writerIndex(out.writerIndex() + outputLength);
-                    } else {
-                        out.writeBytes(output, 0, outputLength);
-                    }
-
-                    in.skipBytes(length);
-
-                    if (!in.hasArray()) {
-                        recycler.releaseInputBuffer(input);
-                    }
-                    return out;
-                } catch (Throwable cause) {
-                    out.release();
-                    throw cause;
-                }
             default:
                 throw new IllegalStateException();
         }
@@ -273,14 +260,14 @@ public final class LzfCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }

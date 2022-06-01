@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * An bit reader that allows the reading of single bit booleans, bit strings of
  * arbitrary length (up to 32 bits), and bit aligned 32-bit integers. A single byte
- * at a time is read from the {@link ByteBuf} when more bits are required.
+ * at a time is read from the {@link Buffer} when more bits are required.
  */
 class Bzip2BitReader {
     /**
@@ -29,9 +29,9 @@ class Bzip2BitReader {
     private static final int MAX_COUNT_OF_READABLE_BYTES = Integer.MAX_VALUE >>> 3;
 
     /**
-     * The {@link ByteBuf} from which to read data.
+     * The {@link Buffer} from which to read data.
      */
-    private ByteBuf in;
+    private Buffer in;
 
     /**
      * A buffer of bits read from the input stream that have not yet been returned.
@@ -44,14 +44,14 @@ class Bzip2BitReader {
     private int bitCount;
 
     /**
-     * Set the {@link ByteBuf} from which to read data.
+     * Set the {@link Buffer} from which to read data.
      */
-    void setByteBuf(ByteBuf in) {
+    void setBuffer(Buffer in) {
         this.in = in;
     }
 
     /**
-     * Reads up to 32 bits from the {@link ByteBuf}.
+     * Reads up to 32 bits from the {@link Buffer}.
      * @param count The number of bits to read (maximum {@code 32} as a size of {@code int})
      * @return The bits requested, right-aligned within the integer
      */
@@ -98,7 +98,7 @@ class Bzip2BitReader {
     }
 
     /**
-     * Reads a single bit from the {@link ByteBuf}.
+     * Reads a single bit from the {@link Buffer}.
      * @return {@code true} if the bit read was {@code 1}, otherwise {@code false}
      */
     boolean readBoolean() {
@@ -114,7 +114,7 @@ class Bzip2BitReader {
     }
 
     /**
-     * Refill the {@link ByteBuf} by one byte.
+     * Refill the {@link Buffer} by one byte.
      */
     void refill() {
         int readData = in.readUnsignedByte();
@@ -127,7 +127,7 @@ class Bzip2BitReader {
      * @return {@code true} if one bit is available for reading, otherwise {@code false}
      */
     boolean isReadable() {
-        return bitCount > 0 || in.isReadable();
+        return bitCount > 0 || in.readableBytes() > 0;
     }
 
     /**

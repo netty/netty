@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 import java.util.zip.Adler32;
@@ -38,7 +37,7 @@ import static io.netty5.handler.codec.compression.FastLz.OPTIONS_OFFSET;
 import static io.netty5.handler.codec.compression.FastLz.calculateOutputBufferLength;
 
 /**
- * Compresses a {@link ByteBuf} using the FastLZ algorithm.
+ * Compresses a {@link Buffer} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
@@ -51,7 +50,7 @@ public final class FastLzCompressor implements Compressor {
     /**
      * Underlying checksum calculator in use.
      */
-    private final ByteBufChecksum checksum;
+    private final BufferChecksum checksum;
 
     private enum State {
         PROCESSING,
@@ -74,7 +73,7 @@ public final class FastLzCompressor implements Compressor {
      */
     private FastLzCompressor(int level, Checksum checksum) {
         this.level = level;
-        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        this.checksum = checksum == null ? null : new BufferChecksum(checksum);
     }
 
     /**
@@ -135,12 +134,12 @@ public final class FastLzCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf in, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer in, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
                 return compressData(in, allocator);
             default:
@@ -148,17 +147,19 @@ public final class FastLzCompressor implements Compressor {
         }
     }
 
-    private ByteBuf compressData(ByteBuf in, ByteBufAllocator allocator) {
-        final ByteBufChecksum checksum = this.checksum;
-        ByteBuf out = allocator.buffer();
+    private Buffer compressData(Buffer in, BufferAllocator allocator) {
+        final BufferChecksum checksum = this.checksum;
+        // for text compression it can at max half the size, lets try to keep a bit of head-room.
+        Buffer out = allocator.allocate((int) ((double) in.readableBytes() / 1.5));
         for (;;) {
-            if (!in.isReadable()) {
+            if (in.readableBytes() == 0) {
                 return out;
             }
-            final int idx = in.readerIndex();
+            final int idx = in.readerOffset();
             final int length = Math.min(in.readableBytes(), MAX_CHUNK_LENGTH);
 
-            final int outputIdx = out.writerIndex();
+            final int outputIdx = out.writerOffset();
+            out.ensureWritable(4);
             out.setMedium(outputIdx, MAGIC_NUMBER);
             int outputOffset = outputIdx + CHECKSUM_OFFSET + (checksum != null ? 4 : 0);
 
@@ -175,7 +176,7 @@ public final class FastLzCompressor implements Compressor {
                     checksum.update(in, idx, length);
                     out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
                 }
-                out.setBytes(outputPtr, in, idx, length);
+                in.copyInto(idx, out, outputPtr, length);
                 chunkLength = length;
             } else {
                 // try to compress
@@ -188,39 +189,41 @@ public final class FastLzCompressor implements Compressor {
                 final int maxOutputLength = calculateOutputBufferLength(length);
                 out.ensureWritable(outputOffset + 4 + maxOutputLength);
                 final int outputPtr = outputOffset + 4;
+
                 final int compressedLength =
-                        FastLz.compress(in, in.readerIndex(), length, out, outputPtr, level);
+                        FastLz.compress(in, in.readerOffset(), length, out, outputPtr, level);
 
                 if (compressedLength < length) {
                     blockType = BLOCK_TYPE_COMPRESSED;
                     chunkLength = compressedLength;
 
-                    out.setShort(outputOffset, chunkLength);
+                    out.setShort(outputOffset, (short) chunkLength);
                     outputOffset += 2;
                 } else {
                     blockType = BLOCK_TYPE_NON_COMPRESSED;
-                    out.setBytes(outputOffset + 2, in, idx, length);
+                    in.copyInto(idx, out, outputOffset + 2, length);
+
                     chunkLength = length;
                 }
             }
-            out.setShort(outputOffset, length);
+            out.setShort(outputOffset, (short) length);
 
             out.setByte(outputIdx + OPTIONS_OFFSET,
-                    blockType | (checksum != null ? BLOCK_WITH_CHECKSUM : BLOCK_WITHOUT_CHECKSUM));
-            out.writerIndex(outputOffset + 2 + chunkLength);
-            in.skipBytes(length);
+                    (byte) (blockType | (checksum != null ? BLOCK_WITH_CHECKSUM : BLOCK_WITHOUT_CHECKSUM)));
+            out.writerOffset(outputOffset + 2 + chunkLength);
+            in.skipReadable(length);
         }
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }

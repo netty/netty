@@ -17,9 +17,9 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
@@ -60,11 +60,6 @@ public class BrotliDecoderTest {
         }
     }
 
-    private static final ByteBuf WRAPPED_BYTES_SMALL = Unpooled.unreleasableBuffer(
-            Unpooled.wrappedBuffer(BYTES_SMALL)).asReadOnly();
-    private static final ByteBuf WRAPPED_BYTES_LARGE = Unpooled.unreleasableBuffer(
-            Unpooled.wrappedBuffer(BYTES_LARGE)).asReadOnly();
-
     static boolean isNotSupported() {
         return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
@@ -98,71 +93,71 @@ public class BrotliDecoderTest {
         }
     }
 
-    public static ByteBuf[] smallData() {
-        ByteBuf heap = Unpooled.wrappedBuffer(COMPRESSED_BYTES_SMALL);
-        ByteBuf direct = Unpooled.directBuffer(COMPRESSED_BYTES_SMALL.length);
-        direct.writeBytes(COMPRESSED_BYTES_SMALL);
-        return new ByteBuf[]{heap, direct};
+    public static Buffer[] smallData() {
+        Buffer heap = BufferAllocator.onHeapUnpooled().copyOf(COMPRESSED_BYTES_SMALL);
+        Buffer direct = BufferAllocator.offHeapUnpooled().copyOf(COMPRESSED_BYTES_SMALL);
+        return new Buffer[]{ heap, direct};
     }
 
-    public static ByteBuf[] largeData() {
-        ByteBuf heap = Unpooled.wrappedBuffer(COMPRESSED_BYTES_LARGE);
-        ByteBuf direct = Unpooled.directBuffer(COMPRESSED_BYTES_LARGE.length);
-        direct.writeBytes(COMPRESSED_BYTES_LARGE);
-        return new ByteBuf[]{heap, direct};
+    public static Buffer[] largeData() {
+        Buffer heap = BufferAllocator.onHeapUnpooled().copyOf(COMPRESSED_BYTES_LARGE);
+        Buffer direct = BufferAllocator.offHeapUnpooled().copyOf(COMPRESSED_BYTES_LARGE);
+        return new Buffer[]{ heap, direct};
     }
 
     @ParameterizedTest
     @MethodSource("smallData")
-    public void testDecompressionOfSmallChunkOfData(ByteBuf data) {
-        testDecompression(WRAPPED_BYTES_SMALL.duplicate(), data);
+    public void testDecompressionOfSmallChunkOfData(Buffer data) {
+        testDecompression(BYTES_SMALL, data.readSplit(data.readableBytes()));
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testDecompressionOfLargeChunkOfData(ByteBuf data) {
-        testDecompression(WRAPPED_BYTES_LARGE.duplicate(), data);
+    public void testDecompressionOfLargeChunkOfData(Buffer data) {
+        testDecompression(BYTES_LARGE, data.readSplit(data.readableBytes()));
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testDecompressionOfBatchedFlowOfData(ByteBuf data) {
-        testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
+    public void testDecompressionOfBatchedFlowOfData(Buffer data) {
+        testDecompressionOfBatchedFlow(BYTES_LARGE, data.readSplit(data.readableBytes()));
     }
 
-    private void testDecompression(final ByteBuf expected, final ByteBuf data) {
+    private void testDecompression(final byte[] expectedBytes, final Buffer data) {
         assertTrue(channel.writeInbound(data));
 
-        ByteBuf decompressed = readDecompressed(channel);
-        assertEquals(expected, decompressed);
-
-        decompressed.release();
+        try (Buffer decompressed = readDecompressed(channel);
+            Buffer expected = channel.bufferAllocator().copyOf(expectedBytes)) {
+            assertEquals(expected, decompressed);
+        }
     }
 
-    private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
+    private void testDecompressionOfBatchedFlow(final byte[] expectedBytes, final Buffer data) {
         final int compressedLength = data.readableBytes();
         int written = 0, length = RANDOM.nextInt(100);
         while (written + length < compressedLength) {
-            ByteBuf compressedBuf = data.retainedSlice(written, length);
+            Buffer compressedBuf = data.readSplit(length);
             channel.writeInbound(compressedBuf);
             written += length;
             length = RANDOM.nextInt(100);
         }
-        ByteBuf compressedBuf = data.slice(written, compressedLength - written);
-        assertTrue(channel.writeInbound(compressedBuf.retain()));
+        assertTrue(channel.writeInbound(data));
 
-        ByteBuf decompressedBuf = readDecompressed(channel);
-        assertEquals(expected, decompressedBuf);
-
-        decompressedBuf.release();
-        data.release();
+        try (Buffer decompressed = readDecompressed(channel);
+             Buffer expected = channel.bufferAllocator().copyOf(expectedBytes)) {
+            assertEquals(expected, decompressed);
+        }
     }
 
-    private static ByteBuf readDecompressed(final EmbeddedChannel channel) {
-        CompositeByteBuf decompressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readInbound()) != null) {
-            decompressed.addComponent(true, msg);
+    private static Buffer readDecompressed(final EmbeddedChannel channel) {
+        CompositeBuffer decompressed = channel.bufferAllocator().compose();
+        for (;;) {
+            try (Buffer msg = channel.readInbound()) {
+                if (msg == null) {
+                    break;
+                }
+                decompressed.extendWith(msg.readSplit(msg.readableBytes()).send());
+            }
         }
         return decompressed;
     }

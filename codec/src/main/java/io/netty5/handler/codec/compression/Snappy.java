@@ -16,6 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -55,19 +57,19 @@ public final class Snappy {
         written = 0;
     }
 
-    public void encode(final ByteBuf in, final ByteBuf out, final int length) {
+    public void encode(final Buffer in, final Buffer out, final int length) {
         // Write the preamble length to the output buffer
         for (int i = 0;; i ++) {
             int b = length >>> i * 7;
             if ((b & 0xFFFFFF80) != 0) {
-                out.writeByte(b & 0x7f | 0x80);
+                out.writeByte((byte) (b & 0x7f | 0x80));
             } else {
-                out.writeByte(b);
+                out.writeByte((byte) b);
                 break;
             }
         }
 
-        int inIndex = in.readerIndex();
+        int inIndex = in.readerOffset();
         final int baseIndex = inIndex;
 
         final short[] table = getHashTable(length);
@@ -110,7 +112,7 @@ public final class Snappy {
                     inIndex += matched;
                     int offset = base - candidate;
                     encodeCopy(out, offset, matched);
-                    in.readerIndex(in.readerIndex() + matched);
+                    in.readerOffset(in.readerOffset() + matched);
                     insertTail = inIndex - 1;
                     nextEmit = inIndex;
                     if (inIndex >= length - 4) {
@@ -146,7 +148,7 @@ public final class Snappy {
      *     within the range of our hash table size
      * @return A 32-bit hash of 4 bytes located at index
      */
-    private static int hash(ByteBuf in, int index, int shift) {
+    private static int hash(Buffer in, int index, int shift) {
         return in.getInt(index) * 0x1e35a7bd >>> shift;
     }
 
@@ -175,7 +177,7 @@ public final class Snappy {
      * @param maxIndex The length of our input buffer
      * @return The number of bytes for which our candidate copy is a repeat of
      */
-    private static int findMatchingLength(ByteBuf in, int minIndex, int inIndex, int maxIndex) {
+    private static int findMatchingLength(Buffer in, int minIndex, int inIndex, int maxIndex) {
         int matched = 0;
 
         while (inIndex <= maxIndex - 4 &&
@@ -219,29 +221,32 @@ public final class Snappy {
      * @param out The output buffer to copy to
      * @param length The length of the literal to copy
      */
-    static void encodeLiteral(ByteBuf in, ByteBuf out, int length) {
+    static void encodeLiteral(Buffer in, Buffer out, int length) {
         if (length < 61) {
-            out.writeByte(length - 1 << 2);
+            out.writeByte((byte) (length - 1 << 2));
         } else {
             int bitLength = bitsToEncode(length - 1);
             int bytesToEncode = 1 + bitLength / 8;
-            out.writeByte(59 + bytesToEncode << 2);
+            out.writeByte((byte) (59 + bytesToEncode << 2));
             for (int i = 0; i < bytesToEncode; i++) {
-                out.writeByte(length - 1 >> i * 8 & 0x0ff);
+                out.writeByte((byte) (length - 1 >> i * 8 & 0x0ff));
             }
         }
 
-        out.writeBytes(in, length);
+        out.ensureWritable(length);
+        in.copyInto(in.readerOffset(), out, out.writerOffset(), length);
+        in.skipReadable(length);
+        out.skipWritable(length);
     }
 
-    private static void encodeCopyWithOffset(ByteBuf out, int offset, int length) {
+    private static void encodeCopyWithOffset(Buffer out, int offset, int length) {
         if (length < 12 && offset < 2048) {
-            out.writeByte(COPY_1_BYTE_OFFSET | length - 4 << 2 | offset >> 8 << 5);
-            out.writeByte(offset & 0x0ff);
+            out.writeByte((byte) (COPY_1_BYTE_OFFSET | length - 4 << 2 | offset >> 8 << 5));
+            out.writeByte((byte) (offset & 0x0ff));
         } else {
-            out.writeByte(COPY_2_BYTE_OFFSET | length - 1 << 2);
-            out.writeByte(offset & 0x0ff);
-            out.writeByte(offset >> 8 & 0x0ff);
+            out.writeByte((byte) (COPY_2_BYTE_OFFSET | length - 1 << 2));
+            out.writeByte((byte) (offset & 0x0ff));
+            out.writeByte((byte) (offset >> 8 & 0x0ff));
         }
     }
 
@@ -252,7 +257,7 @@ public final class Snappy {
      * @param offset The offset at which the original instance lies
      * @param length The length of the original instance
      */
-    private static void encodeCopy(ByteBuf out, int offset, int length) {
+    private static void encodeCopy(Buffer out, int offset, int length) {
         while (length >= 68) {
             encodeCopyWithOffset(out, offset, 64);
             length -= 64;
@@ -266,8 +271,8 @@ public final class Snappy {
         encodeCopyWithOffset(out, offset, length);
     }
 
-    public void decode(ByteBuf in, ByteBuf out) {
-        while (in.isReadable()) {
+    public void decode(Buffer in, Buffer out) {
+        while (in.readableBytes() > 0) {
             switch (state) {
             case READING_PREAMBLE:
                 int uncompressedLength = readPreamble(in);
@@ -283,7 +288,7 @@ public final class Snappy {
                 state = State.READING_TAG;
                 // fall through
             case READING_TAG:
-                if (!in.isReadable()) {
+                if (in.readableBytes() == 0) {
                     return;
                 }
                 tag = in.readByte();
@@ -355,10 +360,10 @@ public final class Snappy {
      * @return The calculated length based on the input buffer, or 0 if
      *   no preamble is able to be calculated
      */
-    private static int readPreamble(ByteBuf in) {
+    private static int readPreamble(Buffer in) {
         int length = 0;
         int byteIndex = 0;
-        while (in.isReadable()) {
+        while (in.readableBytes() > 0) {
             int current = in.readUnsignedByte();
             length |= (current & 0x7f) << byteIndex++ * 7;
             if ((current & 0x80) == 0) {
@@ -382,13 +387,13 @@ public final class Snappy {
      * @return The calculated length based on the input buffer, or 0 if
      *   no preamble is able to be calculated
      */
-    int getPreamble(ByteBuf in) {
+    int getPreamble(Buffer in) {
         if (state == State.READING_PREAMBLE) {
-            int readerIndex = in.readerIndex();
+            int readerIndex = in.readerOffset();
             try {
                 return readPreamble(in);
             } finally {
-                in.readerIndex(readerIndex);
+                in.readerOffset(readerIndex);
             }
         }
         return 0;
@@ -405,12 +410,12 @@ public final class Snappy {
      * @param out The output buffer to write the literal to
      * @return The number of bytes appended to the output buffer, or -1 to indicate "try again later"
      */
-    static int decodeLiteral(byte tag, ByteBuf in, ByteBuf out) {
-        int readerIndex = in.readerIndex();
+    static int decodeLiteral(byte tag, Buffer in, Buffer out) {
+        int readerIndex = in.readerOffset();
         int length;
         switch(tag >> 2 & 0x3F) {
         case 60:
-            if (!in.isReadable()) {
+            if (in.readableBytes() == 0) {
                 return NOT_ENOUGH_INPUT;
             }
             length = in.readUnsignedByte();
@@ -419,19 +424,19 @@ public final class Snappy {
             if (in.readableBytes() < 2) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedShortLE();
+            length = BufferUtil.reverseUnsignedShort(in.readUnsignedShort());
             break;
         case 62:
             if (in.readableBytes() < 3) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedMediumLE();
+            length = BufferUtil.reverseUnsignedMedium(in.readUnsignedMedium());
             break;
         case 63:
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readIntLE();
+            length = Integer.reverseBytes(in.readInt());
             break;
         default:
             length = tag >> 2 & 0x3F;
@@ -439,11 +444,14 @@ public final class Snappy {
         length += 1;
 
         if (in.readableBytes() < length) {
-            in.readerIndex(readerIndex);
+            in.readerOffset(readerIndex);
             return NOT_ENOUGH_INPUT;
         }
 
-        out.writeBytes(in, length);
+        out.ensureWritable(length);
+        in.copyInto(in.readerOffset(), out, out.writerOffset(), length);
+        in.skipReadable(length);
+        out.skipWritable(length);
         return length;
     }
 
@@ -460,35 +468,38 @@ public final class Snappy {
      *     "try again later"
      * @throws DecompressionException If the read offset is invalid
      */
-    private static int decodeCopyWith1ByteOffset(byte tag, ByteBuf in, ByteBuf out, int writtenSoFar) {
-        if (!in.isReadable()) {
+    private static int decodeCopyWith1ByteOffset(byte tag, Buffer in, Buffer out, int writtenSoFar) {
+        if (in.readableBytes() == 0) {
             return NOT_ENOUGH_INPUT;
         }
 
-        int initialIndex = out.writerIndex();
+        int initialIndex = out.writerOffset();
         int length = 4 + ((tag & 0x01c) >> 2);
         int offset = (tag & 0x0e0) << 8 >> 5 | in.readUnsignedByte();
 
         validateOffset(offset, writtenSoFar);
 
-        int readerIndex = out.readerIndex();
+        int readerIndex = out.readerOffset();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, offset);
+                copyRegion(out, initialIndex, offset, offset);
             }
             if (length % offset != 0) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, length % offset);
+                copyRegion(out, initialIndex, offset, length % offset);
             }
         } else {
-            out.readerIndex(initialIndex - offset);
-            out.readBytes(out, length);
+            copyRegion(out, initialIndex, offset, length);
         }
-        out.readerIndex(readerIndex);
+        out.readerOffset(readerIndex);
 
         return length;
+    }
+
+    private static void copyRegion(Buffer out, int initialIndex, int offset, int length) {
+        out.readerOffset(initialIndex - offset);
+        out.copyInto(out.readerOffset(), out, out.writerOffset(), length);
+        out.skipWritable(length).skipReadable(length);
     }
 
     /**
@@ -504,33 +515,30 @@ public final class Snappy {
      * @return The number of bytes appended to the output buffer, or -1 to indicate
      *     "try again later"
      */
-    private static int decodeCopyWith2ByteOffset(byte tag, ByteBuf in, ByteBuf out, int writtenSoFar) {
+    private static int decodeCopyWith2ByteOffset(byte tag, Buffer in, Buffer out, int writtenSoFar) {
         if (in.readableBytes() < 2) {
             return NOT_ENOUGH_INPUT;
         }
 
-        int initialIndex = out.writerIndex();
+        int initialIndex = out.writerOffset();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = in.readUnsignedShortLE();
+        int offset = BufferUtil.reverseUnsignedShort(in.readUnsignedShort());
 
         validateOffset(offset, writtenSoFar);
 
-        int readerIndex = out.readerIndex();
+        int readerIndex = out.readerOffset();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, offset);
+                copyRegion(out, initialIndex, offset, offset);
             }
             if (length % offset != 0) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, length % offset);
+                copyRegion(out, initialIndex, offset, length % offset);
             }
         } else {
-            out.readerIndex(initialIndex - offset);
-            out.readBytes(out, length);
+            copyRegion(out, initialIndex, offset, length);
         }
-        out.readerIndex(readerIndex);
+        out.readerOffset(readerIndex);
 
         return length;
     }
@@ -548,33 +556,30 @@ public final class Snappy {
      *     "try again later"
      * @throws DecompressionException If the read offset is invalid
      */
-    private static int decodeCopyWith4ByteOffset(byte tag, ByteBuf in, ByteBuf out, int writtenSoFar) {
+    private static int decodeCopyWith4ByteOffset(byte tag, Buffer in, Buffer out, int writtenSoFar) {
         if (in.readableBytes() < 4) {
             return NOT_ENOUGH_INPUT;
         }
 
-        int initialIndex = out.writerIndex();
+        int initialIndex = out.writerOffset();
         int length = 1 + (tag >> 2 & 0x03F);
-        int offset = in.readIntLE();
+        int offset = Integer.reverseBytes(in.readInt());
 
         validateOffset(offset, writtenSoFar);
 
-        int readerIndex = out.readerIndex();
+        int readerIndex = out.readerOffset();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, offset);
+                copyRegion(out, initialIndex, offset, offset);
             }
             if (length % offset != 0) {
-                out.readerIndex(initialIndex - offset);
-                out.readBytes(out, length % offset);
+                copyRegion(out, initialIndex, offset, length % offset);
             }
         } else {
-            out.readerIndex(initialIndex - offset);
-            out.readBytes(out, length);
+            copyRegion(out, initialIndex, offset, length);
         }
-        out.readerIndex(readerIndex);
+        out.readerOffset(readerIndex);
 
         return length;
     }
@@ -609,8 +614,8 @@ public final class Snappy {
      *
      * @param data The input data to calculate the CRC32C checksum of
      */
-    static int calculateChecksum(ByteBuf data) {
-        return calculateChecksum(data, data.readerIndex(), data.readableBytes());
+    static int calculateChecksum(Buffer data) {
+        return calculateChecksum(data, data.readerOffset(), data.readableBytes());
     }
 
     /**
@@ -619,7 +624,7 @@ public final class Snappy {
      *
      * @param data The input data to calculate the CRC32C checksum of
      */
-    static int calculateChecksum(ByteBuf data, int offset, int length) {
+    static int calculateChecksum(Buffer data, int offset, int length) {
         Crc32c crc32 = new Crc32c();
         try {
             crc32.update(data, offset, length);
@@ -638,8 +643,8 @@ public final class Snappy {
      * @param data The input data to calculate the CRC32C checksum of
      * @throws DecompressionException If the calculated and supplied checksums do not match
      */
-    static void validateChecksum(int expectedChecksum, ByteBuf data) {
-        validateChecksum(expectedChecksum, data, data.readerIndex(), data.readableBytes());
+    static void validateChecksum(int expectedChecksum, Buffer data) {
+        validateChecksum(expectedChecksum, data, data.readerOffset(), data.readableBytes());
     }
 
     /**
@@ -651,7 +656,7 @@ public final class Snappy {
      * @param data The input data to calculate the CRC32C checksum of
      * @throws DecompressionException If the calculated and supplied checksums do not match
      */
-    static void validateChecksum(int expectedChecksum, ByteBuf data, int offset, int length) {
+    static void validateChecksum(int expectedChecksum, Buffer data, int offset, int length) {
         final int actualChecksum = calculateChecksum(data, offset, length);
         if (actualChecksum != expectedChecksum) {
             throw new DecompressionException(

@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 /**
  * A bit writer that allows the writing of single bit booleans, unary numbers, bit strings
  * of arbitrary length (up to 32 bits), and bit aligned 32-bit integers. A single byte at a
- * time is written to the {@link ByteBuf} when sufficient bits have been accumulated.
+ * time is written to the {@link Buffer} when sufficient bits have been accumulated.
  */
 final class Bzip2BitWriter {
     /**
@@ -34,11 +34,11 @@ final class Bzip2BitWriter {
     private int bitCount;
 
     /**
-     * Writes up to 32 bits to the output {@link ByteBuf}.
+     * Writes up to 32 bits to the output {@link Buffer}.
      * @param count The number of bits to write (maximum {@code 32} as a size of {@code int})
      * @param value The bits to write
      */
-    void writeBits(ByteBuf out, final int count, final long value) {
+    void writeBits(Buffer out, final int count, final long value) {
         if (count < 0 || count > 32) {
             throw new IllegalArgumentException("count: " + count + " (expected: 0-32)");
         }
@@ -56,10 +56,10 @@ final class Bzip2BitWriter {
     }
 
     /**
-     * Writes a single bit to the output {@link ByteBuf}.
+     * Writes a single bit to the output {@link Buffer}.
      * @param value The bit to write
      */
-    void writeBoolean(ByteBuf out, final boolean value) {
+    void writeBoolean(Buffer out, final boolean value) {
         int bitCount = this.bitCount + 1;
         long bitBuffer = this.bitBuffer | (value ? 1L << 64 - bitCount : 0L);
 
@@ -73,11 +73,11 @@ final class Bzip2BitWriter {
     }
 
     /**
-     * Writes a zero-terminated unary number to the output {@link ByteBuf}.
+     * Writes a zero-terminated unary number to the output {@link Buffer}.
      * Example of the output for value = 6: {@code 1111110}
      * @param value The number of {@code 1} to write
      */
-    void writeUnary(ByteBuf out, int value) {
+    void writeUnary(Buffer out, int value) {
         if (value < 0) {
             throw new IllegalArgumentException("value: " + value + " (expected 0 or more)");
         }
@@ -88,18 +88,18 @@ final class Bzip2BitWriter {
     }
 
     /**
-     * Writes an integer as 32 bits to the output {@link ByteBuf}.
+     * Writes an integer as 32 bits to the output {@link Buffer}.
      * @param value The integer to write
      */
-    void writeInt(ByteBuf out, final int value) {
+    void writeInt(Buffer out, final int value) {
         writeBits(out, 32, value);
     }
 
     /**
-     * Writes any remaining bits to the output {@link ByteBuf},
+     * Writes any remaining bits to the output {@link Buffer},
      * zero padding to a whole byte as required.
      */
-    void flush(ByteBuf out) {
+    void flush(Buffer out) {
         final int bitCount = this.bitCount;
 
         if (bitCount > 0) {
@@ -107,9 +107,9 @@ final class Bzip2BitWriter {
             final int shiftToRight = 64 - bitCount;
 
             if (bitCount <= 8) {
-                out.writeByte((int) (bitBuffer >>> shiftToRight << 8 - bitCount));
+                out.writeByte((byte) (bitBuffer >>> shiftToRight << 8 - bitCount));
             } else if (bitCount <= 16) {
-                out.writeShort((int) (bitBuffer >>> shiftToRight << 16 - bitCount));
+                out.writeShort((short) (bitBuffer >>> shiftToRight << 16 - bitCount));
             } else if (bitCount <= 24) {
                 out.writeMedium((int) (bitBuffer >>> shiftToRight << 24 - bitCount));
             } else {

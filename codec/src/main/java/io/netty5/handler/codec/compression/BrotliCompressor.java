@@ -16,10 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -28,7 +26,7 @@ import java.util.function.Supplier;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Compress a {@link ByteBuf} with the brotli format.
+ * Compress a {@link Buffer} with the brotli format.
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
@@ -86,21 +84,22 @@ public final class BrotliCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+    public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case PROCESSING:
-                if (!input.isReadable()) {
-                    return Unpooled.EMPTY_BUFFER;
+                if (input.readableBytes() == 0) {
+                    return allocator.allocate(0);
                 }
-                byte[] uncompressed = ByteBufUtil.getBytes(input, input.readerIndex(), input.readableBytes(), false);
+                // TODO: Improve me
+                byte[] uncompressed = new byte[input.readableBytes()];
                 try {
+                    input.readBytes(uncompressed, 0, uncompressed.length);
                     byte[] compressed = Encoder.compress(uncompressed, parameters);
-                    input.skipBytes(input.readableBytes());
-                    return Unpooled.wrappedBuffer(compressed);
+                    return allocator.copyOf(compressed);
                 } catch (IOException e) {
                     state = State.FINISHED;
                     throw new CompressionException(e);
@@ -111,14 +110,14 @@ public final class BrotliCompressor implements Compressor {
     }
 
     @Override
-    public ByteBuf finish(ByteBufAllocator allocator) {
+    public Buffer finish(BufferAllocator allocator) {
         switch (state) {
             case CLOSED:
                 throw new CompressionException("Compressor closed");
             case FINISHED:
             case PROCESSING:
                 state = State.FINISHED;
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
                 throw new IllegalStateException();
         }

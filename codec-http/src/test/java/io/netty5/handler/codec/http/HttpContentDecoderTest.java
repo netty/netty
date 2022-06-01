@@ -16,9 +16,8 @@
 
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -44,7 +43,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
 import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -656,11 +654,11 @@ public class HttpContentDecoderTest {
             @Override
             protected Decompressor newContentDecoder(String contentEncoding) {
                 return new Decompressor() {
-                    private ByteBuf input;
+                    private Buffer input;
                     @Override
-                    public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
-                        if (input.isReadable()) {
-                            final ByteBuf slice = input.readRetainedSlice(input.readableBytes());
+                    public Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException {
+                        if (input.readableBytes() > 0) {
+                            final Buffer slice = input.split();
                             this.input = input;
                             return slice;
                         }
@@ -680,7 +678,7 @@ public class HttpContentDecoderTest {
                     @Override
                     public void close() {
                         if (input != null) {
-                            input.release();
+                            input.close();
                         }
                         throw new DecoderException();
                     }
@@ -789,7 +787,7 @@ public class HttpContentDecoderTest {
 
     private static byte[] gzDecompress(byte[] input) {
         ChannelHandler decoder = ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP);
-        EmbeddedChannel channel = new EmbeddedChannel(decoder, byteBufToBuffer());
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(input.length).writeBytes(input)));
         assertTrue(channel.finish()); // close the channel to indicate end-of-data
 
@@ -845,9 +843,9 @@ public class HttpContentDecoderTest {
 
     private static byte[] gzCompress(byte[] input) {
         ChannelHandler encoder = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP);
-        EmbeddedChannel channel = new EmbeddedChannel(bufferToByteBuf(), encoder);
-        assertTrue(channel.writeOutbound(intoByteBuf(channel.bufferAllocator()
-                .allocate(input.length).writeBytes(input))));
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        assertTrue(channel.writeOutbound(channel.bufferAllocator()
+                .allocate(input.length).writeBytes(input)));
         assertTrue(channel.finish());  // close the channel to indicate end-of-data
 
         int outputSize = 0;

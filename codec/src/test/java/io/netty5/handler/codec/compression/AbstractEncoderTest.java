@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
     /**
      * Decompresses data with some external library.
      */
-    protected abstract ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception;
+    protected abstract Buffer decompress(Buffer compressed, int originalLength) throws Exception;
 
     @BeforeEach
     public final void initChannel() {
@@ -51,77 +51,68 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         }
     }
 
-    public static ByteBuf[] smallData() {
-        ByteBuf heap = Unpooled.wrappedBuffer(BYTES_SMALL);
-        ByteBuf direct = Unpooled.directBuffer(BYTES_SMALL.length);
-        direct.writeBytes(BYTES_SMALL);
-        return new ByteBuf[] {heap, direct};
+    public static Buffer[] smallData() {
+        Buffer heap = BufferAllocator.onHeapUnpooled().copyOf(BYTES_SMALL);
+        Buffer direct = BufferAllocator.offHeapUnpooled().copyOf(BYTES_SMALL);
+        return new Buffer[] {heap, direct};
     }
 
-    public static ByteBuf[] largeData() {
-        ByteBuf heap = Unpooled.wrappedBuffer(BYTES_LARGE);
-        ByteBuf direct = Unpooled.directBuffer(BYTES_LARGE.length);
-        direct.writeBytes(BYTES_LARGE);
-        return new ByteBuf[] {heap, direct};
+    public static Buffer[] largeData() {
+        Buffer heap = BufferAllocator.onHeapUnpooled().copyOf(BYTES_LARGE);
+        Buffer direct = BufferAllocator.offHeapUnpooled().copyOf(BYTES_LARGE);
+        return new Buffer[] {heap, direct};
     }
 
     @ParameterizedTest
     @MethodSource("smallData")
-    public void testCompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
+    public void testCompressionOfSmallChunkOfData(Buffer data) throws Exception {
         testCompression(data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testCompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
+    public void testCompressionOfLargeChunkOfData(Buffer data) throws Exception {
         testCompression(data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testCompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
+    public void testCompressionOfBatchedFlowOfData(Buffer data) throws Exception {
         testCompressionOfBatchedFlow(data);
     }
 
-    protected void testCompression(final ByteBuf data) throws Exception {
+    protected void testCompression(final Buffer data) throws Exception {
         final int dataLength = data.readableBytes();
-        assertTrue(channel.writeOutbound(data.retain()));
+        assertTrue(channel.writeOutbound(data.copy()));
         assertTrue(channel.finish());
 
-        ByteBuf decompressed = readDecompressed(dataLength);
-        data.readerIndex(0);
-        assertEquals(data, decompressed);
-
-        decompressed.release();
-        data.release();
+        try (Buffer decompressed = readDecompressed(dataLength)) {
+            assertEquals(data, decompressed);
+        }
     }
 
-    protected void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
-        final int dataLength = data.readableBytes();
-        int written = 0, length = rand.nextInt(100);
-        while (written + length < dataLength) {
-            ByteBuf in = data.retainedSlice(written, length);
-            assertTrue(channel.writeOutbound(in));
-            written += length;
-            length = rand.nextInt(100);
+    protected void testCompressionOfBatchedFlow(final Buffer data) throws Exception {
+        try (Buffer expected = data.copy()) {
+            final int dataLength = data.readableBytes();
+            int written = 0, length = rand.nextInt(100);
+            while (written + length < dataLength) {
+                Buffer in = data.readSplit(length);
+                assertTrue(channel.writeOutbound(in));
+                written += length;
+                length = rand.nextInt(100);
+            }
+            assertTrue(channel.writeOutbound(data.readSplit(dataLength - written)));
+            assertTrue(channel.finish());
+
+            try (Buffer decompressed = readDecompressed(dataLength)) {
+                assertEquals(expected, decompressed);
+            }
         }
-        ByteBuf in = data.retainedSlice(written, dataLength - written);
-        assertTrue(channel.writeOutbound(in));
-        assertTrue(channel.finish());
-
-        ByteBuf decompressed = readDecompressed(dataLength);
-        assertEquals(data, decompressed);
-
-        decompressed.release();
-        data.release();
     }
 
-    protected ByteBuf readDecompressed(final int dataLength) throws Exception {
-        CompositeByteBuf compressed = Unpooled.compositeBuffer();
-        ByteBuf msg;
-        while ((msg = channel.readOutbound()) != null) {
-            compressed.addComponent(true, msg);
-        }
+    protected Buffer readDecompressed(final int dataLength) throws Exception {
+        CompositeBuffer compressed =  CompressionTestUtils.compose(
+                BufferAllocator.onHeapUnpooled(), channel::readOutbound);
         return decompress(compressed, dataLength);
     }
 }

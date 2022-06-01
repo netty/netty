@@ -15,16 +15,16 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
 import static io.netty5.handler.codec.compression.Snappy.validateChecksum;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
+ * Uncompresses a {@link Buffer} encoded with the Snappy framing format.
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  *
@@ -106,26 +106,26 @@ public final class SnappyDecompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator)
+    public Buffer decompress(Buffer in, BufferAllocator allocator)
             throws DecompressionException {
         switch (state) {
             case FINISHED:
             case CORRUPTED:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             case CLOSED:
                 throw new DecompressionException("Decompressor closed");
             case DECODING:
                 if (numBytesToSkip != 0) {
                     // The last chunkType we detected was RESERVED_SKIPPABLE and we still have some bytes to skip.
                     int skipBytes = Math.min(numBytesToSkip, in.readableBytes());
-                    in.skipBytes(skipBytes);
+                    in.skipReadable(skipBytes);
                     numBytesToSkip -= skipBytes;
 
                     // Let's return and try again.
                     return null;
                 }
 
-                int idx = in.readerIndex();
+                int idx = in.readerOffset();
                 final int inSize = in.readableBytes();
                 if (inSize < 4) {
                     // We need to be at least able to read the chunk type identifier (one byte),
@@ -135,7 +135,7 @@ public final class SnappyDecompressor implements Decompressor {
 
                 final int chunkTypeVal = in.getUnsignedByte(idx);
                 final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
-                final int chunkLength = in.getUnsignedMediumLE(idx + 1);
+                final int chunkLength = BufferUtil.reverseUnsignedMedium(in.getUnsignedMedium(idx + 1));
 
                 switch (chunkType) {
                     case STREAM_IDENTIFIER:
@@ -147,9 +147,9 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipBytes(4);
-                        int offset = in.readerIndex();
-                        in.skipBytes(SNAPPY_IDENTIFIER_LEN);
+                        in.skipReadable(4);
+                        int offset = in.readerOffset();
+                        in.skipReadable(SNAPPY_IDENTIFIER_LEN);
 
                         checkByte(in.getByte(offset++), (byte) 's');
                         checkByte(in.getByte(offset++), (byte) 'N');
@@ -165,10 +165,10 @@ public final class SnappyDecompressor implements Decompressor {
                             streamCorrupted("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                         }
 
-                        in.skipBytes(4);
+                        in.skipReadable(4);
 
                         int skipBytes = Math.min(chunkLength, in.readableBytes());
-                        in.skipBytes(skipBytes);
+                        in.skipReadable(skipBytes);
                         if (skipBytes != chunkLength) {
                             // We could skip all bytes, let's store the remaining so we can do so once we receive more
                             // data.
@@ -194,19 +194,19 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipBytes(4);
+                        in.skipReadable(4);
                         if (validateChecksums) {
-                            int checksum = in.readIntLE();
+                            int checksum = Integer.reverseBytes(in.readInt());
                             try {
-                                validateChecksum(checksum, in, in.readerIndex(), chunkLength - 4);
+                                validateChecksum(checksum, in, in.readerOffset(), chunkLength - 4);
                             } catch (DecompressionException e) {
                                 state = State.CORRUPTED;
                                 throw e;
                             }
                         } else {
-                            in.skipBytes(4);
+                            in.skipReadable(4);
                         }
-                        return in.readRetainedSlice(chunkLength - 4);
+                        return in.readSplit(chunkLength - 4);
                     case COMPRESSED_DATA:
                         if (!started) {
                             streamCorrupted("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
@@ -221,8 +221,8 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipBytes(4);
-                        int checksum = in.readIntLE();
+                        in.skipReadable(4);
+                        int checksum = Integer.reverseBytes(in.readInt());
 
                         int uncompressedSize = snappy.getPreamble(in);
                         if (uncompressedSize > MAX_DECOMPRESSED_DATA_SIZE) {
@@ -230,32 +230,35 @@ public final class SnappyDecompressor implements Decompressor {
                                     " uncompressed data that exceeds " + MAX_DECOMPRESSED_DATA_SIZE + " bytes");
                         }
 
-                        ByteBuf uncompressed = allocator.buffer(uncompressedSize, MAX_DECOMPRESSED_DATA_SIZE);
+                        Buffer uncompressed = allocator.allocate(uncompressedSize);
+                        uncompressed.implicitCapacityLimit(MAX_DECOMPRESSED_DATA_SIZE);
                         try {
                             if (validateChecksums) {
-                                int oldWriterIndex = in.writerIndex();
+                                int oldWriterIndex = in.writerOffset();
                                 try {
-                                    in.writerIndex(in.readerIndex() + chunkLength - 4);
+                                    in.writerOffset(in.readerOffset() + chunkLength - 4);
                                     snappy.decode(in, uncompressed);
                                 } finally {
-                                    in.writerIndex(oldWriterIndex);
+                                    in.writerOffset(oldWriterIndex);
                                 }
                                 try {
-                                    validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
+                                    validateChecksum(checksum, uncompressed, 0, uncompressed.writerOffset());
                                 } catch (DecompressionException e) {
                                     state = State.CORRUPTED;
                                     throw e;
                                 }
                             } else {
-                                snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
+                                try (Buffer slice = in.readSplit(chunkLength - 4)) {
+                                    snappy.decode(slice, uncompressed);
+                                }
                             }
                             snappy.reset();
-                            ByteBuf buffer = uncompressed;
+                            Buffer buffer = uncompressed;
                             uncompressed = null;
                             return buffer;
                         } finally {
                             if (uncompressed != null) {
-                                uncompressed.release();
+                                uncompressed.close();
                             }
                         }
                     default:

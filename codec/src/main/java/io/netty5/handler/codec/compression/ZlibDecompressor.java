@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
@@ -29,7 +28,7 @@ import java.util.zip.Inflater;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decompress a {@link ByteBuf} using the inflate algorithm.
+ * Decompress a {@link Buffer} using the inflate algorithm.
  */
 public final class ZlibDecompressor implements Decompressor {
     private static final int FHCRC = 0x02;
@@ -42,7 +41,7 @@ public final class ZlibDecompressor implements Decompressor {
     private final byte[] dictionary;
 
     // GZIP related
-    private final ByteBufChecksum crc;
+    private final BufferChecksum crc;
     private final boolean decompressConcatenated;
 
     /**
@@ -77,7 +76,7 @@ public final class ZlibDecompressor implements Decompressor {
         switch (wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
-                crc = ByteBufChecksum.wrapChecksum(new CRC32());
+                crc = new BufferChecksum(new CRC32());
                 break;
             case NONE:
                 inflater = new Inflater(true);
@@ -113,7 +112,7 @@ public final class ZlibDecompressor implements Decompressor {
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *          If zero, maximum size is decided by the {@link BufferAllocator}.
      * @return the factory.
      */
     public static Supplier<ZlibDecompressor> newFactory(int maxAllocation) {
@@ -138,7 +137,7 @@ public final class ZlibDecompressor implements Decompressor {
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *          If zero, maximum size is decided by the {@link BufferAllocator}.
      * @return the factory.
      */
     public static Supplier<ZlibDecompressor> newFactory(byte[] dictionary, int maxAllocation) {
@@ -163,7 +162,7 @@ public final class ZlibDecompressor implements Decompressor {
      *
      * @param maxAllocation
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *          If zero, maximum size is decided by the {@link BufferAllocator}.
      * @return the factory.
      */
     public static Supplier<ZlibDecompressor> newFactory(ZlibWrapper wrapper, int maxAllocation) {
@@ -194,12 +193,12 @@ public final class ZlibDecompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator) throws DecompressionException {
+    public Buffer decompress(Buffer in, BufferAllocator allocator) throws DecompressionException {
         if (closed) {
             throw new DecompressionException("Decompressor closed");
         }
         if (finished) {
-            return Unpooled.EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
 
         int readableBytes = in.readableBytes();
@@ -213,7 +212,7 @@ public final class ZlibDecompressor implements Decompressor {
                 return null;
             }
 
-            boolean nowrap = !looksLikeZlib(in.getShort(in.readerIndex()));
+            boolean nowrap = !looksLikeZlib(in.getShort(in.readerOffset()));
             inflater = new Inflater(nowrap);
             decideZlibOrNone = false;
         }
@@ -241,83 +240,90 @@ public final class ZlibDecompressor implements Decompressor {
         }
 
         if (inflater.needsInput()) {
-            if (in.hasArray()) {
-                inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
-            } else {
-                if (in.nioBufferCount() == 1) {
-                    inflater.setInput(in.internalNioBuffer(in.readerIndex(), readableBytes));
+            try (var readableIteration = in.forEachReadable()) {
+                var readableComponent = readableIteration.first();
+                if (readableComponent.hasReadableArray()) {
+                    inflater.setInput(readableComponent.readableArray(),
+                            readableComponent.readableArrayOffset(), readableComponent.readableBytes());
                 } else {
-                    inflater.setInput(in.nioBuffer(in.readerIndex(), readableBytes));
+                    inflater.setInput(readableComponent.readableBuffer());
                 }
             }
         }
 
-        ByteBuf decompressed = prepareDecompressBuffer(allocator, null, inflater.getRemaining() << 1);
+        Buffer decompressed = prepareDecompressBuffer(allocator, null, inflater.getRemaining() << 1);
         try {
             boolean readFooter = false;
             while (!inflater.needsInput()) {
-                int writerIndex = decompressed.writerIndex();
-                int writable = decompressed.writableBytes();
-                int outputLength;
-                if (decompressed.hasArray()) {
-                    byte[] outArray = decompressed.array();
-                    int outIndex = decompressed.arrayOffset() + writerIndex;
-                    outputLength = inflater.inflate(outArray, outIndex, writable);
-                } else if (decompressed.nioBufferCount() == 1) {
-                    ByteBuffer buffer = decompressed.internalNioBuffer(writerIndex, writable);
-                    outputLength = inflater.inflate(buffer);
-                } else {
+                int writableComponents = decompressed.countWritableComponents();
+                if (writableComponents == 0) {
+                    break;
+                } else if (writableComponents > 1) {
                     throw new IllegalStateException(
                             "Decompress buffer must have array or exactly 1 NIO buffer: " + decompressed);
                 }
-                if (outputLength > 0) {
-                    decompressed.writerIndex(writerIndex + outputLength);
-                    if (crc != null) {
-                        crc.update(decompressed, writerIndex, outputLength);
-                    }
-                } else  if (inflater.needsDictionary()) {
-                    if (dictionary == null) {
-                        throw new DecompressionException(
-                                "decompression failure, unable to set dictionary as non was specified");
-                    }
-                    inflater.setDictionary(dictionary);
-                }
-
-                if (inflater.finished()) {
-                    if (crc == null) {
-                        finished = true; // Do not decode anymore.
+                try (var writableIteration = decompressed.forEachWritable()) {
+                    var writableComponent = writableIteration.first();
+                    int writerIndex = decompressed.writerOffset();
+                    int writable = decompressed.writableBytes();
+                    int outputLength;
+                    if (writableComponent.hasWritableArray()) {
+                        byte[] outArray = writableComponent.writableArray();
+                        int outIndex = writableComponent.writableArrayOffset();
+                        outputLength = inflater.inflate(outArray, outIndex, writable);
                     } else {
-                        readFooter = true;
+                        ByteBuffer buffer = writableComponent.writableBuffer();
+                        outputLength = inflater.inflate(buffer);
                     }
-                    break;
-                } else {
-                    decompressed = prepareDecompressBuffer(allocator, decompressed, inflater.getRemaining() << 1);
+                    if (outputLength > 0) {
+                        writableComponent.skipWritable(outputLength);
+                        if (crc != null) {
+                            crc.update(decompressed, writerIndex, outputLength);
+                        }
+                    } else if (inflater.needsDictionary()) {
+                        if (dictionary == null) {
+                            throw new DecompressionException(
+                                    "decompression failure, unable to set dictionary as non was specified");
+                        }
+                        inflater.setDictionary(dictionary);
+                    }
+
+                    if (inflater.finished()) {
+                        if (crc == null) {
+                            finished = true; // Do not decode anymore.
+                        } else {
+                            readFooter = true;
+                        }
+                        break;
+                    }
                 }
+                decompressed = prepareDecompressBuffer(allocator, decompressed, inflater.getRemaining() << 1);
             }
 
-            in.skipBytes(readableBytes - inflater.getRemaining());
+            int remaining = inflater.getRemaining();
+            in.skipReadable(readableBytes - remaining);
 
             if (readFooter) {
                 gzipState = GzipState.FOOTER_START;
                 handleGzipFooter(in);
             }
 
-            if (decompressed.isReadable()) {
+            if (decompressed.readableBytes() > 0) {
                 return decompressed;
             } else {
-                decompressed.release();
+                decompressed.close();
                 return null;
             }
         } catch (DataFormatException e) {
-            decompressed.release();
+            decompressed.close();
             throw new DecompressionException("decompression failure", e);
         } catch (Throwable cause) {
-            decompressed.release();
+            decompressed.close();
             throw cause;
         }
     }
 
-    private boolean handleGzipFooter(ByteBuf in) {
+    private boolean handleGzipFooter(Buffer in) {
         if (readGZIPFooter(in)) {
             finished = !decompressConcatenated;
 
@@ -331,7 +337,7 @@ public final class ZlibDecompressor implements Decompressor {
         return false;
     }
 
-    private boolean readGZIPHeader(ByteBuf in) {
+    private boolean readGZIPHeader(Buffer in) {
         switch (gzipState) {
             case HEADER_START:
                 if (in.readableBytes() < 10) {
@@ -363,8 +369,8 @@ public final class ZlibDecompressor implements Decompressor {
                 }
 
                 // mtime (int)
-                crc.update(in, in.readerIndex(), 4);
-                in.skipBytes(4);
+                crc.update(in, in.readerOffset(), 4);
+                in.skipReadable(4);
 
                 crc.update(in.readUnsignedByte()); // extra flags
                 crc.update(in.readUnsignedByte()); // operating system
@@ -390,8 +396,8 @@ public final class ZlibDecompressor implements Decompressor {
                     if (in.readableBytes() < xlen) {
                         return false;
                     }
-                    crc.update(in, in.readerIndex(), xlen);
-                    in.skipBytes(xlen);
+                    crc.update(in, in.readerOffset(), xlen);
+                    in.skipReadable(xlen);
                 }
                 gzipState = GzipState.SKIP_FNAME;
                 // fall through
@@ -430,10 +436,10 @@ public final class ZlibDecompressor implements Decompressor {
      * @return  {@code true} if the operation is complete and we can move to the next state, {@code false} if
      * we need to retry again once we have more readable bytes.
      */
-    private boolean skipIfNeeded(ByteBuf in, int flagMask) {
+    private boolean skipIfNeeded(Buffer in, int flagMask) {
         if ((flags & flagMask) != 0) {
             for (;;) {
-                if (!in.isReadable()) {
+                if (in.readableBytes() == 0) {
                     // We didnt find the end yet, need to retry again once more data is readable
                     return false;
                 }
@@ -453,9 +459,9 @@ public final class ZlibDecompressor implements Decompressor {
      *
      * @param   in the input.
      * @return  {@code true} if the footer could be read, {@code false} if the read could not be performed as
-     *          the input {@link ByteBuf} doesn't have enough readable bytes (8 bytes).
+     *          the input {@link Buffer} doesn't have enough readable bytes (8 bytes).
      */
-    private boolean readGZIPFooter(ByteBuf in) {
+    private boolean readGZIPFooter(Buffer in) {
         if (in.readableBytes() < 8) {
             return false;
         }
@@ -481,9 +487,9 @@ public final class ZlibDecompressor implements Decompressor {
      *
      * @param   in the input.
      * @return  {@code true} if verification could be performed, {@code false} if verification could not be
-     * performed as the input {@link ByteBuf} doesn't have enough readable bytes (4 bytes).
+     * performed as the input {@link Buffer} doesn't have enough readable bytes (4 bytes).
      */
-    private boolean verifyCrc(ByteBuf in) {
+    private boolean verifyCrc(Buffer in) {
         if (in.readableBytes() < 4) {
             return false;
         }
@@ -499,7 +505,7 @@ public final class ZlibDecompressor implements Decompressor {
         return true;
     }
 
-    private boolean verifyCrc16(ByteBuf in) {
+    private boolean verifyCrc16(Buffer in) {
         if (in.readableBytes() < 2) {
             return false;
         }
@@ -532,34 +538,31 @@ public final class ZlibDecompressor implements Decompressor {
 
     /**
      * Allocate or expand the decompression buffer, without exceeding the maximum allocation.
-     * Calls {@link #decompressionBufferExhausted(ByteBuf)} if the buffer is full and cannot be expanded further.
+     * Calls {@link #decompressionBufferExhausted(Buffer)} if the buffer is full and cannot be expanded further.
      */
-    protected ByteBuf prepareDecompressBuffer(ByteBufAllocator allocator, ByteBuf buffer, int preferredSize) {
+    protected Buffer prepareDecompressBuffer(BufferAllocator allocator, Buffer buffer, int preferredSize) {
         if (buffer == null) {
             if (maxAllocation == 0) {
-                return allocator.buffer(preferredSize);
+                return allocator.allocate(preferredSize);
             }
 
-            return allocator.buffer(Math.min(preferredSize, maxAllocation), maxAllocation);
+            Buffer buf = allocator.allocate(Math.min(preferredSize, maxAllocation));
+            buf.implicitCapacityLimit(maxAllocation);
+            return buf;
         }
 
-        // this always expands the buffer if possible, even if the expansion is less than preferredSize
-        // we throw the exception only if the buffer could not be expanded at all
-        // this means that one final attempt to deserialize will always be made with the buffer at maxAllocation
-        if (buffer.ensureWritable(preferredSize, true) == 1) {
-            // buffer must be consumed so subclasses don't add it to output
-            // we therefore duplicate it when calling decompressionBufferExhausted() to guarantee non-interference
-            // but wait until after to consume it so the subclass can tell how much output is really in the buffer
-            decompressionBufferExhausted(buffer.duplicate());
-            buffer.skipBytes(buffer.readableBytes());
+        // TODO:
+        buffer.ensureWritable(preferredSize);
+        if (buffer.writableBytes() < preferredSize) {
+            decompressionBufferExhausted(buffer);
+            buffer.skipReadable(buffer.readableBytes());
             throw new DecompressionException(
-                    "Decompression buffer has reached maximum size: " + buffer.maxCapacity());
+                    "Decompression buffer has reached maximum size: " + buffer.capacity());
         }
-
         return buffer;
     }
 
-    protected void decompressionBufferExhausted(ByteBuf buffer) {
+    protected void decompressionBufferExhausted(Buffer buffer) {
         finished = true;
     }
 

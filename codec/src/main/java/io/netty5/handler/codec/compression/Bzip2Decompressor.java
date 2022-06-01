@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.util.function.Supplier;
 
@@ -37,7 +36,7 @@ import static io.netty5.handler.codec.compression.Bzip2Constants.MAX_SELECTORS;
 import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
+ * Uncompresses a {@link Buffer} encoded with the Bzip2 format.
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
@@ -102,21 +101,21 @@ public final class Bzip2Decompressor implements Decompressor {
     }
 
     @Override
-    public ByteBuf decompress(ByteBuf in, ByteBufAllocator allocator)
+    public Buffer decompress(Buffer in, BufferAllocator allocator)
             throws DecompressionException {
         switch (currentState) {
             case CLOSED:
                 throw new DecompressionException("Decompressor closed");
             case EOF:
-                return Unpooled.EMPTY_BUFFER;
+                return allocator.allocate(0);
             default:
 
-                if (!in.isReadable()) {
+                if (in.readableBytes() == 0) {
                     return null;
                 }
 
                 final Bzip2BitReader reader = this.reader;
-                reader.setByteBuf(in);
+                reader.setBuffer(in);
 
                 for (;;) {
                     switch (currentState) {
@@ -317,7 +316,7 @@ public final class Bzip2Decompressor implements Decompressor {
                             // fall through
                         case DECODE_HUFFMAN_DATA:
                             blockDecompressor = this.blockDecompressor;
-                            final int oldReaderIndex = in.readerIndex();
+                            final int oldReaderIndex = in.readerOffset();
                             final boolean decoded = blockDecompressor.decodeHuffmanData(this.huffmanStageDecoder);
                             if (!decoded) {
                                 return null;
@@ -325,16 +324,16 @@ public final class Bzip2Decompressor implements Decompressor {
                             // It used to avoid "Bzip2Decoder.decode() did not read anything but decoded a message"
                             // exception. Because previous operation may read only a few bits from
                             // Bzip2BitReader.bitBuffer and don't read incoming ByteBuf.
-                            if (in.readerIndex() == oldReaderIndex && in.isReadable()) {
+                            if (in.readerOffset() == oldReaderIndex && in.readableBytes() > 0) {
                                 reader.refill();
                             }
 
                             final int blockLength = blockDecompressor.blockLength();
-                            ByteBuf uncompressed = allocator.buffer(blockLength);
+                            Buffer uncompressed = allocator.allocate(blockLength);
                             try {
                                 int uncByte;
                                 while ((uncByte = blockDecompressor.read()) >= 0) {
-                                    uncompressed.writeByte(uncByte);
+                                    uncompressed.writeByte((byte) uncByte);
                                 }
                                 // We did read all the data, lets reset the state and do the CRC check.
                                 currentState = State.INIT_BLOCK;
@@ -343,16 +342,16 @@ public final class Bzip2Decompressor implements Decompressor {
 
                                 // Return here so the ByteBuf that was put in the List will be forwarded to the user
                                 // and so can be released as soon as possible.
-                                ByteBuf data = uncompressed;
+                                Buffer data = uncompressed;
                                 uncompressed = null;
                                 return data;
                             } finally {
                                 if (uncompressed != null) {
-                                    uncompressed.release();
+                                    uncompressed.close();
                                 }
                             }
                         case EOF:
-                            return Unpooled.EMPTY_BUFFER;
+                            return allocator.allocate(0);
                         default:
                             throw new IllegalStateException();
                     }
