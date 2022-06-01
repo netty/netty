@@ -209,6 +209,11 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
+    public int implicitCapacityLimit() {
+        return implicitCapacityLimit;
+    }
+
+    @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
         checkLength(length);
         checkGet(offset, length);

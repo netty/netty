@@ -17,6 +17,7 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.internal.Statics;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -24,6 +25,17 @@ import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BufferImplicitCapacityTest extends BufferTestSupport {
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void implicitLimit(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            assertEquals(MAX_BUFFER_SIZE, buffer.implicitCapacityLimit());
+            buffer.implicitCapacityLimit(buffer.capacity());
+            assertEquals(buffer.capacity(), buffer.implicitCapacityLimit());
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("allocators")
     public void implicitLimitMustBeWithinBounds(Fixture fixture) {

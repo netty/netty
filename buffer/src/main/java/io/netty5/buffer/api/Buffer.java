@@ -262,6 +262,14 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     Buffer implicitCapacityLimit(int limit);
 
     /**
+     * Returns the implicit capacity limit of the buffer. If none was set before via {@link #implicitCapacityLimit(int)}
+     * this method will return the default value.
+     *
+     * @return the limit.
+     */
+    int implicitCapacityLimit();
+
+    /**
      * Copies the given length of data from this buffer into the given destination array, beginning at the given source
      * position in this buffer, and the given destination position in the destination array.
      * <p>
