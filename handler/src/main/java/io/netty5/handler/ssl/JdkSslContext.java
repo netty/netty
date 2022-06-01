@@ -67,35 +67,56 @@ public class JdkSslContext extends SslContext {
     private static final Provider DEFAULT_PROVIDER;
 
     static {
-        SSLContext context;
-        try {
-            context = SSLContext.getInstance(PROTOCOL);
-            context.init(null, null, null);
-        } catch (Exception e) {
-            throw new Error("failed to initialize the default SSL context", e);
-        }
+        Defaults defaults = new Defaults();
+        defaults.init();
 
-        DEFAULT_PROVIDER = context.getProvider();
-
-        SSLEngine engine = context.createSSLEngine();
-        DEFAULT_PROTOCOLS = defaultProtocols(context, engine);
-
-        SUPPORTED_CIPHERS = Collections.unmodifiableSet(supportedCiphers(engine));
-        DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers(engine, SUPPORTED_CIPHERS));
-
-        List<String> ciphersNonTLSv13 = new ArrayList<>(DEFAULT_CIPHERS);
-        ciphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
-        DEFAULT_CIPHERS_NON_TLSV13 = Collections.unmodifiableList(ciphersNonTLSv13);
-
-        Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<>(SUPPORTED_CIPHERS);
-        for (String defaultTlsv13CipherSuite : SslUtils.DEFAULT_TLSV13_CIPHER_SUITES) {
-            suppertedCiphersNonTLSv13.remove(defaultTlsv13CipherSuite);
-        }
-        SUPPORTED_CIPHERS_NON_TLSV13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
+        DEFAULT_PROVIDER = defaults.defaultProvider;
+        DEFAULT_PROTOCOLS = defaults.defaultProtocols;
+        SUPPORTED_CIPHERS = defaults.supportedCiphers;
+        DEFAULT_CIPHERS = defaults.defaultCiphers;
+        DEFAULT_CIPHERS_NON_TLSV13 = defaults.defaultCiphersNonTLSv13;
+        SUPPORTED_CIPHERS_NON_TLSV13 = defaults.supportedCiphersNonTLSv13;
 
         if (logger.isDebugEnabled()) {
             logger.debug("Default protocols (JDK): {} ", Arrays.asList(DEFAULT_PROTOCOLS));
             logger.debug("Default cipher suites (JDK): {}", DEFAULT_CIPHERS);
+        }
+    }
+
+    private static final class Defaults {
+        String[] defaultProtocols;
+        List<String> defaultCiphers;
+        List<String> defaultCiphersNonTLSv13;
+        Set<String> supportedCiphers;
+        Set<String> supportedCiphersNonTLSv13;
+        Provider defaultProvider;
+
+        void init() {
+            SSLContext context;
+            try {
+                context = SSLContext.getInstance(PROTOCOL);
+                context.init(null, null, null);
+            } catch (Exception e) {
+                throw new Error("failed to initialize the default SSL context", e);
+            }
+
+            defaultProvider = context.getProvider();
+
+            SSLEngine engine = context.createSSLEngine();
+            defaultProtocols = defaultProtocols(context, engine);
+
+            supportedCiphers = Collections.unmodifiableSet(supportedCiphers(engine));
+            defaultCiphers = Collections.unmodifiableList(defaultCiphers(engine, supportedCiphers));
+
+            List<String> ciphersNonTLSv13 = new ArrayList<>(defaultCiphers);
+            ciphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
+            defaultCiphersNonTLSv13 = Collections.unmodifiableList(ciphersNonTLSv13);
+
+            Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<>(supportedCiphers);
+            for (String defaultTlsv13CipherSuite : SslUtils.DEFAULT_TLSV13_CIPHER_SUITES) {
+            suppertedCiphersNonTLSv13.remove(defaultTlsv13CipherSuite);
+        }
+            supportedCiphersNonTLSv13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
         }
     }
 
